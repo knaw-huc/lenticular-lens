@@ -1,0 +1,13 @@
+{
+  "=": {
+    "sql_template": "{source} = {target}",
+    "similarity": 100
+  },
+  "DISTANCE_IS_BETWEEN": {
+    "sql_template": "{source} IS NOT NULL AND {target} IS NOT NULL AND {source} - {target} BETWEEN %1 AND %2",
+    "similarity": "{source} - {target}"
+  },
+  "IS_IN_SET": {
+    "sql_template": "{source} IN (SELECT source_uri FROM \"%1__hash\") AND {target} IN (SELECT source_uri FROM \"%1__hash\")"
+  }
+}
