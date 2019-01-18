@@ -6,7 +6,7 @@ from psycopg2 import extras as psycopg2_extras, sql as psycopg2_sql
 from helpers import get_job_data, hash_string, update_job_data
 from datasets_config import DatasetsConfig
 import pathlib
-import os
+import subprocess
 
 
 class S(SimpleHTTPRequestHandler):
@@ -70,6 +70,11 @@ class S(SimpleHTTPRequestHandler):
             else:
                 self._set_headers()
                 response = json.dumps(get_job_data(job_id), default=str)
+        elif path == 'status':
+            self._set_headers('text/html')
+            self.end_headers()
+            status_process = subprocess.run(['python', '/app/status.py'], stdout=subprocess.PIPE)
+            response = str(status_process.stdout).replace('\\n', '<br>')
         else:
             self._set_headers('text/html')
             return super().do_GET()
