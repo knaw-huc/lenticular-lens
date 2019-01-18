@@ -7,4 +7,4 @@ COPY ./requirements.txt /app/requirements.txt
 RUN pip install --trusted-host pypi.python.org -r /app/requirements.txt
 
 COPY src /app
-COPY vue_app/src/dist /web
+COPY vue_app/dist /web
