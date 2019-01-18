@@ -2,11 +2,14 @@ from config_db import db_conn
 import datetime
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 import json
+import psycopg2
 from psycopg2 import extras as psycopg2_extras, sql as psycopg2_sql
 from helpers import get_job_data, hash_string, update_job_data
 from datasets_config import DatasetsConfig
 import pathlib
+import random
 import subprocess
+import time
 
 
 class S(SimpleHTTPRequestHandler):
@@ -52,17 +55,26 @@ class S(SimpleHTTPRequestHandler):
                         view=psycopg2_sql.Identifier(view_name)
                     )
 
-                    with db_conn() as conn:
-                        with conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) as cur:
-                            cur.execute(count_query)
-                            rows_count = cur.fetchone()['count']
-                            cur.execute(rows_query)
-                            rows = cur.fetchall()
-                            response = json.dumps({
-                                'mapping_name': mapping_name,
-                                'rows': rows,
-                                'rows_total': rows_count,
-                            })
+                    n = 0
+                    while True:
+                        try:
+                            with db_conn() as conn:
+                                with conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) as cur:
+                                    cur.execute(count_query)
+                                    rows_count = cur.fetchone()['count']
+                                    cur.execute(rows_query)
+                                    rows = cur.fetchall()
+                                    response = json.dumps({
+                                        'mapping_name': mapping_name,
+                                        'rows': rows,
+                                        'rows_total': rows_count,
+                                    })
+                        except (psycopg2.InterfaceError, psycopg2.OperationalError):
+                            n += 1
+                            print('Database error. Retry %i' % n)
+                            time.sleep((2 ** n) + (random.randint(0, 1000) / 1000))
+                        else:
+                            break
                 else:
                     self.path = 'index.html'
                     self._set_headers('text/html')

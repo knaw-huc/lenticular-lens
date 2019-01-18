@@ -1,7 +1,10 @@
 import collections
 from config_db import db_conn
+import psycopg2
 from psycopg2 import extras as psycopg2_extras, sql as psycopg2_sql
 from psycopg2.extensions import AsIs
+import random
+import time
 
 
 def get_absolute_property(property_array, parent_label):
@@ -46,25 +49,41 @@ def hash_string(to_hash):
 
 
 def get_job_data(job_id):
-    with db_conn() as conn:
-        with conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) as cur:
-            cur.execute('SELECT * FROM reconciliation_jobs WHERE job_id = %s', (job_id,))
-            return cur.fetchone()
+    n = 0
+    while True:
+        try:
+            with db_conn() as conn:
+                with conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) as cur:
+                    cur.execute('SELECT * FROM reconciliation_jobs WHERE job_id = %s', (job_id,))
+                    return cur.fetchone()
+        except (psycopg2.InterfaceError, psycopg2.OperationalError):
+            n += 1
+            print('Database error. Retry %i' % n)
+            time.sleep((2 ** n) + (random.randint(0, 1000) / 1000))
 
 
 def update_job_data(job_id, job_data):
-    with db_conn() as conn:
-        with conn.cursor(cursor_factory=psycopg2_extras.DictCursor) as cur:
-            cur.execute(psycopg2_sql.SQL("""
-            INSERT INTO reconciliation_jobs AS rj (job_id, %s) VALUES %s
-                ON CONFLICT (job_id) DO UPDATE
-                    SET {} WHERE rj.job_id = %s
-                    """).format(psycopg2_sql.SQL(', '.join('%s = EXCLUDED.%s' % (key, key) for key in job_data.keys()))),
-                        (
-                            AsIs(', '.join(job_data.keys())),
-                            tuple([job_id] + list(job_data.values())),
-                            job_id
-                        ))
+    n = 0
+    while True:
+        try:
+            with db_conn() as conn:
+                with conn.cursor(cursor_factory=psycopg2_extras.DictCursor) as cur:
+                    cur.execute(psycopg2_sql.SQL("""
+                    INSERT INTO reconciliation_jobs AS rj (job_id, %s) VALUES %s
+                        ON CONFLICT (job_id) DO UPDATE
+                            SET {} WHERE rj.job_id = %s
+                            """).format(psycopg2_sql.SQL(', '.join('%s = EXCLUDED.%s' % (key, key) for key in job_data.keys()))),
+                                (
+                                    AsIs(', '.join(job_data.keys())),
+                                    tuple([job_id] + list(job_data.values())),
+                                    job_id
+                                ))
+        except (psycopg2.InterfaceError, psycopg2.OperationalError):
+            n += 1
+            print('Database error. Retry %i' % n)
+            time.sleep((2 ** n) + (random.randint(0, 1000) / 1000))
+        else:
+            break
 
 
 class PropertyField:
