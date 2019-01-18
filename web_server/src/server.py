@@ -42,43 +42,50 @@ class S(SimpleHTTPRequestHandler):
             job_id = path_parts[1]
 
             if len(path_parts) > 2 and path_parts[2] == 'result':
-                if self.headers['Accept'] == 'application/json':
-                    self._set_headers()
-                    mapping_name = path_parts[3]
-                    view_name = hash_string(mapping_name)
-                    count_query = psycopg2_sql.SQL('SELECT count(*) FROM {schema}.{view}').format(
-                        schema=psycopg2_sql.Identifier('job_' + job_id),
-                        view=psycopg2_sql.Identifier(view_name)
-                    )
-                    rows_query = psycopg2_sql.SQL('SELECT * FROM {schema}.{view} LIMIT 100').format(
-                        schema=psycopg2_sql.Identifier('job_' + job_id),
-                        view=psycopg2_sql.Identifier(view_name)
-                    )
-
-                    n = 0
-                    while True:
-                        try:
-                            with db_conn() as conn:
-                                with conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) as cur:
-                                    cur.execute(count_query)
-                                    rows_count = cur.fetchone()['count']
-                                    cur.execute(rows_query)
-                                    rows = cur.fetchall()
-                                    response = json.dumps({
-                                        'mapping_name': mapping_name,
-                                        'rows': rows,
-                                        'rows_total': rows_count,
-                                    })
-                        except (psycopg2.InterfaceError, psycopg2.OperationalError):
-                            n += 1
-                            print('Database error. Retry %i' % n)
-                            time.sleep((2 ** n) + (random.randint(0, 1000) / 1000))
-                        else:
-                            break
-                else:
-                    self.path = 'index.html'
-                    self._set_headers('text/html')
+                if len(path_parts) > 3 and path_parts[3] == 'download':
+                    self.directory = '/output/rdf'
+                    self.path = '%s_output.nq.gz' % job_id
+                    self.send_response(200)
+                    self.send_header('Content-Disposition', 'attachment; filename=%s_output.nq.gz' % job_id)
                     return super().do_GET()
+                else:
+                    if self.headers['Accept'] == 'application/json':
+                        self._set_headers()
+                        mapping_name = path_parts[3]
+                        view_name = hash_string(mapping_name)
+                        count_query = psycopg2_sql.SQL('SELECT count(*) FROM {schema}.{view}').format(
+                            schema=psycopg2_sql.Identifier('job_' + job_id),
+                            view=psycopg2_sql.Identifier(view_name)
+                        )
+                        rows_query = psycopg2_sql.SQL('SELECT * FROM {schema}.{view} LIMIT 100').format(
+                            schema=psycopg2_sql.Identifier('job_' + job_id),
+                            view=psycopg2_sql.Identifier(view_name)
+                        )
+
+                        n = 0
+                        while True:
+                            try:
+                                with db_conn() as conn:
+                                    with conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) as cur:
+                                        cur.execute(count_query)
+                                        rows_count = cur.fetchone()['count']
+                                        cur.execute(rows_query)
+                                        rows = cur.fetchall()
+                                        response = json.dumps({
+                                            'mapping_name': mapping_name,
+                                            'rows': rows,
+                                            'rows_total': rows_count,
+                                        })
+                            except (psycopg2.InterfaceError, psycopg2.OperationalError):
+                                n += 1
+                                print('Database error. Retry %i' % n)
+                                time.sleep((2 ** n) + (random.randint(0, 1000) / 1000))
+                            else:
+                                break
+                    else:
+                        self.path = 'index.html'
+                        self._set_headers('text/html')
+                        return super().do_GET()
             else:
                 self._set_headers()
                 response = json.dumps(get_job_data(job_id), default=str)

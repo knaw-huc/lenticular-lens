@@ -41,7 +41,7 @@ if __name__ == '__main__':
                     process_start_time = str(datetime.datetime.now())
                     update_job_data(job['job_id'], {'status': 'Processing', 'processing_at': process_start_time})
 
-                    with open('./rdf/%s_output.nq.gz' % process_start_time, 'wb') as output_file:
+                    with open('./rdf/%s_output.nq.gz' % job['job_id'], 'wb') as output_file:
                         with subprocess.Popen(['python', '/app/run_json.py', '-r', job['resources_filename'], '-m', job['mappings_filename']],
                                               stdout=subprocess.PIPE) as converting_process:
                             blabla = subprocess.run(['gzip'], stdin=converting_process.stdout, stdout=output_file)

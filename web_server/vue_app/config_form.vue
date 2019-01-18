@@ -69,6 +69,9 @@
                 <div v-for="match in matches">
                     <a :href="'/job/' + job_id + '/result/' + match.label" target="_blank">Results for {{ match.label }}</a>
                 </div>
+                <div>
+                    <a :href="'/job/' + job_id + '/result/download'" download>Download RDF</a>
+                </div>
             </div>
         </div>
     </form>
