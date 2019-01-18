@@ -1,4 +1,4 @@
-from .helpers import get_json_from_file, get_absolute_property, get_property_sql
+from helpers import get_json_from_file, get_absolute_property, get_property_sql
 from psycopg2 import sql as psycopg2_sql
 
 

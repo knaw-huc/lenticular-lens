@@ -1,5 +1,5 @@
 import collections
-from .config_db import db_conn
+from config_db import db_conn
 from psycopg2 import extras as psycopg2_extras, sql as psycopg2_sql
 from psycopg2.extensions import AsIs
 
@@ -24,7 +24,7 @@ def is_property_object(value):
 def get_json_from_file(filename):
     import jstyleson
 
-    json_file = open('scripted_matching/' + filename, 'r')
+    json_file = open('/app/' + filename, 'r')
     json_config = jstyleson.load(json_file)
     json_file.close()
 

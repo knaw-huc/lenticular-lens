@@ -1,6 +1,6 @@
-from .datasets_config import DatasetsConfig
-from .filter_function import FilterFunction
-from .helpers import hash_string, PropertyField
+from datasets_config import DatasetsConfig
+from filter_function import FilterFunction
+from helpers import hash_string, PropertyField
 from psycopg2 import sql as psycopg2_sql
 
 

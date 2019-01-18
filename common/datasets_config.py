@@ -1,5 +1,5 @@
-from .dataset import Dataset
-from .timbuctoo import Timbuctoo
+from dataset import Dataset
+from timbuctoo import Timbuctoo
 
 
 class DatasetsConfig:

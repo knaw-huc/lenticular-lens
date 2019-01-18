@@ -1,0 +1,43 @@
+version: '3.7'
+
+services:
+  postgres:
+    build: postgres_timbuctoo
+    image: postgres_timbuctoo:latest
+    ports:
+      - 5432:5432
+    volumes:
+      - ./postgres_timbuctoo/pgdata:/pgdata
+    env_file:
+      - .docker-env
+
+  jobs_worker:
+    build: jobs_worker
+    command: ["python", "/app/jobs_worker.py"]
+    depends_on:
+      - postgres
+    environment:
+      - DATABASE_CONFIG={"host":"postgres","database":"postgres","user":"postgres","password":"postgres"}
+    volumes:
+      - ./common:/common
+      - output:/output
+    working_dir: /output
+
+  web_server:
+    build: web_server
+    command: ["python", "/app/server.py"]
+    depends_on:
+      - postgres
+    environment:
+      - DATABASE_CONFIG={"host":"postgres","database":"postgres","user":"postgres","password":"postgres"}
+    ports:
+      - 8000:8000
+    volumes:
+      - ./common:/common
+      - output:/output
+    working_dir: /output
+
+volumes:
+  pgdata:
+  common:
+  output:

@@ -191,6 +191,7 @@ class TimTable:
                 else:
                     curToken = query_result["nextCursor"]
             except (ConnectionError, TimeoutError):
+                print('Error. Retrying...')
                 n += 1
                 sleep((2 ** n) + (random.randint(0, 1000) / 1000))
 

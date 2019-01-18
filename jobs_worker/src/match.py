@@ -1,5 +1,5 @@
-from .conditions import Conditions
-from .helpers import hash_string, PropertyField
+from conditions import Conditions
+from helpers import hash_string, PropertyField
 from psycopg2 import sql as psycopg_sql
 
 

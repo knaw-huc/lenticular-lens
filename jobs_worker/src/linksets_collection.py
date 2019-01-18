@@ -1,13 +1,13 @@
-from .links_to_rdf import convert_link
+from links_to_rdf import convert_link
 import datetime
-from .config_db import db_conn
-from .helpers import get_absolute_property, get_job_data, get_property_sql, hash_string, update_job_data
+from config_db import db_conn
+from helpers import get_absolute_property, get_job_data, get_property_sql, hash_string, update_job_data
 import jstyleson
-from .match import Match
+from match import Match
 from psycopg2 import extras
 from psycopg2 import sql
 import re
-from .resource import Resource
+from resource import Resource
 import time
 
 
@@ -15,11 +15,6 @@ class LinksetsCollection:
     sql_only = False
 
     def __init__(self, resources_filename, matches_filename, sql_only=False, resources_only=False, matches_only=False, return_limit=None):
-        self.data = {
-            'resources': self.get_json_config(resources_filename),
-            'matches': self.get_json_config(matches_filename),
-        }
-
         self.sql_only = sql_only
         self.resources_only = resources_only
         self.matches_only = matches_only
@@ -28,14 +23,18 @@ class LinksetsCollection:
         self.job_id = hash_string(resources_filename.split('/')[-1] + matches_filename.split('/')[-1])
         self.job_data = get_job_data(self.job_id)
 
-        datetime_string = str(datetime.datetime.now())
-
-        if not self.sql_only:
-            # self.output_file = gzip.open('scripted_matching/output/%s_output.nq.gz' % datetime_string, 'wb')
-            self.statistics_file = open('scripted_matching/output/%s_statistics.txt' % datetime_string, 'w')
-
         self.__matches = None
         self.__resources = None
+
+        self.data = {
+            'resources': self.get_json_config(resources_filename),
+            'matches': self.get_json_config(matches_filename),
+        }
+
+        if not self.sql_only:
+            datetime_string = str(datetime.datetime.now())
+            # self.output_file = gzip.open('scripted_matching/output/%s_output.nq.gz' % datetime_string, 'wb')
+            self.statistics_file = open('rdf/%s_statistics.txt' % datetime_string, 'w')
 
     def __enter__(self):
         return self
@@ -44,6 +43,8 @@ class LinksetsCollection:
         if not self.sql_only:
             # self.output_file.close()
             self.statistics_file.close()
+            # if exc_type:
+            #     self.updateJobData({'status': 'Error1', 'mappings_form_data': '{}'})
 
     def __del__(self):
         pass
@@ -331,20 +332,20 @@ FROM {table_name} AS {alias}{joins}{wheres}{group_by}
             update_job_data(self.job_id, update_data)
 
     def run(self):
-        self.updateJobData({
-            'status': 'Processing',
-            'processing_at': str(datetime.datetime.now()),
-        })
+        # self.updateJobData({
+        #     'status': 'Processing',
+        #     'processing_at': str(datetime.datetime.now()),
+        # })
 
-        try:
-            if not self.matches_only:
-                self.generate_resources()
-            if not self.resources_only:
-                self.generate_matches()
-        except:
-            self.updateJobData({'status': 'Error'})
-            raise
-        else:
-            self.updateJobData({'status': 'Finished', 'finished_at': str(datetime.datetime.now())})
+        # try:
+        if not self.matches_only:
+            self.generate_resources()
+        if not self.resources_only:
+            self.generate_matches()
+        # except:
+            # self.updateJobData({'status': 'Error'})
+            # raise
+        # else:
+            # self.updateJobData({'status': 'Finished', 'finished_at': str(datetime.datetime.now())})
 
         return self.results

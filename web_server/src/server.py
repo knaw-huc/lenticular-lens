@@ -1,10 +1,12 @@
-from scripted_matching.config_db import db_conn
+from config_db import db_conn
 import datetime
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 import json
 from psycopg2 import extras as psycopg2_extras, sql as psycopg2_sql
-from scripted_matching.helpers import get_job_data, hash_string, update_job_data
-from scripted_matching.datasets_config import DatasetsConfig
+from helpers import get_job_data, hash_string, update_job_data
+from datasets_config import DatasetsConfig
+import pathlib
+import os
 
 
 class S(SimpleHTTPRequestHandler):
@@ -22,6 +24,8 @@ class S(SimpleHTTPRequestHandler):
             self.end_headers()
 
     def do_GET(self):
+        self.directory = '/web'
+
         path = self.path.strip('/')
 
         if path == '':
@@ -80,10 +84,10 @@ class S(SimpleHTTPRequestHandler):
             post_data = json.loads(self.rfile.read(content_length))
 
             resources_json = json.dumps(post_data['resources'], indent=2)
-            resources_filename = './scripted_matching/generated_json/resources_' + hash_string(resources_json) + '.json'
+            resources_filename = './generated_json/resources_' + hash_string(resources_json) + '.json'
 
             matches_json = json.dumps(post_data['matches'], indent=2)
-            matches_filename = './scripted_matching/generated_json/matches_' + hash_string(matches_json) + '.json'
+            matches_filename = './generated_json/matches_' + hash_string(matches_json) + '.json'
 
             job_id = hash_string(resources_filename.split('/')[-1] + matches_filename.split('/')[-1])
 
@@ -116,10 +120,8 @@ class S(SimpleHTTPRequestHandler):
         self._set_headers()
         self.wfile.write(response.encode('utf-8'))
 
-    def translate_path(self, path):
-        path = 'dist/' + path
-        return super().translate_path(path)
-
 
 if __name__ == '__main__':
-    HTTPServer(('', 8001), S).serve_forever()
+    pathlib.Path('generated_json').mkdir(exist_ok=True)
+
+    HTTPServer(('', 8000), S).serve_forever()

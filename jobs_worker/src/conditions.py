@@ -1,4 +1,4 @@
-from .helpers import hash_string, get_json_from_file
+from helpers import hash_string, get_json_from_file
 from psycopg2 import sql as psycopg2_sql
 import re
 

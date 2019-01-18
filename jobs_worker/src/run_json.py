@@ -1,7 +1,5 @@
-#!/home/cedric/PycharmProjects/postgres_reconciliation/venv/bin/python
-
 import argparse
-from scripted_matching.linksets_collection import LinksetsCollection
+from linksets_collection import LinksetsCollection
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Process reconciliation configs in JSON files.')

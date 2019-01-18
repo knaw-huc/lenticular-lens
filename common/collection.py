@@ -1,5 +1,5 @@
-from .config_db import db_conn, run_query, table_exists
-from .helpers import hash_string
+from config_db import db_conn, run_query, table_exists
+from helpers import hash_string
 from psycopg2 import sql as psycopg2_sql
 
 
@@ -25,7 +25,9 @@ class Collection:
 
     def create_cached_view(self, limit=None):
         original_table = self.view_name if limit and self.has_cached_view else self.sql_name
-        limit_string = 'ORDER BY RANDOM() LIMIT %s' if limit else ''
+        limit_string = 'LIMIT %s' if limit else ''
+        if limit and self.has_cached_view:
+            limit_string = 'ORDER BY RANDOM() ' + limit_string
 
         run_query(psycopg2_sql.SQL("""
                 CREATE MATERIALIZED VIEW IF NOT EXISTS {limit_view_name} AS
