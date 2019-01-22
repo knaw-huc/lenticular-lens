@@ -13,47 +13,63 @@ if __name__ == '__main__':
     pathlib.Path('rdf').mkdir(exist_ok=True)
 
     while True:
-        job = None
+        jobs = []
         n1 = 0
+        last_checked_downloading = None
         try:
             with db_conn() as conn:
                 while True:
                     print('\rLooking for new job...', end='')
 
-                    while not job:
+                    while len(jobs) < 1:
+                        if not last_checked_downloading or time.time() - last_checked_downloading > 60:
+                            include_downloading = "OR status = 'Downloading'"
+                            last_checked_downloading = time.time()
+                        else:
+                            include_downloading = ''
+
                         with conn.cursor(cursor_factory=psycopg2_extras.DictCursor) as cur:
-                            cur.execute("""
+                            sql_string = """
                                 SELECT *
                                 FROM reconciliation_jobs
                                 WHERE status = 'Requested'
-                                ORDER BY requested_at
-                                LIMIT 1;""")
+                                %s
+                                ORDER BY requested_at""" % include_downloading
 
-                            job = cur.fetchone()
+                            cur.execute(sql_string)
 
+                            jobs = cur.fetchall()
                             conn.commit()
 
-                            if not job:
+                            if len(jobs) < 1:
                                 time.sleep(2)
 
-                    print('\rJob %s started.' % job['job_id'], end='')
+                    found_new_requests = False
+                    for job in jobs:
+                        print('\rJob %s started.' % job['job_id'], end='')
 
-                    process_start_time = str(datetime.datetime.now())
-                    update_job_data(job['job_id'], {'status': 'Processing', 'processing_at': process_start_time})
+                        process_start_time = str(datetime.datetime.now())
+                        update_job_data(job['job_id'], {'status': 'Processing', 'processing_at': process_start_time})
 
-                    with open('./rdf/%s_output.nq.gz' % job['job_id'], 'wb') as output_file:
-                        with subprocess.Popen(['python', '/app/run_json.py', '-r', job['resources_filename'], '-m', job['mappings_filename']],
-                                              stdout=subprocess.PIPE) as converting_process:
-                            blabla = subprocess.run(['gzip'], stdin=converting_process.stdout, stdout=output_file)
+                        with open('./rdf/%s_output.nq.gz' % job['job_id'], 'wb') as output_file:
+                            with subprocess.Popen(['python', '/app/run_json.py', '-r', job['resources_filename'], '-m', job['mappings_filename']],
+                                                  stdout=subprocess.PIPE) as converting_process:
+                                subprocess.run(['gzip'], stdin=converting_process.stdout, stdout=output_file)
 
-                    if converting_process.returncode == 0:
-                        update_job_data(job['job_id'], {'status': 'Finished', 'finished_at': str(datetime.datetime.now())})
-                    else:
-                        update_job_data(job['job_id'], {'status': 'Failed'})
+                        if converting_process.returncode == 0:
+                            found_new_requests = True
+                            print('\rJob %s finished.' % job['job_id'])
+                            update_job_data(job['job_id'], {'status': 'Finished', 'finished_at': str(datetime.datetime.now())})
+                        elif converting_process.returncode == 3:
+                            print('\rJob %s downloading.' % job['job_id'])
+                            update_job_data(job['job_id'], {'status': 'Downloading'})
+                        else:
+                            found_new_requests = True
+                            print('\rJob %s failed.' % job['job_id'])
+                            update_job_data(job['job_id'], {'status': 'Failed'})
 
-                    print('\rJob %s finished.' % job['job_id'])
+                    jobs = []
 
-                    job = None
         except (psycopg2.InterfaceError, psycopg2.OperationalError):
             n1 += 1
             time.sleep((2 ** n1) + (random.randint(0, 1000) / 1000))

@@ -17,4 +17,6 @@ if __name__ == '__main__':
         matches_only=args.mappings_only,
         sql_only=args.sql_only,
     ) as linksets_collection:
-        linksets_collection.run()
+        result = linksets_collection.run()
+        if result.has_queued_view:
+            exit(3)

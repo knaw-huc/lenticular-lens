@@ -1,8 +1,8 @@
-CREATE EXTENSION fuzzystrmatch;
-CREATE EXTENSION plpython3u;
-CREATE EXTENSION multicorn;
+CREATE EXTENSION IF NOT EXISTS fuzzystrmatch;
+CREATE EXTENSION IF NOT EXISTS plpython3u;
+CREATE EXTENSION IF NOT EXISTS multicorn;
 
-CREATE SERVER timbuctoo FOREIGN DATA WRAPPER multicorn options ( wrapper 'timbuctoo_fdw.TimbuctooForeignDataWrapper' );
+CREATE SERVER IF NOT EXISTS timbuctoo FOREIGN DATA WRAPPER multicorn options ( wrapper 'timbuctoo_fdw.TimbuctooForeignDataWrapper' );
 
 CREATE TABLE IF NOT EXISTS reconciliation_jobs (
   job_id text primary key,
@@ -14,6 +14,17 @@ CREATE TABLE IF NOT EXISTS reconciliation_jobs (
   requested_at timestamp,
   processing_at timestamp,
   finished_at timestamp
+);
+
+CREATE TABLE IF NOT EXISTS timbuctoo_jobs (
+  id serial primary key,
+  dataset_id text not null,
+  collection_id text not null,
+  "limit" int,
+  requested_at timestamp,
+  processing_at timestamp,
+  finished_at timestamp,
+  UNIQUE (dataset_id, collection_id, "limit")
 );
 
 CREATE OR REPLACE FUNCTION public.ecartico_full_name(text) RETURNS text IMMUTABLE AS $$

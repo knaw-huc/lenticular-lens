@@ -11,6 +11,7 @@ class Resource:
 
         collection = DatasetsConfig().dataset(self.dataset_id).collection(self.collection_id)
         self.cached_view = collection.limit_view_name(self.limit, True) if self.limit > -1 else collection.view_name
+        self.view_queued = collection.view_queued
 
     @property
     def additional_properties(self):

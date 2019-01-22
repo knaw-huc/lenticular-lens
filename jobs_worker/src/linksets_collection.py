@@ -50,6 +50,14 @@ class LinksetsCollection:
         pass
 
     @property
+    def has_queued_view(self):
+        for resource in self.resources:
+            if resource.view_queued:
+                return True
+
+        return False
+
+    @property
     def matches(self):
         if not self.__matches:
             self.__matches = list(map(Match, self.data['matches']))
@@ -89,14 +97,15 @@ class LinksetsCollection:
                 if resource_label not in materialize:
                     materialize.append(resource_label)
 
-        while len(generated) < len(resources):
-            for resource in resources:
-                if resource.label not in generated:
-                    if resource.label in materialize:
-                        result = self.process_sql(self.generate_resource_sql(resource))
-                        if not self.sql_only:
-                            self.add_statistics(resource, result)
-                    generated.append(resource.label)
+        if not self.has_queued_view:
+            while len(generated) < len(resources):
+                for resource in resources:
+                    if resource.label not in generated:
+                        if resource.label in materialize:
+                            result = self.process_sql(self.generate_resource_sql(resource))
+                            if not self.sql_only:
+                                self.add_statistics(resource, result)
+                        generated.append(resource.label)
 
     def process_sql(self, composed):
         query_starting_time = time.time()
@@ -340,7 +349,7 @@ FROM {table_name} AS {alias}{joins}{wheres}{group_by}
         # try:
         if not self.matches_only:
             self.generate_resources()
-        if not self.resources_only:
+        if not self.resources_only and not self.has_queued_view:
             self.generate_matches()
         # except:
             # self.updateJobData({'status': 'Error'})
@@ -348,4 +357,4 @@ FROM {table_name} AS {alias}{joins}{wheres}{group_by}
         # else:
             # self.updateJobData({'status': 'Finished', 'finished_at': str(datetime.datetime.now())})
 
-        return self.results
+        return self
