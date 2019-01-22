@@ -163,13 +163,10 @@
                         if (job_id) {
                             this.job_id = job_id;
                             this.getJobData();
+                        } else {
+                            this.addResource();
+                            this.addMatch();
                         }
-
-                        this.addResource();
-                        this.addMatch();
-
-                        this.resources_count = this.resources.length;
-                        this.matches_count = this.matches.length;
                     });
             },
             getJobData() {
@@ -178,10 +175,14 @@
                         .then((response) => response.json())
                         .then((data) => {
                             this.job_data = data;
-                            this.resources = data.resources_form_data;
-                            this.matches = data.mappings_form_data;
-                            this.resources_count = this.resources.length;
-                            this.matches_count = this.matches.length;
+                            if (this.resources_count < 1) {
+                                this.resources = data.resources_form_data;
+                                this.resources_count = this.resources.length;
+                            }
+                            if (this.matches_count < 1) {
+                                this.matches = data.mappings_form_data;
+                                this.matches_count = this.matches.length;
+                            }
 
                             if (this.job_data.status !== 'Finished') {
                                 setTimeout(this.getJobData, 5000);
