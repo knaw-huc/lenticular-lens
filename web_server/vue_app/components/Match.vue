@@ -84,7 +84,7 @@
         },
         computed: {
             match_label() {
-                if (this.label_input == '') {
+                if (typeof this.label_input === 'undefined' || this.label_input == '') {
                     this.label_input = this.match.label;
                 }
 

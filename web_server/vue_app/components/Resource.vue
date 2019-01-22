@@ -106,7 +106,7 @@
         },
         computed: {
             resource_label() {
-                if (this.label_input == '') {
+                if (typeof this.label_input === 'undefined' || this.label_input == '') {
                     this.label_input = this.resource.label;
                 }
 
@@ -163,7 +163,7 @@
                 this.addFilterCondition();
             }
 
-            this.resource.label = this.resource_label;
+            this.label_input = this.resource.label = this.resource_label;
         },
         watch: {
             label_input() {

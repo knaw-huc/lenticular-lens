@@ -158,6 +158,13 @@
                     .then((data) => {
                         vue.datasets = data;
 
+                        let urlParams = new URLSearchParams(window.location.search);
+                        let job_id = urlParams.get('job_id');
+                        if (job_id) {
+                            this.job_id = job_id;
+                            this.getJobData();
+                        }
+
                         this.addResource();
                         this.addMatch();
 
@@ -171,6 +178,10 @@
                         .then((response) => response.json())
                         .then((data) => {
                             this.job_data = data;
+                            this.resources = data.resources_form_data;
+                            this.matches = data.mappings_form_data;
+                            this.resources_count = this.resources.length;
+                            this.matches_count = this.matches.length;
 
                             if (this.job_data.status !== 'Finished') {
                                 setTimeout(this.getJobData, 5000);
@@ -392,6 +403,11 @@
                     .then((response) => response.json())
                     .then((data) => {
                         this.$set(this, 'job_id', data.job_id);
+
+                        let parsedUrl = new URL(window.location.href);
+                        parsedUrl.searchParams.set('job_id', data.job_id);
+                        window.history.pushState(null, null, parsedUrl.href);
+
                         this.getJobData();
                     }
                 );
