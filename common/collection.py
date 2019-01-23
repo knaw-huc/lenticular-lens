@@ -29,7 +29,12 @@ class Collection:
         if queue:
             self.view_queued = True
 
-            if run_query('SELECT 1 FROM timbuctoo_jobs WHERE dataset_id = %s AND collection_id = %s', (self.dataset_id, self.collection_id)) is None:
+            if run_query(
+                    '''SELECT 1 FROM timbuctoo_jobs
+                    WHERE dataset_id = %s
+                    AND collection_id = %s
+                    AND "limit" = %s''',
+                    (self.dataset_id, self.collection_id, limit)) is None:
                 run_query("""
                 INSERT INTO timbuctoo_jobs
                 (dataset_id, collection_id, "limit", requested_at)
