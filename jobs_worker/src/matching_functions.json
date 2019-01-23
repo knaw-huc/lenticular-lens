@@ -3,6 +3,10 @@
     "sql_template": "{source} = {target}",
     "similarity": 100
   },
+  ">": {
+    "sql_template": "{source} > {target}",
+    "similarity": "{source} - {target}"
+  },
   "DISTANCE_IS_BETWEEN": {
     "sql_template": "{source} IS NOT NULL AND {target} IS NOT NULL AND {source} - {target} BETWEEN %1 AND %2",
     "similarity": "{source} - {target}"

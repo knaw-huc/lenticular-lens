@@ -11,6 +11,9 @@ class Match:
 
         self.__data = data
 
+        if 'targets' not in self.__data:
+            self.__data['conditions']['items'].insert(0, {'matching_field': '__uri', 'method': '>', 'similarity': None})
+
     @property
     def conditions(self):
         return Conditions(self.__data['conditions'])

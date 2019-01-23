@@ -33,7 +33,9 @@ class Conditions:
     class MatchingFunction:
         def __init__(self, function_obj):
             self.raw_field_name = function_obj['matching_field']
-            self.field_name = hash_string(self.raw_field_name)
+            self.field_name =\
+                self.raw_field_name[2::] if self.raw_field_name.startswith('__')\
+                else hash_string(self.raw_field_name)
 
             if isinstance(function_obj['method'], str):
                 self.function_name = function_obj['method']
@@ -46,12 +48,14 @@ class Conditions:
             matching_functions = get_json_from_file('matching_functions.json')
             if self.function_name in matching_functions:
                 self.function_info = matching_functions[self.function_name]
+                if 'similarity' in function_obj:
+                    self.function_info['similarity'] = function_obj['similarity']
             else:
                 raise NameError('Matching function %s is not defined' % self.function_name)
 
         @property
         def similarity_sql(self):
-            if 'similarity' not in self.function_info:
+            if 'similarity' not in self.function_info or not self.function_info['similarity']:
                 return None
 
             template = self.function_info['similarity']
