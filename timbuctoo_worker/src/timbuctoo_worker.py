@@ -18,6 +18,7 @@ if __name__ == '__main__':
 
                     while not job:
                         with conn.cursor(cursor_factory=psycopg2_extras.DictCursor) as cur:
+                            cur.execute("LOCK TABLE timbuctoo_jobs IN ACCESS EXCLUSIVE MODE;")
                             cur.execute("""
                                 SELECT *
                                 FROM timbuctoo_jobs
@@ -27,18 +28,20 @@ if __name__ == '__main__':
                                 LIMIT 1;""")
 
                             job = cur.fetchone()
-                            conn.commit()
 
                             if not job:
+                                conn.commit()
                                 time.sleep(2)
 
                     print('Job %s started.' % job['id'])
 
                     process_start_time = str(datetime.datetime.now())
-                    run_query(
-                        "UPDATE timbuctoo_jobs SET processing_at = %s WHERE id = %s",
-                        (process_start_time, job['id'])
-                    )
+                    with conn.cursor(cursor_factory=psycopg2_extras.DictCursor) as cur:
+                        cur.execute(
+                            "UPDATE timbuctoo_jobs SET processing_at = %s WHERE id = %s",
+                            (process_start_time, job['id'])
+                        )
+                    conn.commit()
 
                     collection = DatasetsConfig().dataset(job['dataset_id']).collection(job['collection_id'])
                     collection.create_cached_view(job['limit'], False)

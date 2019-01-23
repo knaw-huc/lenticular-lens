@@ -15,26 +15,20 @@ if __name__ == '__main__':
     while True:
         jobs = []
         n1 = 0
-        last_checked_downloading = None
         try:
             with db_conn() as conn:
                 while True:
                     print('\rLooking for new job...', end='')
 
                     while len(jobs) < 1:
-                        if not last_checked_downloading or time.time() - last_checked_downloading > 60:
-                            include_downloading = "OR status = 'Downloading'"
-                            last_checked_downloading = time.time()
-                        else:
-                            include_downloading = ''
 
                         with conn.cursor(cursor_factory=psycopg2_extras.DictCursor) as cur:
                             sql_string = """
                                 SELECT *
                                 FROM reconciliation_jobs
                                 WHERE status = 'Requested'
-                                %s
-                                ORDER BY requested_at""" % include_downloading
+                                OR status = 'Downloading'
+                                ORDER BY requested_at"""
 
                             cur.execute(sql_string)
 
@@ -46,10 +40,23 @@ if __name__ == '__main__':
 
                     found_new_requests = False
                     for job in jobs:
-                        print('\rJob %s started.' % job['job_id'], end='')
+                        # Lock, check, update, commit
+                        with conn.cursor(cursor_factory=psycopg2_extras.DictCursor) as cur:
+                            cur.execute("LOCK TABLE reconciliation_jobs IN ACCESS EXCLUSIVE MODE;")
+                            cur.execute("SELECT status FROM reconciliation_jobs WHERE job_id = %s", (job['job_id'],))
+                            if cur.fetchone()['status'] not in ['Requested', 'Downloading']:
+                                continue
 
-                        process_start_time = str(datetime.datetime.now())
-                        update_job_data(job['job_id'], {'status': 'Processing', 'processing_at': process_start_time})
+                            print('\rJob %s started.' % job['job_id'], end='')
+                            process_start_time = str(datetime.datetime.now())
+                            cur.execute(
+                                """UPDATE reconciliation_jobs
+                                SET status = 'Processing', processing_at = %s
+                                WHERE job_id = %s""",
+                                (process_start_time, job['job_id'])
+                            )
+
+                        conn.commit()
 
                         with open('./rdf/%s_output.nq.gz' % job['job_id'], 'wb') as output_file:
                             with subprocess.Popen(['python', '/app/run_json.py', '-r', job['resources_filename'], '-m', job['mappings_filename']],
@@ -68,6 +75,8 @@ if __name__ == '__main__':
                             print('\rJob %s failed.' % job['job_id'])
                             update_job_data(job['job_id'], {'status': 'Failed'})
 
+                    if not found_new_requests:
+                        time.sleep(2)
                     jobs = []
 
         except (psycopg2.InterfaceError, psycopg2.OperationalError):
