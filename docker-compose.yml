@@ -47,6 +47,19 @@ services:
       - output:/output
     working_dir: /output
 
+  status_monitor:
+    build: status_monitor
+    command: python /app/status_monitor.py
+    depends_on:
+      - postgres
+      - web_server
+    environment:
+      - DATABASE_CONFIG={"host":"postgres","database":"postgres","user":"postgres","password":"postgres"}
+    volumes:
+      - ./common:/common
+      - output:/output
+    working_dir: /output
+
 volumes:
   pgdata:
   common:
