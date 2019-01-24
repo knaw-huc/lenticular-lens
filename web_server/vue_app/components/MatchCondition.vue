@@ -18,7 +18,7 @@
             <div v-if="Array.isArray(condition.method[method_object.name])" class="row">
                 <div v-for="(item, index) in condition.method[method_object.name]" class="col">
                     <div v-if="typeof item === 'number'" class="form-group">
-                        <input class="form-control" type="number" v-model.number="condition.method[method_object.name][index]">
+                        <input class="form-control" type="number" step="any" v-model.number="condition.method[method_object.name][index]">
                     </div>
 
                     <div v-if="item.type === 'matching_label'" class="form-group">
@@ -50,6 +50,20 @@
                     {
                         'label': '=',
                         'object': '=',
+                    },
+                    {
+                        'label': 'Trigram distance',
+                        'object': {
+                            'name': 'TRIGRAM_DISTANCE',
+                            'value': {
+                                'type': [],
+                                'listItems': {
+                                    'type': 0.30,
+                                    'minValue': 0,
+                                    'maxValue': 1,
+                                },
+                            },
+                        },
                     },
                     {
                         'label': 'Distance is between',
@@ -92,7 +106,7 @@
                     this.condition.method = {};
                     this.condition.method[this.method_object.name] = JSON.parse(JSON.stringify(this.method_object.value.type));
                     if (this.method_object.value.listItems) {
-                        for (let i = 0; i < this.method_object.value.listItems.minItems; i++) {
+                        for (let i = 0; i < (this.method_object.value.listItems.minItems | 1); i++) {
                             this.condition.method[this.method_object.name].push(this.method_object.value.listItems.type);
                         }
                     }
