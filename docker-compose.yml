@@ -13,7 +13,7 @@ services:
 
   jobs_worker:
     build: jobs_worker
-    command: ["python", "/app/jobs_worker.py"]
+    command: python /app/jobs_worker.py
     depends_on:
       - postgres
     environment:
