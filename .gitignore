@@ -1,3 +1,4 @@
 pgdata
 venv
 node_modules
+.env
