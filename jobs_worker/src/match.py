@@ -23,6 +23,24 @@ class Match:
         return self.conditions.conditions_sql
 
     @property
+    def index_sql(self):
+        index_sqls = []
+        for template in self.conditions.index_templates:
+            resources = self.targets if len(self.targets) > 0 else self.sources
+            for resource in resources:
+                resource_field_name = template['field_name'][2::]\
+                    if template['field_name'].startswith('__')\
+                    else resource['matching_fields'][template['field_name']].hash
+
+                template_sql = psycopg_sql.SQL(template['template']).format(
+                    target=psycopg_sql.Identifier(resource_field_name))
+
+                index_sqls.append(psycopg_sql.SQL('CREATE INDEX ON {} USING {};').format(
+                    psycopg_sql.Identifier(hash_string(resource['resource'])), template_sql))
+
+        return psycopg_sql.SQL('\n').join(index_sqls)
+
+    @property
     def materialize(self):
         return 'materialize' not in self.meta or self.meta['materialize'] is True
 

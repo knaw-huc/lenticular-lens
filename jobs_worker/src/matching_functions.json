@@ -1,15 +1,18 @@
 {
   "=": {
     "sql_template": "{source} = {target}",
-    "similarity": 100
+    "similarity": 100,
+    "index_using": "btree({target})"
   },
   ">": {
     "sql_template": "{source} > {target}",
-    "similarity": "{source} - {target}"
+    "similarity": "{source} - {target}",
+    "index_using": "btree({target})"
   },
   "TRIGRAM_DISTANCE": {
     "sql_template": "{source} % {target}",
-    "similarity": "similarity({source}, {target})"
+    "similarity": "similarity({source}, {target})",
+    "index_using": "gin({target} gin_trgm_ops)"
   },
   "DISTANCE_IS_BETWEEN": {
     "sql_template": "{source} IS NOT NULL AND {target} IS NOT NULL AND {source} - {target} BETWEEN %1 AND %2",

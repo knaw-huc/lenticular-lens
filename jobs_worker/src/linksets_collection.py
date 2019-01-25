@@ -112,8 +112,8 @@ class LinksetsCollection:
 
         schema_name_sql = sql.Identifier('job_' + self.job_id)
         composed = sql.Composed([
-            sql.SQL('CREATE SCHEMA IF NOT EXISTS {};').format(schema_name_sql),
-            sql.SQL('SET SEARCH_PATH TO "$user", {}, public;').format(schema_name_sql),
+            sql.SQL('CREATE SCHEMA IF NOT EXISTS {};\n').format(schema_name_sql),
+            sql.SQL('SET SEARCH_PATH TO "$user", {}, public;\n').format(schema_name_sql),
             composed,
         ])
         conn = db_conn()
@@ -233,6 +233,8 @@ CREATE MATERIALIZED VIEW {view_name} AS""").format(view_name=sql.Identifier(matc
 SELECT * FROM {view_name};
 """
                                                ).format(view_name=sql.Identifier(match.name)))
+
+        match_sql = match.index_sql + match_sql
 
         return match_sql
 

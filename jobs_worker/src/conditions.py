@@ -30,6 +30,16 @@ class Conditions:
 
         return self.MatchingFunction(condition).sql
 
+    @property
+    def index_templates(self):
+        return self.r_index_templates(self.__data)
+
+    def r_index_templates(self, condition):
+        if 'type' in condition:
+            return [self.r_index_templates(item) for item in condition['items'] if item]
+
+        return self.MatchingFunction(condition).index_template
+
     class MatchingFunction:
         def __init__(self, function_obj):
             self.raw_field_name = function_obj['matching_field']
@@ -52,6 +62,16 @@ class Conditions:
                     self.function_info['similarity'] = function_obj['similarity']
             else:
                 raise NameError('Matching function %s is not defined' % self.function_name)
+
+        @property
+        def index_template(self):
+            if 'index_using' not in self.function_info:
+                return None
+
+            return {
+                'template': self.function_info['index_using'],
+                'field_name': self.raw_field_name
+            }
 
         @property
         def similarity_sql(self):
