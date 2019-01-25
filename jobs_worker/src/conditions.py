@@ -68,9 +68,16 @@ class Conditions:
             if 'index_using' not in self.function_info:
                 return None
 
+            before_index = self.function_info.get('before_index', None)
+            if before_index:
+                for index, parameter in enumerate(self.parameters):
+                    before_index = re.sub('%%%i__hash' % (index + 1), hash_string(str(parameter)), before_index)
+                    before_index = re.sub('%%%i' % (index + 1), str(parameter), before_index)
+
             return {
                 'template': self.function_info['index_using'],
-                'field_name': self.raw_field_name
+                'field_name': self.raw_field_name,
+                'before_index': before_index,
             }
 
         @property

@@ -12,6 +12,7 @@
   "TRIGRAM_DISTANCE": {
     "sql_template": "{source} % {target}",
     "similarity": "similarity({source}, {target})",
+    "before_index": "SELECT set_config('pg_trgm.similarity_threshold', '%1', true);",
     "index_using": "gin({target} gin_trgm_ops)"
   },
   "DISTANCE_IS_BETWEEN": {

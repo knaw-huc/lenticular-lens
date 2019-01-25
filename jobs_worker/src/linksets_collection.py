@@ -130,7 +130,7 @@ class LinksetsCollection:
             affected_count = 0
             for statement in sql_string.split(';'):
                 if re.search(r'\S', statement):
-                    if re.match(r'^\s*SELECT', statement):
+                    if re.match(r'^\s*SELECT', statement) and not re.search(r'set_config\(', statement):
                         named_cur.execute(statement)
                         for record in named_cur:
                             if self.return_limit > 0:

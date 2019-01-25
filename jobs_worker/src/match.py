@@ -26,6 +26,9 @@ class Match:
     def index_sql(self):
         index_sqls = []
         for template in self.conditions.index_templates:
+            if 'before_index' in template and template['before_index']:
+                index_sqls.append(psycopg_sql.SQL(template['before_index']))
+
             resources = self.targets if len(self.targets) > 0 else self.sources
             for resource in resources:
                 resource_field_name = template['field_name'][2::]\
