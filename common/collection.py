@@ -29,11 +29,13 @@ class Collection:
         if queue:
             self.view_queued = True
 
-            if run_query(
+            limit_operator = '=' if limit else 'IS'
+
+            if run_query(psycopg2_sql.SQL(
                     '''SELECT 1 FROM timbuctoo_jobs
                     WHERE dataset_id = %s
                     AND collection_id = %s
-                    AND "limit" = %s''',
+                    AND "limit" {} %s''').format(psycopg2_sql.SQL(limit_operator)),
                     (self.dataset_id, self.collection_id, limit)) is None:
                 run_query("""
                 INSERT INTO timbuctoo_jobs
