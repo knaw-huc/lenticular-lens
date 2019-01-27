@@ -1,0 +1,17 @@
+FROM python:3.7-slim
+
+ENV PYTHONPATH /common
+ENV PYTHONUNBUFFERED 1
+
+COPY ./web_server/requirements.txt /app/requirements.txt
+RUN pip install --trusted-host pypi.python.org -r /app/requirements.txt
+
+COPY common /common
+
+RUN mkdir /output
+WORKDIR /output
+
+COPY ./web_server/src /app
+COPY ./web_server/vue_app/dist /web
+
+CMD ["python", "/app/server.py"]

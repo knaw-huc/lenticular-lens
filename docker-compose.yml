@@ -12,33 +12,32 @@ services:
       - .docker-env
 
   jobs_worker:
-    build: jobs_worker
+    build:
+      context: .
+      dockerfile: Dockerfile.jobs_worker
     image: knawhuc/postgres_reconciliation_worker:jobs_worker-latest
-    command: python /app/jobs_worker.py
     depends_on:
       - postgres
     environment:
       - DATABASE_CONFIG={"host":"postgres","database":"postgres","user":"postgres","password":"postgres"}
     volumes:
-      - ./common:/common
       - output:/output
-    working_dir: /output
 
   timbuctoo_worker:
-    build: timbuctoo_worker
+    build:
+      context: .
+      dockerfile: Dockerfile.timbuctoo_worker
     image: knawhuc/postgres_reconciliation_worker:timbuctoo_worker-latest
-    command: ["python", "/app/timbuctoo_worker.py"]
     depends_on:
       - postgres
     environment:
       - DATABASE_CONFIG={"host":"postgres","database":"postgres","user":"postgres","password":"postgres"}
-    volumes:
-      - ./common:/common
 
   web_server:
-    build: web_server
+    build:
+      context: .
+      dockerfile: Dockerfile.web_server
     image: knawhuc/postgres_reconciliation_worker:web_server-latest
-    command: ["python", "/app/server.py"]
     depends_on:
       - postgres
     environment:
@@ -46,23 +45,20 @@ services:
     ports:
       - 8000:8000
     volumes:
-      - ./common:/common
       - output:/output
-    working_dir: /output
 
   status_monitor:
-    build: status_monitor
+    build:
+      context: .
+      dockerfile: Dockerfile.status_monitor
     image: knawhuc/postgres_reconciliation_worker:status_monitor-latest
-    command: python /app/status_monitor.py
     depends_on:
       - postgres
       - web_server
     environment:
       - DATABASE_CONFIG={"host":"postgres","database":"postgres","user":"postgres","password":"postgres"}
     volumes:
-      - ./common:/common
       - output:/output
-    working_dir: /output
 
 volumes:
   pgdata:
