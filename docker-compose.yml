@@ -3,7 +3,7 @@ version: '3.7'
 services:
   postgres:
     build: postgres_timbuctoo
-    image: postgres_timbuctoo:latest
+    image: knawhuc/postgres_reconciliation_worker:postgres-latest
     ports:
       - 5432:5432
     volumes:
@@ -13,6 +13,7 @@ services:
 
   jobs_worker:
     build: jobs_worker
+    image: knawhuc/postgres_reconciliation_worker:jobs_worker-latest
     command: python /app/jobs_worker.py
     depends_on:
       - postgres
@@ -25,6 +26,7 @@ services:
 
   timbuctoo_worker:
     build: timbuctoo_worker
+    image: knawhuc/postgres_reconciliation_worker:timbuctoo_worker-latest
     command: ["python", "/app/timbuctoo_worker.py"]
     depends_on:
       - postgres
@@ -35,6 +37,7 @@ services:
 
   web_server:
     build: web_server
+    image: knawhuc/postgres_reconciliation_worker:web_server-latest
     command: ["python", "/app/server.py"]
     depends_on:
       - postgres
@@ -49,6 +52,7 @@ services:
 
   status_monitor:
     build: status_monitor
+    image: knawhuc/postgres_reconciliation_worker:status_monitor-latest
     command: python /app/status_monitor.py
     depends_on:
       - postgres
