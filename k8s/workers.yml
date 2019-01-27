@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: workers-deployment
+  labels:
+    app: workers
+  namespace: stage
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: workers
+  template:
+    metadata:
+      labels:
+        app: workers
+    spec:
+      volumes:
+        - name: outputshare
+          emptyDir: {}
+      containers:
+        - name: timworker
+          image: knawhuc/postgres_reconciliation_worker:timbuctoo_worker-latest
+          command: ["python", "/app/timbuctoo_worker.py"]
+          env:
+            - name: DATABASE_CONFIG
+              value: '{"host":"postgres","database":"postgres","user":"postgres","password":"postgres"}'
+          volumeMounts:
+            - mountPath: /output
+              name: outputshare
+        - name: jobsworker
+          image: knawhuc/postgres_reconciliation_worker:jobs_worker-latest
+          command: ["python", "/app/jobs_worker.py"]
+          env:
+            - name: DATABASE_CONFIG
+              value: '{"host":"postgres","database":"postgres","user":"postgres","password":"postgres"}'
+          volumeMounts:
+            - mountPath: /output
+              name: outputshare
+        - name: web_server
+          image: knawhuc/postgres_reconciliation_worker:web_server-latest
+          ports:
+            - containerPort: 8000
+              hostPort: 80
+          volumeMounts:
+            - mountPath: /output
+              name: outputshare
+        
