@@ -6,10 +6,24 @@ import subprocess
 from config_db import db_conn
 import pathlib
 import random
+import signal
 import time
 
 
+def teardown(signum=0, frame=None):
+    print('Worker stopped.')
+
+    if current_job:
+        update_job_data(current_job['job_id'], {'status': current_job['status']})
+
+    exit(signum)
+
+
 if __name__ == '__main__':
+    current_job = None
+
+    signal.signal(signal.SIGTERM, teardown)
+
     pathlib.Path('rdf').mkdir(exist_ok=True)
 
     while True:
@@ -40,6 +54,8 @@ if __name__ == '__main__':
 
                     found_new_requests = False
                     for job in jobs:
+                        current_job = job
+
                         # Lock, check, update, commit
                         with conn.cursor(cursor_factory=psycopg2_extras.DictCursor) as cur:
                             cur.execute("LOCK TABLE reconciliation_jobs IN ACCESS EXCLUSIVE MODE;")
@@ -72,7 +88,7 @@ if __name__ == '__main__':
                             update_job_data(job['job_id'], {'status': 'Downloading'})
                         else:
                             found_new_requests = True
-                            print('\rJob %s failed.' % job['job_id'])
+                            print('Job %s failed.' % job['job_id'])
                             update_job_data(job['job_id'], {'status': 'Failed'})
 
                     if not found_new_requests:
