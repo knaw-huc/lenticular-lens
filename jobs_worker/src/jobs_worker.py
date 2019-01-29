@@ -17,8 +17,8 @@ if __name__ == '__main__':
         n1 = 0
         try:
             with db_conn() as conn:
+                print('Looking for new job...')
                 while True:
-                    print('\rLooking for new job...', end='')
 
                     while len(jobs) < 1:
 
@@ -47,7 +47,7 @@ if __name__ == '__main__':
                             if cur.fetchone()['status'] not in ['Requested', 'Downloading']:
                                 continue
 
-                            print('\rJob %s started.' % job['job_id'], end='')
+                            print('Job %s started.' % job['job_id'])
                             process_start_time = str(datetime.datetime.now())
                             cur.execute(
                                 """UPDATE reconciliation_jobs
@@ -65,10 +65,10 @@ if __name__ == '__main__':
 
                         if converting_process.returncode == 0:
                             found_new_requests = True
-                            print('\rJob %s finished.' % job['job_id'])
+                            print('Job %s finished.' % job['job_id'])
                             update_job_data(job['job_id'], {'status': 'Finished', 'finished_at': str(datetime.datetime.now())})
                         elif converting_process.returncode == 3:
-                            print('\rJob %s downloading.' % job['job_id'])
+                            print('Job %s downloading.' % job['job_id'])
                             update_job_data(job['job_id'], {'status': 'Downloading'})
                         else:
                             found_new_requests = True
