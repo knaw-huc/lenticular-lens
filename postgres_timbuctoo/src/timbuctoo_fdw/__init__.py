@@ -180,7 +180,7 @@ class TimTable:
                     "cursor": curToken
                 })["dataSets"][self.dataset][self.list_id]
                 page += 1
-                print("Fetched page {page}, {elapsed} seconds elapsed".format(page=page, elapsed=round(timer() - start, 1)))
+                print("Fetched page {page}, {elapsed} seconds elapsed".format(page=page, elapsed=round(timer() - start, 1)), flush=True)
                 for item in query_result["items"]:
                     result = {hash_string(name.lower()): extract_value(item[name]) for name in item}
                     result['uri'] = result[hash_string('uri')]
@@ -191,7 +191,7 @@ class TimTable:
                 else:
                     curToken = query_result["nextCursor"]
             except (ConnectionError, TimeoutError):
-                print('Error. Retrying...')
+                print('Error. Retrying...', flush=True)
                 n += 1
                 sleep((2 ** n) + (random.randint(0, 1000) / 1000))
 
