@@ -4,10 +4,29 @@ import datetime
 from psycopg2 import extras as psycopg2_extras
 import psycopg2
 import random
+import signal
+import threading
 import time
 
 
+def teardown(signum=0, frame=None):
+    print('Stopping Timbuctoo worker.')
+
+    if job:
+        with db_conn() as conn:
+            with conn.cursor(cursor_factory=psycopg2_extras.DictCursor) as cur:
+                cur.execute(
+                    "UPDATE timbuctoo_jobs SET processing_at = NULL WHERE id = %s",
+                    (job['id'], )
+                )
+            conn.commit()
+
+    exit(signum)
+
+
 if __name__ == '__main__':
+    signal.signal(signal.SIGTERM, teardown)
+
     while True:
         job = None
         n1 = 0
@@ -44,7 +63,9 @@ if __name__ == '__main__':
                     conn.commit()
 
                     collection = DatasetsConfig().dataset(job['dataset_id']).collection(job['collection_id'])
-                    collection.create_cached_view(job['limit'], False)
+                    thread = threading.Thread(target=collection.create_cached_view, args=(job['limit'], False))
+                    thread.start()
+                    thread.join()
 
                     process_finish_time = str(datetime.datetime.now())
                     run_query(
