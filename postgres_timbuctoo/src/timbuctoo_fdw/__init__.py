@@ -143,7 +143,7 @@ class TimTable:
             query fetch($cursor: ID) {{
                 dataSets {{
                     {dataset} {{
-                    {list_id}(cursor: $cursor, count: 100) {{
+                    {list_id}(cursor: $cursor, count: 500) {{
                         nextCursor
                         items {{
                             {columns}
