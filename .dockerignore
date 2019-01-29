@@ -6,3 +6,4 @@ scripted_matching
 structured_matching
 node_modules
 hello-world
+postgres_timbuctoo/pgdata
