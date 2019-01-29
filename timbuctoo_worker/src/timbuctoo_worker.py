@@ -14,7 +14,7 @@ if __name__ == '__main__':
         try:
             with db_conn() as conn:
                 while True:
-                    print('\rLooking for new Timbuctoo job...', end='')
+                    print('Looking for new Timbuctoo job...')
 
                     while not job:
                         with conn.cursor(cursor_factory=psycopg2_extras.DictCursor) as cur:
