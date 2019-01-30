@@ -101,9 +101,10 @@ if __name__ == '__main__':
                 job = None
                 n1 = 0
 
-        except (psycopg2.InterfaceError, psycopg2.OperationalError):
+        except (psycopg2.InterfaceError, psycopg2.OperationalError) as e:
             n1 += 1
-            print('Database error. Waiting...')
+            print('Database error: %s' % e)
+            print('Waiting to retry...')
             time.sleep((2 ** n1) + (random.randint(0, 1000) / 1000))
             print('Retry %i...' % n1)
 
