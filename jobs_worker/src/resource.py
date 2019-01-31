@@ -10,8 +10,9 @@ class Resource:
         self.config = config
 
         collection = DatasetsConfig().dataset(self.dataset_id).collection(self.collection_id)
-        self.cached_view = collection.limit_view_name(self.limit, True) if self.limit > -1 else collection.view_name
-        self.view_queued = collection.view_queued
+        self.cached_view = collection.view_name
+        self.view_queued = collection.rows_downloaded > -1\
+                           and (self.limit < 0 or self.limit > collection.rows_downloaded)
 
     @property
     def additional_properties(self):

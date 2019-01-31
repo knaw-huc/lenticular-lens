@@ -1,7 +1,7 @@
 from config_db import db_conn, run_query, table_exists
 import datetime
 from helpers import hash_string
-from psycopg2 import sql as psycopg2_sql
+from psycopg2 import extras as psycopg2_extras, sql as psycopg2_sql
 
 
 class Collection:
@@ -9,96 +9,6 @@ class Collection:
         self.collection_id = collection_id
         self.dataset_id = dataset_id
         self.graph_columns = columns
-        self.view_queued = False
-
-    def create_foreign_table(self, name):
-        run_query(psycopg2_sql.SQL("""
-        CREATE FOREIGN TABLE IF NOT EXISTS {table_name} (
-            {columns}
-        ) SERVER timbuctoo OPTIONS (
-            dataset %(dataset_id)s,
-            collectionid %(collection_id)s
-        );
-        """)
-            .format(
-            table_name=psycopg2_sql.Identifier(name),
-            columns=self.columns_sql,
-        ), {'dataset_id': self.dataset_id, 'collection_id': self.collection_id})
-
-    def create_cached_view(self, limit=None, queue=True):
-        if queue:
-            self.view_queued = True
-
-            limit_operator = '=' if limit else 'IS'
-
-            if run_query(psycopg2_sql.SQL(
-                    '''SELECT 1 FROM timbuctoo_jobs
-                    WHERE dataset_id = %s
-                    AND collection_id = %s
-                    AND "limit" {} %s''').format(psycopg2_sql.SQL(limit_operator)),
-                    (self.dataset_id, self.collection_id, limit)) is None:
-                run_query("""
-                INSERT INTO timbuctoo_jobs
-                (dataset_id, collection_id, "limit", requested_at)
-                VALUES (%s, %s, %s, %s);
-                """, (self.dataset_id, self.collection_id, limit, str(datetime.datetime.now())))
-        else:
-            original_table = self.view_name if limit and self.has_cached_view else self.sql_name
-            limit_string = 'LIMIT %s' if limit else ''
-            if limit and self.has_cached_view:
-                limit_string = 'ORDER BY RANDOM() ' + limit_string
-
-            run_query(psycopg2_sql.SQL("""
-                    CREATE MATERIALIZED VIEW IF NOT EXISTS {limit_view_name} AS
-                    SELECT * FROM {original_view_name}
-                    %s
-                    ;
-                    """ % limit_string).format(
-                limit_view_name=psycopg2_sql.Identifier(self.limit_view_name(limit) + '_full'),
-                original_view_name=psycopg2_sql.Identifier(original_table)),
-                (limit,))
-
-            conn = db_conn()
-            cur = conn.cursor()
-            cur.execute("""
-                SELECT a.attname,
-                       pg_catalog.format_type(a.atttypid, a.atttypmod)
-                FROM pg_attribute a
-                  JOIN pg_class t on a.attrelid = t.oid
-                  JOIN pg_namespace s on t.relnamespace = s.oid
-                WHERE a.attnum > 0 
-                  AND NOT a.attisdropped
-                  AND t.relname = %s
-                  AND s.nspname = 'public'
-                ORDER BY a.attnum;
-            """, (self.limit_view_name(limit) + '_full',))
-
-            column_sqls = []
-            for column in cur:
-                column_sql = psycopg2_sql.Identifier(column[0])
-                if column[1] == 'jsonb':
-                    column_sql = psycopg2_sql.SQL('jsonb_array_elements_text({}) AS {}').format(column_sql, column_sql)
-                column_sqls.append(column_sql)
-            conn.close()
-
-            run_query(psycopg2_sql.SQL("""
-                CREATE OR REPLACE VIEW {view_name} AS
-                SELECT {columns}
-                FROM {materialized_view}
-                ;
-            """).format(
-                view_name=psycopg2_sql.Identifier(self.limit_view_name(limit)),
-                columns=psycopg2_sql.SQL(',\n').join(column_sqls),
-                materialized_view=psycopg2_sql.Identifier(self.limit_view_name(limit) + '_full'),
-            ))
-
-    def limit_view_name(self, limit, create_if_not_exists=False):
-        view_name = self.sql_name + '_limit_' + str(limit) if limit else self.get_view_name(False)
-
-        if limit and create_if_not_exists and not table_exists(view_name):
-            self.create_cached_view(limit)
-
-        return view_name
 
     @property
     def columns_sql(self):
@@ -107,6 +17,25 @@ class Collection:
                 col_name=psycopg2_sql.Identifier(column_name),
                 col_type=psycopg2_sql.Identifier(column_type),
             )
+
+        columns_sqls = []
+        for info in self.columns.values():
+            if info['name'] == 'uri':
+                columns_sqls.append(column_sql('uri', 'text'))
+
+            column_name = hash_string(info['name'])
+            column_type = 'jsonb' if info['LIST'] else 'text'
+            columns_sqls.append(column_sql(column_name, column_type))
+
+        return psycopg2_sql.SQL(',\n').join(columns_sqls)
+
+    @property
+    def expanded_columns_sql(self):
+        def column_sql(column_name, column_type):
+            sql_string = 'jsonb_array_elements_text({col_name}) as {col_name}' if column_type == 'jsonb'\
+                else '{col_name}'
+
+            return psycopg2_sql.SQL(sql_string).format(col_name=psycopg2_sql.Identifier(column_name))
 
         columns_sqls = []
         for info in self.columns.values():
@@ -164,22 +93,51 @@ class Collection:
         }
 
     @property
-    def has_cached_view(self):
-        return table_exists(self.get_view_name(False))
+    def rows_downloaded(self):
+        return self.table_data['rows_count']\
+            if self.table_data['update_finish_time'] is None or self.table_data['update_finish_time'] < self.table_data['update_start_time']\
+            else -1
 
     @property
-    def sql_name(self):
-        sql_name = hash_string(self.dataset_id + self.collection_id)
-        if not table_exists(sql_name):
-            self.create_foreign_table(sql_name)
+    def table_name(self):
+        return hash_string(self.dataset_id + self.collection_id)
 
-        return sql_name
+    @property
+    def table_data(self):
+        with db_conn() as conn:
+            with conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) as cur:
+                cur.execute("LOCK TABLE timbuctoo_tables IN ACCESS EXCLUSIVE MODE;")
+                cur.execute('SELECT * FROM timbuctoo_tables WHERE dataset_id = %s AND collection_id = %s',
+                                   (self.dataset_id, self.collection_id))
+                table_data = cur.fetchone()
 
-    def get_view_name(self, create_if_not_exists=True):
-        view_name = self.sql_name + '_cached'
-        if create_if_not_exists and not table_exists(view_name):
-            self.create_cached_view()
+            if not table_data:
+                with conn.cursor() as cur:
+                    cur.execute(psycopg2_sql.SQL('CREATE TABLE {} ({})').format(
+                        psycopg2_sql.Identifier(self.table_name),
+                        self.columns_sql,
+                    ))
+                with conn.cursor() as cur:
+                    cur.execute(psycopg2_sql.SQL('CREATE VIEW {} AS SELECT {} FROM {}').format(
+                        psycopg2_sql.Identifier(self.table_name + '_expanded'),
+                        self.expanded_columns_sql,
+                        psycopg2_sql.Identifier(self.table_name),
+                    ))
+                with conn.cursor() as cur:
+                    cur.execute(
+                        '''INSERT INTO timbuctoo_tables
+                            ("table_name", dataset_id, collection_id, create_time)
+                            VALUES (%s, %s, %s, now())''',
+                        (self.table_name, self.dataset_id, self.collection_id))
 
-        return view_name
+                conn.commit()
 
-    view_name = property(get_view_name)
+                return self.table_data
+
+        table_data['view_name'] = table_data['table_name'] + '_expanded'
+
+        return table_data
+
+    @property
+    def view_name(self):
+        return self.table_data['view_name']
