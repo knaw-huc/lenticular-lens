@@ -14,15 +14,17 @@ CREATE TABLE IF NOT EXISTS reconciliation_jobs (
   finished_at timestamp
 );
 
-CREATE TABLE IF NOT EXISTS timbuctoo_jobs (
-  id serial primary key,
+CREATE TABLE IF NOT EXISTS timbuctoo_tables (
+  table_name text primary key,
   dataset_id text not null,
   collection_id text not null,
-  "limit" int,
-  requested_at timestamp,
-  processing_at timestamp,
-  finished_at timestamp,
-  UNIQUE (dataset_id, collection_id, "limit")
+  create_time timestamp not null,
+  update_start_time timestamp,
+  next_page text,
+  rows_count int default 0 not null,
+  last_push_time timestamp,
+  update_finish_time timestamp,
+  UNIQUE (dataset_id, collection_id)
 );
 
 CREATE OR REPLACE FUNCTION public.ecartico_full_name(text) RETURNS text IMMUTABLE AS $$
