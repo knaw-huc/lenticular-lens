@@ -1,9 +1,6 @@
 CREATE EXTENSION IF NOT EXISTS fuzzystrmatch;
 CREATE EXTENSION IF NOT EXISTS plpython3u;
-CREATE EXTENSION IF NOT EXISTS multicorn;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
-
-CREATE SERVER IF NOT EXISTS timbuctoo FOREIGN DATA WRAPPER multicorn options ( wrapper 'timbuctoo_fdw.TimbuctooForeignDataWrapper' );
 
 CREATE TABLE IF NOT EXISTS reconciliation_jobs (
   job_id text primary key,
