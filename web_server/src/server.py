@@ -95,7 +95,6 @@ class S(SimpleHTTPRequestHandler):
             status_process = subprocess.run(['python', '/app/status.py'], stdout=subprocess.PIPE)
             response = str(status_process.stdout).replace('\\n', '<br>')
         else:
-            self._set_headers('text/html')
             return super().do_GET()
 
         self.wfile.write(response.encode('utf-8'))
