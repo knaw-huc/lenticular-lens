@@ -34,15 +34,24 @@ def extract_value(value):
 
 
 def fetchGraphQl(query, variables):
-    response = requests.post(graphql_uri, json={
-        "query": query,
-        "variables": variables
-    })
-    response.raise_for_status()
-    result = response.json()
-    if "errors" in result and len(result["errors"]) > 0:
-        raise RuntimeError('Graphql query returned an error: ', result["errors"])
-    return result["data"]
+    tn = 0
+    while True:
+        try:
+            response = requests.post(graphql_uri, json={
+                "query": query,
+                "variables": variables
+            }, timeout=60)
+            response.raise_for_status()
+            result = response.json()
+            if "errors" in result and len(result["errors"]) > 0:
+                raise RuntimeError('Graphql query returned an error: ', result["errors"])
+            return result["data"]
+        except requests.RequestException as e:
+            print('Error while trying to get data from Timbuctoo: ' + str(e))
+            tn += 1
+            print('Waiting to retry...')
+            time.sleep((2 ** tn) + (random.randint(0, 1000) / 1000))
+            print('Retry %i...' % tn)
 
 
 def initColumns():
@@ -154,8 +163,8 @@ if __name__ == '__main__':
                             WHERE update_start_time IS NULL
                             OR (
                                 (update_finish_time IS NULL OR update_finish_time < update_start_time)
-                                AND update_start_time < now() - interval '1 minute'
-                                AND (last_push_time IS NULL OR last_push_time < now() - interval '1 minute')
+                                AND update_start_time < now() - interval '2 minutes'
+                                AND (last_push_time IS NULL OR last_push_time < now() - interval '2 minutes')
                             )
                             ORDER BY create_time
                             LIMIT 1;""")
