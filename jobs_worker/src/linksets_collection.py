@@ -31,20 +31,11 @@ class LinksetsCollection:
             'matches': self.get_json_config(matches_filename),
         }
 
-        if not self.sql_only:
-            datetime_string = str(datetime.datetime.now())
-            # self.output_file = gzip.open('scripted_matching/output/%s_output.nq.gz' % datetime_string, 'wb')
-            self.statistics_file = open('rdf/%s_statistics.txt' % datetime_string, 'w')
-
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        if not self.sql_only:
-            # self.output_file.close()
-            self.statistics_file.close()
-            # if exc_type:
-            #     self.updateJobData({'status': 'Error1', 'mappings_form_data': '{}'})
+        pass
 
     def __del__(self):
         pass
@@ -70,14 +61,7 @@ class LinksetsCollection:
         return self.__resources
 
     def add_statistics(self, for_object, statistics):
-        if isinstance(for_object, Match):
-            self.statistics_file.write('Processing alignment mapping "%s" resulted in %i matches in %s.\n' %
-                                       (for_object.name, statistics['processed'], statistics['duration']))
-        elif isinstance(for_object, Resource):
-            self.statistics_file.write('Processing collection "%s" affected %i rows in %s.\n' %
-                                       (for_object.label, statistics['affected'], statistics['duration']))
-
-        self.statistics_file.write('')
+        pass
 
     def generate_matches(self):
         for match in self.matches:
@@ -263,7 +247,7 @@ CREATE MATERIALIZED VIEW {view_name} AS{sub_query};
 
         return sql.SQL("""
 SELECT {matching_fields}
-FROM {table_name} AS {alias}{joins}{wheres}{group_by}
+FROM {table_name} AS {alias}{joins}{wheres}{group_by}{limit}
 """
                        )\
             .format(
@@ -273,6 +257,7 @@ FROM {table_name} AS {alias}{joins}{wheres}{group_by}
                 joins=joins,
                 wheres=self.replace_sql_variables(resource.where_sql),
                 group_by=resource.group_by_sql,
+                limit=resource.limit_sql,
         )
 
     def get_json_config(self, filename=None):
