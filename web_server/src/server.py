@@ -45,7 +45,6 @@ class S(SimpleHTTPRequestHandler):
                 if len(path_parts) > 3 and path_parts[3] == 'download':
                     self.directory = '/output/rdf'
                     self.path = '%s_output.nq.gz' % job_id
-                    self.send_response(200)
                     self.send_header('Content-Disposition', 'attachment; filename=%s_output.nq.gz' % job_id)
                     return super().do_GET()
                 else:
@@ -84,7 +83,6 @@ class S(SimpleHTTPRequestHandler):
                                 break
                     else:
                         self.path = 'index.html'
-                        self._set_headers('text/html')
                         return super().do_GET()
             else:
                 self._set_headers()
