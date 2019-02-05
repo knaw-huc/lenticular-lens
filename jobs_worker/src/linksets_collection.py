@@ -100,36 +100,34 @@ class LinksetsCollection:
             sql.SQL('SET SEARCH_PATH TO "$user", {}, public;\n').format(schema_name_sql),
             composed,
         ])
-        conn = db_conn()
 
-        sql_string = composed.as_string(conn)
+        processed_count = 0
+        affected_count = 0
+        with db_conn() as conn:
+            sql_string = composed.as_string(conn)
 
-        if self.sql_only:
-            print(composed.as_string(conn))
-        else:
-            cur = conn.cursor()
-            named_cur = conn.cursor(cursor_factory=extras.DictCursor, name='cursor')
+            if self.sql_only:
+                print(sql_string)
+            else:
+                for statement in sql_string.split(';'):
+                    if re.search(r'\S', statement):
+                        if re.match(r'^\s*SELECT', statement) and not re.search(r'set_config\(', statement):
+                            with conn.cursor(cursor_factory=extras.DictCursor, name='cursor') as named_cur:
+                                named_cur.execute(statement)
+                                for record in named_cur:
+                                    if self.return_limit > 0:
+                                        self.results.append(record)
+                                        self.return_limit -= 1
 
-            processed_count = 0
-            affected_count = 0
-            for statement in sql_string.split(';'):
-                if re.search(r'\S', statement):
-                    if re.match(r'^\s*SELECT', statement) and not re.search(r'set_config\(', statement):
-                        named_cur.execute(statement)
-                        for record in named_cur:
-                            if self.return_limit > 0:
-                                self.results.append(record)
-                                self.return_limit -= 1
-
-                            print(convert_link(record))
-                            processed_count += 1
-                    else:
-                        cur.execute(statement)
-                        if cur.rowcount > 0:
-                            affected_count += cur.rowcount
-
-            conn.commit()
-            conn.close()
+                                    print(convert_link(record))
+                                    processed_count += 1
+                            conn.commit()
+                        else:
+                            with conn.cursor() as cur:
+                                cur.execute(statement)
+                                conn.commit()
+                                if cur.rowcount > 0:
+                                    affected_count += cur.rowcount
 
             return {'processed': processed_count, 'affected': affected_count,
                     'duration': str(datetime.timedelta(seconds=time.time() - query_starting_time))}

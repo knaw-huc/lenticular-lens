@@ -61,6 +61,7 @@ if __name__ == '__main__':
                             cur.execute("LOCK TABLE reconciliation_jobs IN ACCESS EXCLUSIVE MODE;")
                             cur.execute("SELECT status FROM reconciliation_jobs WHERE job_id = %s", (job['job_id'],))
                             if cur.fetchone()['status'] not in ['Requested', 'Downloading']:
+                                conn.commit()
                                 continue
 
                             print('Job %s started.' % job['job_id'])
