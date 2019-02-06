@@ -1,6 +1,6 @@
 from config_db import db_conn
 import datetime
-from http.server import HTTPServer, SimpleHTTPRequestHandler
+from http.server import HTTPServer, HTTPStatus, SimpleHTTPRequestHandler
 import json
 import psycopg2
 from psycopg2 import extras as psycopg2_extras, sql as psycopg2_sql
@@ -43,10 +43,23 @@ class S(SimpleHTTPRequestHandler):
 
             if len(path_parts) > 2 and path_parts[2] == 'result':
                 if len(path_parts) > 3 and path_parts[3] == 'download':
-                    self.directory = '/output/rdf'
+                    self.directory = '/output/rdf/'
                     self.path = '%s_output.nq.gz' % job_id
-                    self.send_header('Content-Disposition', 'attachment; filename=%s_output.nq.gz' % job_id)
-                    return super().do_GET()
+                    print(self.directory + self.path)
+                    try:
+                        f = open(self.directory + self.path, 'rb')
+                    except OSError:
+                        self.send_error(HTTPStatus.NOT_FOUND, "File not found")
+                        return None
+                    if f:
+                        try:
+                            self.send_response(HTTPStatus.OK)
+                            self.send_header('Content-Disposition', 'attachment; filename=%s' % self.path)
+                            self.end_headers()
+                            self.copyfile(f, self.wfile)
+                        finally:
+                            f.close()
+                    return True
                 else:
                     if self.headers['Accept'] == 'application/json':
                         self._set_headers()
