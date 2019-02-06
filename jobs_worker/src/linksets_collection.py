@@ -244,7 +244,7 @@ CREATE MATERIALIZED VIEW {view_name} AS{sub_query};
             joins = self.get_join_sql(resource)
 
         return sql.SQL("""
-SELECT {matching_fields}
+SELECT DISTINCT {matching_fields}
 FROM {table_name} AS {alias}{joins}{wheres}{group_by}{limit}
 """
                        )\
