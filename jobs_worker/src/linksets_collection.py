@@ -3,12 +3,16 @@ import datetime
 from config_db import db_conn
 from helpers import get_absolute_property, get_job_data, get_property_sql, hash_string, update_job_data
 import jstyleson
+import locale
 from match import Match
 from psycopg2 import extras
 from psycopg2 import sql
 import re
 from resource import Resource
+import sys
 import time
+
+locale.setlocale(locale.LC_ALL, '')
 
 
 class LinksetsCollection:
@@ -66,7 +70,10 @@ class LinksetsCollection:
     def generate_matches(self):
         for match in self.matches:
             if not self.get_option('skip', options=match.meta):
+                self.log('Generating linkset %s.' % match.name)
                 result = self.process_sql(self.generate_match_sql(match))
+                self.log('Linkset %s generated. %s links created in %s.' % (
+                    match.name, locale.format_string('%i', result['affected'], grouping=True), result['duration']))
                 if not self.sql_only:
                     self.add_statistics(match, result)
 
@@ -86,10 +93,20 @@ class LinksetsCollection:
                 for resource in resources:
                     if resource.label not in generated:
                         if resource.label in materialize:
+                            self.log('Generating collection %s.' % resource.label)
                             result = self.process_sql(self.generate_resource_sql(resource))
+                            self.log('Collection %s generated. Inserted %s records in %s' % (
+                                resource.label,
+                                locale.format_string('%i', result['affected'], grouping=True),
+                                result['duration'],
+                            ))
                             if not self.sql_only:
                                 self.add_statistics(resource, result)
                         generated.append(resource.label)
+
+    @staticmethod
+    def log(message):
+        print(message, file=sys.stderr)
 
     def process_sql(self, composed):
         query_starting_time = time.time()
@@ -113,6 +130,7 @@ class LinksetsCollection:
                     if re.search(r'\S', statement):
                         if re.match(r'^\s*SELECT', statement) and not re.search(r'set_config\(', statement):
                             with conn.cursor(cursor_factory=extras.DictCursor, name='cursor') as named_cur:
+                                self.log('Converting linkset to RDF.')
                                 named_cur.execute(statement)
                                 for record in named_cur:
                                     if self.return_limit > 0:
@@ -121,7 +139,10 @@ class LinksetsCollection:
 
                                     print(convert_link(record))
                                     processed_count += 1
+                                    if processed_count % 100000 == 0:
+                                        self.log('%s links converted.' % locale.format_string('%i', processed_count, grouping=True))
                             conn.commit()
+                            self.log('Linkset converted, %s links total.' % locale.format_string('%i', processed_count, grouping=True))
                         else:
                             with conn.cursor() as cur:
                                 cur.execute(statement)
@@ -197,7 +218,7 @@ SELECT source.uri AS source_uri,
        {fields}
 FROM ({source}) AS source
 JOIN ({target}) AS target
-  ON {conditions};
+  ON {conditions} and nextval({sequence_name}) != 0;
 """
                             )\
             .format(
@@ -205,12 +226,15 @@ JOIN ({target}) AS target
                 source=match.source_sql,
                 target=match.target_sql,
                 conditions=match.conditions_sql,
+                sequence_name=sql.Literal(match.name + '_count'),
         )
 
         if match.materialize:
             match_sql = (sql.SQL("""
 DROP MATERIALIZED VIEW IF EXISTS {view_name} CASCADE;
-CREATE MATERIALIZED VIEW {view_name} AS""").format(view_name=sql.Identifier(match.name))
+DROP SEQUENCE IF EXISTS {sequence_name} CASCADE;
+CREATE SEQUENCE {sequence_name};
+CREATE MATERIALIZED VIEW {view_name} AS""").format(view_name=sql.Identifier(match.name), sequence_name=sql.Identifier(match.name + '_count'))
                          + match_sql + sql.SQL("""
 SELECT * FROM {view_name};
 """

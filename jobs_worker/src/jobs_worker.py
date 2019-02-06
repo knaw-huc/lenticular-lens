@@ -1,13 +1,32 @@
 import datetime
+import fcntl
 from helpers import update_job_data
+import locale
 import psycopg2
-from psycopg2 import extras as psycopg2_extras
+from psycopg2 import extras as psycopg2_extras, sql as psycopg2_sql
 import subprocess
 from config_db import db_conn
+import os
 import pathlib
 import random
+import re
 import signal
 import time
+
+locale.setlocale(locale.LC_ALL, '')
+
+
+def non_block_peek(output):
+    fd = output.fileno()
+    fl = fcntl.fcntl(fd, fcntl.F_GETFL)
+    fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
+    try:
+        output_bytes = output.peek(1)
+        return output_bytes
+    except:
+        return b""
+    finally:
+        fcntl.fcntl(fd, fcntl.F_SETFL, fl)
 
 
 def teardown(signum=0, frame=None):
@@ -21,6 +40,7 @@ def teardown(signum=0, frame=None):
 
 if __name__ == '__main__':
     current_job = None
+    found_new_requests = False
 
     signal.signal(signal.SIGTERM, teardown)
 
@@ -29,9 +49,10 @@ if __name__ == '__main__':
     while True:
         jobs = []
         n1 = 0
+        if found_new_requests:
+            print('Looking for new job...')
         try:
             with db_conn() as conn:
-                print('Looking for new job...')
                 while True:
 
                     while len(jobs) < 1:
@@ -75,10 +96,34 @@ if __name__ == '__main__':
 
                         conn.commit()
 
-                        with open('./rdf/%s_output.nq.gz' % job['job_id'], 'wb') as output_file:
-                            with subprocess.Popen(['python', '/app/run_json.py', '-r', job['resources_filename'], '-m', job['mappings_filename']],
-                                                  stdout=subprocess.PIPE) as converting_process:
-                                subprocess.run(['gzip'], stdin=converting_process.stdout, stdout=output_file)
+                        with subprocess.Popen(['python', '/app/run_json.py', '-r', job['resources_filename'], '-m', job['mappings_filename']],
+                                              stdout=subprocess.PIPE, stderr=subprocess.PIPE) as converting_process:
+                            with open('./rdf/%s_output.nq.gz' % job['job_id'], 'wb') as output_file:
+                                with subprocess.Popen(['gzip'], stdin=converting_process.stdout, stdout=output_file) as gzip_process:
+                                    for converting_output in converting_process.stderr:
+                                        message = converting_output.decode('utf-8')
+                                        print(message)
+                                        update_job_data(job['job_id'], {'status': message})
+                                        if message.startswith('Generating linkset '):
+                                            view_name = re.search(r'(?<=Generating linkset ).+(?=.$)', message)[0]
+                                            next_out = None
+                                            while not next_out:
+                                                next_out = non_block_peek(converting_process.stderr)
+                                                time.sleep(1)
+                                                with db_conn() as conn1:
+                                                    with conn1.cursor() as cur:
+                                                        try:
+                                                            cur.execute(psycopg2_sql.SQL('SELECT last_value FROM {}.{}').format(
+                                                                psycopg2_sql.Identifier('job_' + job['job_id']),
+                                                                psycopg2_sql.Identifier(view_name + '_count'),
+                                                            ))
+                                                        except psycopg2.ProgrammingError:
+                                                            continue
+                                                        inserted = cur.fetchone()[0]
+                                                        conn1.commit()
+                                                inserted_message = '%s links found so far.' % locale.format_string('%i', inserted, grouping=True)
+                                                print(inserted_message)
+                                                update_job_data(job['job_id'], {'status': inserted_message})
 
                         if converting_process.returncode == 0:
                             found_new_requests = True

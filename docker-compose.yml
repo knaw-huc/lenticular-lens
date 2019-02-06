@@ -20,6 +20,9 @@ services:
       - postgres
     environment:
       - DATABASE_CONFIG={"host":"postgres","database":"postgres","user":"postgres","password":"postgres"}
+      - LC_ALL=de_DE.UTF-8
+      - LANG=en_US.UTF-8
+      - LANGUAGE=en_US.UTF-8
     volumes:
       - output:/output
 
