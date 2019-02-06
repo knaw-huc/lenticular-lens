@@ -243,12 +243,15 @@ CREATE MATERIALIZED VIEW {view_name} AS{sub_query};
         if joins is None:
             joins = self.get_join_sql(resource)
 
+        pre = sql.SQL('SELECT * FROM (') if resource.limit > -1 else sql.SQL('')
+
         return sql.SQL("""
-SELECT DISTINCT {matching_fields}
+{pre}SELECT DISTINCT {matching_fields}
 FROM {table_name} AS {alias}{joins}{wheres}{group_by}{limit}
 """
                        )\
             .format(
+                pre=pre,
                 matching_fields=matching_fields,
                 table_name=sql.Identifier(resource.cached_view),
                 alias=sql.Identifier(resource.label),
