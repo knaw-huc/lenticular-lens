@@ -66,7 +66,7 @@ class Conditions:
         @property
         def index_template(self):
             if 'index_using' not in self.function_info:
-                return None
+                return {}
 
             before_index = self.function_info.get('before_index', None)
             if before_index:
