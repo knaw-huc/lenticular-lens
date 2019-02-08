@@ -105,10 +105,8 @@
                 } else {
                     this.condition.method = {};
                     this.condition.method[this.method_object.name] = JSON.parse(JSON.stringify(this.method_object.value.type));
-                    if (this.method_object.value.listItems) {
-                        for (let i = 0; i < (this.method_object.value.listItems.minItems | 1); i++) {
-                            this.condition.method[this.method_object.name].push(this.method_object.value.listItems.type);
-                        }
+                    for (let i = 0; i < (this.method_object.value.listItems.minItems || 1); i++) {
+                        this.condition.method[this.method_object.name].push(this.method_object.value.listItems.type);
                     }
                 }
             },
