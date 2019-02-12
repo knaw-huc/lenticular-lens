@@ -247,6 +247,22 @@ if __name__ == '__main__':
                             conn.commit()
                             break
 
+                    # Check rows count
+                    with conn.cursor() as cur:
+                        cur.execute(psycopg2_sql.SQL('SELECT count(*) FROM {}').format(
+                            psycopg2_sql.Identifier(job['table_name'])
+                        ))
+                        table_rows = cur.fetchone()[0]
+                    print(table_rows, job['rows_count'], total_insert)
+                    if table_rows != job['rows_count'] + total_insert:
+                        print('ERROR: Table %s has %i rows, expected %i. Quitting job.' % (
+                            job['table_name'],
+                            table_rows,
+                            job['rows_count'] + total_insert
+                        ))
+                        conn.commit()
+                        break
+
                     columns_sql = psycopg2_sql.SQL(', ').join(
                         [psycopg2_sql.Identifier(key) for key in results[0].keys()]
                     )
@@ -262,9 +278,9 @@ if __name__ == '__main__':
                     with conn.cursor() as cur:
                         cur.execute('''
                         UPDATE timbuctoo_tables
-                        SET last_push_time = now(), next_page = %s, rows_count = rows_count + %s
+                        SET last_push_time = now(), next_page = %s, rows_count = %s
                         WHERE "table_name" = %s
-                        ''', (query_result['nextCursor'], len(results), job['table_name'])
+                        ''', (query_result['nextCursor'], table_rows + len(results), job['table_name'])
                         )
 
                     conn.commit()
