@@ -118,7 +118,7 @@ class Collection:
                         self.columns_sql,
                     ))
                 with conn.cursor() as cur:
-                    cur.execute(psycopg2_sql.SQL('CREATE VIEW {} AS SELECT {} FROM {}').format(
+                    cur.execute(psycopg2_sql.SQL('CREATE VIEW {} AS SELECT {} FROM {} ORDER BY uri').format(
                         psycopg2_sql.Identifier(self.table_name + '_expanded'),
                         self.expanded_columns_sql,
                         psycopg2_sql.Identifier(self.table_name),
