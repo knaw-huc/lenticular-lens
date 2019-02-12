@@ -15,7 +15,7 @@ class Collection:
         def column_sql(column_name, column_type):
             return psycopg2_sql.SQL('{col_name} {col_type}').format(
                 col_name=psycopg2_sql.Identifier(column_name),
-                col_type=psycopg2_sql.Identifier(column_type),
+                col_type=psycopg2_sql.SQL(column_type),
             )
 
         columns_sqls = []
