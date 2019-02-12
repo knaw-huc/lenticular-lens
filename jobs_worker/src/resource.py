@@ -66,7 +66,8 @@ class Resource:
 
     @property
     def limit_sql(self):
-        return psycopg2_sql.SQL(') AS x\nORDER BY RANDOM()\nLIMIT %i' % self.limit) if self.limit > -1 else psycopg2_sql.SQL('')
+        random = '\nORDER BY RANDOM()' if self.__data.get('random', True) else ''
+        return psycopg2_sql.SQL(') AS x%s\nLIMIT %i' % (random, self.limit)) if self.limit > -1 else psycopg2_sql.SQL('')
 
     def r_get_filter_sql(self, filter_obj):
         if filter_obj['type'] in ['AND', 'OR']:
