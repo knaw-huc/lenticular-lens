@@ -59,7 +59,7 @@
                 Request received at: {{ job_data.requested_at }}
             </div>
             <div>
-                Status: {{ job_data.status }}
+                Status: <pre>{{ job_data.status }}</pre>
             </div>
             <div v-if="job_data.processing_at">
                 Processing started at: {{ job_data.processing_at }}
