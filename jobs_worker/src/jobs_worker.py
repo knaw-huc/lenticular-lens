@@ -46,6 +46,7 @@ if __name__ == '__main__':
 
     pathlib.Path('rdf').mkdir(exist_ok=True)
 
+    print('Looking for new job...')
     while True:
         jobs = []
         n1 = 0
@@ -100,9 +101,11 @@ if __name__ == '__main__':
                                               stdout=subprocess.PIPE, stderr=subprocess.PIPE) as converting_process:
                             with open('./rdf/%s_output.nq.gz' % job['job_id'], 'wb') as output_file:
                                 with subprocess.Popen(['gzip'], stdin=converting_process.stdout, stdout=output_file) as gzip_process:
+                                    messages_log = ''
                                     for converting_output in converting_process.stderr:
                                         message = converting_output.decode('utf-8')
                                         print(message)
+                                        messages_log += message + '\n'
                                         update_job_data(job['job_id'], {'status': message})
                                         if message.startswith('Generating linkset '):
                                             view_name = re.search(r'(?<=Generating linkset ).+(?=.$)', message)[0]
@@ -135,7 +138,7 @@ if __name__ == '__main__':
                         else:
                             found_new_requests = True
                             print('Job %s failed.' % job['job_id'])
-                            update_job_data(job['job_id'], {'status': 'Failed'})
+                            update_job_data(job['job_id'], {'status': messages_log})
 
                     if not found_new_requests:
                         time.sleep(2)
