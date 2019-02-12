@@ -21,7 +21,7 @@ class Collection:
         columns_sqls = []
         for info in self.columns.values():
             if info['name'] == 'uri':
-                columns_sqls.append(column_sql('uri', 'text'))
+                columns_sqls.append(column_sql('uri', 'text primary key'))
 
             column_name = hash_string(info['name'])
             column_type = 'jsonb' if info['LIST'] else 'text'
