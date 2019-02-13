@@ -1,19 +1,29 @@
 import json
 import random
 import requests
+import sys
 from time import monotonic as timer, sleep
 
 
 def fetchGraphQl(graphql_uri, query, variables=None):
-    response = requests.post(graphql_uri, json={
-        "query": query,
-        "variables": variables
-    })
-    response.raise_for_status()
-    result = response.json()
-    if "errors" in result and len(result["errors"]) > 0:
-        raise RuntimeError('Graphql query returned an error: ', result["errors"])
-    return result["data"]
+    n = 0
+    while True:
+        try:
+            response = requests.post(graphql_uri, json={
+                "query": query,
+                "variables": variables
+            }, timeout=60)
+            response.raise_for_status()
+            result = response.json()
+            if "errors" in result and len(result["errors"]) > 0:
+                raise RuntimeError('Graphql query returned an error: ', result["errors"])
+            return result["data"]
+        except requests.exceptions.ConnectionError as e:
+            n += 1
+            print(e, file=sys.stderr)
+            print('Waiting to retry...', file=sys.stderr)
+            sleep((2 ** n) + (random.randint(0, 1000) / 1000))
+            print('Retry %i' % n, file=sys.stderr)
 
 
 class Timbuctoo:
