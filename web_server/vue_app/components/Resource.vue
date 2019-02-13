@@ -94,6 +94,10 @@
         <label class="col-auto" :for="'resource_' + resource.id + '_limit'">Only use a sample of this amount of records (-1 is no limit):</label>
         <input type="number" min="-1" v-model.number="resource.limit" class="form-control col-1" :id="'resource_' + resource.id + '_limit'">
     </div>
+    <div class="form-check">
+        <input v-model.boolean="resource.random" type="checkbox" class="form-check-input" :id="'resource_' + resource.id + '_random'">
+        <label class="form-check-label" :for="'resource_' + resource.id + '_random'">Randomize order</label>
+    </div>
 </div>
 </template>
 
