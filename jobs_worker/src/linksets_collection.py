@@ -271,7 +271,8 @@ CREATE MATERIALIZED VIEW {view_name} AS{sub_query};
 
         return sql.SQL("""
 {pre}SELECT DISTINCT {matching_fields}
-FROM {table_name} AS {alias}{joins}{wheres}{group_by}{limit}
+FROM {table_name} AS {alias}{joins}{wheres}{group_by}
+ORDER BY uri{limit}
 """
                        )\
             .format(
