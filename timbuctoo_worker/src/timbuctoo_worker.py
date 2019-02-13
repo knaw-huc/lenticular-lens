@@ -13,10 +13,15 @@ def format_query(column_info):
     if column_info["URI"]:
         return ""
     else:
-        if column_info["VALUE"]:
+        if column_info["VALUE"] and column_info["LINK"]:
             result = "... on Value { value type } "
-        if column_info["LINK"]:
             result += "... on Entity { uri }"  # It might be both a value and a link
+        else:
+            if column_info["VALUE"]:
+                result = "value type "
+            if column_info["LINK"]:
+                result += "uri"
+
     if column_info["LIST"]:
         result = "items { " + result + " }"
     return "{ " + result + " }"
@@ -253,7 +258,6 @@ if __name__ == '__main__':
                             psycopg2_sql.Identifier(job['table_name'])
                         ))
                         table_rows = cur.fetchone()[0]
-                    print(table_rows, job['rows_count'], total_insert)
                     if table_rows != job['rows_count'] + total_insert:
                         print('ERROR: Table %s has %i rows, expected %i. Quitting job.' % (
                             job['table_name'],
