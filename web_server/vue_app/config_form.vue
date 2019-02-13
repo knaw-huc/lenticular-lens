@@ -50,7 +50,7 @@
 
         <div class="form-group mt-5">
             <button type="submit" class="form-control btn btn-success w-25">
-                Generate JSON
+                Run Job
             </button>
         </div>
 
