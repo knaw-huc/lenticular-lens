@@ -20,7 +20,10 @@ def format_query(column_info):
             if column_info["VALUE"]:
                 result = "value type "
             if column_info["LINK"]:
-                result += "uri"
+                if column_info["LIST"]:
+                    result += "... on Entity { uri }"
+                else:
+                    result += "uri"
 
     if column_info["LIST"]:
         result = "items { " + result + " }"
