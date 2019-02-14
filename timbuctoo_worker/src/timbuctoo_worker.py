@@ -57,6 +57,10 @@ def fetchGraphQl(query, variables):
             print('Waiting to retry...')
             time.sleep((2 ** tn) + (random.randint(0, 1000) / 1000))
             print('Retry %i...' % tn)
+        except RuntimeError as e:
+            print(e)
+            print('Query was: %s' % query)
+            return False
 
 
 def initColumns():
@@ -217,7 +221,12 @@ if __name__ == '__main__':
                         count=rows_per_page,
                         columns="\n".join([introspection_data['columns'][name]["name"] + format_query(introspection_data['columns'][name]) for name in introspection_data['columns']]))
 
-                    query_result = fetchGraphQl(query, {'cursor': cursor})["dataSets"][job['dataset_id']][introspection_data['collection_id']]
+                    query_result = fetchGraphQl(query, {'cursor': cursor})
+                    if not query_result:
+                        job = None
+                        break
+
+                    query_result = query_result["dataSets"][job['dataset_id']][introspection_data['collection_id']]
 
                     results = []
                     for item in query_result["items"]:
