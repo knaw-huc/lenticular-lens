@@ -1,6 +1,6 @@
 FROM python:3.7-slim
 
-ENV PYTHONPATH /app
+ENV PYTHONPATH /app:/common
 ENV PYTHONUNBUFFERED 1
 
 COPY ./flask_server/requirements.txt /app/requirements.txt
