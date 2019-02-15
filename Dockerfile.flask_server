@@ -11,9 +11,6 @@ COPY common /common
 RUN mkdir /output
 WORKDIR /output
 
-#COPY ./flask_server/src /app
-COPY ./flask_server/vue_app/dist /web
-
 ENV FLASK_APP=/app/server.py
 
 CMD ["gunicorn", "-b", ":5000", "server:app"]
