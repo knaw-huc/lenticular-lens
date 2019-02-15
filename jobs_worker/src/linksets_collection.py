@@ -88,7 +88,7 @@ class LinksetsCollection:
                 if resource_label not in materialize:
                     materialize.append(resource_label)
 
-        if not self.has_queued_view:
+        if not self.has_queued_view or self.sql_only:
             while len(generated) < len(resources):
                 for resource in resources:
                     if resource.label not in generated:
@@ -362,7 +362,7 @@ ORDER BY uri{limit}
         # try:
         if not self.matches_only:
             self.generate_resources()
-        if not self.resources_only and not self.has_queued_view:
+        if not self.resources_only and (not self.has_queued_view or self.sql_only):
             self.generate_matches()
         # except:
             # self.updateJobData({'status': 'Error'})
