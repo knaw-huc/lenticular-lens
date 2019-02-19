@@ -1,6 +1,6 @@
 from datasets_config import DatasetsConfig
 import datetime
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_file
 from helpers import get_job_data, hash_string, update_job_data
 import json
 app = Flask(__name__)
@@ -54,3 +54,8 @@ def handle_json_upload():
 @app.route('/job/<job_id>')
 def job_data(job_id):
     return jsonify(get_job_data(job_id))
+
+
+@app.route('/job/<job_id>/result/download')
+def download_rdf(job_id):
+    return send_file('/output/rdf/%s_output.nq.gz' % job_id, as_attachment=True)
