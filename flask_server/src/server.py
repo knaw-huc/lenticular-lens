@@ -48,4 +48,4 @@ def handle_json_upload():
 
         update_job_data(job_id, job_data)
 
-        return jsonify(response)
+    return jsonify(response)
