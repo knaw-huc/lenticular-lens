@@ -101,7 +101,7 @@ if __name__ == '__main__':
                 conn.commit()
 
             print('Posting job.')
-            response = requests.post("http://web_server:8000/handle_json_upload/", data=json.dumps(config_data))
+            response = requests.post("http://web_server:8000/handle_json_upload/", json=config_data)
             job_id = response.json()['job_id']
             print('Job posted. Got job_id %s.' % job_id)
 
@@ -111,7 +111,7 @@ if __name__ == '__main__':
                     if job['status'] in ['Failed', 'Finished']:
                         print('Job already done, renaming and reposting.')
                         rename(reconciliation_jobs=[job['job_id']])
-                        response = requests.post("http://web_server:8000/handle_json_upload/", data=json.dumps(config_data))
+                        response = requests.post("http://web_server:8000/handle_json_upload/", json=config_data)
                         job_id = response.json()['job_id']
                     else:
                         print('Job already requested, using that one.')
