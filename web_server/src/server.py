@@ -1,161 +1,116 @@
+from datasets_config import DatasetsConfig
 from config_db import db_conn
 import datetime
-from http.server import HTTPServer, HTTPStatus, SimpleHTTPRequestHandler
+from flask import Flask, jsonify, request, send_file
+from helpers import get_job_data, hash_string, update_job_data
 import json
 import psycopg2
 from psycopg2 import extras as psycopg2_extras, sql as psycopg2_sql
-from helpers import get_job_data, hash_string, update_job_data
-from datasets_config import DatasetsConfig
-import pathlib
 import random
 import subprocess
 import time
+app = Flask(__name__)
 
 
-class S(SimpleHTTPRequestHandler):
-    def _set_headers(self, content_type=None):
-        if not content_type:
-            content_type = 'application/json'
+@app.route('/')
+def index():
+    return app.send_static_file('index.html')
 
-        self.send_response(200)
-        self.send_header('Content-type', content_type)
-        self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
-        self.send_header('Pragma', 'no-cache')
-        self.send_header('Expires', '0')
 
-        if content_type == 'application/json':
-            self.end_headers()
+@app.route('/datasets')
+def datasets():
+    return jsonify(DatasetsConfig().data)
 
-    def do_GET(self):
-        self.directory = '/web'
 
-        path = self.path.strip('/')
+@app.route('/handle_json_upload/', methods=['POST'])
+def handle_json_upload():
+    resources_json = json.dumps(request.json['resources'], indent=2)
+    resources_filename = './generated_json/resources_' + hash_string(resources_json) + '.json'
 
-        if path == '':
-            self.path = 'index.html'
+    matches_json = json.dumps(request.json['matches'], indent=2)
+    matches_filename = './generated_json/matches_' + hash_string(matches_json) + '.json'
 
-        if path == 'datasets':
-            self._set_headers()
-            response = json.dumps(DatasetsConfig().data)
-        elif path.startswith('job/'):
-            path_parts = path.split('/')
-            job_id = path_parts[1]
+    job_id = hash_string(resources_filename.split('/')[-1] + matches_filename.split('/')[-1])
 
-            if len(path_parts) > 2 and path_parts[2] == 'result':
-                if len(path_parts) > 3 and path_parts[3] == 'download':
-                    self.directory = '/output/rdf/'
-                    self.path = '%s_output.nq.gz' % job_id
-                    print(self.directory + self.path)
-                    try:
-                        f = open(self.directory + self.path, 'rb')
-                    except OSError:
-                        self.send_error(HTTPStatus.NOT_FOUND, "File not found")
-                        return None
-                    if f:
-                        try:
-                            self.send_response(HTTPStatus.OK)
-                            self.send_header('Content-Disposition', 'attachment; filename=%s' % self.path)
-                            self.end_headers()
-                            self.copyfile(f, self.wfile)
-                        finally:
-                            f.close()
-                    return True
-                else:
-                    if self.headers['Accept'] == 'application/json':
-                        self._set_headers()
-                        mapping_name = path_parts[3]
-                        view_name = hash_string(mapping_name)
-                        count_query = psycopg2_sql.SQL('SELECT count(*) FROM {schema}.{view}').format(
-                            schema=psycopg2_sql.Identifier('job_' + job_id),
-                            view=psycopg2_sql.Identifier(view_name)
-                        )
-                        rows_query = psycopg2_sql.SQL('SELECT * FROM {schema}.{view} LIMIT 100').format(
-                            schema=psycopg2_sql.Identifier('job_' + job_id),
-                            view=psycopg2_sql.Identifier(view_name)
-                        )
+    response = {'job_id': job_id}
 
-                        n = 0
-                        while True:
-                            try:
-                                with db_conn() as conn:
-                                    with conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) as cur:
-                                        cur.execute(count_query)
-                                        rows_count = cur.fetchone()['count']
-                                        cur.execute(rows_query)
-                                        rows = cur.fetchall()
-                                        response = json.dumps({
-                                            'mapping_name': mapping_name,
-                                            'rows': rows,
-                                            'rows_total': rows_count,
-                                        })
-                            except (psycopg2.InterfaceError, psycopg2.OperationalError):
-                                n += 1
-                                print('Database error. Retry %i' % n)
-                                time.sleep((2 ** n) + (random.randint(0, 1000) / 1000))
-                            else:
-                                break
-                    else:
-                        self.path = 'index.html'
-                        return super().do_GET()
+    if not get_job_data(job_id):
+        json_file = open(resources_filename, 'w')
+        json_file.write(resources_json)
+        json_file.close()
+
+        json_file = open(matches_filename, 'w')
+        json_file.write(matches_json)
+        json_file.close()
+
+        job_data = {
+            'resources_form_data': json.dumps(request.json['resources_original']),
+            'mappings_form_data': json.dumps(request.json['matches_original']),
+            'resources_filename': resources_filename,
+            'mappings_filename': matches_filename,
+            'status': 'Requested',
+            'requested_at': datetime.datetime.now(),
+        }
+
+        update_job_data(job_id, job_data)
+
+    return jsonify(response)
+
+
+@app.route('/job/<job_id>')
+def job_data(job_id):
+    return jsonify(get_job_data(job_id))
+
+
+@app.route('/job/<job_id>/result/download')
+def download_rdf(job_id):
+    return send_file('/output/rdf/%s_output.nq.gz' % job_id, as_attachment=True)
+
+
+@app.route('/job/<job_id>/result/<mapping_name>')
+def result(job_id, mapping_name):
+    if request.accept_mimetypes.accept_html:
+        response = index()
+    else:
+        view_name = hash_string(mapping_name)
+        count_query = psycopg2_sql.SQL('SELECT count(*) FROM {schema}.{view}').format(
+            schema=psycopg2_sql.Identifier('job_' + job_id),
+            view=psycopg2_sql.Identifier(view_name)
+        )
+        rows_query = psycopg2_sql.SQL('SELECT * FROM {schema}.{view} LIMIT 100').format(
+            schema=psycopg2_sql.Identifier('job_' + job_id),
+            view=psycopg2_sql.Identifier(view_name)
+        )
+
+        n = 0
+        while True:
+            try:
+                with db_conn() as conn:
+                    with conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) as cur:
+                        cur.execute(count_query)
+                        rows_count = cur.fetchone()['count']
+                        cur.execute(rows_query)
+                        rows = cur.fetchall()
+                        response_data = {
+                            'mapping_name': mapping_name,
+                            'rows': rows,
+                            'rows_total': rows_count,
+                        }
+            except (psycopg2.InterfaceError, psycopg2.OperationalError):
+                n += 1
+                print('Database error. Retry %i' % n)
+                time.sleep((2 ** n) + (random.randint(0, 1000) / 1000))
             else:
-                self._set_headers()
-                response = json.dumps(get_job_data(job_id), default=str)
-        elif path == 'status':
-            self._set_headers('text/html')
-            self.end_headers()
-            status_process = subprocess.run(['python', '/app/status.py'], stdout=subprocess.PIPE)
-            response = str(status_process.stdout).replace('\\n', '<br>')
-        else:
-            return super().do_GET()
+                break
 
-        self.wfile.write(response.encode('utf-8'))
+        response = jsonify(response_data)
 
-    def do_POST(self):
-        path = self.path.strip('/')
-
-        if path == 'handle_json_upload':
-            content_length = int(self.headers['Content-Length'])
-            post_data = json.loads(self.rfile.read(content_length))
-
-            resources_json = json.dumps(post_data['resources'], indent=2)
-            resources_filename = './generated_json/resources_' + hash_string(resources_json) + '.json'
-
-            matches_json = json.dumps(post_data['matches'], indent=2)
-            matches_filename = './generated_json/matches_' + hash_string(matches_json) + '.json'
-
-            job_id = hash_string(resources_filename.split('/')[-1] + matches_filename.split('/')[-1])
-
-            response = json.dumps({'job_id': job_id})
-
-            if not get_job_data(job_id):
-                json_file = open(resources_filename, 'w')
-                json_file.write(resources_json)
-                json_file.close()
-
-                json_file = open(matches_filename, 'w')
-                json_file.write(matches_json)
-                json_file.close()
-
-                job_data = {
-                    'resources_form_data': json.dumps(post_data['resources_original']),
-                    'mappings_form_data': json.dumps(post_data['matches_original']),
-                    'resources_filename': resources_filename,
-                    'mappings_filename': matches_filename,
-                    'status': 'Requested',
-                    'requested_at': str(datetime.datetime.now()),
-                }
-
-                update_job_data(job_id, job_data)
-        else:
-            self.send_response(404)
-            self.end_headers()
-            return
-
-        self._set_headers()
-        self.wfile.write(response.encode('utf-8'))
+    # We need to disable caching because the AJAX request is done to the same URL
+    response.cache_control.no_cache = True
+    return response
 
 
-if __name__ == '__main__':
-    pathlib.Path('generated_json').mkdir(exist_ok=True)
-
-    HTTPServer(('', 8000), S).serve_forever()
+@app.route('/server_status/')
+def status():
+    status_process = subprocess.run(['python', '/app/status.py'], capture_output=True, text=True)
+    return status_process.stdout.replace('\n', '<br>')
