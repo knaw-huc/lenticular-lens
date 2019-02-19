@@ -49,3 +49,8 @@ def handle_json_upload():
         update_job_data(job_id, job_data)
 
     return jsonify(response)
+
+
+@app.route('/job/<job_id>')
+def job_data(job_id):
+    return jsonify(get_job_data(job_id))
