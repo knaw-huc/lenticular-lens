@@ -7,6 +7,7 @@ import json
 import psycopg2
 from psycopg2 import extras as psycopg2_extras, sql as psycopg2_sql
 import random
+import subprocess
 import time
 app = Flask(__name__)
 
@@ -107,3 +108,9 @@ def result(job_id, mapping_name):
     # We need to disable caching because the AJAX request is done to the same URL
     response.cache_control.no_cache = True
     return response
+
+
+@app.route('/server_status/')
+def status():
+    status_process = subprocess.run(['python', '/app/status.py'], capture_output=True, text=True)
+    return status_process.stdout.replace('\n', '<br>')
