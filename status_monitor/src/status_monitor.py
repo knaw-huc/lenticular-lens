@@ -13,7 +13,12 @@ import time
 import urllib.request
 
 
-renamed = to_delete = {
+renamed = {
+    'files': [],
+    'timbuctoo_tables': [],
+    'reconciliation_jobs': [],
+}
+to_delete = {
     'files': [],
     'timbuctoo_tables': [],
     'reconciliation_jobs': [],
@@ -31,41 +36,75 @@ def execute_rename_pg_dataset(pg_type, old_name, new_name):
     conn.commit()
 
 
-def rename(timbuctoo_tables=None, reconciliation_jobs=None):
+def rename(timbuctoo_tables=None, reconciliation_jobs=None, revert=False):
     def rename_pg_dataset(pg_type, old_name):
         new_name = old_name + '_backup'
-        execute_rename_pg_dataset(pg_type, old_name, new_name)
+        if revert:
+            new_name, old_name = old_name, new_name
+        try:
+            execute_rename_pg_dataset(pg_type, old_name, new_name)
+        except psycopg2.ProgrammingError as e:
+            if revert:
+                print('Error found when renaming %s to %s: %s' % (old_name, new_name, e))
+            else:
+                raise
 
     if timbuctoo_tables:
         for table_name in timbuctoo_tables:
             rename_pg_dataset('VIEW', table_name + '_expanded')
             rename_pg_dataset('TABLE', table_name)
-            print('Renaming timbuctoo table entry "%s" to "%s"' % (table_name, table_name + '_backup'))
-            with conn.cursor() as cur:
-                cur.execute('''
+
+            table_name_entry_old = table_name
+            table_name_entry_new = table_name + '_backup'
+            if revert:
+                table_name_entry_old, table_name_entry_new = table_name_entry_new, table_name_entry_old
+
+            print('Renaming timbuctoo table entry "%s" to "%s"' % (table_name_entry_old, table_name_entry_new))
+
+            rename_sql = '''
                 UPDATE timbuctoo_tables
-                    SET "table_name" = "table_name" || '_backup',
-                        "collection_id" = "collection_id" || '_backup'
+                    SET "table_name" = %s,
+                        "collection_id" = {}
                 WHERE "table_name" = %s
-                ''',
-                            (table_name, ))
-        renamed['timbuctoo_tables'] += timbuctoo_tables
+                '''.format('left("collection_id", -7)' if revert else '"collection_id" || \'_backup\'')
+            with conn.cursor() as cur:
+                cur.execute(rename_sql, (table_name_entry_new, table_name_entry_old))
+
+            conn.commit()
+
+        if not revert:
+            renamed['timbuctoo_tables'] += timbuctoo_tables
 
     if reconciliation_jobs:
         for job_id in reconciliation_jobs:
-            print('Renaming reconciliation job "%s" to "%s"' % (job_id, job_id + '_backup'))
-            with conn.cursor() as cur:
-                cur.execute('UPDATE reconciliation_jobs SET job_id = %s WHERE job_id = %s',
-                            (job_id + '_backup', job_id))
-            print('Renaming schema "job_%s" to "job_%s"' % (job_id, job_id + '_backup'))
-            with conn.cursor() as cur:
-                cur.execute(psycopg2_sql.SQL('ALTER SCHEMA {} RENAME TO {}').format(
-                    psycopg2_sql.Identifier('job_' + job_id),
-                    psycopg2_sql.Identifier('job_' + job_id + '_backup')
-                ))
-        renamed['reconciliation_jobs'] += reconciliation_jobs
+            old_job_id = job_id
+            new_job_id = job_id + '_backup'
+            if revert:
+                old_job_id, new_job_id = new_job_id, old_job_id
 
-    conn.commit()
+            print('Renaming reconciliation job "%s" to "%s"' % (old_job_id, new_job_id))
+            with conn.cursor() as cur:
+                cur.execute('DELETE FROM reconciliation_jobs WHERE job_id = %s', (new_job_id,))
+                cur.execute('UPDATE reconciliation_jobs SET job_id = %s WHERE job_id = %s',
+                            (new_job_id, old_job_id))
+            print('Renaming schema "job_%s" to "job_%s"' % (old_job_id, new_job_id))
+            try:
+                with conn.cursor() as cur:
+                    cur.execute(psycopg2_sql.SQL('DROP SCHEMA IF EXISTS {} CASCADE').format(
+                        psycopg2_sql.Identifier('job_' + new_job_id)
+                    ))
+                    cur.execute(psycopg2_sql.SQL('ALTER SCHEMA {} RENAME TO {}').format(
+                        psycopg2_sql.Identifier('job_' + old_job_id),
+                        psycopg2_sql.Identifier('job_' + new_job_id)
+                    ))
+            except psycopg2.ProgrammingError as e:
+                print(e)
+                conn.rollback()
+            else:
+                conn.commit()
+
+        if not revert:
+            renamed['reconciliation_jobs'] += reconciliation_jobs
 
 
 if __name__ == '__main__':
@@ -77,7 +116,6 @@ if __name__ == '__main__':
     while True:
         print('Starting test cycle at %s...' % str(datetime.datetime.now()))
 
-        renamed_views = []
         job_id = None
         try:
             print('Preparing collections...')
@@ -108,7 +146,7 @@ if __name__ == '__main__':
             job_done = False
             for job in recon_jobs:
                 if job['job_id'] == job_id:
-                    if job['status'] in ['Failed', 'Finished']:
+                    if job['status'].lower().startswith(('failed', 'finished')):
                         print('Job already done, renaming and reposting.')
                         rename(reconciliation_jobs=[job['job_id']])
                         response = requests.post("http://web_server:8000/handle_json_upload/", json=config_data)
@@ -160,7 +198,7 @@ if __name__ == '__main__':
             print('Reverting changes...')
             try:
                 with db_conn() as conn:
-                    for table_name in to_delete['timbuctoo_tables']:
+                    for table_name in to_delete['timbuctoo_tables'] + renamed['timbuctoo_tables']:
                         print('Dropping view %s.' % (table_name + '_expanded'))
                         with conn.cursor() as cur:
                             cur.execute(psycopg2_sql.SQL('DROP VIEW IF EXISTS {} CASCADE').format(psycopg2_sql.Identifier(table_name + '_expanded')))
@@ -175,22 +213,9 @@ if __name__ == '__main__':
 
                     conn.commit()
 
-                    for table_name in renamed['timbuctoo_tables']:
-                        execute_rename_pg_dataset('TABLE', table_name + '_backup', table_name)
-                        execute_rename_pg_dataset('VIEW', table_name + '_expanded_backup', table_name + '_expanded')
+                    rename(timbuctoo_tables=renamed['timbuctoo_tables'], revert=True)
 
-                        print('Renaming timbuctoo table entry "%s" to "%s"' % (table_name + '_backup', table_name))
-                        with conn.cursor() as cur:
-                            cur.execute('''
-                            UPDATE timbuctoo_tables
-                            SET "table_name" = %s,
-                                "collection_id" = left("collection_id", -7)
-                            WHERE "table_name" = %s
-                                ''',
-                                        (table_name, table_name + '_backup'))
-                    conn.commit()
-
-                    for job_id in to_delete['reconciliation_jobs']:
+                    for job_id in to_delete['reconciliation_jobs'] + renamed['reconciliation_jobs']:
                         print('Deleting reconciliation job %s.' % job_id)
                         with conn.cursor() as cur:
                             cur.execute('DELETE FROM reconciliation_jobs WHERE job_id = %s', (job_id,))
@@ -204,21 +229,10 @@ if __name__ == '__main__':
                     conn.commit()
 
                     # Always try dropping when renamed?
-                    for job_id in renamed['reconciliation_jobs']:
-                        print('Renaming reconciliation job "%s" to "%s"' % (job_id + '_backup', job_id))
-                        with conn.cursor() as cur:
-                            cur.execute('UPDATE reconciliation_jobs SET job_id = %s WHERE job_id = %s',
-                                        (job_id, job_id + '_backup'))
+                    rename(reconciliation_jobs=renamed['reconciliation_jobs'], revert=True)
 
-                        print('Renaming schema "job_%s" to "job_%s"' % (job_id + '_backup', job_id))
-                        with conn.cursor() as cur:
-                            cur.execute(psycopg2_sql.SQL('ALTER SCHEMA {} RENAME TO {}').format(
-                                psycopg2_sql.Identifier('job_' + job_id + '_backup'),
-                                psycopg2_sql.Identifier('job_' + job_id)
-                            ))
-                    conn.commit()
-            except psycopg2.ProgrammingError:
-                pass
+            except psycopg2.ProgrammingError as e:
+                print(e)
 
             for filename in to_delete['files']:
                 print('Deleting file "%s"...' % filename)

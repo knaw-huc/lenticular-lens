@@ -138,7 +138,7 @@ if __name__ == '__main__':
                         else:
                             found_new_requests = True
                             print('Job %s failed.' % job['job_id'])
-                            update_job_data(job['job_id'], {'status': messages_log})
+                            update_job_data(job['job_id'], {'status': 'FAILED: ' + messages_log})
 
                     if not found_new_requests:
                         time.sleep(2)
