@@ -1,3 +1,5 @@
+import './app.scss'
+
 import Vue from 'vue'
 import App from './config_form.vue'
 import ResultsComponent from './components/Results'

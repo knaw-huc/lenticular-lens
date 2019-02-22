@@ -89,9 +89,6 @@
 </template>
 
 <script>
-    import 'bootstrap/dist/css/bootstrap.css'
-    import 'bootstrap-vue/dist/bootstrap-vue.css'
-
     import Resource from './components/Resource'
     import Match from './components/Match'
 

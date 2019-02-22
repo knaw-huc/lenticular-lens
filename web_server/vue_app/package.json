@@ -15,7 +15,10 @@
     "vue-octicon": "^2.1.1",
     "vue-template-compiler": "^2.5.21"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "node-sass": "^4.11.0",
+    "sass-loader": "^7.1.0"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
