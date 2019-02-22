@@ -1,3 +1,5 @@
+import './app.scss'
+
 import Vue from 'vue'
 import App from './config_form.vue'
 import ResultsComponent from './components/Results'
@@ -8,6 +10,10 @@ import 'vue-octicon/icons'
 import MatchingFieldValueComponent from "./components/MatchingFieldValue"
 
 Vue.component('octicon', Octicon);
+
+import VueFormWizard from 'vue-form-wizard'
+import 'vue-form-wizard/dist/vue-form-wizard.min.css'
+Vue.use(VueFormWizard);
 
 Vue.component('matching-field-value-component', MatchingFieldValueComponent);
 
