@@ -74,10 +74,19 @@
         </tab-content>
 
         <template v-if="props.activeTabIndex === 1" slot="next" scope="props">
-            <wizard-button :style="props.fillButtonStyle"
-                            :disabled="props.loading"
-                            @click.native="job_data ? '' : submitForm()">
-              {{job_data ? 'Results' : 'Run Job'}}
+            <wizard-button
+                    v-if="job_data"
+                    :style="props.fillButtonStyle"
+                    :disabled="props.loading">
+                Results
+            </wizard-button>
+            &nbsp;
+            <wizard-button
+                    v-if="has_changes"
+                    :style="props.fillButtonStyle"
+                    :disabled="props.loading"
+                    @click.native="submitForm">
+                Run Job
              </wizard-button>
         </template>
         <template slot="finish" scope="props" style="display: none">&#8203;</template>
@@ -95,6 +104,13 @@
         components: {
             'resource-component': Resource,
             'match-component': Match,
+        },
+        computed: {
+            has_changes() {
+                return !Boolean(this.job_data)
+                    || JSON.stringify(this.resources) !== JSON.stringify(this.job_data['resources_form_data'])
+                    || JSON.stringify(this.matches) !== JSON.stringify(this.job_data['mappings_form_data'])
+            },
         },
         data() {
             return {
