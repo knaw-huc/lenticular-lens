@@ -1,7 +1,13 @@
 <template>
 <div class="container" id="app">
-    <h1>Golden Agents Reconciliation</h1>
     <form @submit.prevent="submitForm" action="" method="post">
+    <form-wizard
+        title="Lenticular Lenses II"
+        subtitle="Reconcile data for Golden Agents"
+        color="#efc501"
+        shape="square"
+    >
+        <tab-content title="Resources">
         <div id="resources">
             <h2>Collections</h2>
             <resource-component
@@ -19,7 +25,9 @@
                 </button>
             </div>
         </div>
+        </tab-content>
 
+        <tab-content title="Matches">
         <div id="matches" class="mt-5">
             <h2>Alignment Mappings</h2>
 
@@ -39,6 +47,7 @@
                 </button>
             </div>
         </div>
+        </tab-content>
 
         <div class="form-group row align-items-end">
             <label class="col-auto" for="limit-all">Only use a sample of this amount of records for all resources (-1 is no limit):</label>
@@ -74,6 +83,7 @@
                 </div>
             </div>
         </div>
+    </form-wizard>
     </form>
 </div>
 </template>
