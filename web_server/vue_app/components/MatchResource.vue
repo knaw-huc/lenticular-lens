@@ -25,7 +25,7 @@
             ></matching-field-component>
 
             <div class="form-group">
-                <button type="button" class="btn btn-success w-25 form-control" @click="addMatchingField($event)">+ Add Matching Field</button>
+                <button type="button" class="btn btn-primary w-25 form-control" @click="addMatchingField($event)">+ Add Matching Field</button>
             </div>
         </div>
     </div>

@@ -29,7 +29,7 @@
         </div>
 
         <div class="form-group">
-            <button type="button" class="btn btn-success w-25 form-control" @click="addTransformer($event)">+ Add Transformer</button>
+            <button type="button" class="btn btn-primary w-25 form-control" @click="addTransformer($event)">+ Add Transformer</button>
         </div>
     </div>
 </template>

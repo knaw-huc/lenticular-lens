@@ -78,7 +78,7 @@
                     @remove="matching_field_value[function_name].splice(index, 1)"
             ></matching-field-value-component>
         </div>
-        <button type="button" v-if="sql_value_functions[function_name].array_items" class="btn btn-success w-25" @click="addValueItem()">+ Add Value</button>
+        <button type="button" v-if="sql_value_functions[function_name].array_items" class="btn btn-primary w-25" @click="addValueItem()">+ Add Value</button>
     </div>
 </template>
 

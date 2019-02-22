@@ -20,7 +20,7 @@
             ></resource-component>
 
             <div class="form-group mt-4">
-                <button v-on:click="addResource" type="button" class="add-resource form-control btn btn-success w-25">
+                <button v-on:click="addResource" type="button" class="add-resource form-control btn btn-primary w-25">
                     + Add Collection
                 </button>
             </div>
@@ -42,7 +42,7 @@
             ></match-component>
 
             <div class="form-group mt-4">
-                <button v-on:click="addMatch" type="button" class="form-control btn btn-success w-25">
+                <button v-on:click="addMatch" type="button" class="form-control btn btn-primary w-25">
                     + Add Alignment Mapping
                 </button>
             </div>

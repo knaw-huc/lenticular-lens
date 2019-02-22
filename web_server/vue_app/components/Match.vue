@@ -24,7 +24,7 @@
             ></match-resource-component>
 
             <div class="form-group">
-                <button type="button" class="btn btn-success w-25 form-control" @click="addMatchResource(match.sources, sources_count, $event)">+ Add source</button>
+                <button type="button" class="btn btn-primary w-25 form-control" @click="addMatchResource(match.sources, sources_count, $event)">+ Add source</button>
             </div>
         </div>
     </div>
@@ -42,7 +42,7 @@
             ></match-resource-component>
 
             <div class="form-group">
-                <button type="button" class="btn btn-success w-25 form-control" @click="addMatchResource(match.targets, targets_count, $event)">+ Add target</button>
+                <button type="button" class="btn btn-primary w-25 form-control" @click="addMatchResource(match.targets, targets_count, $event)">+ Add target</button>
             </div>
         </div>
     </div>
@@ -66,7 +66,7 @@
             ></match-condition>
 
             <div class="form-group">
-                <button type="button" class="btn btn-success w-25 form-control" @click="addCondition($event)">+ Add condition</button>
+                <button type="button" class="btn btn-primary w-25 form-control" @click="addCondition($event)">+ Add condition</button>
             </div>
         </div>
     </div>

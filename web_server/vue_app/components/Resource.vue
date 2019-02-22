@@ -68,7 +68,7 @@
         </div>
 
         <div class="form-group">
-            <button v-on:click="addRelation($event)" type="button" class="form-control btn btn-success w-25">+ Add relation</button>
+            <button v-on:click="addRelation($event)" type="button" class="form-control btn btn-primary w-25">+ Add relation</button>
         </div>
     </div>
 
@@ -85,7 +85,7 @@
     <filter-condition-component v-if="resource.filter.type != ''" :datasets="datasets" :condition="condition" :index="index" :resource_id="resource.id" :resources="resources" v-for="(condition, index) in resource.filter.conditions" :key="index"></filter-condition-component>
 
     <div class="form-group">
-        <button v-if="resource.filter.type != ''" v-on:click="addFilterCondition($event)" type="button" class="add-resource form-control btn btn-success w-25">+ Add condition</button>
+        <button v-if="resource.filter.type != ''" v-on:click="addFilterCondition($event)" type="button" class="add-resource form-control btn btn-primary w-25">+ Add condition</button>
     </div>
 
     <h3>Sample</h3>
