@@ -6,8 +6,9 @@
         subtitle="Reconcile data for Golden Agents"
         color="#efc501"
         shape="square"
+        ref="formWizard"
     >
-        <tab-content title="Resources">
+        <tab-content title="Collections">
         <div id="resources">
             <h2>Collections</h2>
             <resource-component
@@ -27,7 +28,7 @@
         </div>
         </tab-content>
 
-        <tab-content title="Matches">
+        <tab-content title="Mappings">
         <div id="matches" class="mt-5">
             <h2>Alignment Mappings</h2>
 
@@ -49,20 +50,7 @@
         </div>
         </tab-content>
 
-        <div class="form-group row align-items-end">
-            <label class="col-auto" for="limit-all">Only use a sample of this amount of records for all resources (-1 is no limit):</label>
-            <input type="number" min="-1" v-model.number="limit_all" class="form-control col-1" id="limit-all">
-            <div class="col-1">
-                <button type="button" class="form-control btn btn-info" @click="applyLimitAll">Apply</button>
-            </div>
-        </div>
-
-        <div class="form-group mt-5">
-            <button type="submit" class="form-control btn btn-success w-25">
-                Run Job
-            </button>
-        </div>
-
+        <tab-content title="Results">
         <div v-if="job_data">
             <div>
                 Request received at: {{ job_data.requested_at }}
@@ -83,6 +71,16 @@
                 </div>
             </div>
         </div>
+        </tab-content>
+
+        <template v-if="props.activeTabIndex === 1" slot="next" scope="props">
+            <wizard-button :style="props.fillButtonStyle"
+                            :disabled="props.loading"
+                            @click.native="job_data ? '' : submitForm()">
+              {{job_data ? 'Results' : 'Run Job'}}
+             </wizard-button>
+        </template>
+        <template slot="finish" scope="props" style="display: none">&#8203;</template>
     </form-wizard>
     </form>
 </div>
@@ -168,6 +166,9 @@
                         let urlParams = new URLSearchParams(window.location.search);
                         let job_id = urlParams.get('job_id');
                         if (job_id) {
+                            this.$refs.formWizard.activateAll();
+                            this.$refs.formWizard.changeTab(0, 2);
+
                             this.job_id = job_id;
                             this.getJobData();
                         } else {
