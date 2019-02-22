@@ -9,6 +9,10 @@ import MatchingFieldValueComponent from "./components/MatchingFieldValue"
 
 Vue.component('octicon', Octicon);
 
+import VueFormWizard from 'vue-form-wizard'
+import 'vue-form-wizard/dist/vue-form-wizard.min.css'
+Vue.use(VueFormWizard);
+
 Vue.component('matching-field-value-component', MatchingFieldValueComponent);
 
 new Vue({
