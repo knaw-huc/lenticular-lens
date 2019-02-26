@@ -1,4 +1,15 @@
 <template>
+<div>
+    <div class="row">
+        <div class="form-group col-2">
+            <select class="form-control" v-model="condition.property[0]">
+                <option v-for="collection in resources" :key="collection.id" :value="collection.id">{{ collection.label }}
+                </option>
+            </select>
+        </div>
+    </div>
+    <property-component v-model="condition.property[1]" :properties="properties"/>
+
     <div class="row">
         <div class="form-group col-3">
             <select class="form-control" v-model="condition.type">
@@ -7,19 +18,6 @@
                 <option value="!=">!=</option>
                 <option value="date_is_within">date is within</option>
                 <option value="appearances">appearances of property</option>
-            </select>
-        </div>
-
-        <div class="form-group col-2">
-            <select class="form-control" v-model="condition.property[0]">
-                <option v-for="collection in resources" :key="collection.id" :value="collection.id">{{ collection.label }}</option>
-            </select>
-        </div>
-
-        <div class="form-group col-3">
-            <select class="form-control" v-model="condition.property[1]" v-if="condition.property[0] > 0">
-                <option value="" selected disabled>Choose a property</option>
-                <option v-for="(property_info, property) in properties" :value="property">{{ property }}</option>
             </select>
         </div>
 
@@ -40,10 +38,14 @@
             <button v-on:click="resource.filter.conditions.splice(index, 1)" type="button" class="ml-3 btn btn-danger"><octicon name="trashcan"></octicon></button>
         </div>
     </div>
+</div>
 </template>
 
 <script>
+    import PropertyComponent from "./PropertyComponent";
+
     export default {
+        components: {PropertyComponent},
         computed: {
             properties() {
                 let resource = this.get_resource_by_id(this.condition.property[0]);
