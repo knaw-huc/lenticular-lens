@@ -177,6 +177,24 @@
                 fetch('/datasets')
                     .then((response) => response.json())
                     .then((data) => {
+                        // Make internal references for referenced collections
+                        Object.keys(data).forEach(dataset_name => {
+                            let dataset = data[dataset_name];
+                            Object.keys(dataset).forEach(collection_name => {
+                                let collection = dataset[collection_name];
+                                Object.keys(collection).forEach(property_name => {
+                                    let property = collection[property_name];
+                                    if (typeof property['referencedCollections'] !== 'undefined') {
+                                        let referenced_collections = property['referencedCollections'];
+                                        property['referencedCollections'] = {};
+                                        referenced_collections.forEach(ref_collection_name => {
+                                            property['referencedCollections'][ref_collection_name] = dataset[ref_collection_name];
+                                        });
+                                    }
+                                });
+                            });
+                        });
+
                         vue.datasets = data;
 
                         let urlParams = new URLSearchParams(window.location.search);
