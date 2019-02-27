@@ -1,14 +1,8 @@
 <template>
 <div>
     <div class="row">
-        <div class="form-group col-2">
-            <select class="form-control" v-model="condition.property[0]">
-                <option v-for="collection in resources" :key="collection.id" :value="collection.id">{{ collection.label }}
-                </option>
-            </select>
-        </div>
+        <property-component v-model="condition.property" :resources="resources" :value_index.number="0"/>
     </div>
-    <property-component v-model="condition.property[1]" :properties="properties"/>
 
     <div class="row">
         <div class="form-group col-3">
