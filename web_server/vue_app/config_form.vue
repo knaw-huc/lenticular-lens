@@ -198,7 +198,7 @@
                     fetch('/job/' + this.job_id)
                         .then((response) => response.json())
                         .then((data) => {
-                            this.job_data = data;
+                            this.job_data = JSON.parse(JSON.stringify(data));
                             if (this.resources_count < 1) {
                                 this.resources = data.resources_form_data;
                                 this.resources_count = this.resources.length;
