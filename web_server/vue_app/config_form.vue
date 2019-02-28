@@ -249,8 +249,12 @@
                 let vue = this;
                 function get_value(value_object, target_object) {
                     if (value_object.value_type === 'property') {
+                        let resource_label = value_object.property[0] === parseInt(value_object.property[0]) ?
+                            vue.getResourceById(value_object.property[0]).label :
+                            value_object.property[0];
+
                         target_object.property = [
-                            vue.getResourceById(value_object.property[0]).label.toLowerCase(),
+                            resource_label.toLowerCase(),
                             value_object.property[1].toLowerCase()
                         ];
                     }
@@ -294,48 +298,62 @@
 
                     return target_object;
                 }
+                
+                function create_references_for_property(property) {
+                    // Check if reference
+                    if (property.length > 2) {
+                        let base_referenced_resource = vue.getResourceById(property[0], resources_copy);
+
+                        // Add resource
+                        let referenced_resource = {
+                            "collection_id": property[2],
+                            "dataset_id": base_referenced_resource.dataset_id
+                        };
+                        referenced_resource['label'] = vue.$utilities.md5(JSON.stringify(referenced_resource));
+
+                        let resource_exists = false;
+                        resources_copy.forEach(rc => {
+                            if (rc.label === referenced_resource.label) {
+                                resource_exists = true;
+                                return false
+                            }
+                        });
+                        if (!resource_exists) {
+                            resources_copy.push(referenced_resource);
+                        }
+
+                        // Add relation
+                        base_referenced_resource.related.push({
+                            "resource": referenced_resource.label,
+                            "local_property": property[1],
+                            "remote_property": "uri"
+                        });
+
+                        // Replace property
+                        return [referenced_resource.label, property[3].toLowerCase()]
+                    }
+
+                    return property
+                }
 
                 let resources = [];
                 let resources_copy = JSON.parse(JSON.stringify(this.resources));
+                let matches_copy = JSON.parse(JSON.stringify(this.matches));
 
                 // Check for references
                 resources_copy.forEach(resource_copy => {
                     if (resource_copy.filter.type) {
                         resource_copy.filter.conditions.forEach(condition => {
-                            // Check if reference
-                            if (condition.property.length > 2) {
-                                let base_referenced_resource = this.getResourceById(condition.property[0], resources_copy);
-
-                                // Add resource
-                                let referenced_resource = {
-                                    "collection_id": condition.property[2],
-                                    "dataset_id": base_referenced_resource.dataset_id
-                                };
-                                referenced_resource['label'] = this.$utilities.md5(JSON.stringify(referenced_resource));
-
-                                let resource_exists = false;
-                                resources_copy.forEach(rc => {
-                                    if (rc.label === referenced_resource.label) {
-                                        resource_exists = true;
-                                        return false
-                                    }
-                                });
-                                if (!resource_exists) {
-                                    resources_copy.push(referenced_resource);
-                                }
-
-                                // Add relation
-                                base_referenced_resource.related.push({
-                                    "resource": referenced_resource.label,
-                                    "local_property": condition.property[1],
-                                    "remote_property": "uri"
-                                });
-
-                                // Replace condition property
-                                condition.property = [referenced_resource.label, condition.property[3].toLowerCase()]
-                            }
+                            condition.property = create_references_for_property(condition.property)
                         });
                     }
+                });
+                matches_copy.forEach(match_copy => {
+                    match_copy.sources.concat(match_copy.targets).forEach(match_copy_resource => {
+                        match_copy_resource.matching_fields.forEach(matching_field => {
+                            matching_field.value.property = create_references_for_property(matching_field.value.property)
+                        });
+                    });
                 });
 
                 resources_copy.forEach(resource_copy => {
@@ -377,7 +395,7 @@
                 });
 
                 let matches = [];
-                this.matches.forEach(match_original => {
+                matches_copy.forEach(match_original => {
                     let match = {
                         'label': match_original.label,
                         'sources': [],

@@ -12,19 +12,12 @@
         <div class="row">
             <div class="col-3" v-if="matching_field_value.value_type == ''"></div>
 
-            <div class="col-3" v-if="matching_field_value.value_type == 'property'">
-                <div class="form-group">
-                    <select class="form-control" v-model="matching_field_value.property[0]">
-                        <option v-for="collection in resources" :key="collection.id" :value="collection.id">{{ collection.label }}</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <select class="form-control" v-model="matching_field_value.property[1]" v-if="matching_field_value.property[0] > 0">
-                        <option value="" selected disabled>Select a property</option>
-                        <option v-for="(property_info, property) in properties" :value="property">{{ property }}</option>
-                    </select>
-                </div>
-            </div>
+            <property-component
+                    v-if="matching_field_value.value_type == 'property'"
+                    v-model="matching_field_value.property"
+                    :resources="resources"
+                    :value_index.number="0"
+            />
 
             <div class="form-group col-3" v-if="matching_field_value.value_type == 'function'">
                 <select class="form-control" v-model="matching_field_value.function_name">
@@ -84,9 +77,10 @@
 
 <script>
     import MatchingFieldBooleanComponent from "./MatchingFieldBoolean";
+    import PropertyComponent from "./PropertyComponent";
 
     export default {
-        components: {MatchingFieldBooleanComponent},
+        components: {PropertyComponent, MatchingFieldBooleanComponent},
         computed: {
             function_name() {
                 return this.matching_field_value.function_name;
