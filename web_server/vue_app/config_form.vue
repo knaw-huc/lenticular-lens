@@ -244,7 +244,7 @@
             },
             getResourceById(resource_id, resources = this.resources) {
                 for (let i = 0; i < resources.length; i++) {
-                    if (resources[i].id == resource_id)
+                    if (resources[i].id == resource_id || resources[i].label === resource_id)
                         return resources[i];
                 }
             },
@@ -252,7 +252,7 @@
                 let vue = this;
                 function get_value(value_object, target_object) {
                     if (value_object.value_type === 'property') {
-                        let resource_label = value_object.property[0] === parseInt(value_object.property[0]) ?
+                        let resource_label = value_object.property[0] == parseInt(value_object.property[0]) ?
                             vue.getResourceById(value_object.property[0]).label :
                             value_object.property[0];
 
@@ -362,7 +362,7 @@
                 resources_copy.forEach(resource_copy => {
                     if (resource_copy.filter && resource_copy.filter.type) {
                         resource_copy.filter.conditions.forEach(condition => {
-                            if (condition.property[0] === parseInt(condition.property[0])) {
+                            if (condition.property[0] == parseInt(condition.property[0])) {
                                 condition.property[0] = this.getResourceById(condition.property[0]).label;
                             }
                             condition.property[1] = condition.property[1].toLowerCase();
@@ -378,7 +378,7 @@
 
                     if (resource_copy.related) {
                         resource_copy.related.forEach(related => {
-                            if (related.resource === parseInt(related.resource)) {
+                            if (related.resource == parseInt(related.resource)) {
                                 related.resource = this.getResourceById(related.resource).label;
                             }
                             related.local_property = [related.local_property.toLowerCase()];
