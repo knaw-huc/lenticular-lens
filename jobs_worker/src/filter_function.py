@@ -19,16 +19,16 @@ class FilterFunction:
         if absolute_property[0] != parent_label and 'sql_template_remote' in self.function_info:
             self.function_info['sql_template'] = self.function_info['sql_template_remote']
             self.parameters['__relation__remote_property'] = psycopg2_sql.Identifier(
-                absolute_property[0] + '__' + parent_label + '__relation__remote_property'
+                parent_label + '__' + absolute_property[0] + '__relation__remote_property'
             )
             self.parameters['__relation__remote_property__1'] = psycopg2_sql.Identifier(
-                absolute_property[0] + '__' + parent_label + '__relation__remote_property__1'
+                parent_label + '__' + absolute_property[0] + '__relation__remote_property__1'
             )
             self.parameters['__relation__local_property'] = psycopg2_sql.Identifier(
-                absolute_property[0] + '__' + parent_label + '__relation__local_property'
+                parent_label + '__' + absolute_property[0] + '__relation__local_property'
             )
             self.parameters['__relation__local_property__1'] = psycopg2_sql.Identifier(
-                absolute_property[0] + '__' + parent_label + '__relation__local_property__1'
+                parent_label + '__' + absolute_property[0] + '__relation__local_property__1'
             )
 
         self.parameters['property'] = get_property_sql(absolute_property)
