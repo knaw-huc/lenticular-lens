@@ -279,15 +279,16 @@ if __name__ == '__main__':
                         conn.commit()
                         break
 
-                    columns_sql = psycopg2_sql.SQL(', ').join(
-                        [psycopg2_sql.Identifier(key) for key in results[0].keys()]
-                    )
-                    for result in results:
-                        with conn.cursor() as cur:
-                            cur.execute(psycopg2_sql.SQL('INSERT INTO {} ({}) VALUES %s').format(
-                                psycopg2_sql.Identifier(job['table_name']),
-                                columns_sql,
-                            ), (tuple(result.values()),))
+                    if len(results) > 0:
+                        columns_sql = psycopg2_sql.SQL(', ').join(
+                            [psycopg2_sql.Identifier(key) for key in results[0].keys()]
+                        )
+                        for result in results:
+                            with conn.cursor() as cur:
+                                cur.execute(psycopg2_sql.SQL('INSERT INTO {} ({}) VALUES %s').format(
+                                    psycopg2_sql.Identifier(job['table_name']),
+                                    columns_sql,
+                                ), (tuple(result.values()),))
 
                     total_insert += len(results)
                     print('Inserted %i new rows into table %s.' % (total_insert, job['table_name']))
