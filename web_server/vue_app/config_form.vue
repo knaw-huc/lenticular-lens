@@ -313,7 +313,16 @@
                                 };
                                 referenced_resource['label'] = this.$utilities.md5(JSON.stringify(referenced_resource));
 
-                                resources_copy.push(referenced_resource);
+                                let resource_exists = false;
+                                resources_copy.forEach(rc => {
+                                    if (rc.label === referenced_resource.label) {
+                                        resource_exists = true;
+                                        return false
+                                    }
+                                });
+                                if (!resource_exists) {
+                                    resources_copy.push(referenced_resource);
+                                }
 
                                 // Add relation
                                 base_referenced_resource.related.push({
