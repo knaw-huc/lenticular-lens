@@ -16,7 +16,7 @@ class FilterFunction:
                            if key != 'type'}
 
         absolute_property = get_absolute_property(function_obj['property'], parent_label)
-        if absolute_property[0] != parent_label:
+        if absolute_property[0] != parent_label and 'sql_template_remote' in self.function_info:
             self.function_info['sql_template'] = self.function_info['sql_template_remote']
             self.parameters['__relation__remote_property'] = psycopg2_sql.Identifier(
                 absolute_property[0] + '__' + parent_label + '__relation__remote_property'

@@ -239,10 +239,10 @@
                         return this.matches[i];
                 }
             },
-            getResourceById(resource_id) {
-                for (let i = 0; i < this.resources.length; i++) {
-                    if (this.resources[i].id == resource_id)
-                        return this.resources[i];
+            getResourceById(resource_id, resources = this.resources) {
+                for (let i = 0; i < resources.length; i++) {
+                    if (resources[i].id == resource_id)
+                        return resources[i];
                 }
             },
             submitForm() {
@@ -296,13 +296,45 @@
                 }
 
                 let resources = [];
+                let resources_copy = JSON.parse(JSON.stringify(this.resources));
 
-                this.resources.forEach(resource => {
-                    let resource_copy = JSON.parse(JSON.stringify(resource));
-
-                    if (resource_copy.filter.type != '') {
+                // Check for references
+                resources_copy.forEach(resource_copy => {
+                    if (resource_copy.filter.type) {
                         resource_copy.filter.conditions.forEach(condition => {
-                            condition.property[0] = this.getResourceById(condition.property[0]).label;
+                            // Check if reference
+                            if (condition.property.length > 2) {
+                                let base_referenced_resource = this.getResourceById(condition.property[0], resources_copy);
+
+                                // Add resource
+                                let referenced_resource = {
+                                    "collection_id": condition.property[2],
+                                    "dataset_id": base_referenced_resource.dataset_id
+                                };
+                                referenced_resource['label'] = this.$utilities.md5(JSON.stringify(referenced_resource));
+
+                                resources_copy.push(referenced_resource);
+
+                                // Add relation
+                                base_referenced_resource.related.push({
+                                    "resource": referenced_resource.label,
+                                    "local_property": condition.property[1],
+                                    "remote_property": "uri"
+                                });
+
+                                // Replace condition property
+                                condition.property = [referenced_resource.label, condition.property[3].toLowerCase()]
+                            }
+                        });
+                    }
+                });
+
+                resources_copy.forEach(resource_copy => {
+                    if (resource_copy.filter && resource_copy.filter.type) {
+                        resource_copy.filter.conditions.forEach(condition => {
+                            if (condition.property[0] === parseInt(condition.property[0])) {
+                                condition.property[0] = this.getResourceById(condition.property[0]).label;
+                            }
                             condition.property[1] = condition.property[1].toLowerCase();
                             if (typeof condition.value_type !== 'undefined') {
                                 condition[condition.value_type] = condition.value;
@@ -314,15 +346,19 @@
                         delete resource_copy.filter;
                     }
 
-                    resource_copy.related.forEach(related => {
-                        related.resource = this.getResourceById(related.resource).label;
-                        related.local_property = [related.local_property.toLowerCase()];
-                        related.remote_property = [related.remote_property.toLowerCase()];
-                        delete related.resource_index;
-                    });
+                    if (resource_copy.related) {
+                        resource_copy.related.forEach(related => {
+                            if (related.resource === parseInt(related.resource)) {
+                                related.resource = this.getResourceById(related.resource).label;
+                            }
+                            related.local_property = [related.local_property.toLowerCase()];
+                            related.remote_property = [related.remote_property.toLowerCase()];
+                            delete related.resource_index;
+                        });
 
-                    if (resource_copy.related_array) {
-                        resource_copy.related = [resource_copy.related]
+                        if (resource_copy.related_array) {
+                            resource_copy.related = [resource_copy.related]
+                        }
                     }
 
                     delete resource_copy.related_array;
