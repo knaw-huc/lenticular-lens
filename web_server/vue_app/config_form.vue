@@ -187,6 +187,9 @@
                                     if (typeof property['referencedCollections'] !== 'undefined') {
                                         let referenced_collections = property['referencedCollections'];
                                         property['referencedCollections'] = {};
+                                        referenced_collections = referenced_collections.filter(ref_collection_name => {
+                                            return ref_collection_name !== 'tim_unknown'
+                                        });
                                         referenced_collections.forEach(ref_collection_name => {
                                             property['referencedCollections'][ref_collection_name] = dataset[ref_collection_name];
                                         });
