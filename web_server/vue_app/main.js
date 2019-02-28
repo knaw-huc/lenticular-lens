@@ -11,6 +11,11 @@ import MatchingFieldValueComponent from "./components/MatchingFieldValue"
 
 Vue.component('octicon', Octicon);
 
+import md5 from 'md5'
+Vue.prototype.$utilities = {
+  md5: md5,
+};
+
 import VueFormWizard from 'vue-form-wizard'
 import 'vue-form-wizard/dist/vue-form-wizard.min.css'
 Vue.use(VueFormWizard);
