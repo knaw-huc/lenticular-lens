@@ -40,7 +40,6 @@
         },
         data() {
             return {
-                'matching_fields': [],
                 'matching_fields_count': 0,
             }
         },
@@ -71,7 +70,7 @@
             },
         },
         mounted() {
-            this.matching_fields_count = this.matching_fields.length;
+            this.matching_fields_count = this.match_resource.matching_fields.length;
         },
         props: ['match', 'match_resource', 'datasets', 'resources'],
     }
