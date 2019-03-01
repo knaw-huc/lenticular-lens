@@ -13,7 +13,10 @@ class FilterFunction:
             raise NameError('Filter function %s is not defined' % self.function_name)
 
         self.parameters = {key: psycopg2_sql.Literal(value) for key, value in function_obj.items()
-                           if key != 'type'}
+                           if key not in ['operator', 'type']}
+
+        if 'operator' in function_obj and function_obj['operator'] in ['=', '!=', '<>', '<=', '>=']:
+            self.parameters['operator'] = psycopg2_sql.SQL(function_obj['operator'])
 
         absolute_property = get_absolute_property(function_obj['property'], parent_label)
         if absolute_property[0] != parent_label and 'sql_template_remote' in self.function_info:

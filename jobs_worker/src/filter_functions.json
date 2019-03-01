@@ -4,7 +4,7 @@
   },
   "appearances": {
     "sql_template": "{property} NOT IN\n   (SELECT {property__1}\n   FROM {property__0__original_view}\n   WHERE {property__1} IS NOT NULL\n   GROUP BY {property__1}\n   HAVING count(*) > {max})",
-    "sql_template_remote": "{__relation__remote_property} IN\n   (SELECT {__relation__local_property__1}\n   FROM {property__0__original_view}\n   WHERE {property__1} NOT IN\n     (SELECT {property__1}\n     FROM {property__0__original_view}\n     WHERE {property__1} IS NOT NULL\n     GROUP BY {property__1}\n     HAVING count(*) > {max}))"
+    "sql_template_remote": "{__relation__remote_property} IN\n   (SELECT {property__0__original_view}.{__relation__remote_property__1}\n   FROM {property__0__original_view}\n   WHERE {property__0__original_view}.{property__1} IN\n     (SELECT {property__0__original_view}.{property__1}\n     FROM {property__0__original_view}\n     WHERE {property__0__original_view}.{property__1} IS NOT NULL\n     GROUP BY {property__0__original_view}.{property__1}\n     HAVING count(*) {operator} {value}))"
   },
   "!=": {
     "sql_template": "{property} != {value}"

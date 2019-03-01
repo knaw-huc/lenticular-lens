@@ -20,8 +20,10 @@
         </div>
 
         <div v-if="condition.type == 'appearances'" class="form-group col-2">
-            <select v-model="condition.value_type" class="form-control">
-                <option value="max" selected>Max.</option>
+            <select v-model="condition.operator" class="form-control">
+                <option value="<=" selected>Max.</option>
+                <option value=">=" selected>Min.</option>
+                <option value="=" selected>Exactly</option>
             </select>
         </div>
         <div v-if="condition.type == 'appearances'" class="form-group col-1">
