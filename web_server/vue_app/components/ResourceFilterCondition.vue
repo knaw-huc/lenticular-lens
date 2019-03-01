@@ -30,6 +30,11 @@
             <input class="form-control" type="number" min="0" step="1" v-model.number="condition.value">
         </div>
 
+        <div class="form-check">
+            <input v-model.boolean="condition.invert" type="checkbox" class="form-check-input" :id="'resource_' + resource_id + '_condition_' + index + '_invert'">
+            <label class="form-check-label" :for="'resource_' + resource_id + '_condition_' + index + '_invert'">Invert</label>
+        </div>
+
         <div class="form-group col-1">
             <button v-on:click="resource.filter.conditions.splice(index, 1)" type="button" class="ml-3 btn btn-danger"><octicon name="trashcan"></octicon></button>
         </div>
