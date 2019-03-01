@@ -305,6 +305,11 @@
                 function create_references_for_property(property) {
                     // Check if reference
                     if (property.length > 2) {
+                        // Don't follow reference if user selected 'Value'
+                        if (property[2] === '__value__') {
+                            return property.slice(0, 2)
+                        }
+
                         let base_referenced_resource = vue.getResourceById(property[0], resources_copy);
 
                         // Add resource

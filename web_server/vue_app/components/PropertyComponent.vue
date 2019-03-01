@@ -8,18 +8,22 @@
                         </option>
                     </template>
                     <template v-else>
+                        <option value="" disabled>Choose a referenced collection</option>
+                        <option value="__value__">Value (do not follow reference)</option>
                         <option v-for="collection in Object.keys(resources)" :key="collection" :value="collection">{{ collection }}
                         </option>
                     </template>
                 </select>
             </div>
-            ::
-            <div class="form-group col-4">
-                <select class="form-control" :value="value[value_index + 1]" @input="updateInput($event.target.value, value_index + 1)">
-                    <option value="" selected disabled>Choose a property</option>
-                    <option v-for="property_opt in Object.keys(properties)" :value="property_opt">{{ property_opt }}</option>
-                </select>
-            </div>
+            <template v-if="value[value_index] && value[value_index] !== '__value__'">
+                ::
+                <div class="form-group col-4">
+                    <select class="form-control" :value="value[value_index + 1]" @input="updateInput($event.target.value, value_index + 1)">
+                        <option value="" selected disabled>Choose a property</option>
+                        <option v-for="property_opt in Object.keys(properties)" :value="property_opt">{{ property_opt }}</option>
+                    </select>
+                </div>
+            </template>
         </div>
         <template v-if="
             value[value_index + 1]
