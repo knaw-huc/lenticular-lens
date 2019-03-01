@@ -13,21 +13,13 @@ def format_query(column_info):
     if column_info["URI"]:
         return ""
     else:
-        if column_info["VALUE"] and column_info["LINK"]:
+        if column_info["VALUE"]:
             result = "... on Value { value type } "
+        if column_info["LINK"]:
             result += "... on Entity { uri }"  # It might be both a value and a link
-        else:
-            if column_info["VALUE"]:
-                result = "value type "
-            if column_info["LINK"]:
-                if column_info["LIST"]:
-                    result += "... on Entity { uri }"
-                else:
-                    result += "uri"
-
-    if column_info["LIST"]:
-        result = "items { " + result + " }"
-    return "{ " + result + " }"
+        if column_info["LIST"]:
+            result = "items { " + result + " }"
+        return "{ " + result + " }"
 
 
 def extract_value(value):
