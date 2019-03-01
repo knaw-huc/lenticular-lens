@@ -21,7 +21,11 @@
                 </select>
             </div>
         </div>
-        <template v-if="value[value_index + 1] && properties[value[value_index + 1]]['referencedCollections'] && Object.keys(properties[value[value_index + 1]]['referencedCollections']).length > 0">
+        <template v-if="
+            value[value_index + 1]
+            && properties[value[value_index + 1]]['referencedCollections']
+            && Object.keys(properties[value[value_index + 1]]['referencedCollections']).length > 0
+        ">
             <div class="row">
                 -->
                 <property-component

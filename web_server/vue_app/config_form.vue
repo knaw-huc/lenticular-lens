@@ -310,7 +310,8 @@
                         // Add resource
                         let referenced_resource = {
                             "collection_id": property[2],
-                            "dataset_id": base_referenced_resource.dataset_id
+                            "dataset_id": base_referenced_resource.dataset_id,
+                            "related": []
                         };
                         referenced_resource['label'] = vue.$utilities.md5(JSON.stringify(referenced_resource));
 
@@ -326,14 +327,24 @@
                         }
 
                         // Add relation
-                        base_referenced_resource.related.push({
+                        let relation = {
                             "resource": referenced_resource.label,
                             "local_property": property[1],
                             "remote_property": "uri"
+                        };
+                        let relation_exists = false;
+                        base_referenced_resource.related.forEach(existing_relation => {
+                            if (JSON.stringify(existing_relation) === JSON.stringify(relation)) {
+                                relation_exists = true;
+                                return false
+                            }
                         });
+                        if (!relation_exists) {
+                            base_referenced_resource.related.push(relation);
+                        }
 
-                        // Replace property
-                        return [referenced_resource.label, property[3].toLowerCase()]
+                        // Replace part of property that was processed and re-enter the function with that output
+                        return create_references_for_property([referenced_resource.label, property[3].toLowerCase()].concat(property.slice(4)))
                     }
 
                     return property
