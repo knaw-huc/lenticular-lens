@@ -68,14 +68,22 @@ class LinksetsCollection:
         pass
 
     def generate_matches(self):
-        for match in self.matches:
-            if not self.get_option('skip', options=match.meta):
-                self.log('Generating linkset %s.' % match.name)
-                result = self.process_sql(self.generate_match_sql(match))
-                self.log('Linkset %s generated. %s links created in %s.' % (
-                    match.name, locale.format_string('%i', result['affected'], grouping=True), result['duration']))
-                if not self.sql_only:
-                    self.add_statistics(match, result)
+        generated = []
+
+        while len(generated) < len(self.matches):
+            generated_this_cycle = 0
+            for match in self.matches:
+                if match.name_original not in generated and not self.get_option('skip', options=match.meta) and all(m in generated for m in match.matches_dependencies):
+                    generated.append(match.name_original)
+                    generated_this_cycle += 1
+                    self.log('Generating linkset %s.' % match.name)
+                    result = self.process_sql(self.generate_match_sql(match))
+                    self.log('Linkset %s generated. %s links created in %s.' % (
+                        match.name, locale.format_string('%i', result['affected'], grouping=True), result['duration']))
+                    if not self.sql_only:
+                        self.add_statistics(match, result)
+            if generated_this_cycle == 0:
+                raise NameError('Invalid mappings configuration.')
 
     def generate_resources(self):
         generated = []

@@ -46,6 +46,16 @@ class Match:
         return psycopg_sql.SQL('\n').join(index_sqls)
 
     @property
+    def matches_dependencies(self):
+        dependencies = []
+
+        for condition in self.conditions.conditions_list:
+            if condition.function_name == 'IS_IN_SET':
+                dependencies += condition.parameters
+
+        return dependencies
+
+    @property
     def materialize(self):
         return 'materialize' not in self.meta or self.meta['materialize'] is True
 
@@ -55,7 +65,11 @@ class Match:
 
     @property
     def name(self):
-        return hash_string(self.__data['label'])
+        return hash_string(self.name_original)
+
+    @property
+    def name_original(self):
+        return self.__data['label']
 
     @property
     def resources(self):
