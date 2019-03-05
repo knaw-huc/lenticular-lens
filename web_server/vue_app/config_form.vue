@@ -377,45 +377,6 @@
                     });
                 });
 
-                resources_copy.forEach(resource_copy => {
-                    if (resource_copy.filter && resource_copy.filter.type) {
-                        resource_copy.filter.conditions.forEach(condition => {
-                            if (condition.property[0] == parseInt(condition.property[0])) {
-                                condition.property[0] = this.getResourceById(condition.property[0]).label;
-                            }
-                            condition.property[1] = condition.property[1].toLowerCase();
-                            if (typeof condition.value_type !== 'undefined') {
-                                condition[condition.value_type] = condition.value;
-                                delete condition.value;
-                                delete condition.value_type;
-                            }
-                        });
-                    } else {
-                        delete resource_copy.filter;
-                    }
-
-                    if (resource_copy.related) {
-                        resource_copy.related.forEach(related => {
-                            if (related.resource == parseInt(related.resource)) {
-                                related.resource = this.getResourceById(related.resource).label;
-                            }
-                            related.local_property = [related.local_property.toLowerCase()];
-                            related.remote_property = [related.remote_property.toLowerCase()];
-                            delete related.resource_index;
-                        });
-
-                        if (resource_copy.related_array) {
-                            resource_copy.related = [resource_copy.related]
-                        }
-                    }
-
-                    delete resource_copy.related_array;
-                    let resource_copy_copy = JSON.parse(JSON.stringify(resource_copy));
-                    delete resource_copy_copy.id;
-
-                    resources.push(resource_copy_copy);
-                });
-
                 let matches = [];
                 matches_copy.forEach(match_original => {
                     let match = {
@@ -511,6 +472,45 @@
                     });
 
                     matches.push(match);
+                });
+
+                resources_copy.forEach(resource_copy => {
+                    if (resource_copy.filter && resource_copy.filter.type) {
+                        resource_copy.filter.conditions.forEach(condition => {
+                            if (condition.property[0] == parseInt(condition.property[0])) {
+                                condition.property[0] = this.getResourceById(condition.property[0]).label;
+                            }
+                            condition.property[1] = condition.property[1].toLowerCase();
+                            if (typeof condition.value_type !== 'undefined') {
+                                condition[condition.value_type] = condition.value;
+                                delete condition.value;
+                                delete condition.value_type;
+                            }
+                        });
+                    } else {
+                        delete resource_copy.filter;
+                    }
+
+                    if (resource_copy.related) {
+                        resource_copy.related.forEach(related => {
+                            if (related.resource == parseInt(related.resource)) {
+                                related.resource = this.getResourceById(related.resource).label;
+                            }
+                            related.local_property = [related.local_property.toLowerCase()];
+                            related.remote_property = [related.remote_property.toLowerCase()];
+                            delete related.resource_index;
+                        });
+
+                        if (resource_copy.related_array) {
+                            resource_copy.related = [resource_copy.related]
+                        }
+                    }
+
+                    delete resource_copy.related_array;
+                    let resource_copy_copy = JSON.parse(JSON.stringify(resource_copy));
+                    delete resource_copy_copy.id;
+
+                    resources.push(resource_copy_copy);
                 });
 
                 let data = {
