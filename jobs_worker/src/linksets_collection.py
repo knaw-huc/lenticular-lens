@@ -126,7 +126,10 @@ class LinksetsCollection:
             if self.sql_only:
                 print(sql_string)
             else:
-                for statement in sql_string.split(';'):
+                for statement in sql_string.split(';\n'):
+                    if statement.startswith('--'):
+                        continue
+
                     if re.search(r'\S', statement):
                         if re.match(r'^\s*SELECT', statement) and not re.search(r'set_config\(', statement):
                             with conn.cursor(cursor_factory=extras.DictCursor, name='cursor') as named_cur:
