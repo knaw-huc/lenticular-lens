@@ -252,13 +252,15 @@
                 let vue = this;
                 function get_value(value_object, target_object) {
                     if (value_object.value_type === 'property') {
-                        let resource_label = value_object.property[0] == parseInt(value_object.property[0]) ?
-                            vue.getResourceById(value_object.property[0]).label :
-                            value_object.property[0];
+                        let converted_property = create_references_for_property(value_object.property);
+
+                        let resource_label = converted_property[0] == parseInt(converted_property[0]) ?
+                            vue.getResourceById(converted_property[0]).label :
+                            converted_property[0];
 
                         target_object.property = [
                             resource_label.toLowerCase(),
-                            value_object.property[1].toLowerCase()
+                            converted_property[1].toLowerCase()
                         ];
                     }
 
@@ -363,14 +365,14 @@
                 resources_copy.forEach(resource_copy => {
                     if (resource_copy.filter.type) {
                         resource_copy.filter.conditions.forEach(condition => {
-                            condition.property = create_references_for_property(condition.property)
+                            condition.property = create_references_for_property(condition.property);
                         });
                     }
                 });
                 matches_copy.forEach(match_copy => {
                     match_copy.sources.concat(match_copy.targets).forEach(match_copy_resource => {
                         match_copy_resource.matching_fields.forEach(matching_field => {
-                            matching_field.value.property = create_references_for_property(matching_field.value.property)
+                            matching_field.value.property = create_references_for_property(matching_field.value.property);
                         });
                     });
                 });
@@ -408,9 +410,10 @@
                     }
 
                     delete resource_copy.related_array;
-                    delete resource_copy.id;
+                    let resource_copy_copy = JSON.parse(JSON.stringify(resource_copy));
+                    delete resource_copy_copy.id;
 
-                    resources.push(resource_copy);
+                    resources.push(resource_copy_copy);
                 });
 
                 let matches = [];
