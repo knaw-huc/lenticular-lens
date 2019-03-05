@@ -350,6 +350,10 @@
                             base_referenced_resource.related.push(relation);
                         }
 
+                        if (base_referenced_resource.related.length > 1) {
+                            base_referenced_resource.related_array = true;
+                        }
+
                         // Replace part of property that was processed and re-enter the function with that output
                         return create_references_for_property([referenced_resource.label, property[3].toLowerCase()].concat(property.slice(4)))
                     }

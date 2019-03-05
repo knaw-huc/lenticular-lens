@@ -7,7 +7,7 @@ services:
     ports:
       - 5432:5432
     volumes:
-      - ./postgres_timbuctoo/pgdata:/pgdata
+      - /mnt/SSD/pgdata:/pgdata
     env_file:
       - .docker-env
 
@@ -44,6 +44,21 @@ services:
       - DATABASE_CONFIG={"host":"postgres","database":"postgres","user":"postgres","password":"postgres"}
     ports:
       - 8000:8000
+    volumes:
+      - output:/output
+
+  status_monitor:
+    build:
+      context: .
+      dockerfile: Dockerfile.status_monitor
+    image: knawhuc/postgres_reconciliation_worker:status_monitor-latest
+    depends_on:
+      - postgres
+      - web_server
+      - timbuctoo_worker
+      - jobs_worker
+    environment:
+      - DATABASE_CONFIG={"host":"postgres","database":"postgres","user":"postgres","password":"postgres"}
     volumes:
       - output:/output
 
