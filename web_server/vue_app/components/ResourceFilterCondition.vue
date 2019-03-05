@@ -12,10 +12,11 @@
                 <option value="!=">!=</option>
                 <option value="date_is_within">date is within</option>
                 <option value="appearances">appearances of property</option>
+                <option value="ilike">Contains (use % for wildcard)</option>
             </select>
         </div>
 
-        <div v-if="['=', '!=', 'date_is_within'].indexOf(condition.type) > -1" class="form-group col-2">
+        <div v-if="['=', '!=', 'date_is_within', 'ilike'].indexOf(condition.type) > -1" class="form-group col-2">
             <input class="form-control" type="text" v-model="condition.value" placeholder="Enter a value">
         </div>
 

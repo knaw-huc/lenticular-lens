@@ -8,5 +8,8 @@
   },
   "!=": {
     "sql_template": "{property} != {value}"
+  },
+  "ilike": {
+    "sql_template": "{property} ILIKE {value}"
   }
 }
