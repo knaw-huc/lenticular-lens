@@ -78,12 +78,6 @@
                 this.filter_object.conditions.push(condition);
             },
         },
-        mounted() {
-            if (typeof this.filter_object.conditions !== 'undefined' && this.filter_object.conditions.length < 1) {
-                this.addFilterCondition();
-            }
-
-        },
         name: 'resource-filter-group-component',
         props: {
             filter_object: {},
