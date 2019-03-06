@@ -1,7 +1,7 @@
 <template>
-<div>
+<div class="border-bottom pt-3 mb-3">
     <div class="row">
-        <property-component v-model="condition.property" :resources="resources" :value_index.number="0"/>
+        <property-component v-model="condition.property" :resources="$parent.resources" :value_index.number="0"/>
     </div>
 
     <div class="row">
@@ -16,7 +16,7 @@
             </select>
         </div>
 
-        <div v-if="['=', '!=', 'date_is_within', 'ilike'].indexOf(condition.type) > -1" class="form-group col-2">
+        <div v-if="['=', '!=', 'date_is_within', 'ilike'].indexOf(condition.type) > -1" class="form-group col-3">
             <input class="form-control" type="text" v-model="condition.value" placeholder="Enter a value">
         </div>
 
@@ -32,12 +32,12 @@
         </div>
 
         <div class="form-check">
-            <input v-model.boolean="condition.invert" type="checkbox" class="form-check-input" :id="'resource_' + resource_id + '_condition_' + index + '_invert'">
-            <label class="form-check-label" :for="'resource_' + resource_id + '_condition_' + index + '_invert'">Invert</label>
+            <input v-model.boolean="condition.invert" type="checkbox" class="form-check-input" :id="'resource_' + resource.id + '_condition_' + index + '_invert'">
+            <label class="form-check-label" :for="'resource_' + resource.id + '_condition_' + index + '_invert'">Invert</label>
         </div>
 
         <div class="form-group col-1">
-            <button v-on:click="resource.filter.conditions.splice(index, 1)" type="button" class="ml-3 btn btn-danger"><octicon name="trashcan"></octicon></button>
+            <button @click="$emit('remove')" type="button" class="ml-3 btn btn-danger"><octicon name="trashcan"></octicon></button>
         </div>
     </div>
 </div>
@@ -49,22 +49,16 @@
     export default {
         components: {PropertyComponent},
         computed: {
+            datasets() {
+                return this.$parent.datasets
+            },
             properties() {
-                let resource = this.get_resource_by_id(this.condition.property[0]);
-                return this.datasets[resource.dataset_id][resource.collection_id];
+                return this.datasets[this.resource.dataset_id][this.resource.collection_id];
             },
             resource() {
-                return this.get_resource_by_id(this.resource_id);
+                return this.$parent.resource;
             },
         },
-        methods: {
-            get_resource_by_id(resource_id) {
-                for (let i = 0; i < this.resources.length; i++) {
-                    if (this.resources[i].id == resource_id)
-                        return this.resources[i];
-                }
-            },
-        },
-        props: ['condition', 'resource_id', 'index', 'datasets', 'resources'],
+        props: ['condition', 'index'],
     }
 </script>

@@ -72,24 +72,10 @@
         </div>
     </div>
 
-    <div class="form-group" v-if="resource.collection_id != ''">
-        <h3>Filter</h3>
-
-        <select class="form-control" v-model="resource.filter.type">
-            <option value="" selected>No filter</option>
-            <option value="AND">All conditions must be met (AND)</option>
-            <option value="OR">At least one of the conditions must be met (OR)</option>
-        </select>
-    </div>
-
-    <filter-condition-component v-if="resource.filter.type != ''" :datasets="datasets" :condition="condition" :index="index" :resource_id="resource.id" :resources="resources" v-for="(condition, index) in resource.filter.conditions" :key="index"></filter-condition-component>
-
-    <div class="form-group">
-        <button v-if="resource.filter.type != ''" v-on:click="addFilterCondition($event)" type="button" class="add-resource form-control btn btn-primary w-25">+ Add condition</button>
-    </div>
+    <h3>Filter</h3>
+    <resource-filter-group-component v-if="resource.collection_id != ''" :filter_object="resource.filter" :is_root="true"/>
 
     <h3>Sample</h3>
-
     <div class="form-group row align-items-end">
         <label class="col-auto" :for="'resource_' + resource.id + '_limit'">Only use a sample of this amount of records (-1 is no limit):</label>
         <input type="number" min="-1" v-model.number="resource.limit" class="form-control col-1" :id="'resource_' + resource.id + '_limit'">
@@ -102,12 +88,12 @@
 </template>
 
 <script>
-    import ResourceFilterCondition from './ResourceFilterCondition'
+    import ResourceFilterGroupComponent from "./ResourceFilterGroup";
 
     export default {
         components: {
-            'filter-condition-component': ResourceFilterCondition,
-        },
+            ResourceFilterGroupComponent,
+            },
         computed: {
             resource_label() {
                 if (typeof this.label_input === 'undefined' || this.label_input == '') {
@@ -128,16 +114,6 @@
         },
         props: ['resource', 'datasets', 'resources', 'index'],
         methods: {
-            addFilterCondition(event) {
-                if (event) {
-                    event.target.blur();
-                }
-                let condition = {
-                    'type': '',
-                    'property': [this.resource.id, ''],
-                };
-                this.resource.filter.conditions.push(condition);
-            },
             addRelation(event) {
                 if (event) {
                     event.target.blur();
@@ -161,12 +137,6 @@
             },
         },
         mounted() {
-            this.original_filter = this.filter;
-
-            if (this.resource.filter.conditions.length < 1) {
-                this.addFilterCondition();
-            }
-
             this.label_input = this.resource.label = this.resource_label;
         },
         watch: {

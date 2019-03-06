@@ -361,6 +361,26 @@
                     return property
                 }
 
+                function get_recursive_conditions(filter_obj) {
+                    let conditions = [];
+                    let obj_arr;
+
+                    if (Array.isArray(filter_obj)) {
+                        obj_arr = filter_obj;
+                    } else if (Array.isArray(filter_obj.conditions)) {
+                        obj_arr = filter_obj.conditions;
+                    }
+
+                    if (obj_arr) {
+                        obj_arr.forEach(condition => {
+                            conditions = conditions.concat(get_recursive_conditions(condition));
+                        });
+                        return conditions;
+                    } else {
+                        return [filter_obj]
+                    }
+                }
+
                 let resources = [];
                 let resources_copy = JSON.parse(JSON.stringify(this.resources));
                 let matches_copy = JSON.parse(JSON.stringify(this.matches));
@@ -368,11 +388,12 @@
                 // Check for references
                 resources_copy.forEach(resource_copy => {
                     if (resource_copy.filter.type) {
-                        resource_copy.filter.conditions.forEach(condition => {
+                        get_recursive_conditions(resource_copy.filter.conditions).forEach(condition => {
                             condition.property = create_references_for_property(condition.property);
                         });
                     }
                 });
+
                 matches_copy.forEach(match_copy => {
                     match_copy.sources.concat(match_copy.targets).forEach(match_copy_resource => {
                         match_copy_resource.matching_fields.forEach(matching_field => {
@@ -480,7 +501,7 @@
 
                 resources_copy.forEach(resource_copy => {
                     if (resource_copy.filter && resource_copy.filter.type) {
-                        resource_copy.filter.conditions.forEach(condition => {
+                        get_recursive_conditions(resource_copy.filter.conditions).forEach(condition => {
                             if (condition.property[0] == parseInt(condition.property[0])) {
                                 condition.property[0] = this.getResourceById(condition.property[0]).label;
                             }
