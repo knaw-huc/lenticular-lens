@@ -1,5 +1,5 @@
 <template>
-    <div v-if="filter_object.conditions" class="p-3 border border-dark bg-white mb-3">
+    <div v-if="filter_object.conditions" :class="'p-3 border border-dark mb-3 ' + style_class">
         <div class="row">
             <div class="form-group col">
                 <select class="form-control" v-model="filter_object.type">
@@ -46,6 +46,9 @@
             'filter-condition-component': ResourceFilterCondition,
         },
         computed: {
+            style_class() {
+                return this.is_root || this.$parent.style_class === 'bg-white' ? 'bg-dark' : 'bg-white'
+            },
             datasets() {
                 return this.$parent.datasets
             },

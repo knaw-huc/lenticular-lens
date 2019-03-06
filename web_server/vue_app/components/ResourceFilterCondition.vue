@@ -1,5 +1,5 @@
 <template>
-<div class="border-bottom pt-3 mb-3">
+<div class="border-bottom p-3 mb-3 bg-primary">
     <div class="row">
         <property-component v-model="condition.property" :resources="$parent.resources" :value_index.number="0"/>
     </div>
