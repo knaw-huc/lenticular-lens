@@ -13,6 +13,7 @@
                 <option value="date_is_within">date is within</option>
                 <option value="appearances">appearances of property</option>
                 <option value="ilike">Contains (use % for wildcard)</option>
+                <option value="not_null">Is not null</option>
             </select>
         </div>
 

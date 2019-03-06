@@ -11,5 +11,8 @@
   },
   "ilike": {
     "sql_template": "{property} ILIKE {value}"
+  },
+  "not_null": {
+    "sql_template": "{property} IS NOT NULL"
   }
 }
