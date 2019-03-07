@@ -103,6 +103,12 @@
                         'label': '',
                         'fields': [],
                     },
+                    'IS_NOT_NULL': {
+                        'label': 'Is not null',
+                        'fields': {
+                            '': 'value',
+                        },
+                    },
                     'IS_URI': {
                         'label': 'Is URI (starts with \'http\')',
                         'fields': {
