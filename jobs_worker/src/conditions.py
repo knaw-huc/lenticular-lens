@@ -89,6 +89,8 @@ class Conditions:
             if isinstance(self.function_info['similarity'], str):
                 template = re.sub(r'{source}', 'source.{field_name}', template)
                 template = re.sub(r'{target}', 'target.{field_name}', template)
+                for index, parameter in enumerate(self.parameters):
+                    template = re.sub('%%%i' % (index + 1), str(parameter), template)
 
             return psycopg2_sql.SQL(str(template)).format(field_name=psycopg2_sql.Identifier(self.field_name))
 

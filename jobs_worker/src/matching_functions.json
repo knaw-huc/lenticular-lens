@@ -21,5 +21,9 @@
   },
   "IS_IN_SET": {
     "sql_template": "({source} IN (SELECT source_uri FROM \"%1__hash\") OR {source} IN (SELECT target_uri FROM \"%1__hash\")) AND ({target} IN (SELECT source_uri FROM \"%1__hash\") OR {target} IN (SELECT target_uri FROM \"%1__hash\"))"
+  },
+    "LEVENSHTEIN": {
+      "sql_template": "levenshtein_less_equal({source}, {target}, %1::int) <= %1::int",
+      "similarity": "levenshtein_less_equal({source}, {target}, %1::int)"
   }
 }

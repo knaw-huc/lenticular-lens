@@ -66,6 +66,19 @@
                         },
                     },
                     {
+                        'label': 'Levenshtein distance',
+                        'object': {
+                            'name': 'LEVENSHTEIN',
+                            'value': {
+                                'type': [],
+                                'listItems': {
+                                    'type': 1,
+                                    'minValue': 0,
+                                },
+                            },
+                        },
+                    },
+                    {
                         'label': 'Distance is between',
                         'object': {
                             'name': 'DISTANCE_IS_BETWEEN',
