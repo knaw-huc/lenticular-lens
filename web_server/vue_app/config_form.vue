@@ -180,8 +180,8 @@
                         // Make internal references for referenced collections
                         Object.keys(data).forEach(dataset_name => {
                             let dataset = data[dataset_name];
-                            Object.keys(dataset).forEach(collection_name => {
-                                let collection = dataset[collection_name];
+                            Object.keys(dataset.collections).forEach(collection_name => {
+                                let collection = dataset.collections[collection_name];
                                 Object.keys(collection).forEach(property_name => {
                                     let property = collection[property_name];
                                     if (typeof property['referencedCollections'] !== 'undefined') {
@@ -191,7 +191,7 @@
                                             return ref_collection_name !== 'tim_unknown'
                                         });
                                         referenced_collections.forEach(ref_collection_name => {
-                                            property['referencedCollections'][ref_collection_name] = dataset[ref_collection_name];
+                                            property['referencedCollections'][ref_collection_name] = dataset.collections[ref_collection_name];
                                         });
                                     }
                                 });

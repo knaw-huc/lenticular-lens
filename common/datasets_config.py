@@ -19,7 +19,7 @@ class DatasetsConfig:
                 break
 
     def dataset(self, dataset_id):
-        return Dataset(dataset_id, self.__data[dataset_id])
+        return Dataset(dataset_id, self.__data[dataset_id]['collections'])
 
     @property
     def datasets(self):

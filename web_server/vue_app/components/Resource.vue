@@ -16,7 +16,7 @@
             <label :for="'dataset_' + resource.id">Dataset</label>
             <select v-model="resource.dataset_id" :id="'dataset_' + resource.id" class="form-control" v-on:change="resource.collection_id = ''">
                 <option value="" selected disabled>Choose a dataset</option>
-                <option v-for="(data, dataset) in datasets" v-bind:value="dataset">{{ dataset }}</option>
+                <option v-for="(data, dataset) in datasets" v-bind:value="dataset">{{ data.title }}</option>
             </select>
         </div>
 
@@ -24,7 +24,7 @@
             <label :for="'collection_' + resource.id">Subset</label>
             <select v-model="resource.collection_id" :id="'collection_' + resource.id" class="form-control">
                 <option value="" selected disabled>Choose a subset</option>
-                <option v-for="(data, collection) in datasets[resource.dataset_id]" v-bind:value="collection">{{ collection }}</option>
+                <option v-for="(data, collection) in datasets[resource.dataset_id].collections" v-bind:value="collection">{{ collection }}</option>
             </select>
         </div>
     </div>
@@ -50,7 +50,7 @@
                 <label :for="'resource_' + resource.id + '_related_' + relation.id + '_local_property'">Local property</label>
                 <select class="form-control" v-model="relation.local_property">
                     <option value="" selected disabled>Select local property</option>
-                    <option v-for="(property_info, property) in datasets[resource.dataset_id][resource.collection_id]" :value="property">{{ property }}</option>
+                    <option v-for="(property_info, property) in datasets[resource.dataset_id]['collections'][resource.collection_id]" :value="property">{{ property }}</option>
                 </select>
             </div>
 
@@ -133,7 +133,7 @@
                         resource = this.resources[i];
                 }
 
-                return this.datasets[resource.dataset_id][resource.collection_id];
+                return this.datasets[resource.dataset_id]['collections'][resource.collection_id];
             },
         },
         mounted() {

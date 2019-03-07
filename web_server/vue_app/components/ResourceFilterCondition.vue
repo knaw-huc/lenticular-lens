@@ -54,7 +54,7 @@
                 return this.$parent.datasets
             },
             properties() {
-                return this.datasets[this.resource.dataset_id][this.resource.collection_id];
+                return this.$parent.datasets[this.$parent.resource.dataset_id]['collections'][this.$parent.resource.collection_id];
             },
             resource() {
                 return this.$parent.resource;

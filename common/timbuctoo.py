@@ -43,6 +43,7 @@ class Timbuctoo:
             {
                 dataSetMetadataList(promotedOnly: false, publishedOnly: false) {
                     dataSetId,
+                    title { value },
                     collectionList {
                         items {
                             collectionId,
@@ -64,10 +65,11 @@ class Timbuctoo:
         datasets = {}
         for dataset in datasets_data['dataSetMetadataList']:
             dataset_id = dataset['dataSetId']
-            datasets[dataset_id] = {}
+            dataset_title = dataset['title']['value'] if dataset['title'] and dataset['title']['value'] else dataset_id.split('__')[1]
+            datasets[dataset_id] = {"title": dataset_title, "collections": {}}
             for collection in dataset['collectionList']['items']:
                 collection_id = collection['collectionId']
-                datasets[dataset_id][collection_id] = {}
+                datasets[dataset_id]['collections'][collection_id] = {}
                 collection['properties']['items'] += [
                     {"name": "uri", 'isValueType': False, 'isList': False},
                     {"name": "title", 'isValueType': True, 'isList': False},
@@ -76,13 +78,13 @@ class Timbuctoo:
                 ]
                 for collection_property in collection['properties']['items']:
                     property_name = collection_property['name']
-                    datasets[dataset_id][collection_id][property_name] = {}
+                    datasets[dataset_id]['collections'][collection_id][property_name] = {}
                     for property_property_key, property_property_value in collection_property.items():
                         if property_property_key == 'name':
                             continue
                         if property_property_key == 'referencedCollections':
                             property_property_value = property_property_value['items']
-                        datasets[dataset_id][collection_id][property_name][property_property_key] = property_property_value
+                        datasets[dataset_id]['collections'][collection_id][property_name][property_property_key] = property_property_value
 
         return datasets
 

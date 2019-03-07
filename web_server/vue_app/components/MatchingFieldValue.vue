@@ -87,7 +87,7 @@
             },
             properties() {
                 let resource = this.get_resource_by_id(this.matching_field_value.property[0]);
-                return this.datasets[resource.dataset_id][resource.collection_id];
+                return this.datasets[resource.dataset_id]['collections'][resource.collection_id];
             },
         },
         data() {
