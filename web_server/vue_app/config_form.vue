@@ -320,7 +320,7 @@
                             "dataset_id": base_referenced_resource.dataset_id,
                             "related": []
                         };
-                        referenced_resource['label'] = vue.$utilities.md5(JSON.stringify(referenced_resource));
+                        referenced_resource['label'] = vue.$utilities.md5(property[0] + property[1] + JSON.stringify(referenced_resource));
 
                         let resource_exists = false;
                         resources_copy.forEach(rc => {
