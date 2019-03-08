@@ -18,6 +18,7 @@
                     v-for="(resource, index) in resources"
                     :key="resource.id"
                     v-on:remove="resources.splice(index, 1)"
+                    @update:label="resource.label = $event"
             ></resource-component>
 
             <div class="form-group mt-4">
@@ -259,7 +260,7 @@
                             converted_property[0];
 
                         target_object.property = [
-                            resource_label.toLowerCase(),
+                            resource_label,
                             converted_property[1].toLowerCase()
                         ];
                     }

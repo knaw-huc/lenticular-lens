@@ -112,15 +112,18 @@
             },
         computed: {
             resource_label() {
-                if (typeof this.label_input === 'undefined' || this.label_input == '') {
-                    this.label_input = this.resource.label;
-                }
-
-                if (typeof this.label_input === 'undefined' || this.label_input == '') {
-                    return 'Collection ' + this.resource.id;
-                } else {
+                if (typeof this.label_input !== 'undefined' && this.label_input !== '') {
+                    this.$emit('update:label', this.label_input);
                     return this.label_input;
                 }
+
+                if (this.resource.dataset_id && this.resource.collection_id) {
+                    let label = this.datasets[this.resource.dataset_id].title + ' --> ' + this.resource.collection_id;
+                    this.$emit('update:label', label);
+                    return label;
+                }
+
+                return 'Collection ' + this.resource.id;
             }
         },
         data() {
@@ -151,9 +154,6 @@
 
                 return this.datasets[resource.dataset_id]['collections'][resource.collection_id];
             },
-        },
-        mounted() {
-            this.label_input = this.resource.label = this.resource_label;
         },
         watch: {
             label_input() {
