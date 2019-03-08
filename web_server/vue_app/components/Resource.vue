@@ -86,6 +86,7 @@
                 :datasets="datasets"
                 :filter_object="resource.filter"
                 :is_root="true"
+                :uid="'resource_' + resource.id + '_filter_group_0'"
                 :resource="resource"
                 :resources="resources"
         />

@@ -1,6 +1,10 @@
 <template>
     <div v-if="filter_object.conditions" :class="'p-3 border border-dark mb-3 ' + style_class">
         <div class="row">
+            <div class="col-auto">
+                <octicon name="chevron-down" scale="2" v-b-toggle="uid"></octicon>
+            </div>
+
             <div class="form-group col">
                 <select class="form-control" v-model="filter_object.type">
                     <option v-if="is_root" value="" selected>No filter</option>
@@ -14,28 +18,31 @@
             </div>
         </div>
 
-        <template v-if="filter_object.type">
-            <resource-filter-group-component
-                    v-for="(condition, condition_index) in filter_object.conditions"
-                    :filter_object="condition"
-                    :index="condition_index"
-                    :datasets="datasets"
-                    :resource="resource"
-                    :resources="resources"
-                    @remove="filter_object.conditions.splice(condition_index, 1)"
-            />
+        <b-collapse visible :id="uid">
+            <template v-if="filter_object.type">
+                <resource-filter-group-component
+                        v-for="(condition, condition_index) in filter_object.conditions"
+                        :filter_object="condition"
+                        :index="condition_index"
+                        :uid="uid + '_' + condition_index"
+                        :datasets="datasets"
+                        :resource="resource"
+                        :resources="resources"
+                        @remove="filter_object.conditions.splice(condition_index, 1)"
+                />
 
-            <div class="form-group">
-                <button v-on:click="addFilterCondition" type="button"
-                        class="form-control btn btn-primary w-25">+ Add condition
-                </button>
-            </div>
-            <div class="form-group">
-                <button v-on:click="addFilterGroup" type="button"
-                        class="form-control btn btn-primary w-25">+ Add filter group
-                </button>
-            </div>
-        </template>
+                <div class="form-group">
+                    <button v-on:click="addFilterCondition" type="button"
+                            class="form-control btn btn-primary w-25">+ Add condition
+                    </button>
+                </div>
+                <div class="form-group">
+                    <button v-on:click="addFilterGroup" type="button"
+                            class="form-control btn btn-primary w-25">+ Add filter group
+                    </button>
+                </div>
+            </template>
+        </b-collapse>
     </div>
     <div v-else-if="!filter_object.conditions">
         <filter-condition-component :condition="filter_object" :index="index" @remove="$emit('remove')"/>
@@ -81,6 +88,7 @@
             filter_object: {},
             index: Number,
             is_root: false,
+            uid: '',
             resource: {},
             resources: {},
         }
