@@ -116,8 +116,8 @@
                     this.label_input = this.resource.label;
                 }
 
-                if (this.label_input == '') {
-                    return '[Collection ' + this.resource.id + ']';
+                if (typeof this.label_input === 'undefined' || this.label_input == '') {
+                    return 'Collection ' + this.resource.id;
                 } else {
                     return this.label_input;
                 }
@@ -128,7 +128,7 @@
                 label_input: '',
             }
         },
-        props: ['resource', 'datasets', 'resources', 'index'],
+        props: ['resource', 'datasets', 'resources'],
         methods: {
             addRelation(event) {
                 if (event) {
