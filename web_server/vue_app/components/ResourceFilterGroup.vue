@@ -19,6 +19,9 @@
                     v-for="(condition, condition_index) in filter_object.conditions"
                     :filter_object="condition"
                     :index="condition_index"
+                    :datasets="datasets"
+                    :resource="resource"
+                    :resources="resources"
                     @remove="filter_object.conditions.splice(condition_index, 1)"
             />
 
@@ -49,15 +52,6 @@
             style_class() {
                 return this.is_root || this.$parent.style_class === 'bg-white' ? 'bg-dark' : 'bg-white'
             },
-            datasets() {
-                return this.$parent.datasets
-            },
-            resource() {
-                return this.$parent.resource
-            },
-            resources() {
-                return this.$parent.resources
-            },
         },
         methods: {
             addFilterCondition(event) {
@@ -83,9 +77,12 @@
         },
         name: 'resource-filter-group-component',
         props: {
+            datasets: {},
             filter_object: {},
             index: Number,
             is_root: false,
+            resource: {},
+            resources: {},
         }
     }
 </script>

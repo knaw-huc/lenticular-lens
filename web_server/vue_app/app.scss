@@ -9,3 +9,11 @@ $primary: $yellow;
     color: $dark !important;
   }
 }
+
+.octicon[role="button"] {
+  transition: .3s transform ease-in-out;
+
+  &.collapsed {
+    transform: rotate(-90deg);
+  }
+}
