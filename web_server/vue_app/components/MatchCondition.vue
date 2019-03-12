@@ -24,7 +24,7 @@
                     <div v-if="item.type === 'matching_label'" class="form-group">
                         <select class="form-control" v-model="condition.method[method_object.name][index].value">
                             <option disabled selected value="">Select a Mapping</option>
-                            <option v-for="match in $parent.matches" :value="match.id">{{ match.label }}</option>
+                            <option v-for="match in $root.$children[0].matches" :value="match.id">{{ match.label }}</option>
                         </select>
                     </div>
                 </div>
