@@ -1,75 +1,85 @@
 <template>
 <div class="border p-4 mt-4 bg-light">
     <div class="row justify-content-between">
-        <div class="form-group col-3">
-            <label :for="'match_' + match.id + '_label'">Mapping label</label>
-            <input v-model="label_input" class="form-control" id="'match_' + match.id + '_label'" :placeholder="match_label">
+        <div class="col-auto">
+            <octicon name="chevron-down" scale="3" v-b-toggle="'match_' + match.id"></octicon>
+        </div>
+
+        <div class="col" v-b-toggle="'match_' + match.id">
+            <div class="h2">{{ match_label }}</div>
         </div>
 
         <div class="form-group col-1">
             <button v-on:click="$emit('remove')" type="button" class="ml-3 btn btn-danger"><octicon name="trashcan"></octicon></button>
         </div>
     </div>
+
+    <b-collapse :id="'match_' + match.id" :ref="'match_' + match.id" accordion="matches-accordion" @shown="scrollTo('match_' + match.id)">
+        <div class="form-group col-3">
+            <label :for="'match_' + match.id + '_label'">Mapping label</label>
+            <input v-model="label_input" class="form-control" id="'match_' + match.id + '_label'" :placeholder="match_label">
+        </div>
     
-    <div class="row">
-        <div class="col">
-            <h3>Sources</h3>
+        <div class="row">
+            <div class="col">
+                <h3>Sources</h3>
 
-            <match-resource-component
-                    v-for="(match_resource, index) in match.sources"
-                    :match="match" :match_resource="match_resource"
-                    :datasets="datasets"
-                    :resources="resources"
-                    @remove="match.sources.splice(index, 1)"
-            ></match-resource-component>
+                <match-resource-component
+                        v-for="(match_resource, index) in match.sources"
+                        :match="match" :match_resource="match_resource"
+                        :datasets="datasets"
+                        :resources="resources"
+                        @remove="match.sources.splice(index, 1)"
+                ></match-resource-component>
 
-            <div class="form-group">
-                <button type="button" class="btn btn-primary w-25 form-control" @click="addMatchResource(match.sources, sources_count, $event)">+ Add source</button>
+                <div class="form-group">
+                    <button type="button" class="btn btn-primary w-25 form-control" @click="addMatchResource(match.sources, sources_count, $event)">+ Add source</button>
+                </div>
             </div>
         </div>
-    </div>
 
 
-    <div class="row">
-        <div class="col">
-            <h3>Targets</h3>
-            <match-resource-component
-                    v-for="(match_resource, index) in match.targets"
-                    :match="match" :match_resource="match_resource"
-                    :datasets="datasets"
-                    :resources="resources"
-                    @remove="match.targets.splice(index, 1)"
-            ></match-resource-component>
+        <div class="row">
+            <div class="col">
+                <h3>Targets</h3>
+                <match-resource-component
+                        v-for="(match_resource, index) in match.targets"
+                        :match="match" :match_resource="match_resource"
+                        :datasets="datasets"
+                        :resources="resources"
+                        @remove="match.targets.splice(index, 1)"
+                ></match-resource-component>
 
-            <div class="form-group">
-                <button type="button" class="btn btn-primary w-25 form-control" @click="addMatchResource(match.targets, targets_count, $event)">+ Add target</button>
+                <div class="form-group">
+                    <button type="button" class="btn btn-primary w-25 form-control" @click="addMatchResource(match.targets, targets_count, $event)">+ Add target</button>
+                </div>
             </div>
         </div>
-    </div>
 
-    <div class="row">
-        <div class="col">
-            <h3>Conditions</h3>
+        <div class="row">
+            <div class="col">
+                <h3>Conditions</h3>
 
-            <div class="form-group">
-                <select class="form-control" v-model="match.conditions.type">
-                    <option value="AND">All conditions must be met (AND)</option>
-                    <option value="OR">At least one of the conditions must be met (OR)</option>
-                </select>
-            </div>
+                <div class="form-group">
+                    <select class="form-control" v-model="match.conditions.type">
+                        <option value="AND">All conditions must be met (AND)</option>
+                        <option value="OR">At least one of the conditions must be met (OR)</option>
+                    </select>
+                </div>
 
-            <match-condition
-                    v-for="(condition, index) in match.conditions.items"
-                    :condition="condition"
-                    :matching_field_labels="matching_field_labels"
-                    @remove="match.conditions.items.splice(index, 1)"
-            ></match-condition>
+                <match-condition
+                        v-for="(condition, index) in match.conditions.items"
+                        :condition="condition"
+                        :matching_field_labels="matching_field_labels"
+                        @remove="match.conditions.items.splice(index, 1)"
+                ></match-condition>
 
-            <div class="form-group">
-                <button type="button" class="btn btn-primary w-25 form-control" @click="addCondition($event)">+ Add condition</button>
+                <div class="form-group">
+                    <button type="button" class="btn btn-primary w-25 form-control" @click="addCondition($event)">+ Add condition</button>
+                </div>
             </div>
         </div>
-    </div>
+    </b-collapse>
 </div>
 </template>
 
@@ -84,15 +94,12 @@
         },
         computed: {
             match_label() {
-                if (typeof this.label_input === 'undefined' || this.label_input == '') {
-                    this.label_input = this.match.label;
-                }
-
-                if (this.label_input == '') {
-                    return '[Mapping ' + this.match.id + ']';
-                } else {
+                if (typeof this.label_input !== 'undefined' && this.label_input !== '') {
+                    this.$emit('update:label', this.label_input);
                     return this.label_input;
                 }
+
+                return 'Mapping ' + this.match.id;
             },
             matching_field_labels() {
                 let labels = [];
@@ -145,10 +152,11 @@
 
                 match_resources.push(match_resource);
             },
+            scrollTo(ref) {
+                this.$refs[ref].$el.parentNode.scrollIntoView({'behavior':'smooth', 'block':'start'});
+            }
         },
         mounted() {
-            this.match.label = this.match_label;
-
             this.sources_count = this.match.sources.length;
             if (this.sources_count < 1) {
                 this.addMatchResource(this.match.sources, this.sources_count);

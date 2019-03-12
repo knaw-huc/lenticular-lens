@@ -41,6 +41,7 @@
                     v-for="(match, index) in matches"
                     :key="match.id"
                     @remove="matches.splice(index, 1)"
+                    @update:label="match.label = $event"
             ></match-component>
 
             <div class="form-group mt-4">
