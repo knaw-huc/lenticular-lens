@@ -427,7 +427,7 @@
                             if (matching_field_original.value.value_type === 'function') {
                                 matching_field.value = {};
                                 matching_field.value = get_value(matching_field_original.value, matching_field.value);
-                                if (matching_field.transformers) {
+                                if (matching_field.value.transformers) {
                                     matching_field.transformers = JSON.parse(JSON.stringify(matching_field.value.transformers));
                                 }
                                 delete matching_field.value.transformers;
@@ -454,7 +454,9 @@
                             if (matching_field_original.value.value_type === 'function') {
                                 matching_field.value = {};
                                 matching_field.value = get_value(matching_field_original.value, matching_field.value);
-                                matching_field.transformers = JSON.parse(JSON.stringify(matching_field.value.transformers));
+                                if (matching_field.value.transformers) {
+                                    matching_field.transformers = JSON.parse(JSON.stringify(matching_field.value.transformers));
+                                }
                                 delete matching_field.value.transformers;
                             } else {
                                 matching_field = get_value(matching_field_original.value, matching_field);
