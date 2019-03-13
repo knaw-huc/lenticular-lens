@@ -75,6 +75,16 @@
         </div>
         </tab-content>
 
+        <tab-content title="Validation">
+            <iframe src="static/cluster_vis.html" class="w-100" style="height: 700px;"></iframe>
+
+            <div class="row justify-content-end">
+                <div class="col-auto">
+                    <a href="static/cluster_vis.html" target="_blank" class="btn btn-info">Open in new tab</a>
+                </div>
+            </div>
+        </tab-content>
+
         <template v-if="props.activeTabIndex === 1" slot="next" scope="props">
             <wizard-button
                     v-if="job_data"
