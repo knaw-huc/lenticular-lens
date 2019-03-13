@@ -37,69 +37,76 @@
                 <input v-model="label_input" class="form-control" :id="'resource_label_' + resource.id" :placeholder="resource_label">
             </div>
 
-        <div v-if="resource.collection_id != ''">
-            <h3>Relations</h3>
+        <template v-if="resource.collection_id != ''">
+            <h3>Filter</h3>
+            <resource-filter-group-component
+                    :datasets="datasets"
+                    :filter_object="resource.filter"
+                    :is_root="true"
+                    :uid="'resource_' + resource.id + '_filter_group_0'"
+                    :resource="resource"
+                    :resources="resources"
+            />
 
-            <div v-if="resource.related.length > 0" class="form-group form-check">
-                <input :id="resource.label + 'related_array'" class="form-check-input" type="checkbox" v-model="resource.related_array">
-                <label :for="resource.label + 'related_array'" class="form-check-label">Use relations as combined source</label>
+            <h3>Sample</h3>
+            <div class="form-group row align-items-end">
+                <label class="col-auto" :for="'resource_' + resource.id + '_limit'">Only use a sample of this amount of records (-1 is no limit):</label>
+                <input type="number" min="-1" v-model.number="resource.limit" class="form-control col-1" :id="'resource_' + resource.id + '_limit'">
+            </div>
+            <div class="form-check">
+                <input v-model.boolean="resource.random" type="checkbox" class="form-check-input" :id="'resource_' + resource.id + '_random'">
+                <label class="form-check-label" :for="'resource_' + resource.id + '_random'">Randomize order</label>
             </div>
 
-            <div v-for="(relation, index) in resource.related" class="row">
-                <div class="form-group col-4">
-                    <label :for="'resource_' + resource.id + '_related_' + relation.id + '_resource'">Related collection</label>
-                    <select class="form-control" v-model="relation.resource" :id="'resource_' + resource.id + '_related_' + relation.id + '_resource'">
-                        <option disabled selected value="">Choose a collection</option>
-                        <option v-for="(root_resource, index) in resources" :value="root_resource.id" v-if="root_resource.id != resource.id">{{ root_resource.label }}</option>
-                    </select>
+            <div class="row mt-3">
+                <div class="col-auto pr-0 pt-1">
+                    <octicon name="chevron-down" v-b-toggle="'resource_' + resource.id + '_relations'"/>
                 </div>
-
-                <div v-if="relation.resource > 0" class="form-group col-4">
-                    <label :for="'resource_' + resource.id + '_related_' + relation.id + '_local_property'">Local property</label>
-                    <select class="form-control" v-model="relation.local_property">
-                        <option value="" selected disabled>Select local property</option>
-                        <option v-for="(property_info, property) in datasets[resource.dataset_id]['collections'][resource.collection_id]" :value="property">{{ property }}</option>
-                    </select>
-                </div>
-
-                <div v-if="relation.resource > 0" class="form-group col-3">
-                    <label :for="'resource_' + resource.id + '_related_' + relation.id + '_remote_property'">Remote property</label>
-                    <select class="form-control" v-model="relation.remote_property">
-                        <option value="" selected disabled>Select remote property</option>
-                        <option v-for="(property_info, property) in get_properties_for_resource(relation.resource)" :value="property">{{ property }}</option>
-                    </select>
-                </div>
-
-                <div class="form-group col-1 align-self-end">
-                    <button v-on:click="resource.related.splice(index, 1)" type="button" class="ml-3 btn btn-danger"><octicon name="trashcan"></octicon></button>
+                <div class="col" v-b-toggle="'resource_' + resource.id + '_relations'">
+                    <h3>Relations</h3>
                 </div>
             </div>
+            <b-collapse :id="'resource_' + resource.id + '_relations'">
+                <div v-if="resource.related.length > 0" class="form-group form-check">
+                    <input :id="resource.label + 'related_array'" class="form-check-input" type="checkbox" v-model="resource.related_array">
+                    <label :for="resource.label + 'related_array'" class="form-check-label">Use relations as combined source</label>
+                </div>
 
-            <div class="form-group">
-                <button v-on:click="addRelation($event)" type="button" class="form-control btn btn-primary w-25">+ Add relation</button>
-            </div>
-        </div>
+                <div v-for="(relation, index) in resource.related" class="row">
+                    <div class="form-group col-4">
+                        <label :for="'resource_' + resource.id + '_related_' + relation.id + '_resource'">Related collection</label>
+                        <select class="form-control" v-model="relation.resource" :id="'resource_' + resource.id + '_related_' + relation.id + '_resource'">
+                            <option disabled selected value="">Choose a collection</option>
+                            <option v-for="(root_resource, index) in resources" :value="root_resource.id" v-if="root_resource.id != resource.id">{{ root_resource.label }}</option>
+                        </select>
+                    </div>
 
-        <h3>Filter</h3>
-        <resource-filter-group-component
-                v-if="resource.collection_id != ''"
-                :datasets="datasets"
-                :filter_object="resource.filter"
-                :is_root="true"
-                :uid="'resource_' + resource.id + '_filter_group_0'"
-                :resource="resource"
-                :resources="resources"
-        />
+                    <div v-if="relation.resource > 0" class="form-group col-4">
+                        <label :for="'resource_' + resource.id + '_related_' + relation.id + '_local_property'">Local property</label>
+                        <select class="form-control" v-model="relation.local_property">
+                            <option value="" selected disabled>Select local property</option>
+                            <option v-for="(property_info, property) in datasets[resource.dataset_id]['collections'][resource.collection_id]" :value="property">{{ property }}</option>
+                        </select>
+                    </div>
 
-        <h3>Sample</h3>
-        <div class="form-group row align-items-end">
-            <label class="col-auto" :for="'resource_' + resource.id + '_limit'">Only use a sample of this amount of records (-1 is no limit):</label>
-            <input type="number" min="-1" v-model.number="resource.limit" class="form-control col-1" :id="'resource_' + resource.id + '_limit'">
-        </div>
-        <div class="form-check">
-            <input v-model.boolean="resource.random" type="checkbox" class="form-check-input" :id="'resource_' + resource.id + '_random'">
-            <label class="form-check-label" :for="'resource_' + resource.id + '_random'">Randomize order</label>
-        </div>
+                    <div v-if="relation.resource > 0" class="form-group col-3">
+                        <label :for="'resource_' + resource.id + '_related_' + relation.id + '_remote_property'">Remote property</label>
+                        <select class="form-control" v-model="relation.remote_property">
+                            <option value="" selected disabled>Select remote property</option>
+                            <option v-for="(property_info, property) in get_properties_for_resource(relation.resource)" :value="property">{{ property }}</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group col-1 align-self-end">
+                        <button v-on:click="resource.related.splice(index, 1)" type="button" class="ml-3 btn btn-danger"><octicon name="trashcan"></octicon></button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <button v-on:click="addRelation($event)" type="button" class="form-control btn btn-primary w-25">+ Add relation</button>
+                </div>
+            </b-collapse>
+        </template>
     </b-collapse>
 </div>
 </template>
