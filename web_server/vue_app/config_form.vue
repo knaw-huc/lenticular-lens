@@ -178,7 +178,7 @@
                 </div>
             </div>
 
-            <cluster-visualization-component/>
+            <cluster-visualization-component v-if="job_id" cluster_id="static"/>
 
             <div class="row justify-content-end">
                 <div class="col-auto">

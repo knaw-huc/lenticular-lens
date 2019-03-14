@@ -11,21 +11,26 @@
     import * as d3 from 'd3'
 
     export default {
-        mounted() {
-            let svg = d3.select("svg");
+        data() {
+            return {
+                graph: {},
+            }
+        },
+        methods: {
+            draw() {
+                let svg = d3.select("svg");
 
-            let width = +svg.attr("width"),
-              height = +svg.attr("height");
+                let width = +svg.attr("width"),
+                  height = +svg.attr("height");
 
-            let color = d3.scaleOrdinal(d3.schemeCategory20);
+                let color = d3.scaleOrdinal(d3.schemeCategory20);
 
-            let simulation = d3.forceSimulation()
-              .force("link", d3.forceLink().id(function(d) { return d.id; }).distance(function(d) {return d.distance;}))
-              .force("charge", d3.forceManyBody())
-              .force("center", d3.forceCenter(width / 2, height / 2));
+                let simulation = d3.forceSimulation()
+                  .force("link", d3.forceLink().id(function(d) { return d.id; }).distance(function(d) {return d.distance;}))
+                  .force("charge", d3.forceManyBody())
+                  .force("center", d3.forceCenter(width / 2, height / 2));
 
-            d3.json("/static/data.json", function(error, graph) {
-                if (error) throw error;
+                let graph = this.graph;
 
                 let link = svg
                     .append("g")
@@ -50,7 +55,7 @@
                     .attr("class", "nodes")
                   .selectAll("g")
                   .data(graph.nodes)
-                  .enter().append("g")
+                  .enter().append("g");
 
                 node.append("circle")
                     .attr("r", function(d) { if (d.size)
@@ -91,24 +96,35 @@
                         return "translate(" + d.x + "," + d.y + ")";
                       })
                 }
-            });
 
-            function dragstarted(d) {
-              if (!d3.event.active) simulation.alphaTarget(0.3).restart();
-              d.fx = d.x;
-              d.fy = d.y;
-            }
+                function dragstarted(d) {
+                  if (!d3.event.active) simulation.alphaTarget(0.3).restart();
+                  d.fx = d.x;
+                  d.fy = d.y;
+                }
 
-            function dragged(d) {
-              d.fx = d3.event.x;
-              d.fy = d3.event.y;
-            }
+                function dragged(d) {
+                  d.fx = d3.event.x;
+                  d.fy = d3.event.y;
+                }
 
-            function dragended(d) {
-              if (!d3.event.active) simulation.alphaTarget(0);
-              d.fx = null;
-              d.fy = null;
-            }
+                function dragended(d) {
+                  if (!d3.event.active) simulation.alphaTarget(0);
+                  d.fx = null;
+                  d.fy = null;
+                }
+            },
+        },
+        mounted() {
+            fetch('/job/' + this.$root.$children[0].job_id + '/cluster/' + this.cluster_id + '/graph')
+                .then((response) => response.json())
+                .then((data) => {
+                    this.graph = data.graph;
+                    this.draw();
+                });
+        },
+        props: {
+            cluster_id: String,
         },
         name: "ClusterVisualizationComponent",
     }
