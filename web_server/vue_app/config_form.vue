@@ -178,7 +178,7 @@
                 </div>
             </div>
 
-            <iframe src="static/cluster_vis.html" class="w-100" style="height: 700px;"></iframe>
+            <cluster-visualization-component/>
 
             <div class="row justify-content-end">
                 <div class="col-auto">
@@ -212,10 +212,12 @@
 <script>
     import Resource from './components/Resource'
     import Match from './components/Match'
+    import ClusterVisualizationComponent from "./components/ClusterVisualization";
 
     export default {
         name: 'app',
         components: {
+            ClusterVisualizationComponent,
             'resource-component': Resource,
             'match-component': Match,
         },
