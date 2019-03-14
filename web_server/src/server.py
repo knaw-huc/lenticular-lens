@@ -110,6 +110,11 @@ def result(job_id, mapping_name):
     return response
 
 
+@app.route('/job/<job_id>/cluster/<cluster_id>')
+def cluster_visualization(job_id, cluster_id):
+    return index()
+
+
 @app.route('/server_status/')
 def status():
     status_process = subprocess.run(['python', '/app/status.py'], capture_output=True, text=True)

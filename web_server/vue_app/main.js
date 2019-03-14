@@ -6,6 +6,7 @@ Vue.use(BootstrapVue);
 
 import App from './config_form.vue'
 import ResultsComponent from './components/Results'
+import ClusterVisualization from './components/ClusterVisualization'
 
 import Octicon from 'vue-octicon/components/Octicon.vue'
 import 'vue-octicon/icons'
@@ -28,9 +29,15 @@ Vue.component('matching-field-value-component', MatchingFieldValueComponent);
 new Vue({
   computed: {
     ViewComponent() {
-      return this.currentRoute.startsWith('/job')
-          ? ResultsComponent
-          : App
+      if (this.currentRoute.startsWith('/job')) {
+        let cluster_id_res = /(?<=\/job\/.+\/cluster\/).+/.exec(this.currentRoute);
+        if (cluster_id_res)
+          return ClusterVisualization;
+
+        return ResultsComponent;
+      }
+
+      return App;
     },
   },
   data: {

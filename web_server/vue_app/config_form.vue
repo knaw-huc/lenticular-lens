@@ -182,7 +182,7 @@
 
             <div class="row justify-content-end">
                 <div class="col-auto">
-                    <a href="static/cluster_vis.html" target="_blank" class="btn btn-info">Open in new tab</a>
+                    <a :href="'/job/' + job_id + '/cluster/' + 'static'" target="_blank" class="btn btn-info">Open in new tab</a>
                 </div>
             </div>
         </tab-content>
