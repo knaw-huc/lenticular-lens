@@ -1,5 +1,6 @@
 import collections
 from config_db import db_conn
+import pickle
 import psycopg2
 from psycopg2 import extras as psycopg2_extras, sql as psycopg2_sql
 from psycopg2.extensions import AsIs
@@ -62,22 +63,14 @@ def get_job_data(job_id):
             print('Database error. Retry %i' % n)
             time.sleep((2 ** n) + (random.randint(0, 1000) / 1000))
 
-    job_data['clusters'] = [
-        {
-            'cluster_id': 'N9195007856117043990',
-            'ext': 'cyc',
-            'size': 79,
-            'properties': ['first_name', 'full_name'],
-            'sample': '[Marie] [Jans, Marie]',
-        },
-        {
-            'cluster_id': 'N7395160203604709397',
-            'ext': 'cyc',
-            'size': 3,
-            'properties': ['full_name'],
-            'sample': '[Amerongen, Jan [van]]',
-        },
-    ]
+    with open('/app/cluster.bin', 'rb') as clusters_file:
+        clusters_data = pickle.load(clusters_file)
+
+    job_data['clusters'] = {}
+    for i in range(50):
+        cluster_id, cluster_data = clusters_data.popitem()
+        cluster_data['index'] = i + 1
+        job_data['clusters'][cluster_id] = cluster_data
 
     return job_data
 

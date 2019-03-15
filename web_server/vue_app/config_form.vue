@@ -92,13 +92,9 @@
                             </thead>
                             <tbody>
                                 <cluster-table-row-component
-                                        v-for="(cluster_data, index) in job_data.clusters"
-                                        :cluster_id="cluster_data.cluster_id"
-                                        :ext="cluster_data.ext"
-                                        :index="index"
-                                        :size="cluster_data.size"
-                                        :properties="cluster_data.properties"
-                                        :sample="cluster_data.sample"
+                                        v-for="(cluster_data, cluster_id) in job_data.clusters"
+                                        :cluster_id="cluster_id"
+                                        :cluster_data="cluster_data"
                                         @select:cluster_id="cluster_id_selected = $event"
                                 />
                             </tbody>

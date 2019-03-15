@@ -1,11 +1,11 @@
 <template>
     <tr :clusterid="cluster_id" @click="$emit('select:cluster_id', cluster_id)">
-        <td :style="'color: ' + ext_colors[ext] + '; font-weight: bold;'"> {{ ext }} </td>
+        <td :style="'color: ' + ext_colors['no'] + '; font-weight: bold;'"> {{ 'no' }} </td>
         <td> {{ cluster_id }} </td>
-        <td> {{ index }} </td>
-        <td> {{ size }} </td>
-        <td> {{ properties.join(' | ') }} </td>
-        <td> {{ sample }} </td>
+        <td> {{ cluster_data.index }} </td>
+        <td> {{ cluster_data.nodes.length }} </td>
+        <td> {{ ['full_name'].join(' | ') }} </td>
+        <td> {{ 'name' }} </td>
     </tr>
 </template>
 
@@ -22,12 +22,8 @@
         },
         name: "ClusterTableRowComponent",
         props: {
+            cluster_data: Object,
             cluster_id: String,
-            ext: String,
-            index: Number,
-            size: Number,
-            properties: Array,
-            sample: String,
         },
     }
 </script>
