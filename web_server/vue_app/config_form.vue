@@ -76,109 +76,38 @@
         </tab-content>
 
         <tab-content title="Validation">
-            <div class="row">
+            <div class="row" v-if="job_data">
                 <div class="col-md-12">
                     <div id="dataset_linking_stats_cluster_results" style="height: 20em; width:100%; scroll: both; overflow: auto;">
                         <table class="table table-striped" id="resultTable" style="height: 20em; scroll: both; overflow: auto;">
                             <thead>
-                                 <tr>
-
+                                <tr>
                                     <th>Ext</th>
-
                                     <th>ID</th>
-
                                     <th>count</th>
-
                                     <th>size</th>
-
                                     <th>prop</th>
-
                                     <th>sample</th>
-
-                                 </tr></thead>
-                                 <tbody>
-
-                                 <tr clusterid="N9195007856117043990" class="">
-
-                                    <td style="color:purple; font-weight:bold;"> cyc </td>
-
-                                    <td> N9195007856117043990 </td>
-
-                                    <td> 1 </td>
-
-                                    <td> 79 </td>
-
-                                    <td> first_name | full_name </td>
-
-                                    <td> [Marie] [Jans, Marie] </td>
-
-
-                                 </tr><tr clusterid="N7395160203604709397">
-
-                                    <td style="color:purple; font-weight:bold;"> cyc </td>
-
-                                    <td> N7395160203604709397 </td>
-
-                                    <td> 2 </td>
-
-                                    <td> 3 </td>
-
-                                    <td> full_name </td>
-
-                                    <td> [Amerongen, Jan [van]] </td>
-
-
-                                 </tr><tr clusterid="N6025972999207757492">
-
-                                    <td style="color:purple; font-weight:bold;"> cyc </td>
-
-                                    <td> N6025972999207757492 </td>
-
-                                    <td> 3 </td>
-
-                                    <td> 2 </td>
-
-                                    <td> first_name | full_name </td>
-
-                                    <td> [Thomas Jacobsz] [Goddeling, Thomas Jacobsz] </td>
-
-
-                                 </tr><tr clusterid="N8991777952625550418">
-
-                                    <td style="color:purple; font-weight:bold;"> cyc </td>
-
-                                    <td> N8991777952625550418 </td>
-
-                                    <td> 4 </td>
-
-                                    <td> 131 </td>
-
-                                    <td> first_name | full_name </td>
-
-                                    <td> [Anna] [Jans, Anna] </td>
-
-
-                                 </tr><tr clusterid="N8168393585806295922" class="">
-
-                                    <td style="color:purple; font-weight:bold;"> cyc </td>
-
-                                    <td> N8168393585806295922 </td>
-
-                                    <td> 5 </td>
-
-                                    <td> 10 </td>
-
-                                    <td> full_name </td>
-
-                                    <td> [Kipshaven, Lucas [van]] </td>
-                                 </tr>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <cluster-table-row-component
+                                        v-for="(cluster_data, index) in job_data.clusters"
+                                        :cluster_id="cluster_data.cluster_id"
+                                        :ext="cluster_data.ext"
+                                        :index="index"
+                                        :size="cluster_data.size"
+                                        :properties="cluster_data.properties"
+                                        :sample="cluster_data.sample"
+                                        @select:cluster_id="cluster_id_selected = $event"
+                                />
                             </tbody>
                         </table>
                     </div>
                 </div>
             </div>
 
-            <cluster-visualization-component v-if="job_id" cluster_id="static"/>
+            <cluster-visualization-component v-if="cluster_id_selected" :cluster_id="cluster_id_selected"/>
 
             <div class="row justify-content-end">
                 <div class="col-auto">
@@ -213,10 +142,12 @@
     import Resource from './components/Resource'
     import Match from './components/Match'
     import ClusterVisualizationComponent from "./components/ClusterVisualization";
+    import ClusterTableRowComponent from "./components/ClusterTableRow";
 
     export default {
         name: 'app',
         components: {
+            ClusterTableRowComponent,
             ClusterVisualizationComponent,
             'resource-component': Resource,
             'match-component': Match,
@@ -230,6 +161,7 @@
         },
         data() {
             return {
+                cluster_id_selected: null,
                 datasets: [],
                 job_id: '',
                 job_data: null,

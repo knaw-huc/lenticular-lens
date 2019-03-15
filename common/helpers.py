@@ -55,11 +55,31 @@ def get_job_data(job_id):
             with db_conn() as conn:
                 with conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) as cur:
                     cur.execute('SELECT * FROM reconciliation_jobs WHERE job_id = %s', (job_id,))
-                    return cur.fetchone()
+                    job_data = cur.fetchone()
+            break
         except (psycopg2.InterfaceError, psycopg2.OperationalError):
             n += 1
             print('Database error. Retry %i' % n)
             time.sleep((2 ** n) + (random.randint(0, 1000) / 1000))
+
+    job_data['clusters'] = [
+        {
+            'cluster_id': 'N9195007856117043990',
+            'ext': 'cyc',
+            'size': 79,
+            'properties': ['first_name', 'full_name'],
+            'sample': '[Marie] [Jans, Marie]',
+        },
+        {
+            'cluster_id': 'N7395160203604709397',
+            'ext': 'cyc',
+            'size': 3,
+            'properties': ['full_name'],
+            'sample': '[Amerongen, Jan [van]]',
+        },
+    ]
+
+    return job_data
 
 
 def update_job_data(job_id, job_data):

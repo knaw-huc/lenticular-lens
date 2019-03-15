@@ -18,7 +18,9 @@
         },
         methods: {
             draw() {
-                let svg = d3.select("svg");
+                let svg = d3.select("svg#graph_cluster");
+
+                svg.selectAll("*").remove();
 
                 let width = +svg.attr("width"),
                   height = +svg.attr("height");
@@ -114,19 +116,29 @@
                   d.fy = null;
                 }
             },
-        },
-        mounted() {
-            fetch('/job/' + this.$root.$children[0].job_id + '/cluster/' + this.cluster_id + '/graph')
+            getGraphData() {
+                fetch('/job/' + this.$root.$children[0].job_id + '/cluster/' + this.cluster_id + '/graph')
                 .then((response) => response.json())
                 .then((data) => {
                     this.graph = data.graph;
                     this.draw();
                 });
+            },
+        },
+        mounted() {
+            if (this.cluster_id) {
+                this.getGraphData();
+            }
         },
         props: {
             cluster_id: String,
         },
         name: "ClusterVisualizationComponent",
+        watch: {
+            cluster_id() {
+                this.getGraphData();
+            },
+        },
     }
 </script>
 
