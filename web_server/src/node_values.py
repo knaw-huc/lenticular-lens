@@ -10,10 +10,11 @@ def get_node_values(query_data, uris):
         for datatype_set in graph_set['data']:
             for property_name in datatype_set['properties']:
                 sql = psycopg2_sql.SQL('''
-                SELECT uri, {property_literal} AS property, {property_name} AS value
+                SELECT uri, {graph_name}, {property_literal} AS property, {property_name} AS value
                 FROM {table_name}
                 WHERE uri IN %(uris)s
                 ''').format(
+                    graph_name=psycopg2_sql.Literal(graph_set['graph']),
                     property_literal=psycopg2_sql.Literal(property_name),
                     property_name=psycopg2_sql.Identifier(get_column_name(property_name)),
                     table_name=psycopg2_sql.Identifier(
