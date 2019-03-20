@@ -17,6 +17,6 @@ spec:
     spec:
       containers:
       - name: postgres
-        image: knawhuc/postgres_reconciliation_worker:postgres-latest
+        image: knawhuc/postgres_reconciliation_worker:postgres-0.4
         ports:
         - containerPort: 5432

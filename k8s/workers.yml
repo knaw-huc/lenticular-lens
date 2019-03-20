@@ -20,8 +20,7 @@ spec:
           emptyDir: {}
       containers:
         - name: timworker
-          image: knawhuc/postgres_reconciliation_worker:timbuctoo_worker-latest
-          command: ["python", "/app/timbuctoo_worker.py"]
+          image: knawhuc/postgres_reconciliation_worker:timbuctoo_worker-0.6
           env:
             - name: DATABASE_CONFIG
               value: '{"host":"postgres","database":"postgres","user":"postgres","password":"postgres"}'
@@ -29,19 +28,20 @@ spec:
             - mountPath: /output
               name: outputshare
         - name: jobsworker
-          image: knawhuc/postgres_reconciliation_worker:jobs_worker-latest
-          command: ["python", "/app/jobs_worker.py"]
+          image: knawhuc/postgres_reconciliation_worker:jobs_worker-0.6
           env:
             - name: DATABASE_CONFIG
               value: '{"host":"postgres","database":"postgres","user":"postgres","password":"postgres"}'
           volumeMounts:
             - mountPath: /output
               name: outputshare
-        - name: web_server
-          image: knawhuc/postgres_reconciliation_worker:web_server-latest
+        - name: webserver
+          image: knawhuc/postgres_reconciliation_worker:web_server-0.6
+          env:
+            - name: DATABASE_CONFIG
+              value: '{"host":"postgres","database":"postgres","user":"postgres","password":"postgres"}'
           ports:
             - containerPort: 8000
-              hostPort: 80
           volumeMounts:
             - mountPath: /output
               name: outputshare
