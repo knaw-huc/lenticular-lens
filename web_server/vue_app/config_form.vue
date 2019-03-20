@@ -75,6 +75,43 @@
         </div>
         </tab-content>
 
+        <tab-content title="Validation">
+            <div class="row" v-if="job_data">
+                <div class="col-md-12">
+                    <div id="dataset_linking_stats_cluster_results" style="height: 20em; width:100%; scroll: both; overflow: auto;">
+                        <table class="table table-striped" id="resultTable" style="height: 20em; scroll: both; overflow: auto;">
+                            <thead>
+                                <tr>
+                                    <th>Ext</th>
+                                    <th>ID</th>
+                                    <th>count</th>
+                                    <th>size</th>
+                                    <th>prop</th>
+                                    <th>sample</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <cluster-table-row-component
+                                        v-for="(cluster_data, cluster_id) in job_data.clusters"
+                                        :cluster_id="cluster_id"
+                                        :cluster_data="cluster_data"
+                                        @select:cluster_id="cluster_id_selected = $event"
+                                />
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <cluster-visualization-component v-if="cluster_id_selected" :cluster_id="cluster_id_selected"/>
+
+            <div class="row justify-content-end">
+                <div class="col-auto">
+                    <a :href="'/job/' + job_id + '/cluster/' + 'static'" target="_blank" class="btn btn-info">Open in new tab</a>
+                </div>
+            </div>
+        </tab-content>
+
         <template v-if="props.activeTabIndex === 1" slot="next" scope="props">
             <wizard-button
                     v-if="job_data"
@@ -100,10 +137,14 @@
 <script>
     import Resource from './components/Resource'
     import Match from './components/Match'
+    import ClusterVisualizationComponent from "./components/ClusterVisualization";
+    import ClusterTableRowComponent from "./components/ClusterTableRow";
 
     export default {
         name: 'app',
         components: {
+            ClusterTableRowComponent,
+            ClusterVisualizationComponent,
             'resource-component': Resource,
             'match-component': Match,
         },
@@ -116,6 +157,7 @@
         },
         data() {
             return {
+                cluster_id_selected: null,
                 datasets: [],
                 job_id: '',
                 job_data: null,

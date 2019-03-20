@@ -1,5 +1,6 @@
 import collections
 from config_db import db_conn
+import pickle
 import psycopg2
 from psycopg2 import extras as psycopg2_extras, sql as psycopg2_sql
 from psycopg2.extensions import AsIs
@@ -55,11 +56,23 @@ def get_job_data(job_id):
             with db_conn() as conn:
                 with conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) as cur:
                     cur.execute('SELECT * FROM reconciliation_jobs WHERE job_id = %s', (job_id,))
-                    return cur.fetchone()
+                    job_data = cur.fetchone()
+            break
         except (psycopg2.InterfaceError, psycopg2.OperationalError):
             n += 1
             print('Database error. Retry %i' % n)
             time.sleep((2 ** n) + (random.randint(0, 1000) / 1000))
+
+    with open('/app/cluster.bin', 'rb') as clusters_file:
+        clusters_data = pickle.load(clusters_file)
+
+    job_data['clusters'] = {}
+    for i in range(50):
+        cluster_id, cluster_data = clusters_data.popitem()
+        cluster_data['index'] = i + 1
+        job_data['clusters'][cluster_id] = cluster_data
+
+    return job_data
 
 
 def update_job_data(job_id, job_data):
