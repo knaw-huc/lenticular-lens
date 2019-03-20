@@ -75,14 +75,19 @@ def get_job_data(job_id):
             print('Database error. Retry %i' % n)
             time.sleep((2 ** n) + (random.randint(0, 1000) / 1000))
 
-    with open('/app/cluster.bin', 'rb') as clusters_file:
-        clusters_data = pickle.load(clusters_file)
-
-    job_data['clusters'] = {}
-    for i in range(50):
-        cluster_id, cluster_data = clusters_data.popitem()
-        cluster_data['index'] = i + 1
-        job_data['clusters'][cluster_id] = cluster_data
+    if job_data:
+        try:
+            with open('/app/cluster.bin', 'rb') as clusters_file:
+                clusters_data = pickle.load(clusters_file)
+        except FileNotFoundError:
+            pass
+        else:
+            job_data['clusters'] = {}
+            i = 1
+            for cluster_id, cluster_data in clusters_data.items():
+                i += 1
+                cluster_data['index'] = i
+                job_data['clusters'][cluster_id] = cluster_data
 
     return job_data
 
