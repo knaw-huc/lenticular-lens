@@ -1,4 +1,4 @@
-from config_db import db_conn, run_query
+from config_db import execute_query, run_query
 from helpers import hash_string
 from psycopg2 import sql as psycopg2_sql
 
@@ -25,10 +25,7 @@ def get_node_values(query_data, uris):
 
     union_sql = psycopg2_sql.SQL('\nUNION ALL\n').join(sqls)
 
-    with db_conn() as conn, conn.cursor() as cur:
-        cur.execute(union_sql, {'uris': tuple(uris)})
-
-        return cur.fetchall()
+    return execute_query({'query': union_sql, 'parameters': {'uris': tuple(uris)}})
 
 
 def get_table_name(dataset_id, collection_id):
@@ -71,7 +68,8 @@ if __name__ == '__main__':
 
     test_uris = [
         "http://goldenagents.org/uva/SAA/person/IndexOpBegraafregistersVoor1811/saaId11146456p2",
-        "http://goldenagents.org/uva/SAA/person/IndexOpOndertrouwregister/saaId26543348p1"
+        "http://goldenagents.org/uva/SAA/person/IndexOpOndertrouwregister/saaId26543348p1",
+        "http://goldenagents.org/uva/SAA/person/IndexOpBegraafregistersVoor1811/saaId10159286p1",
     ]
 
     print(get_node_values(test_query_data, test_uris))
