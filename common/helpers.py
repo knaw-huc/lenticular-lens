@@ -49,6 +49,18 @@ def hash_string(to_hash):
     return hashlib.md5(to_hash.encode('utf-8')).hexdigest()
 
 
+def get_unnested_list(nest):
+    unnested = []
+
+    for element in nest:
+        if isinstance(element, list):
+            unnested += get_unnested_list(element)
+        else:
+            unnested.append(element)
+
+    return unnested
+
+
 def get_job_data(job_id):
     n = 0
     while True:

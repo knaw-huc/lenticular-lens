@@ -1,7 +1,7 @@
 from links_to_rdf import convert_link
 import datetime
 from config_db import db_conn
-from helpers import get_absolute_property, get_job_data, get_property_sql, hash_string, update_job_data
+from helpers import get_absolute_property, get_job_data, get_property_sql, get_unnested_list, hash_string, update_job_data
 import jstyleson
 import locale
 from match import Match
@@ -334,7 +334,7 @@ ORDER BY uri{limit}
             relation_reg_match = re.search(r'(.+)__(.+)__relation__(.+)', sql_part_string)
             if relation_reg_match:
                 resource = self.get_resource_by_label(relation_reg_match[1])
-                for relation in resource.related:
+                for relation in get_unnested_list(resource.related):
                     if relation['resource'] == relation_reg_match[2]:
                         break
 
