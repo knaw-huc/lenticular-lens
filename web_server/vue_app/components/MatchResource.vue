@@ -3,8 +3,8 @@
         <div class="col">
             <div class="row justify-content-between">
                 <div class="form-group col-3">
-                    <label :for="'match_' + match.id + '_resource_label_' + match_resource.id">Collection to use</label>
-                    <select class="form-control" v-model="match_resource.resource" @change="handleResourceChange" :id="'match_' + match.id + '_resource_label_' + match_resource.id">
+                    <label :for="'match_' + match.id + '_resource_label_' + match_resource_id">Collection to use</label>
+                    <select class="form-control" v-model="match_resource.resource" @change="handleResourceChange" :id="'match_' + match.id + '_resource_label_' + match_resource_id">
                         <option disabled selected value="">Choose a collection</option>
                         <option v-for="(root_resource, index) in resources" :value="root_resource.id" v-if="match.sources.indexOf(root_resource.id) === -1">{{ root_resource.label }}</option>
                     </select>
@@ -20,7 +20,7 @@
                                       :datasets="datasets"
                                       :resources="resources"
                                       :match_id="match.id"
-                                      :resource_id="match_resource.resource"
+                                      :resource_id="match_resource_id"
                                       @remove="match_resource.matching_fields.splice(index, 1)"
             ></matching-field-component>
 
@@ -72,6 +72,6 @@
         mounted() {
             this.matching_fields_count = this.match_resource.matching_fields.length;
         },
-        props: ['match', 'match_resource', 'datasets', 'resources'],
+        props: ['match', 'match_resource', 'match_resource_id', 'datasets', 'resources'],
     }
 </script>

@@ -53,7 +53,7 @@
         },
         mounted() {
             if (typeof this.matching_field.value.property[0] !== 'number') {
-                this.matching_field.value.property[0] = this.resource_id;
+                this.matching_field.value.property[0] = this.$parent.match_resource.resource;
             }
         },
         props: {

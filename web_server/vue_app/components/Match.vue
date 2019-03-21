@@ -26,14 +26,16 @@
 
                 <match-resource-component
                         v-for="(match_resource, index) in match.sources"
-                        :match="match" :match_resource="match_resource"
+                        :match_resource_id="'source_' + index"
+                        :match="match"
+                        :match_resource="match_resource"
                         :datasets="datasets"
                         :resources="resources"
                         @remove="match.sources.splice(index, 1)"
                 ></match-resource-component>
 
                 <div class="form-group">
-                    <button type="button" class="btn btn-primary w-25 form-control" @click="addMatchResource(match.sources, sources_count, $event)">+ Add source</button>
+                    <button type="button" class="btn btn-primary w-25 form-control" @click="addMatchResource(match.sources, $event)">+ Add source</button>
                 </div>
             </div>
         </div>
@@ -44,14 +46,16 @@
                 <h3>Targets</h3>
                 <match-resource-component
                         v-for="(match_resource, index) in match.targets"
-                        :match="match" :match_resource="match_resource"
+                        :match_resource_id="'target_' + index"
+                        :match="match"
+                        :match_resource="match_resource"
                         :datasets="datasets"
                         :resources="resources"
                         @remove="match.targets.splice(index, 1)"
                 ></match-resource-component>
 
                 <div class="form-group">
-                    <button type="button" class="btn btn-primary w-25 form-control" @click="addMatchResource(match.targets, targets_count, $event)">+ Add target</button>
+                    <button type="button" class="btn btn-primary w-25 form-control" @click="addMatchResource(match.targets, $event)">+ Add target</button>
                 </div>
             </div>
         </div>
@@ -116,8 +120,6 @@
         data() {
             return {
                 label_input: '',
-                sources_count: 0,
-                targets_count: 0,
                 conditions_count: 0,
             }
         },
@@ -138,15 +140,12 @@
 
                 this.match.conditions.items.push(condition);
             },
-            addMatchResource(match_resources, count, event) {
+            addMatchResource(match_resources, event) {
                 if (event) {
                     event.target.blur();
                 }
 
-                count++;
-
                 let match_resource = {
-                    'id': count,
                     'matching_fields': [],
                 };
 
@@ -157,12 +156,9 @@
             }
         },
         mounted() {
-            this.sources_count = this.match.sources.length;
-            if (this.sources_count < 1) {
-                this.addMatchResource(this.match.sources, this.sources_count);
+            if (this.match.sources.length < 1) {
+                this.addMatchResource(this.match.sources);
             }
-
-            this.targets_count = this.match.targets.length;
 
             this.conditions_count = this.match.conditions.items.length;
             if (this.conditions_count < 1) {
