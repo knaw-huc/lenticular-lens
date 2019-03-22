@@ -273,7 +273,7 @@
                                 this.matches_count = this.matches.length;
                             }
 
-                            if (this.job_data.status !== 'Finished') {
+                            if (this.job_data.status !== 'Finished' && !this.job_data.status.startsWith('FAILED')) {
                                 setTimeout(this.getJobData, 5000);
                             }
                         })
