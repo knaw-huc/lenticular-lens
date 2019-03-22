@@ -3,14 +3,16 @@ from helpers import hash_string
 from psycopg2 import sql as psycopg2_sql
 
 
-def get_node_values(query_data, uris):
+def get_node_values(uris, query_data):
     sqls = []
+
+    uris = [uri.replace('<', '').replace('>', '') for uri in uris]
 
     for graph_set in query_data:
         for datatype_set in graph_set['data']:
             for property_name in datatype_set['properties']:
                 sql = psycopg2_sql.SQL('''
-                SELECT uri, {graph_name}, {property_literal} AS property, {property_name} AS value
+                SELECT uri AS resource, {graph_name} AS dataset, {property_literal} AS property, {property_name} AS value
                 FROM {table_name}
                 WHERE uri IN %(uris)s
                 ''').format(
@@ -18,7 +20,7 @@ def get_node_values(query_data, uris):
                     property_literal=psycopg2_sql.Literal(property_name),
                     property_name=psycopg2_sql.Identifier(get_column_name(property_name)),
                     table_name=psycopg2_sql.Identifier(
-                        get_table_name(graph_set['graph'], datatype_set['entity_datatype'])
+                        get_table_name(graph_set['graph'], datatype_set['entity_type'])
                     ),
                 )
 
@@ -26,7 +28,11 @@ def get_node_values(query_data, uris):
 
     union_sql = psycopg2_sql.SQL('\nUNION ALL\n').join(sqls)
 
-    return execute_query({'query': union_sql, 'parameters': {'uris': tuple(uris)}})
+    return {
+        'query': union_sql,
+        'header': ('resource', 'dataset', 'property', 'value'),
+        'parameters': {'uris': tuple(uris)}
+    }
 
 
 def get_table_name(dataset_id, collection_id):
