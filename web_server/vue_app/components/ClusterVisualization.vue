@@ -1,5 +1,5 @@
 <template>
-    <div id="cluster_plot_row" class="row" style="background-color:#FFFFE0;" >
+    <div id="cluster_plot_row" class="row mb-3" style="background-color:#FFFFE0;" >
         <div id="cluster_plot_col" class="col-md-12" style='height: 40em; width:100%; scroll: both; overflow: auto;' >
             <svg class="plot" id="graph_cluster" width="1000" height="800" style="background-color:#FFFFE0;"></svg>
         </div>
