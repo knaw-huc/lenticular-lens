@@ -75,6 +75,24 @@
         </div>
         </tab-content>
 
+        <tab-content title="Clustering">
+            <div class="border p-4 mt-4 bg-light" v-for="match in matches">
+                <div class="row justify-content-between">
+                    <div class="col align-self-center">
+                        <div class="h2">{{ match.label }}</div>
+                    </div>
+
+                    <div class="col-auto align-self-center">
+                        <div class="h3 text-success">Clustered</div>
+                    </div>
+
+                    <div class="form-group col-1 align-self-center">
+                        <button v-on:click="" type="button" class="ml-3 btn btn-danger"><octicon name="trashcan"></octicon></button>
+                    </div>
+                </div>
+            </div>
+        </tab-content>
+
         <tab-content title="Validation">
             <div class="row" v-if="job_data">
                 <div class="col-md-12">
