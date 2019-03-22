@@ -103,7 +103,7 @@
                 </div>
             </div>
 
-            <cluster-visualization-component v-if="cluster_id_selected" :cluster_id="cluster_id_selected"/>
+            <cluster-visualization-component v-if="cluster_id_selected" :cluster_id="cluster_id_selected" :cluster_data="job_data.clusters[cluster_id_selected]"/>
 
             <div class="row justify-content-end">
                 <div class="col-auto">

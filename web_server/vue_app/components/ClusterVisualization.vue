@@ -117,7 +117,16 @@
                 }
             },
             getGraphData() {
-                fetch('/job/' + this.$root.$children[0].job_id + '/cluster/' + this.cluster_id + '/graph')
+                fetch(
+                    '/job/' + this.$root.$children[0].job_id + '/cluster/' + this.cluster_id + '/graph',
+                    {
+                            headers: {
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json',
+                            },
+                            method: "POST",
+                            body: JSON.stringify({'cluster_data': this.cluster_data})
+                        })
                 .then((response) => response.json())
                 .then((data) => {
                     this.graph = data.graph;
@@ -131,6 +140,7 @@
             }
         },
         props: {
+            cluster_data: Object,
             cluster_id: String,
         },
         name: "ClusterVisualizationComponent",
