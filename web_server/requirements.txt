@@ -1,4 +1,10 @@
 Flask
 gunicorn
+jstyleson
+kitchen
 psycopg2-binary
+networkx
+rdflib
 requests
+unidecode
+xmltodict

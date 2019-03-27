@@ -1,6 +1,5 @@
 FROM python:3.7-slim
 
-ENV PYTHONPATH /app:/common
 ENV PYTHONUNBUFFERED 1
 
 COPY ./web_server/requirements.txt /app/requirements.txt
@@ -13,6 +12,8 @@ WORKDIR /output
 
 ENV FLASK_APP=/app/server.py
 ENV FLASK_ENV=development
+
+ENV PYTHONPATH /app:/common:/lenticular_lens_1
 
 COPY ./web_server/src /app
 CMD ["gunicorn", "-b", ":8000", "--reload", "server:app"]
