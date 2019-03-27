@@ -27,6 +27,13 @@ CREATE TABLE IF NOT EXISTS timbuctoo_tables (
   UNIQUE (dataset_id, collection_id)
 );
 
+CREATE TABLE IF NOT EXISTS clusterings (
+  clustering_id text unique not null,
+  job_id text not null,
+  mapping_name text not null,
+  clustering_type text not null
+);
+
 CREATE OR REPLACE FUNCTION public.ecartico_full_name(text) RETURNS text IMMUTABLE AS $$
   DECLARE
     first_name text;

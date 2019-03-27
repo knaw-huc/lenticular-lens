@@ -2,8 +2,10 @@ from datasets_config import DatasetsConfig
 from config_db import db_conn
 import datetime
 from flask import Flask, jsonify, request, send_file
-from helpers import get_job_data, hash_string, update_job_data
+from helpers import cluster_csv, get_cluster_data, get_job_data, hash_string, linkset_to_csv, update_job_data
 import json
+from os.path import join
+import pickle
 import psycopg2
 from psycopg2 import extras as psycopg2_extras, sql as psycopg2_sql
 import random
@@ -63,6 +65,27 @@ def job_data(job_id):
     return jsonify(get_job_data(job_id))
 
 
+@app.route('/job/<job_id>/clusters/<clustering_id>')
+def clusters(job_id, clustering_id):
+    clusters = {}
+    try:
+        from src.LLData.Serialisation import CLUSTER_SERIALISATION_DIR
+        with open(join(CLUSTER_SERIALISATION_DIR, f'{clustering_id}-1.txt'), 'rb') as clusters_file:
+            clusters_data = pickle.load(clusters_file)
+    except FileNotFoundError:
+        pass
+    else:
+        i = 1
+        for cluster_id, cluster_data in clusters_data.items():
+            i += 1
+            cluster_data['index'] = i
+            clusters[cluster_id] = cluster_data
+            if i == 100:
+                break
+
+    return jsonify(clusters)
+
+
 @app.route('/job/<job_id>/result/download')
 def download_rdf(job_id):
     return send_file('/output/rdf/%s_output.nq.gz' % job_id, as_attachment=True)
@@ -111,6 +134,21 @@ def result(job_id, mapping_name):
     return response
 
 
+@app.route('/job/<job_id>/create_clustering/', methods=['POST'])
+def create_clustering(job_id):
+    csv_filepath = linkset_to_csv(job_id, request.json['mapping_label'])
+    clustering_id = cluster_csv(csv_filepath)
+
+    with db_conn() as conn, conn.cursor() as cur:
+        cur.execute('''
+        INSERT INTO clusterings
+        (clustering_id, job_id, mapping_name, clustering_type)
+        VALUES (%s, %s, %s, %s)
+        ''', (clustering_id, job_id, request.json['mapping_label'], request.json.get('clustering_type', 'default')))
+
+    return jsonify(clustering_id)
+
+
 @app.route('/job/<job_id>/cluster/<cluster_id>')
 def cluster_visualization(job_id, cluster_id):
     return index()
@@ -118,7 +156,8 @@ def cluster_visualization(job_id, cluster_id):
 
 @app.route('/job/<job_id>/cluster/<cluster_id>/graph', methods=['POST'])
 def get_cluster_graph_data(job_id, cluster_id):
-    cluster_data = request.json['cluster_data']
+    cluster_data = request.json['cluster_data'] if 'cluster_data' in request.json else get_cluster_data(cluster_id)
+
     golden_agents_specifications = {
         "data_store": "POSTGRESQL",
         "cluster_id": cluster_id,
@@ -132,6 +171,10 @@ def get_cluster_graph_data(job_id, cluster_id):
             {"dataset": "ufab7d657a250e3461361c982ce9b38f3816e0c4b__saa_index_op_ondertrouwregister",
              "entity_type": "saaOnt_Person",
              "property": "saaOnt_full_nameList"},
+            # BAPTISM_PERSON
+            {"dataset": "ufab7d657a250e3461361c982ce9b38f3816e0c4b__saa_index_op_doopregister",
+             "entity_type": "saaOnt_Person",
+             "property": "saaOnt_full_name"},
         ]
     }
     return jsonify({'graph': visualise(specs=golden_agents_specifications, activated=True)})

@@ -1,11 +1,35 @@
 import collections
 from config_db import db_conn
+from os.path import join
 import pickle
 import psycopg2
 from psycopg2 import extras as psycopg2_extras, sql as psycopg2_sql
 from psycopg2.extensions import AsIs
 import random
 import time
+
+
+def cluster_csv(csv_filepath):
+    from src.Clustering.SimpleLinkClustering import simple_csv_link_clustering
+    from src.LLData.Serialisation import CLUSTER_SERIALISATION_DIR
+
+    return simple_csv_link_clustering(csv_filepath, "Don't know", CLUSTER_SERIALISATION_DIR, activated=True)
+
+
+def linkset_to_csv(job_id, mapping_label):
+    from src.LLData.CSVClusters import CSV_CLUSTER_DIR
+    filepath = join(CSV_CLUSTER_DIR, f'{job_id}_{mapping_label}.csv')
+
+    sql = psycopg2_sql.SQL("COPY (SELECT source_uri, target_uri, 1 FROM {schema}.{view}) TO STDOUT WITH CSV DELIMITER ','").format(
+        schema=psycopg2_sql.Identifier(f'job_{job_id}'),
+        view=psycopg2_sql.Identifier(hash_string(mapping_label)),
+    )
+
+    with db_conn() as conn, conn.cursor() as cur:
+        with open(filepath, 'w') as csv_file:
+            cur.copy_expert(sql, csv_file)
+
+    return filepath
 
 
 def get_absolute_property(property_array, parent_label):
@@ -49,6 +73,16 @@ def hash_string(to_hash):
     return hashlib.md5(to_hash.encode('utf-8')).hexdigest()
 
 
+# Temporary function
+def get_cluster_data(cluster_id):
+    print('Reading file')
+    from src.LLData.Serialisation import CLUSTER_SERIALISATION_DIR
+    with open(join(CLUSTER_SERIALISATION_DIR, 'Serialized_Cluster_PH952ac38a0f5ddf6-1.txt'), 'rb') as clusters_file:
+        clusters_data = pickle.load(clusters_file)
+
+    return clusters_data[cluster_id]
+
+
 def get_unnested_list(nest):
     unnested = []
 
@@ -65,7 +99,8 @@ def get_job_data(job_id):
     n = 0
     while True:
         try:
-            with db_conn() as conn:
+            conn = db_conn()
+            with conn:
                 with conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) as cur:
                     cur.execute('SELECT * FROM reconciliation_jobs WHERE job_id = %s', (job_id,))
                     job_data = cur.fetchone()
@@ -76,18 +111,19 @@ def get_job_data(job_id):
             time.sleep((2 ** n) + (random.randint(0, 1000) / 1000))
 
     if job_data:
-        try:
-            with open('/app/cluster.bin', 'rb') as clusters_file:
-                clusters_data = pickle.load(clusters_file)
-        except FileNotFoundError:
-            pass
-        else:
-            job_data['clusters'] = {}
-            i = 1
-            for cluster_id, cluster_data in clusters_data.items():
-                i += 1
-                cluster_data['index'] = i
-                job_data['clusters'][cluster_id] = cluster_data
+        job_data['results'] = {}
+        n = 0
+        while True:
+            try:
+                with conn:
+                    with conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) as cur:
+                        cur.execute('SELECT * FROM clusterings WHERE job_id = %s', (job_id,))
+                        job_data['results']['clusterings'] = cur.fetchall()
+                break
+            except (psycopg2.InterfaceError, psycopg2.OperationalError):
+                n += 1
+                print('Database error. Retry %i' % n)
+                time.sleep((2 ** n) + (random.randint(0, 1000) / 1000))
 
     return job_data
 

@@ -83,7 +83,8 @@
                     </div>
 
                     <div class="col-auto align-self-center">
-                        <div class="h3 text-success">Clustered</div>
+                        <div v-if="getResultForMatch(match.label).clusterings.length > 0" class="h3 text-success">Clustered</div>
+                        <button v-else type="button" class="btn btn-info" @click="createClustering(match.label, $event)">Create clustering</button>
                     </div>
 
                     <div class="form-group col-1 align-self-center">
@@ -96,20 +97,21 @@
         <tab-content title="Validation">
             <template v-if="job_data">
                 <div class="border mb-5 p-3">
-                    <div class="border p-4 mt-4 bg-light" v-for="match in matches" @click="clustering_id = match.id">
+                    <div class="border p-4 mt-4 bg-light" v-for="match in matches" @click="getClusters(getResultForMatch(match.label).clusterings[0].clustering_id)">
                         <div class="row justify-content-between">
                             <div class="col align-self-center">
                                 <div class="h2">{{ match.label }}</div>
                             </div>
 
                             <div class="col-auto align-self-center">
-                                <div class="h3 text-success">Clustered</div>
+                                <div v-if="getResultForMatch(match.label).clusterings.length > 0" class="h3 text-success">Clustered</div>
+                                <div v-else class="h3 text-danger">Not clustered</div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="row border-bottom mb-5" v-if="clustering_id">
+                <div class="row border-bottom mb-5" v-if="Object.keys(clusters).length > 0">
                     <div class="col-md-12">
                         <div id="dataset_linking_stats_cluster_results" style="height: 20em; width:100%; scroll: both; overflow: auto;">
                             <table class="table table-striped" id="resultTable" style="height: 20em; scroll: both; overflow: auto;">
@@ -125,7 +127,7 @@
                                 </thead>
                                 <tbody>
                                     <cluster-table-row-component
-                                            v-for="(cluster_data, cluster_id) in job_data.clusters"
+                                            v-for="(cluster_data, cluster_id) in clusters"
                                             :cluster_id="cluster_id"
                                             :cluster_data="cluster_data"
                                             @select:cluster_id="cluster_id_selected = $event"
@@ -137,11 +139,11 @@
                 </div>
 
                 <template v-if="cluster_id_selected">
-                    <cluster-visualization-component :cluster_id="cluster_id_selected" :cluster_data="job_data.clusters[cluster_id_selected]"/>
+                    <cluster-visualization-component :cluster_id="cluster_id_selected" :cluster_data="clusters[cluster_id_selected]"/>
 
                     <div class="row justify-content-end">
                         <div class="col-auto">
-                            <a :href="'/job/' + job_id + '/cluster/' + 'static'" target="_blank" class="btn btn-info">Open in new tab</a>
+                            <a :href="'/job/' + job_id + '/cluster/' + cluster_id_selected" target="_blank" class="btn btn-info">Open in new tab</a>
                         </div>
                     </div>
                 </template>
@@ -195,6 +197,7 @@
             return {
                 cluster_id_selected: null,
                 clustering_id: null,
+                clusters: [],
                 datasets: [],
                 job_id: '',
                 job_data: null,
@@ -252,6 +255,31 @@
                 this.resources.forEach(resource => {
                     this.$set(resource, 'limit', this.limit_all);
                 });
+            },
+            createClustering(mapping_label, event) {
+                let btn = event.target;
+                btn.setAttribute('disabled', 'disabled');
+
+                fetch('/job/' + this.job_id + '/create_clustering/',
+                    {
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json',
+                        },
+                        method: "POST",
+                        body: JSON.stringify({'mapping_label': mapping_label})
+                    })
+                    .then((response) => response.json())
+                    .then((data) => {
+                        this.getJobData();
+                    });
+            },
+            getClusters(clustering_id) {
+                fetch('/job/' + this.job_id + '/clusters/' + clustering_id)
+                    .then((response) => response.json())
+                    .then((data) => {
+                        this.clusters = data;
+                    });
             },
             getDatasets() {
                 let vue = this;
@@ -327,6 +355,19 @@
                 for (let i = 0; i < resources.length; i++) {
                     if (resources[i].id == resource_id || resources[i].label === resource_id)
                         return resources[i];
+                }
+            },
+            getResultForMatch(match_label) {
+                let clusterings = [];
+
+                this.job_data.results.clusterings.forEach(clustering => {
+                    if (clustering.mapping_name === match_label) {
+                        clusterings.push(clustering);
+                    }
+                });
+
+                return {
+                    'clusterings': clusterings,
                 }
             },
             submitForm() {
