@@ -46,9 +46,6 @@ services:
       - 8000:8000
     volumes:
       - output:/output
-      - ./web_server/src:/app
-      - ./common:/common
-      - ./lenticular_lens_1:/lenticular_lens_1
 
   status_monitor:
     build:
@@ -64,6 +61,7 @@ services:
       - DATABASE_CONFIG={"host":"postgres","database":"postgres","user":"postgres","password":"postgres"}
     volumes:
       - output:/output
+
 volumes:
   pgdata:
   common:
