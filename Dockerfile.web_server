@@ -16,4 +16,5 @@ ENV FLASK_ENV=development
 ENV PYTHONPATH /app:/common:/lenticular_lens_1
 
 COPY ./web_server/src /app
+COPY ./lenticular_lens_1 /lenticular_lens_1
 CMD ["gunicorn", "-b", ":8000", "--reload", "server:app"]
