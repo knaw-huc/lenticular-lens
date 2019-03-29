@@ -23,6 +23,10 @@ class Match:
         return self.conditions.conditions_sql
 
     @property
+    def is_association(self):
+        return self.__data.get('is_association', False)
+
+    @property
     def index_sql(self):
         index_sqls = []
         for template in self.conditions.index_templates:

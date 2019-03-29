@@ -30,11 +30,12 @@ new Vue({
   computed: {
     ViewComponent() {
       if (this.currentRoute.startsWith('/job')) {
-        let cluster_id_res = /(?<=\/job\/.+\/cluster\/).+/.exec(this.currentRoute);
+        let cluster_id_res = /(?<=\/job\/.+\/cluster\/)(.+)\/(.+)/.exec(this.currentRoute);
         if (cluster_id_res) {
           this.child_component_data = JSON.stringify({
             props: {
-              cluster_id: cluster_id_res[0],
+              clustering_id: cluster_id_res[1],
+              cluster_id: cluster_id_res[2],
             },
           });
           return ClusterVisualization;

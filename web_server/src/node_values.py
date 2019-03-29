@@ -1,6 +1,11 @@
 from config_db import execute_query, run_query
-from helpers import hash_string
+# from helpers import hash_string
+from hashlib import md5
 from psycopg2 import sql as psycopg2_sql
+
+
+def hash_string(to_hash):
+    return md5(to_hash.encode('utf-8')).hexdigest()
 
 
 def get_node_values(uris, query_data):
@@ -10,21 +15,21 @@ def get_node_values(uris, query_data):
 
     for graph_set in query_data:
         for datatype_set in graph_set['data']:
-            for property_name in datatype_set['properties']:
-                sql = psycopg2_sql.SQL('''
-                SELECT uri AS resource, {graph_name} AS dataset, {property_literal} AS property, {property_name} AS value
-                FROM {table_name}
-                WHERE uri IN %(uris)s
-                ''').format(
-                    graph_name=psycopg2_sql.Literal(graph_set['graph']),
-                    property_literal=psycopg2_sql.Literal(property_name),
-                    property_name=psycopg2_sql.Identifier(get_column_name(property_name)),
-                    table_name=psycopg2_sql.Identifier(
-                        get_table_name(graph_set['graph'], datatype_set['entity_type'])
-                    ),
-                )
+            table_name = get_table_name(graph_set['graph'], datatype_set['entity_type'])
+            if table_name:
+                for property_name in datatype_set['properties']:
+                    sql = psycopg2_sql.SQL('''
+                    SELECT uri AS resource, {graph_name} AS dataset, {property_literal} AS property, {property_name} AS value
+                    FROM {table_name}
+                    WHERE uri IN %(uris)s
+                    ''').format(
+                        graph_name=psycopg2_sql.Literal(graph_set['graph']),
+                        property_literal=psycopg2_sql.Literal(property_name),
+                        property_name=psycopg2_sql.Identifier(get_column_name(property_name)),
+                        table_name=psycopg2_sql.Identifier(table_name),
+                    )
 
-                sqls.append(sql)
+                    sqls.append(sql)
 
     union_sql = psycopg2_sql.SQL('\nUNION ALL\n').join(sqls)
 
@@ -36,10 +41,12 @@ def get_node_values(uris, query_data):
 
 
 def get_table_name(dataset_id, collection_id):
-    return run_query(
+    result = run_query(
         'SELECT table_name FROM timbuctoo_tables WHERE dataset_id = %s AND collection_id = %s',
         (dataset_id, collection_id)
-    )[0] + '_expanded'
+    )
+
+    return result[0] + '_expanded' if result else result
 
 
 def get_column_name(property_name):

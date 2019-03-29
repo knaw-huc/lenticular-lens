@@ -1,29 +1,31 @@
 <template>
-    <div id="cluster_plot_row" class="row mb-3" style="background-color:#FFFFE0;" >
-        <div id="cluster_plot_col" class="col-md-12" style='height: 40em; width:100%; scroll: both; overflow: auto;' >
-            <svg class="plot" id="graph_cluster" width="1000" height="800" style="background-color:#FFFFE0;"></svg>
+    <div>
+        <div id="cluster_plot_row_1" class="row mb-3" style="background-color:#FFFFE0;" >
+            <div id="cluster_plot_col_1" class="col-md-12" style='height: 40em; width:100%; scroll: both; overflow: auto;' >
+                <svg class="plot" id="graph_cluster_1" width="1000" height="800" style="background-color:#FFFFE0;"></svg>
+            </div>
+        </div>
+        <div id="cluster_plot_row" class="row mb-3" style="background-color:#FFFFE0;" >
+            <div id="cluster_plot_col" class="col-md-12" style='height: 40em; width:100%; scroll: both; overflow: auto;' >
+                <svg class="plot" id="graph_cluster_2" width="1000" height="800" style="background-color:#FFFFE0;"></svg>
+            </div>
         </div>
     </div>
-
 </template>
 
 <script>
     import * as d3 from 'd3'
 
     export default {
-        data() {
-            return {
-                graph: {},
-            }
-        },
         methods: {
-            draw() {
-                let svg = d3.select("svg#graph_cluster");
+            draw(graph, svg_name) {
+                let svg = d3.select(svg_name);
 
                 svg.selectAll("*").remove();
 
                 let width = +svg.attr("width"),
                   height = +svg.attr("height");
+                let radius = 200;
 
                 let color = d3.scaleOrdinal(d3.schemeCategory20);
 
@@ -31,8 +33,6 @@
                   .force("link", d3.forceLink().id(function(d) { return d.id; }).distance(function(d) {return d.distance;}))
                   .force("charge", d3.forceManyBody())
                   .force("center", d3.forceCenter(width / 2, height / 2));
-
-                let graph = this.graph;
 
                 let link = svg
                     .append("g")
@@ -59,10 +59,20 @@
                   .data(graph.nodes)
                   .enter().append("g");
 
+                node.append("svg:image")
+                    .attr("class", "circle")
+                    .attr("xlink:href", function(d) { if (d.size < 6)
+                                                return "";
+                                             else return "https://github.com/favicon.ico"; })
+                    .attr("x", "-12px")
+                    .attr("y", "-12px")
+                    .attr("width", "24px")
+                    .attr("height", "24px");
+
                 node.append("circle")
                     .attr("r", function(d) { if (d.size)
                                                 return d.size;
-                                             else return 5; })
+                                             else return 8; })
                     .attr("fill", function(d) { return color(d.group); })
                     .call(d3.drag()
                         .on("start", dragstarted)
@@ -94,13 +104,15 @@
                       .attr("y2", function(d) { return d.target.y; });
 
                   node
-                      .attr("transform", function(d) {
+                    .attr("cx", function(d) { return d.x = Math.max(10, Math.min(width - radius, d.x)); })
+                    .attr("cy", function(d) { return d.y = Math.max(10, Math.min(height - 10, d.y)); })
+                    .attr("transform", function(d) {
                         return "translate(" + d.x + "," + d.y + ")";
                       })
                 }
 
                 function dragstarted(d) {
-                  if (!d3.event.active) simulation.alphaTarget(0.3).restart();
+                  if (!d3.event.active) simulation.alphaTarget(0.2).restart();
                   d.fx = d.x;
                   d.fy = d.y;
                 }
@@ -118,7 +130,7 @@
             },
             getGraphData() {
                 fetch(
-                    '/job/' + this.$root.$children[0].job_id + '/cluster/' + this.cluster_id + '/graph',
+                    '/job/' + this.$root.$children[0].job_id + '/cluster/' + this.clustering_id + '/' + this.cluster_id + '/graph',
                     {
                             headers: {
                                 'Accept': 'application/json',
@@ -129,8 +141,8 @@
                         })
                 .then((response) => response.json())
                 .then((data) => {
-                    this.graph = data.graph;
-                    this.draw();
+                    this.draw(data.graph_1, "svg#graph_cluster_1");
+                    this.draw(data.graph_2, "svg#graph_cluster_2");
                 });
             },
         },
@@ -142,6 +154,7 @@
         props: {
             cluster_data: Object,
             cluster_id: String,
+            clustering_id: String,
         },
         name: "ClusterVisualizationComponent",
         watch: {

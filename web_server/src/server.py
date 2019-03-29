@@ -2,14 +2,15 @@ from datasets_config import DatasetsConfig
 from config_db import db_conn
 import datetime
 from flask import Flask, jsonify, request, send_file
-from helpers import cluster_csv, get_cluster_data, get_job_data, hash_string, linkset_to_csv, update_job_data
+from helpers import get_job_data, update_job_data
+from clustering import cluster_csv, get_cluster_data, hash_string, linkset_to_csv, cluster_reconciliation_csv, cluster_and_reconcile
 import json
 from os.path import join
 import pickle
 import psycopg2
 from psycopg2 import extras as psycopg2_extras, sql as psycopg2_sql
 import random
-from src.Clustering.SimpleLinkClustering import cluster_vis_input as visualise
+from src.Clustering.SimpleLinkClustering import cluster_vis_input_2 as visualise_2, cluster_vis_input as visualise_1
 import subprocess
 import time
 app = Flask(__name__)
@@ -137,7 +138,13 @@ def result(job_id, mapping_name):
 @app.route('/job/<job_id>/create_clustering/', methods=['POST'])
 def create_clustering(job_id):
     csv_filepath = linkset_to_csv(job_id, request.json['mapping_label'])
-    clustering_id = cluster_csv(csv_filepath)
+    if request.json['association_file'] != '':
+        if request.json['clustered']:
+            cluster_reconciliation_csv(request.json['association_file'], job_id, request.json['mapping_label'])
+        else:
+            cluster_and_reconcile(request.json['association_file'], job_id, request.json['mapping_label'], request.json['association_file'])
+
+    clustering_id = cluster_csv(csv_filepath, job_id, request.json['mapping_label'])
 
     with db_conn() as conn, conn.cursor() as cur:
         cur.execute('''
@@ -149,17 +156,20 @@ def create_clustering(job_id):
     return jsonify(clustering_id)
 
 
-@app.route('/job/<job_id>/cluster/<cluster_id>')
-def cluster_visualization(job_id, cluster_id):
+@app.route('/job/<job_id>/cluster/<clustering_id>/<cluster_id>')
+def cluster_visualization(job_id, clustering_id, cluster_id):
     return index()
 
 
-@app.route('/job/<job_id>/cluster/<cluster_id>/graph', methods=['POST'])
-def get_cluster_graph_data(job_id, cluster_id):
-    cluster_data = request.json['cluster_data'] if 'cluster_data' in request.json else get_cluster_data(cluster_id)
+@app.route('/job/<job_id>/cluster/<clustering_id>/<cluster_id>/graph', methods=['POST'])
+def get_cluster_graph_data(job_id, clustering_id, cluster_id):
+    cluster_data = request.json['cluster_data'] if 'cluster_data' in request.json else get_cluster_data(clustering_id, cluster_id)
 
     golden_agents_specifications = {
         "data_store": "POSTGRESQL",
+        "sub_clusters": 'Serialized_Cluster_Reconciled_PH1f99c8924c573d6',
+        "associations": 'GA-related-paper.csv',
+        "serialised": 'Serialized_Cluster_PH1f99c8924c573d6_ga',
         "cluster_id": cluster_id,
         "cluster_data": {
             "nodes": cluster_data['nodes'],
@@ -170,14 +180,35 @@ def get_cluster_graph_data(job_id, cluster_id):
             # MARRIAGE_PERSON
             {"dataset": "ufab7d657a250e3461361c982ce9b38f3816e0c4b__saa_index_op_ondertrouwregister",
              "entity_type": "saaOnt_Person",
-             "property": "saaOnt_full_nameList"},
+             "property": "saaOnt_full_nameList"
+             },
             # BAPTISM_PERSON
             {"dataset": "ufab7d657a250e3461361c982ce9b38f3816e0c4b__saa_index_op_doopregister",
              "entity_type": "saaOnt_Person",
-             "property": "saaOnt_full_name"},
+             "property": "saaOnt_full_name"
+             },
+            {"dataset": "ufab7d657a250e3461361c982ce9b38f3816e0c4b__ecartico",
+             "entity_type": "foaf_Person",
+             "property": "foaf_name"
+             },
+            {"dataset": "ufab7d657a250e3461361c982ce9b38f3816e0c4b__ecartico",
+             "entity_type": "schema_Person",
+             "property": "foaf_name"
+             },
+            {"dataset": "ufab7d657a250e3461361c982ce9b38f3816e0c4b__onstage_20190220",
+             "entity_type": "schema_Person",
+             "property": "schema_name"
+             },
+            {"dataset": "ufab7d657a250e3461361c982ce9b38f3816e0c4b__saa_index_op_begraafregisters",
+             "entity_type": "saaOnt_Person",
+             "property": "saaOnt_full_name"
+             },
         ]
     }
-    return jsonify({'graph': visualise(specs=golden_agents_specifications, activated=True)})
+    return jsonify({
+        'graph_1': visualise_1(specs=golden_agents_specifications, activated=True),
+        'graph_2': visualise_2(specs=golden_agents_specifications, activated=True)[1],
+    })
 
 
 @app.route('/server_status/')

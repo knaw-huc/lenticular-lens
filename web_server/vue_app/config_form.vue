@@ -76,15 +76,26 @@
         </tab-content>
 
         <tab-content title="Clustering">
-            <div class="border p-4 mt-4 bg-light" v-for="match in matches">
+            <div class="border p-4 mt-4 bg-light" v-for="match in matches" v-if="!match.is_association">
                 <div class="row justify-content-between">
                     <div class="col align-self-center">
                         <div class="h2">{{ match.label }}</div>
                     </div>
 
-                    <div class="col-auto align-self-center">
-                        <div v-if="getResultForMatch(match.label).clusterings.length > 0" class="h3 text-success">Clustered</div>
-                        <button v-else type="button" class="btn btn-info" @click="createClustering(match.label, $event)">Create clustering</button>
+                    <div v-if="getResultForMatch(match.label).clusterings.length > 0" class="col-auto align-self-center">
+                            <div class="h3 text-success">Clustered</div>
+                    </div>
+
+                    <div class="col-auto">
+                        <button v-if="getResultForMatch(match.label).clusterings.length > 0" type="button" class="btn btn-info" @click="createClustering(match.label, $event)" :disabled="association === ''" :title="association === '' ? 'Choose an association first' : ''">Reconcile</button>
+                        <button v-if="getResultForMatch(match.label).clusterings.length === 0" type="button" class="btn btn-info" @click="createClustering(match.label, $event)">Cluster<template v-if="association !== ''"> &amp; Reconcile</template></button>
+                    </div>
+
+                    <div class="col-auto align-self-center form-group">
+                        <select class="form-control" v-model="association" :id="'match_' + match.id + '_association'">
+                            <option value="">No association</option>
+                            <option v-if="job_data" v-for="association_file_name in job_data.association_files" :value="association_file_name">{{ association_file_name }}</option>
+                        </select>
                     </div>
 
                     <div class="form-group col-1 align-self-center">
@@ -139,11 +150,11 @@
                 </div>
 
                 <template v-if="cluster_id_selected">
-                    <cluster-visualization-component :cluster_id="cluster_id_selected" :cluster_data="clusters[cluster_id_selected]"/>
+                    <cluster-visualization-component :clustering_id="clustering_id" :cluster_id="cluster_id_selected" :cluster_data="clusters[cluster_id_selected]"/>
 
                     <div class="row justify-content-end">
                         <div class="col-auto">
-                            <a :href="'/job/' + job_id + '/cluster/' + cluster_id_selected" target="_blank" class="btn btn-info">Open in new tab</a>
+                            <a :href="'/job/' + job_id + '/cluster/' + clustering_id + '/' + cluster_id_selected" target="_blank" class="btn btn-info">Open in new tab</a>
                         </div>
                     </div>
                 </template>
@@ -195,6 +206,7 @@
         },
         data() {
             return {
+                association: '',
                 cluster_id_selected: null,
                 clustering_id: null,
                 clusters: [],
@@ -242,6 +254,7 @@
                 this.matches_count++;
                 let match = {
                     'id': this.matches_count,
+                    'is_association': false,
                     'sources': [],
                     'targets': [],
                     'conditions': {
@@ -267,7 +280,11 @@
                             'Content-Type': 'application/json',
                         },
                         method: "POST",
-                        body: JSON.stringify({'mapping_label': mapping_label})
+                        body: JSON.stringify({
+                            'mapping_label': mapping_label,
+                            'association_file': this.association,
+                            'clustered': this.getResultForMatch(mapping_label).clusterings.length > 0,
+                        })
                     })
                     .then((response) => response.json())
                     .then((data) => {
@@ -360,11 +377,13 @@
             getResultForMatch(match_label) {
                 let clusterings = [];
 
-                this.job_data.results.clusterings.forEach(clustering => {
-                    if (clustering.mapping_name === match_label) {
-                        clusterings.push(clustering);
-                    }
-                });
+                if (this.job_data) {
+                    this.job_data.results.clusterings.forEach(clustering => {
+                        if (clustering.mapping_name === match_label) {
+                            clusterings.push(clustering);
+                        }
+                    });
+                }
 
                 return {
                     'clusterings': clusterings,
@@ -528,6 +547,7 @@
                 matches_copy.forEach(match_original => {
                     let match = {
                         'label': match_original.label,
+                        'is_association': match_original.is_association,
                         'sources': [],
                         'targets': [],
                         'conditions': [],

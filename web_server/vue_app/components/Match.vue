@@ -6,7 +6,15 @@
         </div>
 
         <div class="col" v-b-toggle="'match_' + match.id">
-            <div class="h2">{{ match_label }}</div>
+            <div class="row">
+                <div class="h2 col">{{ match_label }}</div>
+            </div>
+            <div class="row">
+                <div class="col form-group form-check ml-3 mb-1">
+                    <input type="checkbox" class="form-check-input" :id="'match_' + match.id + '_is_association'" v-model.boolean="match.is_association">
+                    <label class="form-check-label" :for="'match_' + match.id + '_is_association'">Association</label>
+                </div>
+            </div>
         </div>
 
         <div class="form-group col-1">

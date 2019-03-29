@@ -1,35 +1,36 @@
 import collections
 from config_db import db_conn
-from os.path import join
-import pickle
+import datetime
+from hashlib import md5
+from os import listdir
+from os.path import join, isfile
 import psycopg2
 from psycopg2 import extras as psycopg2_extras, sql as psycopg2_sql
 from psycopg2.extensions import AsIs
 import random
+import re
+from src.LLData.CSV_Associations import CSV_ASSOCIATIONS_DIR
 import time
 
 
-def cluster_csv(csv_filepath):
-    from src.Clustering.SimpleLinkClustering import simple_csv_link_clustering
-    from src.LLData.Serialisation import CLUSTER_SERIALISATION_DIR
+def hasher(object):
+    h = md5()
+    h.update(bytes(object.__str__(), encoding='utf-8'))
+    return F"H{h.hexdigest()[:15]}"
 
-    return simple_csv_link_clustering(csv_filepath, "Don't know", CLUSTER_SERIALISATION_DIR, activated=True)
+
+def file_date():
+    today = datetime.date.isoformat(datetime.date.today()).replace('-', '')
+    return f"{today}_{re.findall('..:.*', str(datetime.datetime.now()))[0]}"
 
 
-def linkset_to_csv(job_id, mapping_label):
-    from src.LLData.CSVClusters import CSV_CLUSTER_DIR
-    filepath = join(CSV_CLUSTER_DIR, f'{job_id}_{mapping_label}.csv')
-
-    sql = psycopg2_sql.SQL("COPY (SELECT source_uri, target_uri, 1 FROM {schema}.{view}) TO STDOUT WITH CSV DELIMITER ','").format(
-        schema=psycopg2_sql.Identifier(f'job_{job_id}'),
-        view=psycopg2_sql.Identifier(hash_string(mapping_label)),
-    )
-
+def table_to_csv(table_name, file):
     with db_conn() as conn, conn.cursor() as cur:
-        with open(filepath, 'w') as csv_file:
-            cur.copy_expert(sql, csv_file)
-
-    return filepath
+        sql = cur.mogrify(
+            "COPY (SELECT * FROM to_regclass(%s)) TO STDOUT WITH CSV DELIMITER ','",
+            (table_name,)
+        )
+        cur.copy_expert(sql, file)
 
 
 def get_absolute_property(property_array, parent_label):
@@ -68,19 +69,7 @@ def get_string_from_sql(sql):
 
 
 def hash_string(to_hash):
-    import hashlib
-
-    return hashlib.md5(to_hash.encode('utf-8')).hexdigest()
-
-
-# Temporary function
-def get_cluster_data(cluster_id):
-    print('Reading file')
-    from src.LLData.Serialisation import CLUSTER_SERIALISATION_DIR
-    with open(join(CLUSTER_SERIALISATION_DIR, 'Serialized_Cluster_PH952ac38a0f5ddf6-1.txt'), 'rb') as clusters_file:
-        clusters_data = pickle.load(clusters_file)
-
-    return clusters_data[cluster_id]
+    return md5(to_hash.encode('utf-8')).hexdigest()
 
 
 def get_unnested_list(nest):
@@ -124,6 +113,11 @@ def get_job_data(job_id):
                 n += 1
                 print('Database error. Retry %i' % n)
                 time.sleep((2 ** n) + (random.randint(0, 1000) / 1000))
+
+    #     Add association files
+        job_data['association_files'] = [
+            f for f in listdir(CSV_ASSOCIATIONS_DIR) if isfile(join(CSV_ASSOCIATIONS_DIR, f)) and f.endswith('.csv')
+        ]
 
     return job_data
 

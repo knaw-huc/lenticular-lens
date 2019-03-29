@@ -1,19 +1,32 @@
 import datetime
 import fcntl
-from helpers import update_job_data
+from helpers import update_job_data, table_to_csv
+from linksets_collection import LinksetsCollection
 import locale
 import psycopg2
 from psycopg2 import extras as psycopg2_extras, sql as psycopg2_sql
 import subprocess
 from config_db import db_conn
 import os
+from os.path import join
 import pathlib
 import random
 import re
 import signal
 import time
+from hashlib import md5
 
 locale.setlocale(locale.LC_ALL, '')
+
+
+def hasher(object):
+
+    # h = blake2b(digest_size=10)
+    # h.update(bytes(object.__str__(), encoding='utf-8'))
+    # print(F"H{h.hexdigest()}")
+    h = md5()
+    h.update(bytes(object.__str__(), encoding='utf-8'))
+    return F"H{h.hexdigest()[:15]}"
 
 
 def non_block_peek(output):
@@ -130,6 +143,25 @@ if __name__ == '__main__':
 
                         if converting_process.returncode == 0:
                             found_new_requests = True
+
+                            print("Generating CSVs")
+                            linksets_collection = LinksetsCollection(job['resources_filename'], job['mappings_filename'])
+                            for match in linksets_collection.matches:
+                                if match.is_association:
+                                    from src.LLData.CSV_Associations import CSV_ASSOCIATIONS_DIR as CSV_DIR
+                                    prefix = 'association'
+                                else:
+                                    from src.LLData.CSV_Alignments import CSV_ALIGNMENTS_DIR as CSV_DIR
+                                    prefix = 'alignment'
+
+                                today = datetime.date.isoformat(datetime.date.today()).replace('-', '')
+                                now = f"{today}_{re.findall('..:.*', str(datetime.datetime.now()))[0]}"
+                                filename = f'{prefix}_{hasher(job["job_id"])}_{match.name_original}_{now}.csv'
+
+                                print('Creating file ' + join(CSV_DIR, filename))
+                                with open(join(CSV_DIR, filename), 'w') as csv_file:
+                                    table_to_csv(f'job_{job["job_id"]}.{match.name}', csv_file)
+
                             print('Job %s finished.' % job['job_id'])
                             update_job_data(job['job_id'], {'status': 'Finished', 'finished_at': str(datetime.datetime.now())})
                         elif converting_process.returncode == 3:
