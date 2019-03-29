@@ -7,6 +7,8 @@ Vue.use(BootstrapVue);
 import App from './config_form.vue'
 import ResultsComponent from './components/Results'
 import ClusterVisualization from './components/ClusterVisualization'
+import EditLabel from './components/EditLabel'
+Vue.component('edit-label-component', EditLabel);
 
 import Octicon from 'vue-octicon/components/Octicon.vue'
 import 'vue-octicon/icons'

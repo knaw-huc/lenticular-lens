@@ -6,7 +6,7 @@
         </div>
 
         <div class="col" v-b-toggle="'resource_' + resource.id">
-            <div class="h2">{{ resource_label }}</div>
+            <edit-label-component v-model="resource.label" :required="true"/>
         </div>
 
         <div class="form-group col-1">
@@ -32,10 +32,6 @@
                 </select>
             </div>
         </div>
-            <div class="form-group col-3">
-                <label :for="'resource_label_' + resource.id">Collection label</label>
-                <input v-model="label_input" class="form-control" :id="'resource_label_' + resource.id" :placeholder="resource_label">
-            </div>
 
         <template v-if="resource.collection_id != ''">
             <h3>Filter</h3>
@@ -134,12 +130,12 @@
                 return 'Collection ' + this.resource.id;
             }
         },
-        data() {
-            return {
-                label_input: '',
-            }
+        props: {
+            'resource': Object,
+            'datasets': Object,
+            'resources': Array,
+            initial_label: String,
         },
-        props: ['resource', 'datasets', 'resources'],
         methods: {
             addRelation(event) {
                 if (event) {
@@ -163,12 +159,15 @@
                 return this.datasets[resource.dataset_id]['collections'][resource.collection_id];
             },
         },
-        watch: {
-            label_input() {
-                this.$set(this.resource, 'label', this.resource_label);
-                this.resources.reverse();
-                this.resources.reverse();
+        mounted() {
+            if (!this.resource.label) {
+                this.$set(this.resource, 'label', this.initial_label)
             }
-        }
+        },
+        updated() {
+            if ((!this.resource.label || this.resource_label === this.initial_label) && this.resource.dataset_id && this.resource.collection_id) {
+                this.$set(this.resource, 'label', this.datasets[this.resource.dataset_id].title + ' --> ' + this.resource.collection_id)
+            }
+        },
     }
 </script>

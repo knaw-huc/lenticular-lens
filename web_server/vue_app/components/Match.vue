@@ -7,10 +7,10 @@
 
         <div class="col" v-b-toggle="'match_' + match.id">
             <div class="row">
-                <div class="h2 col">{{ match_label }}</div>
+                <edit-label-component v-model="match.label"/>
             </div>
             <div class="row">
-                <div class="col form-group form-check ml-3 mb-1">
+                <div class="col form-group form-check mb-1">
                     <input type="checkbox" class="form-check-input" :id="'match_' + match.id + '_is_association'" v-model.boolean="match.is_association">
                     <label class="form-check-label" :for="'match_' + match.id + '_is_association'">Association</label>
                 </div>
@@ -23,11 +23,6 @@
     </div>
 
     <b-collapse :id="'match_' + match.id" :ref="'match_' + match.id" accordion="matches-accordion" @shown="scrollTo('match_' + match.id)">
-        <div class="form-group col-3">
-            <label :for="'match_' + match.id + '_label'">Mapping label</label>
-            <input v-model="label_input" class="form-control" id="'match_' + match.id + '_label'" :placeholder="match_label">
-        </div>
-    
         <div class="row">
             <div class="col">
                 <h3>Sources</h3>
@@ -105,14 +100,6 @@
             'match-condition': MatchCondition,
         },
         computed: {
-            match_label() {
-                if (typeof this.label_input !== 'undefined' && this.label_input !== '') {
-                    this.$emit('update:label', this.label_input);
-                    return this.label_input;
-                }
-
-                return 'Mapping ' + this.match.id;
-            },
             matching_field_labels() {
                 let labels = [];
 
@@ -127,7 +114,6 @@
         },
         data() {
             return {
-                label_input: '',
                 conditions_count: 0,
             }
         },
@@ -172,12 +158,9 @@
             if (this.conditions_count < 1) {
                 this.addCondition();
             }
-        },
-        watch: {
-            label_input() {
-                this.$set(this.match, 'label', this.match_label);
-                this.matches.reverse();
-                this.matches.reverse();
+
+            if (!this.match.label) {
+                this.$set(this.match, 'label', 'Mapping ' + this.match.id);
             }
         }
     }

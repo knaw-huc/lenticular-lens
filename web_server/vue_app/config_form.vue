@@ -12,6 +12,7 @@
         <div id="resources">
             <h2>Collections</h2>
             <resource-component
+                    :initial_label="'Collection ' + resource.id"
                     :resource="resource"
                     :datasets="datasets"
                     :resources="resources"
@@ -91,10 +92,10 @@
                         <button v-if="getResultForMatch(match.label).clusterings.length === 0" type="button" class="btn btn-info" @click="createClustering(match.label, $event)">Cluster<template v-if="association !== ''"> &amp; Reconcile</template></button>
                     </div>
 
-                    <div class="col-auto align-self-center form-group">
+                    <div v-if="job_data" class="col-auto align-self-center form-group">
                         <select class="form-control" v-model="association" :id="'match_' + match.id + '_association'">
                             <option value="">No association</option>
-                            <option v-if="job_data" v-for="association_file_name in job_data.association_files" :value="association_file_name">{{ association_file_name }}</option>
+                            <option v-for="association_file_name in job_data.association_files" :value="association_file_name">{{ association_file_name }}</option>
                         </select>
                     </div>
 
