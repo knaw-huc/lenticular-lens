@@ -1,5 +1,5 @@
 <template>
-<div class="container" id="app">
+<div class="container-fluid" id="app">
     <form @submit.prevent="submitForm" action="" method="post">
     <form-wizard
         title="Lenticular Lenses II"
@@ -32,7 +32,16 @@
 
         <tab-content title="Mappings">
         <div id="matches" class="mt-5">
-            <h2>Alignment Mappings</h2>
+            <div class="row justify-content-between">
+                <div class="col-auto">
+                    <h2>Alignment Specifications</h2>
+                </div>
+                <div class="col-auto">
+                    <div class="form-group mb-0 pr-2 pt-3">
+                        <button v-on:click="addMatch" type="button" class="btn btn-info rounded-circle">+</button>
+                    </div>
+                </div>
+            </div>
 
             <match-component
                     :match="match"
@@ -44,12 +53,6 @@
                     @remove="matches.splice(index, 1)"
                     @update:label="match.label = $event"
             ></match-component>
-
-            <div class="form-group mt-4">
-                <button v-on:click="addMatch" type="button" class="form-control btn btn-primary w-25">
-                    + Add Alignment Mapping
-                </button>
-            </div>
         </div>
         </tab-content>
 
@@ -109,7 +112,11 @@
         <tab-content title="Validation">
             <template v-if="job_data">
                 <div class="border mb-5 p-3">
-                    <div class="border p-4 mt-4 bg-light" v-for="match in matches" @click="getClusters(getResultForMatch(match.label).clusterings[0].clustering_id)">
+                    <div class="border p-4 mt-4 bg-light"
+                         v-for="match in matches"
+                         v-if="!match.is_association"
+                         @click="getClusters(getResultForMatch(match.label).clusterings[0].clustering_id)"
+                    >
                         <div class="row justify-content-between">
                             <div class="col align-self-center">
                                 <div class="h2">{{ match.label }}</div>
@@ -155,7 +162,7 @@
 
                     <div class="row justify-content-end">
                         <div class="col-auto">
-                            <a :href="'/job/' + job_id + '/cluster/' + clustering_id + '/' + cluster_id_selected" target="_blank" class="btn btn-info">Open in new tab</a>
+                            <a :href="'/job/' + job_id + '/cluster/' + job_data.results.clusterings[0].clustering_id + '/' + cluster_id_selected" target="_blank" class="btn btn-info">Open in new tab</a>
                         </div>
                     </div>
                 </template>

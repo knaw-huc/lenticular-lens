@@ -12,7 +12,6 @@
             <matching-field-value-component
                     v-for="(sub_field_type, sub_field_name) in sql_boolean_functions[matching_field_value.function_name].fields"
                     v-if="sub_field_type == 'value'"
-                    :datasets="datasets"
                     :resources="resources"
                     :matching_field_value="matching_field_value[matching_field_value.function_name]"
                     :resource_id="resource_id"
@@ -62,6 +61,6 @@
             this.$set(this.matching_field_value, 'value_type', 'function');
         },
         name: 'matching-field-boolean-component',
-        props: ['datasets', 'resources', 'matching_field_value', 'resource_id', 'unique_id', 'function_name', 'field_name', 'sql_boolean_functions'],
+        props: ['resources', 'matching_field_value', 'resource_id', 'unique_id', 'function_name', 'field_name', 'sql_boolean_functions'],
     }
 </script>

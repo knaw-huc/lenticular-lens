@@ -1,6 +1,6 @@
 <template>
 <div class="border p-4 mt-4 bg-light">
-    <div class="row justify-content-between">
+    <div class="row">
         <div class="col-auto">
             <octicon name="chevron-down" scale="3" v-b-toggle="'match_' + match.id"></octicon>
         </div>
@@ -23,66 +23,96 @@
     </div>
 
     <b-collapse :id="'match_' + match.id" :ref="'match_' + match.id" accordion="matches-accordion" @shown="scrollTo('match_' + match.id)">
-        <div class="row">
-            <div class="col">
-                <h3>Sources</h3>
+        <div class="bg-white border p-3 justify-content-around rounded mb-4">
+            <div class="row">
+                <div class="col">
+                    <h3>Sources</h3>
+                </div>
+                <div class="form-group col-auto">
+                    <button type="button" class="btn btn-info w-auto font-weight-bold rounded-circle" @click="addMatchResource(match.sources, $event)">+</button>
+                </div>
+            </div>
 
-                <match-resource-component
-                        v-for="(match_resource, index) in match.sources"
-                        :match_resource_id="'source_' + index"
-                        :match="match"
-                        :match_resource="match_resource"
-                        :datasets="datasets"
-                        :resources="resources"
-                        @remove="match.sources.splice(index, 1)"
-                ></match-resource-component>
-
-                <div class="form-group">
-                    <button type="button" class="btn btn-primary w-25 form-control" @click="addMatchResource(match.sources, $event)">+ Add source</button>
+            <div class="row pl-5">
+                <div class="col">
+                    <match-resource-component
+                            v-for="(match_resource, index) in match.sources"
+                            :match_resource_id="'source_' + index"
+                            :match="match"
+                            :match_resource="match_resource"
+                            :datasets="datasets"
+                            :resources="resources"
+                            @remove="match.sources.splice(index, 1)"
+                    ></match-resource-component>
                 </div>
             </div>
         </div>
 
 
-        <div class="row">
-            <div class="col">
-                <h3>Targets</h3>
-                <match-resource-component
-                        v-for="(match_resource, index) in match.targets"
-                        :match_resource_id="'target_' + index"
-                        :match="match"
-                        :match_resource="match_resource"
-                        :datasets="datasets"
-                        :resources="resources"
-                        @remove="match.targets.splice(index, 1)"
-                ></match-resource-component>
+        <div class="bg-white border p-3 rounded mb-4">
+            <div class="row">
+                <div class="col">
+                    <h3>Targets</h3>
+                </div>
+                <div class="form-group col-auto">
+                    <button type="button" class="btn btn-info w-auto font-weight-bold rounded-circle" @click="addMatchResource(match.targets, $event)">+</button>
+                </div>
+            </div>
 
-                <div class="form-group">
-                    <button type="button" class="btn btn-primary w-25 form-control" @click="addMatchResource(match.targets, $event)">+ Add target</button>
+            <div class="row pl-5">
+                <div class="col">
+                    <match-resource-component
+                            v-for="(match_resource, index) in match.targets"
+                            :match_resource_id="'target_' + index"
+                            :match="match"
+                            :match_resource="match_resource"
+                            :datasets="datasets"
+                            :resources="resources"
+                            @remove="match.targets.splice(index, 1)"
+                    ></match-resource-component>
+                    <div v-if="match.targets.length < 1" class="pl-5 text-secondary">
+                        No targets specified. The sources will be used as targets.
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="row">
-            <div class="col">
-                <h3>Conditions</h3>
 
-                <div class="form-group">
-                    <select class="form-control" v-model="match.conditions.type">
-                        <option value="AND">All conditions must be met (AND)</option>
-                        <option value="OR">At least one of the conditions must be met (OR)</option>
-                    </select>
+        <div class="bg-white border p-3 rounded mb-4">
+            <div class="row justify-content-between">
+                <div class="col-auto">
+                    <div class="row">
+                        <div class="col">
+                            <h3>Matching Methods</h3>
+                        </div>
+
+                        <div class="form-group col-auto">
+                            <select class="border-0 btn-outline-info col-auto form-control h-auto shadow" v-model="match.conditions.type">
+                                <option value="AND">All conditions must be met (AND)</option>
+                                <option value="OR">At least one of the conditions must be met (OR)</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
 
-                <match-condition
-                        v-for="(condition, index) in match.conditions.items"
-                        :condition="condition"
-                        :matching_field_labels="matching_field_labels"
-                        @remove="match.conditions.items.splice(index, 1)"
-                ></match-condition>
+                <div class="col-auto">
+                    <div class="form-group">
+                        <button type="button" class="btn btn-info w-auto font-weight-bold rounded-circle" @click="addCondition($event)">+</button>
+                    </div>
+                </div>
+            </div>
 
-                <div class="form-group">
-                    <button type="button" class="btn btn-primary w-25 form-control" @click="addCondition($event)">+ Add condition</button>
+            <div class="row pl-5">
+                <div class="col">
+                    <match-condition
+                            v-for="(condition, index) in match.conditions.items"
+                            :condition="condition"
+                            :matching_field_labels="matching_field_labels"
+                            :match_id="match.id"
+                            :parent_sources="getResources(match.sources)"
+                            :parent_targets="getResources(match.targets)"
+                            @remove="match.conditions.items.splice(index, 1)"
+                    ></match-condition>
                 </div>
             </div>
         </div>
@@ -130,6 +160,8 @@
                     'id': this.conditions_count,
                     'matching_field': '',
                     'method': '',
+                    'method_index': '',
+                    'matching_fields': [],
                 };
 
                 this.match.conditions.items.push(condition);
@@ -141,9 +173,33 @@
 
                 let match_resource = {
                     'matching_fields': [],
+                    'resource': '',
                 };
 
                 match_resources.push(match_resource);
+            },
+            getResourceById(id) {
+                let found_resource = null;
+
+                this.resources.forEach(resource => {
+                    if (resource.id === id) {
+                        found_resource = resource;
+                        return false
+                    }
+                });
+
+                return found_resource
+            },
+            getResources(resource_refs) {
+                let resources = [];
+                resource_refs.forEach(resource_ref => {
+                    let resource = this.getResourceById(resource_ref.resource);
+                    if (resource) {
+                        resources.push(resource);
+                    }
+                });
+
+                return resources;
             },
             scrollTo(ref) {
                 this.$refs[ref].$el.parentNode.scrollIntoView({'behavior':'smooth', 'block':'start'});

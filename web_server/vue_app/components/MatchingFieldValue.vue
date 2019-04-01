@@ -36,7 +36,6 @@
 
             <matching-field-boolean-component
                     v-if="field_type == 'boolean'"
-                    :datasets="datasets"
                     :resources="resources"
                     :sql_boolean_functions="sql_boolean_functions"
                     :function_name="function_name"
@@ -49,7 +48,6 @@
 
             <matching-field-value-component
                     v-if="field_type == 'value'"
-                    :datasets="datasets"
                     :resources="resources"
                     :matching_field_value="matching_field_value[function_name][field_name]"
                     :resource_id="resource_id"
@@ -61,7 +59,6 @@
         <div v-if="Array.isArray(matching_field_value[function_name])">
             <matching-field-value-component
                     v-for="(value_item, index) in matching_field_value[function_name]"
-                    :datasets="datasets"
                     :resources="resources"
                     :matching_field_value="value_item"
                     :resource_id="resource_id"
@@ -87,7 +84,7 @@
             },
             properties() {
                 let resource = this.get_resource_by_id(this.matching_field_value.property[0]);
-                return this.datasets[resource.dataset_id]['collections'][resource.collection_id];
+                return this.$root.$children[0].datasets[resource.dataset_id]['collections'][resource.collection_id];
             },
         },
         data() {
@@ -201,7 +198,6 @@
         },
         name: 'matching-field-value-component',
         props: {
-            datasets: {},
             matching_field_value: {},
             removable: false,
             resources: {},

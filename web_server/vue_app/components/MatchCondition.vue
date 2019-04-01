@@ -1,44 +1,107 @@
 <template>
-    <div class="row">
-        <div class="form-group col-4">
-            <select class="form-control" v-model="condition.matching_field">
-                <option disabled selected value="">Select a Matching Field</option>
-                <option v-for="(label, index) in matching_field_labels" :value="index">{{ label }}</option>
-            </select>
-        </div>
-
-        <div class="form-group col-3">
-            <select class="form-control" v-model="condition.method_index" @change="handleMethodIndexChange">
-                <option disabled selected value="">Select a method</option>
-                <option v-for="(method, index) in matching_methods" :value="index">{{ method.label }}</option>
-            </select>
-        </div>
-
-        <div v-if="condition.method_index > 0 && typeof condition.method === 'object'" class="col-4">
-            <div v-if="Array.isArray(condition.method[method_object.name])" class="row">
-                <div v-for="(item, index) in condition.method[method_object.name]" class="col">
-                    <div v-if="typeof item === 'number'" class="form-group">
-                        <input class="form-control" type="number" step="any" v-model.number="condition.method[method_object.name][index]">
-                    </div>
-
-                    <div v-if="item.type === 'matching_label'" class="form-group">
-                        <select class="form-control" v-model="condition.method[method_object.name][index].value">
-                            <option disabled selected value="">Select a Mapping</option>
-                            <option v-for="match in $root.$children[0].matches" :value="match.id">{{ match.label }}</option>
+    <div class="border mb-3 p-3">
+        <div class="row justify-content-between">
+            <div class="col-auto">
+                <div class="row">
+                    <label class="h4 col-auto align-self-center">Method</label>
+                    <div class="col-auto form-group">
+                        <select class="border-0 btn-outline-info form-control h-auto shadow" v-model="condition.method_index" @change="handleMethodIndexChange">
+                            <option disabled selected value="">Select a method</option>
+                            <option v-for="(method, index) in matching_methods" :value="index">{{ method.label }}</option>
                         </select>
+                    </div>
+                </div>
+            </div>
+
+            <div v-if="condition.method_index > 0 && typeof condition.method === 'object'" class="col-4">
+                <div v-if="Array.isArray(condition.method[method_object.name])" class="row">
+                    <div v-for="(item, index) in condition.method[method_object.name]" class="col">
+                        <div v-if="typeof item === 'number'" class="form-group">
+                            <input class="form-control" type="number" step="any" v-model.number="condition.method[method_object.name][index]">
+                        </div>
+
+                        <div v-if="item.type === 'matching_label'" class="form-group">
+                            <select class="form-control" v-model="condition.method[method_object.name][index].value">
+                                <option disabled selected value="">Select a Mapping</option>
+                                <option v-for="match in $root.$children[0].matches" :value="match.id">{{ match.label }}</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group col-auto">
+                <button v-on:click="$emit('remove')" type="button" class="ml-3 btn btn-danger"><octicon name="trashcan"></octicon></button>
+            </div>
+        </div>
+
+        <div class="row pl-5 mb-3">
+            <div class="col">
+                <div class="row">
+                    <div class="h4 col">Sources</div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <div v-for="resource in parent_sources" class="row">
+                            <div class="col">
+                                <div class="row pl-5">
+                                    <div class="h5 col-auto align-self-center">{{ resource.label }}</div>
+                                    <div class="col-auto form-group">
+                                        <select class="border-0 btn-outline-info col-auto form-control h-auto shadow">
+                                            <option value="" disabled selected>Select a property</option>
+                                        </select>
+                                    </div>
+<!--                                    <matching-field-component-->
+<!--                                        :match_id="match_id"-->
+<!--                                        :resource_id="resource.id"-->
+<!--                                        @remove="resource.matching_fields.splice(index, 1)"-->
+<!--                                    ></matching-field-component>-->
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="form-group col-1">
-            <button v-on:click="$emit('remove')" type="button" class="ml-3 btn btn-danger"><octicon name="trashcan"></octicon></button>
+        <div v-if="parent_targets.length > 0" class="row pl-5">
+            <div class="col">
+                <div class="row">
+                    <div class="h4 col">Targets</div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <div v-for="resource in parent_targets" class="row">
+                            <div class="col">
+                                <div class="row pl-5">
+                                    <div class="h5 col-auto align-self-center">{{ resource.label }}</div>
+                                    <div class="col-auto form-group">
+                                        <select class="border-0 btn-outline-info col-auto form-control h-auto shadow">
+                                            <option value="" disabled selected>Select a property</option>
+                                        </select>
+                                    </div>
+<!--                                    <matching-field-component-->
+<!--                                        :match_id="match_id"-->
+<!--                                        :resource_id="resource.id"-->
+<!--                                        @remove="resource.matching_fields.splice(index, 1)"-->
+<!--                                    ></matching-field-component>-->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </template>
 
 <script>
+    import MatchingField from './MatchingField'
+
     export default {
+        components: {
+            'matching-field-component': MatchingField,
+        },
         computed: {
             method_object() {
                 return this.matching_methods[this.condition.method_index].object;
@@ -112,6 +175,25 @@
             }
         },
         methods: {
+            addMatchingField(event) {
+                if (event) {
+                    event.target.blur();
+                }
+
+                this.matching_fields_count++;
+
+                let matching_field = {
+                    'id': this.matching_fields_count,
+                    'value': {
+                        'property': [this.match_resource.resource, ''],
+                        'transformers': [],
+                        'value_type': '',
+                        'function_name': '',
+                    },
+                };
+
+                this.condition.matching_fields.push(matching_field);
+            },
             handleMethodIndexChange() {
                 if (typeof this.method_object === 'string') {
                     this.condition.method = this.method_object;
@@ -124,6 +206,6 @@
                 }
             },
         },
-        props: ['condition', 'matching_field_labels'],
+        props: ['condition', 'matching_field_labels', 'parent_sources', 'parent_targets', 'match_id'],
     }
 </script>

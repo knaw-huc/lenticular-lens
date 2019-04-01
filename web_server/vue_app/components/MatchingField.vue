@@ -11,7 +11,7 @@
             </div>
         </div>
 
-        <matching-field-value-component :matching_field_value="matching_field.value" :datasets="datasets" :resources="resources" :resource_id="resource_id" :unique_id="unique_id"  :key="unique_id"/>
+        <matching-field-value-component :matching_field_value="matching_field.value" :resource_id="resource_id" :unique_id="unique_id"  :key="unique_id"/>
 
         <div v-for="(transformer, index) in matching_field.value.transformers" class="col-4">
             <div class="row">
@@ -39,7 +39,7 @@
         data() {
             return {
                 'transformers': ['ecartico_full_name', 'to_date_immutable'],
-                'unique_id': 'match_' + this.match_id + '_resource_' + this.resource_id + '_field_' + this.matching_field.id,
+                'unique_id': 'blah',
             }
         },
         methods: {
@@ -65,7 +65,6 @@
                     'function_name': '',
                 },
             },
-            'datasets': {},
             'resources': {},
             'match_id': '',
             'resource_id': ''

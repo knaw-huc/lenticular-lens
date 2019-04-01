@@ -2,12 +2,12 @@
     <div>
         <div id="cluster_plot_row_1" class="row mb-3" style="background-color:#FFFFE0;" >
             <div id="cluster_plot_col_1" class="col-md-12" style='height: 40em; width:100%; scroll: both; overflow: auto;' >
-                <svg class="plot" id="graph_cluster_1" width="1000" height="800" style="background-color:#FFFFE0;"></svg>
+                <svg class="plot" id="graph_cluster_1" width="2000" height="800" style="background-color:#FFFFE0;"></svg>
             </div>
         </div>
         <div id="cluster_plot_row" class="row mb-3" style="background-color:#FFFFE0;" >
             <div id="cluster_plot_col" class="col-md-12" style='height: 40em; width:100%; scroll: both; overflow: auto;' >
-                <svg class="plot" id="graph_cluster_2" width="1000" height="800" style="background-color:#FFFFE0;"></svg>
+                <svg class="plot" id="graph_cluster_2" width="2000" height="800" style="background-color:#FFFFE0;"></svg>
             </div>
         </div>
     </div>
