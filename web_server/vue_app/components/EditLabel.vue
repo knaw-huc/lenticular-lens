@@ -4,9 +4,9 @@
     </div>
     <div v-else class="row" @mouseenter="hovering = true" @mouseleave="hovering = false">
         <div class="h2 col">{{ value }}</div>
-        <div class="col-auto pl-0">
+        <button type="button" class="btn col-auto pl-0 pt-0 align-self-start" title="Click to Edit">
             <octicon name="pencil" scale="1.2" :class="hideClass" @click.native.stop.prevent="editing = true"/>
-        </div>
+        </button>
     </div>
 </template>
 
@@ -15,7 +15,7 @@
         name: 'edit-label-component',
         computed: {
             hideClass() {
-                return this.hovering ? '' : ' d-none';
+                return this.hovering ? '' : ' invisible';
             },
         },
         data() {

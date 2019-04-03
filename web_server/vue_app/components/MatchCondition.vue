@@ -1,5 +1,5 @@
 <template>
-    <div class="border mb-3 p-3">
+    <div class="border mb-3 p-3" @mouseenter="hovering = true" @mouseleave="hovering = false">
         <div class="row justify-content-between">
             <div class="col-auto">
                 <div class="row">
@@ -31,7 +31,7 @@
             </div>
 
             <div class="form-group col-auto">
-                <button v-on:click="$emit('remove')" type="button" class="ml-3 btn btn-danger"><octicon name="trashcan"></octicon></button>
+                <button-delete v-on:click="$emit('remove')" scale="1.7" :class="showOnHover" title="Delete this Method"/>
             </div>
         </div>
 
@@ -42,13 +42,19 @@
                 </div>
                 <div class="row">
                     <div class="col">
-                        <div v-for="resource in parent_sources" class="row">
+                        <div v-for="resource in resources.sources" v-if="resource" class="row">
                             <div class="col">
                                 <div class="row pl-5">
                                     <div class="h5 col-auto align-self-center">{{ resource.label }}</div>
                                     <div class="col-auto form-group">
                                         <select class="border-0 btn-outline-info col-auto form-control h-auto shadow">
                                             <option value="" disabled selected>Select a property</option>
+<!--                                            <option-->
+<!--                                                    v-for="(property_name, property_info) in $root.$children[0].datasets[resource.dataset_id][resource.collection_id]"-->
+<!--                                                    :value="property_name"-->
+<!--                                            >-->
+<!--                                                {{ property_name }}-->
+<!--                                            </option>-->
                                         </select>
                                     </div>
 <!--                                    <matching-field-component-->
@@ -64,14 +70,14 @@
             </div>
         </div>
 
-        <div v-if="parent_targets.length > 0" class="row pl-5">
+        <div v-if="resources.targets.length > 0" class="row pl-5">
             <div class="col">
                 <div class="row">
                     <div class="h4 col">Targets</div>
                 </div>
                 <div class="row">
                     <div class="col">
-                        <div v-for="resource in parent_targets" class="row">
+                        <div v-for="resource in resources.targets" class="row">
                             <div class="col">
                                 <div class="row pl-5">
                                     <div class="h5 col-auto align-self-center">{{ resource.label }}</div>
@@ -106,9 +112,33 @@
             method_object() {
                 return this.matching_methods[this.condition.method_index].object;
             },
+            resources() {
+                let app = this;
+
+                function getResources(property_paths) {
+                    let resources = [];
+
+                    property_paths.forEach(property_path => {
+                        if (property_path[0]) {
+                            resources.push(app.$root.$children[0].getResourceById(property_path[0]));
+                        }
+                    });
+
+                    return resources
+                }
+
+                return {
+                    'sources': getResources(this.condition.sources),
+                    'targets': getResources(this.condition.targets),
+                }
+            },
+            showOnHover() {
+                return this.hovering ? '' : ' invisible';
+            },
         },
         data() {
             return {
+                hovering: false,
                 'matching_methods': [
                     {
                         'label': '=',
@@ -176,6 +206,7 @@
         },
         methods: {
             addMatchingField(event) {
+                // Obsolete
                 if (event) {
                     event.target.blur();
                 }
@@ -206,6 +237,6 @@
                 }
             },
         },
-        props: ['condition', 'matching_field_labels', 'parent_sources', 'parent_targets', 'match_id'],
+        props: ['condition', 'match_id'],
     }
 </script>

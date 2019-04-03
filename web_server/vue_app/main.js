@@ -9,6 +9,10 @@ import ResultsComponent from './components/Results'
 import ClusterVisualization from './components/ClusterVisualization'
 import EditLabel from './components/EditLabel'
 Vue.component('edit-label-component', EditLabel);
+import ButtonAdd from './components/misc/ButtonAdd'
+Vue.component('button-add', ButtonAdd);
+import ButtonDelete from './components/misc/ButtonDelete'
+Vue.component('button-delete', ButtonDelete);
 
 import Octicon from 'vue-octicon/components/Octicon.vue'
 import 'vue-octicon/icons'

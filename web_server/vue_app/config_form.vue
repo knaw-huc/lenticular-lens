@@ -38,7 +38,7 @@
                 </div>
                 <div class="col-auto">
                     <div class="form-group mb-0 pr-2 pt-3">
-                        <button v-on:click="addMatch" type="button" class="btn btn-info rounded-circle">+</button>
+                        <button-add @click="addMatch" title="Add an Alignment"/>
                     </div>
                 </div>
             </div>
@@ -261,10 +261,9 @@
                 }
                 this.matches_count++;
                 let match = {
-                    'id': this.matches_count,
+                    'id': this.matches.length,
                     'is_association': false,
-                    'sources': [],
-                    'targets': [],
+                    'label': 'Alignment ' + (this.matches.length + 1),
                     'conditions': {
                         'type': 'AND',
                         'items': [],
@@ -358,9 +357,8 @@
                                 this.resources = data.resources_form_data;
                                 this.resources_count = this.resources.length;
                             }
-                            if (this.matches_count < 1) {
+                            if (this.matches.length < 1) {
                                 this.matches = data.mappings_form_data;
-                                this.matches_count = this.matches.length;
                             }
 
                             if (this.job_data.status !== 'Finished' && !this.job_data.status.startsWith('FAILED')) {
