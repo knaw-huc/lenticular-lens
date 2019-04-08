@@ -540,9 +540,12 @@
                 });
 
                 matches_copy.forEach(match_copy => {
-                    match_copy.sources.concat(match_copy.targets).forEach(match_copy_resource => {
-                        match_copy_resource.matching_fields.forEach(matching_field => {
-                            matching_field.value.property = create_references_for_property(matching_field.value.property);
+                    match_copy.conditions.items.forEach(condition => {
+                        condition.sources.forEach((resource, index) => {
+                            condition.sources[index] = create_references_for_property(resource);
+                        });
+                        condition.targets.forEach((resource, index) => {
+                            condition.targets[index] = create_references_for_property(resource);
                         });
                     });
                 });
@@ -552,8 +555,6 @@
                     let match = {
                         'label': match_original.label,
                         'is_association': match_original.is_association,
-                        'sources': [],
-                        'targets': [],
                         'conditions': [],
                     };
 

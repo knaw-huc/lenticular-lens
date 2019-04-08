@@ -31,7 +31,7 @@
                             <h3>Sources</h3>
                         </div>
                         <div class="col-auto pl-0">
-                            <button type="button" class="btn"><octicon name="question" scale="1.3"></octicon></button>
+                            <b-button class="btn text-info pt-1" v-b-modal.sources-info variant="block"><octicon name="question" scale="1.5"></octicon></b-button>
                         </div>
                     </div>
                 </div>
@@ -40,6 +40,22 @@
                     <button-add @click="addMatchResource('sources', $event)" title="Add a Collection as a Source"/>
                 </div>
             </div>
+
+            <b-modal id="sources-info" title="Sources" size="xl" scrollable class="text-center" hide-footer>
+                <div class="h2">MATCHING & DEDUPLICATION OF RESOURCES STEMMED FROM MULTUPLE DATASETS USING PROPERTIES OF INTEREST</div>
+
+                <img width="700px" src="/static/images/VirtualCollection.png"/>
+
+                <p class="h5 text-left pt-4 pb-4">All collections of interest selected as sources are combined into a <span class="text-info">SINGLE VIRTUALL COLLECTION</span> with the resource's id and the value of the selected properties. For a single dataset, multuple <span class="text-info">SEMATICALLY SIMILAR PROPERTIES</span> can be selected.</p>
+
+                <hr>
+
+                <img class="pb-4" width="1000px" src="/static/images/Documentation.png"/>
+
+                <div class="h3">Examples  of  candidate links found  for  Suzanna van Baerle</div>
+
+                <hr>
+            </b-modal>
 
             <div class="row pl-5">
                 <div class="col">
@@ -64,7 +80,7 @@
                             <h3>Targets</h3>
                         </div>
                         <div class="col-auto pl-0">
-                            <button type="button" class="btn"><octicon name="question" scale="1.3"></octicon></button>
+                            <b-button class="btn text-info pt-1" v-b-modal.targets-info variant="block"><octicon name="question" scale="1.5"></octicon></b-button>
                         </div>
                     </div>
                 </div>
@@ -73,6 +89,26 @@
                     <button-add @click="addMatchResource('targets', $event)" title="Add a Collection as a Target"/>
                 </div>
             </div>
+            
+            <b-modal id="targets-info" title="Targets" size="xl" scrollable class="text-center" hide-footer>
+                <div class="h2">MATCHING SOURCE AGAINST TARGET</div>
+
+                <img src="/static/images/Source_Target.png" width="800px">
+                
+                <ul class="text-left pt-5">
+                    <li>Several collections can be selected as <span class="text-info">SOURCE</span>.</li>
+                
+                    <li>Several collections can be selected as <span class="text-info">TARGET</span>.</li>
+                    
+                    <li>For each collection, be it the <span class="text-info">TARGET</span>or the <span class="text-info">SOURCE</span> several properties can be selected.</li>
+                    
+                    <li>Overall, <span class="text-info">ALL</span> selected properties <span class="text-info">MUST</span> be concistent for a particuilar the type of <span class="text-info">SIMILARITY METHOD</span> in mind.</li>
+                    
+                    <li>When both <span class="text-info">SOURCE</span> and <span class="text-info">TARGET</span> collections are selected, links are discovered <span class="text-info">ONLY</span> accross <span class="text-info">SOURCE'S VRTUAL COLLECTIONS</span> and <span class="text-info">TARGET'S VRTUAL COLLECTIONS</span> contrarily to selecting only <span class="text-info">SOURCE</span> colections where links are be discovered <span class="text-info">WITHIN</span> and <span class="text-info">ACCROSS</span> collections ,</li>
+                </ul>
+                
+                <hr>
+            </b-modal>
 
             <div class="row pl-5">
                 <div class="col">
@@ -96,22 +132,41 @@
             <div class="row justify-content-between">
                 <div class="col-auto">
                     <div class="row">
-                        <div class="col">
+                        <div class="col-auto pr-0">
                             <h3>Matching Methods</h3>
                         </div>
-
-                        <div class="form-group col-auto">
-                            <select class="border-0 btn-outline-info col-auto form-control h-auto shadow" v-model="match.conditions.type">
-                                <option value="AND">All conditions must be met (AND)</option>
-                                <option value="OR">At least one of the conditions must be met (OR)</option>
-                            </select>
+                        <div class="col-auto pl-0">
+                            <b-button class="btn text-info pt-1" v-b-modal.methods-info variant="block"><octicon name="question" scale="1.5"></octicon></b-button>
                         </div>
                     </div>
                 </div>
 
+                <b-modal id="methods-info" title="Methods" size="xl" scrollable class="text-center" hide-footer>
+                </b-modal>
+
                 <div class="col-auto">
                     <div class="form-group">
                         <button-add @click="addCondition($event)" title="Add a Matching Method"/>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row pl-5">
+                <div class="col">
+                    <div class="mb-3 p-3">
+                        <div class="row justify-content-between">
+                            <div class="col-auto">
+                                <div class="row">
+                                    <label class="h4 col-auto align-self-center">Logical Operator</label>
+                                    <div class="col-auto form-group">
+                                        <v-select v-model="match.conditions.type">
+                                            <option value="AND">All conditions must be met (AND)</option>
+                                            <option value="OR">At least one of the conditions must be met (OR)</option>
+                                        </v-select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
