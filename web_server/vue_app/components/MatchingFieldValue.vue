@@ -15,7 +15,7 @@
             <property-component
                     v-if="matching_field_value.value_type == 'property'"
                     v-model="matching_field_value.property"
-                    :resources="resources"
+                    :resources="$root.$children[0].datasets"
                     :value_index.number="0"
             />
 
@@ -24,10 +24,6 @@
                     <option value="" selected disabled>Select a function</option>
                     <option v-if="function_name != ''" v-for="(function_info, function_name) in sql_value_functions" :value="function_name">{{ function_info.label }}</option>
                 </select>
-            </div>
-
-            <div v-if="removable" class="form-group col-1">
-                <button @click="$emit('remove')" type="button" class="ml-3 btn btn-danger"><octicon name="trashcan"></octicon></button>
             </div>
         </div>
 
@@ -199,7 +195,6 @@
         name: 'matching-field-value-component',
         props: {
             matching_field_value: {},
-            removable: false,
             resources: {},
             'resource_id': '',
             'unique_id': '',

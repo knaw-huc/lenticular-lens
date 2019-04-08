@@ -1,16 +1,5 @@
 <template>
     <div class="border-top pb-3 pt-3">
-        <div class="row justify-content-between">
-            <div class="form-group col-2">
-                <label :for="unique_id + '_label'">Field label</label>
-                <input type="text" class="form-control" v-model="matching_field.label" :id="unique_id + '_label'">
-            </div>
-
-            <div class="form-group col-1">
-                <button @click="$emit('remove')" type="button" class="ml-3 btn btn-danger"><octicon name="trashcan"></octicon></button>
-            </div>
-        </div>
-
         <matching-field-value-component :matching_field_value="matching_field.value" :resource_id="resource_id" :unique_id="unique_id"  :key="unique_id"/>
 
         <div v-for="(transformer, index) in matching_field.value.transformers" class="col-4">
@@ -29,7 +18,7 @@
         </div>
 
         <div class="form-group">
-            <button type="button" class="btn btn-primary w-25 form-control" @click="addTransformer($event)">+ Add Transformer</button>
+            <button-add @click="addTransformer($event)" title="Add transformer"/>
         </div>
     </div>
 </template>

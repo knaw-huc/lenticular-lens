@@ -5,10 +5,10 @@
                 <div class="row">
                     <label class="h4 col-auto align-self-center">Method</label>
                     <div class="col-auto form-group">
-                        <select class="border-0 btn-outline-info form-control h-auto shadow" v-model="condition.method_index" @change="handleMethodIndexChange">
+                        <v-select v-model="condition.method_index" @input="handleMethodIndexChange">
                             <option disabled selected value="">Select a method</option>
                             <option v-for="(method, index) in matching_methods" :value="index">{{ method.label }}</option>
-                        </select>
+                        </v-select>
                     </div>
                 </div>
             </div>
@@ -38,62 +38,24 @@
         <div class="row pl-5 mb-3">
             <div class="col">
                 <div class="row">
-                    <div class="h4 col">Sources</div>
+                    <div class="h4 col">Sources properties</div>
                 </div>
-                <div class="row">
+                <div v-for="(resource, index) in resources.sources" v-if="resource" class="row">
                     <div class="col">
-                        <div v-for="resource in resources.sources" v-if="resource" class="row">
-                            <div class="col">
-                                <div class="row pl-5">
-                                    <div class="h5 col-auto align-self-center">{{ resource.label }}</div>
-                                    <div class="col-auto form-group">
-                                        <select class="border-0 btn-outline-info col-auto form-control h-auto shadow">
-                                            <option value="" disabled selected>Select a property</option>
-<!--                                            <option-->
-<!--                                                    v-for="(property_name, property_info) in $root.$children[0].datasets[resource.dataset_id][resource.collection_id]"-->
-<!--                                                    :value="property_name"-->
-<!--                                            >-->
-<!--                                                {{ property_name }}-->
-<!--                                            </option>-->
-                                        </select>
-                                    </div>
-<!--                                    <matching-field-component-->
-<!--                                        :match_id="match_id"-->
-<!--                                        :resource_id="resource.id"-->
-<!--                                        @remove="resource.matching_fields.splice(index, 1)"-->
-<!--                                    ></matching-field-component>-->
-                                </div>
-                            </div>
-                        </div>
+                            <property-component :property="condition.sources[index]" @resetProperty="resetProperty('sources', index, $event)"/>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div v-if="resources.targets.length > 0" class="row pl-5">
+        <div v-if="resources.targets.length > 0" class="row pl-5 mb-3">
             <div class="col">
                 <div class="row">
-                    <div class="h4 col">Targets</div>
+                    <div class="h4 col">Targets properties</div>
                 </div>
-                <div class="row">
+                <div v-for="(resource, index) in resources.targets" v-if="resource" class="row">
                     <div class="col">
-                        <div v-for="resource in resources.targets" class="row">
-                            <div class="col">
-                                <div class="row pl-5">
-                                    <div class="h5 col-auto align-self-center">{{ resource.label }}</div>
-                                    <div class="col-auto form-group">
-                                        <select class="border-0 btn-outline-info col-auto form-control h-auto shadow">
-                                            <option value="" disabled selected>Select a property</option>
-                                        </select>
-                                    </div>
-<!--                                    <matching-field-component-->
-<!--                                        :match_id="match_id"-->
-<!--                                        :resource_id="resource.id"-->
-<!--                                        @remove="resource.matching_fields.splice(index, 1)"-->
-<!--                                    ></matching-field-component>-->
-                                </div>
-                            </div>
-                        </div>
+                            <property-component :property="condition.targets[index]" @resetProperty="resetProperty('targets', index, $event)"/>
                     </div>
                 </div>
             </div>
@@ -102,12 +64,7 @@
 </template>
 
 <script>
-    import MatchingField from './MatchingField'
-
     export default {
-        components: {
-            'matching-field-component': MatchingField,
-        },
         computed: {
             method_object() {
                 return this.matching_methods[this.condition.method_index].object;
@@ -235,6 +192,16 @@
                         this.condition.method[this.method_object.name].push(this.method_object.value.listItems.type);
                     }
                 }
+            },
+            resetProperty(resource_type, resource_index, property_index) {
+                let property = this.condition[resource_type][resource_index];
+                let new_property = property.slice(0, property_index);
+                new_property.push('');
+                if (new_property.length % 2 > 0) {
+                    new_property.push('');
+                }
+
+                this.$set(this.condition[resource_type], resource_index, new_property);
             },
         },
         props: ['condition', 'match_id'],

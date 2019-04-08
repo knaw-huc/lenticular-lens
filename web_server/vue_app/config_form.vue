@@ -46,8 +46,6 @@
             <match-component
                     :match="match"
                     :matches="matches"
-                    :datasets="datasets"
-                    :resources="resources"
                     v-for="(match, index) in matches"
                     :key="match.id"
                     @remove="matches.splice(index, 1)"

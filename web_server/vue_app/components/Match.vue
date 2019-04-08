@@ -56,13 +56,21 @@
         </div>
 
 
-        <div class="bg-white border p-3 rounded mb-4">
-            <div class="row">
-                <div class="col">
-                    <h3>Targets</h3>
+        <div class="bg-white border p-3 justify-content-around rounded mb-4">
+            <div class="row justify-content-between">
+                <div class="col-auto">
+                    <div class="row">
+                        <div class="col-auto pr-0">
+                            <h3>Targets</h3>
+                        </div>
+                        <div class="col-auto pl-0">
+                            <button type="button" class="btn"><octicon name="question" scale="1.3"></octicon></button>
+                        </div>
+                    </div>
                 </div>
+
                 <div class="form-group col-auto">
-                    <button-add @click.native="addMatchResource('targets', $event)" title="Add a Collection as a Target"/>
+                    <button-add @click="addMatchResource('targets', $event)" title="Add a Collection as a Target"/>
                 </div>
             </div>
 
@@ -161,12 +169,22 @@
                     event.target.blur();
                 }
 
+                function getEmptyResources(from_resources) {
+                    let empty_resources = [];
+
+                    from_resources.forEach(from_resource => {
+                        empty_resources.push([from_resource[0], '']);
+                    });
+
+                    return empty_resources
+                }
+
                 let condition = {
                     'id': this.match.conditions.items.length,
                     'method': '',
                     'method_index': '',
-                    'sources': this.resources.sources,
-                    'targets': this.resources.targets,
+                    'sources': this.match.conditions.items.length > 0 ? getEmptyResources(this.match.conditions.items[0].sources) : [],
+                    'targets': this.match.conditions.items.length > 0 ? getEmptyResources(this.match.conditions.items[0].targets) : [],
                 };
 
                 this.match.conditions.items.push(condition);
@@ -190,7 +208,7 @@
             },
             updateMatchResource(resources_key, index, value) {
                 this.match.conditions.items.forEach(condition => {
-                    this.$set(condition[resources_key], index, value);
+                    this.$set(condition[resources_key], index, [value,'']);
                 });
             },
         },

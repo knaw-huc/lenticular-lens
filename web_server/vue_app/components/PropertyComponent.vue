@@ -1,66 +1,65 @@
 <template>
-    <div class="col">
+    <div class="col-auto">
         <div class="row">
-            <div class="form-group col-4">
-                <select class="form-control" :value="value[value_index]" @input="updateInput($event.target.value, value_index)">
+            <div v-if="!Array.isArray(resources) && value[0]" class="col-auto p-1">
+                <octicon name="arrow-right" />
+            </div>
+            <div class="form-group col-auto">
+                <v-select :value="value[0]" @input="updateInput($event, 0)" v-if="!value[0]">
                     <template v-if="Array.isArray(resources)">
                         <option v-for="collection in resources" :key="collection.id" :value="collection.id">{{ collection.label }}
                         </option>
                     </template>
                     <template v-else>
-                        <option value="" disabled>Choose a referenced collection</option>
+                        <option value="" disabled selected>Choose a referenced collection</option>
                         <option value="__value__">Value (do not follow reference)</option>
                         <option v-for="collection in Object.keys(resources)" :key="collection" :value="collection">{{ collection }}
                         </option>
                     </template>
-                </select>
+                </v-select>
+                <div v-else-if="Array.isArray(resources)" class="row">
+                    <div class="col-auto border border-info p-1 rounded-pill pl-2 pr-2">
+                        {{ $root.$children[0].datasets[$root.$children[0].getResourceById(value[0], resources).dataset_id].title }}
+                    </div>
+                    <div class="col-auto border border-info p-1 rounded-pill ml-2 mr-3 pl-2 pr-2">
+                        {{ $root.$children[0].getResourceById(value[0], resources).collection_id }}
+                    </div>
+                </div>
+                <div class="row" v-else>
+                    <button type="button" class="btn-info btn col-auto mt-1 pb-0 pt-0 rounded-pill" @click="$emit('reset', 0)">
+                        {{ value[0] }}
+                    </button>
+                </div>
             </div>
-            <template v-if="value[value_index] && value[value_index] !== '__value__'">
-                ::
-                <div class="form-group col-4">
-                    <select class="form-control" :value="value[value_index + 1]" @input="updateInput($event.target.value, value_index + 1)">
+            <template v-if="value[0] && value[0] !== '__value__'">
+                <div v-if="!Array.isArray(resources)" class="col-auto p-1">
+                    <octicon name="arrow-right" />
+                </div>
+                <div class="form-group col-auto">
+                    <v-select v-if="!value[1]" class="form-control" :value="value[1]" @input="updateInput($event, 1)">
                         <option value="" selected disabled>Choose a property</option>
                         <option v-for="property_opt in Object.keys(properties)" :value="property_opt">{{ property_opt }}</option>
-                    </select>
+                    </v-select>
+                    <div class="row" v-else>
+                    <button type="button" class="btn-info btn col-auto mt-1 pb-0 pt-0 rounded-pill" @click="$emit('reset', 1)">
+                        {{ value[1] }}
+                    </button>
+                </div>
                 </div>
             </template>
         </div>
-        <template v-if="
-            value[value_index + 1]
-            && properties[value[value_index + 1]]['referencedCollections']
-            && Object.keys(properties[value[value_index + 1]]['referencedCollections']).length > 0
-        ">
-            <div class="row">
-                -->
-                <property-component
-                        v-model="value"
-                        :value_index="value_index + 2"
-                        :resources="properties[value[value_index + 1]]['referencedCollections']"
-                ></property-component>
-            </div>
-        </template>
     </div>
 </template>
 <script>
     export default {
-        computed: {
-            properties() {
-                if (Array.isArray(this.resources)) {
-                    return this.$parent.properties;
-                } else {
-                    return this.value[this.value_index] ? this.resources[this.value[this.value_index]] : []
-                }
-            },
-        },
         methods: {
             updateInput(new_value, index) {
-                this.$set(this.value, index, new_value);
-                this.$emit('input', this.value);
+                this.$emit('input', [index, new_value]);
             },
         },
-        name: 'property-component',
+        name: 'property-component-component',
         props: {
-            value_index: 0,
+            properties: Object,
             resources: [Array, Object],
             value: Array,
         },
