@@ -1,5 +1,5 @@
 <template>
-<div class="container-fluid" id="app">
+<div class="container" id="app">
     <form @submit.prevent="submitForm" action="" method="post">
     <form-wizard
         title="Lenticular Lenses II"
@@ -113,45 +113,52 @@
                     <div class="border p-4 mt-4 bg-light"
                          v-for="match in matches"
                          v-if="!match.is_association"
-                         @click="getClusters(getResultForMatch(match.label).clusterings[0].clustering_id)"
                     >
                         <div class="row justify-content-between">
-                            <div class="col align-self-center">
+                            <div class="col-auto">
+                                <octicon name="chevron-down" scale="3" v-b-toggle="'clusters_match_' + match.id"></octicon>
+                            </div>
+
+                            <div class="col align-self-center" v-b-toggle="'clusters_match_' + match.id">
                                 <div class="h2">{{ match.label }}</div>
                             </div>
 
-                            <div class="col-auto align-self-center">
+                            <div class="col-auto align-self-center" v-b-toggle="'clusters_match_' + match.id">
                                 <div v-if="getResultForMatch(match.label).clusterings.length > 0" class="h3 text-success">Clustered</div>
                                 <div v-else class="h3 text-danger">Not clustered</div>
                             </div>
                         </div>
-                    </div>
-                </div>
-
-                <div class="row border-bottom mb-5" v-if="Object.keys(clusters).length > 0">
-                    <div class="col-md-12">
-                        <div id="dataset_linking_stats_cluster_results" style="height: 20em; width:100%; scroll: both; overflow: auto;">
-                            <table class="table table-striped" id="resultTable" style="height: 20em; scroll: both; overflow: auto;">
-                                <thead>
-                                    <tr>
-                                        <th>Ext</th>
-                                        <th>ID</th>
-                                        <th>count</th>
-                                        <th>size</th>
-                                        <th>prop</th>
-                                        <th>sample</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <cluster-table-row-component
-                                            v-for="(cluster_data, cluster_id) in clusters"
-                                            :cluster_id="cluster_id"
-                                            :cluster_data="cluster_data"
-                                            @select:cluster_id="cluster_id_selected = $event"
-                                    />
-                                </tbody>
-                            </table>
-                        </div>
+                        <b-collapse
+                                @show="getClusters(getResultForMatch(match.label).clusterings[0].clustering_id)"
+                                class="row border-bottom mb-5"
+                                :id="'clusters_match_' + match.id"
+                                accordion="clusters-matches-accordion"
+                        >
+                            <div class="col-md-12">
+                                <div id="dataset_linking_stats_cluster_results" style="height: 20em; width:100%; scroll: both; overflow: auto;">
+                                    <table class="table table-striped" id="resultTable" style="height: 20em; scroll: both; overflow: auto;">
+                                        <thead>
+                                            <tr>
+                                                <th>Ext</th>
+                                                <th>ID</th>
+                                                <th>count</th>
+                                                <th>size</th>
+                                                <th>prop</th>
+                                                <th>sample</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <cluster-table-row-component
+                                                    v-for="(cluster_data, cluster_id) in clusters"
+                                                    :cluster_id="cluster_id"
+                                                    :cluster_data="cluster_data"
+                                                    @select:cluster_id="cluster_id_selected = $event"
+                                            />
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </b-collapse>
                     </div>
                 </div>
 

@@ -1,5 +1,6 @@
 $yellow: #efc501;
 $primary: $yellow;
+$container-max-widths: (lg: 1500px);
 
 @import '~bootstrap/scss/bootstrap.scss';
 @import '~bootstrap-vue/src/index.scss';

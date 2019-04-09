@@ -166,6 +166,8 @@
                 }
             },
             getGraphData(type) {
+                let vm = this;
+
                 d3.select('svg#graph_cluster_1').selectAll("*").remove();
                 if (type !== 'cluster') {
                     d3.select('svg#graph_cluster_2').selectAll("*").remove();
@@ -173,6 +175,10 @@
                 if (this.$root.$children[0].association) {
                     this.$refs.vis_collapse_1.show = false;
                 }
+
+                setTimeout(function () {
+                    vm.scrollTo('vis_collapse_1');
+                }, 100);
             // document.getElementById('graph_cluster_1').parentNode.setAttribute('hidden', 'hidden');
             // document.getElementById('graph_cluster_2').parentNode.setAttribute('hidden', 'hidden');
                 fetch(
@@ -204,9 +210,14 @@
                     plot_col_1.scrollLeft = plot_col_1.scrollWidth - plot_col_1.clientWidth;
                     plot_col_1.scrollTop = (plot_col_1.scrollHeight - plot_col_1.clientHeight) / 2;
                     let plot_col_2 = document.getElementById('cluster_plot_col_2');
-                    plot_col_2.scrollLeft = plot_col_2.scrollWidth - plot_col_2.clientWidth;
-                    plot_col_2.scrollTop = (plot_col_2.scrollHeight - plot_col_2.clientHeight) / 2;
+                    if (plot_col_2) {
+                        plot_col_2.scrollLeft = plot_col_2.scrollWidth - plot_col_2.clientWidth;
+                        plot_col_2.scrollTop = (plot_col_2.scrollHeight - plot_col_2.clientHeight) / 2;
+                    }
                 });
+            },
+            scrollTo(ref) {
+                this.$refs[ref].$el.parentNode.scrollIntoView({'behavior':'smooth', 'block':'start'});
             },
         },
         mounted() {
