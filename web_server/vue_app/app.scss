@@ -18,3 +18,15 @@ $container-max-widths: (lg: 1500px);
     transform: rotate(-90deg);
   }
 }
+
+div#app::before {
+    position: absolute;
+    content: '';
+    z-index: -1;
+    width: 100%;
+    height: 207px;
+    background-image: url(/static/images/bg-trade01.jpg);
+    background-repeat: no-repeat;
+    background-position: 0 25%;
+    background-size: cover;
+}
