@@ -156,7 +156,11 @@
                 </div>
 
                 <template v-if="cluster_id_selected">
-                    <cluster-visualization-component :clustering_id="clustering_id" :cluster_id="cluster_id_selected" :cluster_data="clusters[cluster_id_selected]"/>
+                    <cluster-visualization-component
+                            :clustering_id="clustering_id"
+                            :cluster_id="cluster_id_selected"
+                            :cluster_data="clusters[cluster_id_selected]"
+                    />
 
                     <div class="row justify-content-end">
                         <div class="col-auto">

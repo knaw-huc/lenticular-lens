@@ -1,14 +1,51 @@
 <template>
     <div>
-        <div id="cluster_plot_row_1" class="row mb-3" style="background-color:#FFFFE0;" >
-            <div id="cluster_plot_col_1" class="col-md-12" style='height: 40em; width:100%; scroll: both; overflow: auto;' >
-                <svg class="plot" id="graph_cluster_1" width="2000" height="800" style="background-color:#FFFFE0;"></svg>
+        <div class="border p-4 mt-4 bg-light">
+            <div class="row">
+                <div class="col-auto">
+                    <octicon name="chevron-down" scale="3" v-b-toggle.cluster_plot_row_1></octicon>
+                </div>
+
+                <div class="col" v-b-toggle.cluster_plot_row_1>
+                    <div class="row">
+                        <div class="col h3">Cluster</div>
+                    </div>
+                </div>
+
+                <div class="col-auto" v-if="$root.$children[0].association" v-b-toggle.cluster_plot_row_1>
+                    <button type="button" @click="getGraphData('cluster')" class="btn btn-info">Get Clusters</button>
+                </div>
             </div>
+            <b-collapse
+                    :visible="!Boolean($root.$children[0].association)"
+                    id="cluster_plot_row_1"
+                    class="row mb-3"
+                    style="background-color:#FFFFE0;"
+                    ref="vis_collapse_1"
+            >
+                <div id="cluster_plot_col_1" class="col-md-12" style='height: 40em; width:100%; scroll: both; overflow: auto;' >
+                    <svg class="plot" id="graph_cluster_1" width="2000" height="800" style="background-color:#FFFFE0;"></svg>
+                </div>
+            </b-collapse>
         </div>
-        <div id="cluster_plot_row" class="row mb-3" style="background-color:#FFFFE0;" >
-            <div id="cluster_plot_col" class="col-md-12" style='height: 40em; width:100%; scroll: both; overflow: auto;' >
-                <svg class="plot" id="graph_cluster_2" width="2000" height="800" style="background-color:#FFFFE0;"></svg>
+
+        <div v-if="$root.$children[0].association" class="border p-4 mt-4 bg-light">
+            <div class="row">
+                <div class="col-auto">
+                    <octicon name="chevron-down" scale="3" v-b-toggle.cluster_plot_row_2></octicon>
+                </div>
+
+                <div class="col" v-b-toggle.cluster_plot_row_2>
+                    <div class="row">
+                        <div class="col h3">Reconciled</div>
+                    </div>
+                </div>
             </div>
+            <b-collapse :visible="Boolean($root.$children[0].association)" id="cluster_plot_row_2" class="row mb-3" style="background-color:#FFFFE0;" >
+                <div id="cluster_plot_col_2" class="col-md-12" style='height: 40em; width:100%; scroll: both; overflow: auto;' >
+                    <svg class="plot" id="graph_cluster_2" width="2000" height="800" style="background-color:#FFFFE0;"></svg>
+                </div>
+            </b-collapse>
         </div>
     </div>
 </template>
@@ -128,7 +165,16 @@
                   d.fy = null;
                 }
             },
-            getGraphData() {
+            getGraphData(type) {
+                d3.select('svg#graph_cluster_1').selectAll("*").remove();
+                if (type !== 'cluster') {
+                    d3.select('svg#graph_cluster_2').selectAll("*").remove();
+                }
+                if (this.$root.$children[0].association) {
+                    this.$refs.vis_collapse_1.show = false;
+                }
+            // document.getElementById('graph_cluster_1').parentNode.setAttribute('hidden', 'hidden');
+            // document.getElementById('graph_cluster_2').parentNode.setAttribute('hidden', 'hidden');
                 fetch(
                     '/job/' + this.$root.$children[0].job_id + '/cluster/' + this.clustering_id + '/' + this.cluster_id + '/graph',
                     {
@@ -137,12 +183,29 @@
                                 'Content-Type': 'application/json',
                             },
                             method: "POST",
-                            body: JSON.stringify({'cluster_data': this.cluster_data})
+                            body: JSON.stringify({
+                                'cluster_data': this.cluster_data,
+                                'get_cluster': !Boolean(this.$root.$children[0].association) || type === 'cluster',
+                                'get_reconciliation': Boolean(this.$root.$children[0].association),
+                                'associations': this.$root.$children[0].association,
+                            })
                         })
                 .then((response) => response.json())
                 .then((data) => {
-                    this.draw(data.graph_1, "svg#graph_cluster_1");
-                    this.draw(data.graph_2, "svg#graph_cluster_2");
+                    if (data.cluster_graph) {
+                        // document.getElementById('graph_cluster_1').parentNode.removeAttribute('hidden');
+                        this.draw(data.cluster_graph, "svg#graph_cluster_1");
+                    }
+                    if (data.reconciliation_graph) {
+                        // document.getElementById('graph_cluster_2').parentNode.removeAttribute('hidden');
+                        this.draw(data.reconciliation_graph, "svg#graph_cluster_2");
+                    }
+                    let plot_col_1 = document.getElementById('cluster_plot_col_1');
+                    plot_col_1.scrollLeft = plot_col_1.scrollWidth - plot_col_1.clientWidth;
+                    plot_col_1.scrollTop = (plot_col_1.scrollHeight - plot_col_1.clientHeight) / 2;
+                    let plot_col_2 = document.getElementById('cluster_plot_col_2');
+                    plot_col_2.scrollLeft = plot_col_2.scrollWidth - plot_col_2.clientWidth;
+                    plot_col_2.scrollTop = (plot_col_2.scrollHeight - plot_col_2.clientHeight) / 2;
                 });
             },
         },

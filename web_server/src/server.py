@@ -164,11 +164,15 @@ def cluster_visualization(job_id, clustering_id, cluster_id):
 @app.route('/job/<job_id>/cluster/<clustering_id>/<cluster_id>/graph', methods=['POST'])
 def get_cluster_graph_data(job_id, clustering_id, cluster_id):
     cluster_data = request.json['cluster_data'] if 'cluster_data' in request.json else get_cluster_data(clustering_id, cluster_id)
+    associations = request.json['associations'] if 'associations' in request.json else None
+    sub_clusters = 'Serialized_Cluster_Reconciled_PH1f99c8924c573d6'
+    get_cluster = request.json.get('get_cluster', True)
+    get_reconciliation = request.json.get('get_reconciliation', True) if associations else False
 
     golden_agents_specifications = {
         "data_store": "POSTGRESQL",
-        "sub_clusters": 'Serialized_Cluster_Reconciled_PH1f99c8924c573d6',
-        "associations": 'GA-related-paper.csv',
+        "sub_clusters": sub_clusters,
+        "associations": associations,
         "serialised": 'Serialized_Cluster_PH1f99c8924c573d6_ga',
         "cluster_id": cluster_id,
         "cluster_data": {
@@ -205,9 +209,10 @@ def get_cluster_graph_data(job_id, clustering_id, cluster_id):
              },
         ]
     }
+
     return jsonify({
-        'graph_1': visualise_1(specs=golden_agents_specifications, activated=True),
-        'graph_2': visualise_2(specs=golden_agents_specifications, activated=True)[1],
+        'cluster_graph': visualise_1(specs=golden_agents_specifications, activated=True) if get_cluster else None,
+        'reconciliation_graph': visualise_2(specs=golden_agents_specifications, activated=True)[1] if get_reconciliation else None,
     })
 
 

@@ -45,7 +45,6 @@ def simple_csv_link_clustering(csv_path, save_in, file_name=None, key=None, acti
     print("\n{:.^100}".format(" WE ARE ABOUT TO CLUSTER AND SERIALISED "))
     print("{:.^100}".format(" FOM " + csv_path + " "))
     print("{:.^100}".format(" *** MAYBE TIME FOR A COFFEE? *** "))
-    print(key)
 
     """
         EXAMPLE OF WHAT WE GET AS CLUSTER
@@ -292,6 +291,7 @@ def simple_csv_link_clustering(csv_path, save_in, file_name=None, key=None, acti
                             print(F"\tRESOURCE {links:>10}:   {subject:>40}    =    {t_object}")
                             check += standard
                         iteration += 1
+                        # print(iteration)
 
             elapse = datetime.timedelta(seconds=time.time() - start)
             print(F"\t>>> {links} links clustered in {elapse}")
@@ -1437,7 +1437,7 @@ def cluster_vis_input(specs, visualisation_obj=None, resources_obj=None, dataset
     # PROVIDED ASSOCIATION CSV FILE, THE CODE EXTRACTS THE NODES OF
     # THE CURRENT CLUSTER THAT EXTEND THE CLUSTER WITH NEW CLUSTERS
     # ***************************************************************
-    if 'associations' in specs:
+    if 'associations' in specs and specs['associations']:
 
         # ***************************************************************
         print(F"\n{tab}--> 1. FETCHING THE ASSOCIATED NODES ")
