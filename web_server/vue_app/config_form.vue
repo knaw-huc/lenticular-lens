@@ -78,14 +78,21 @@
         </tab-content>
 
         <tab-content title="Clustering">
-            <div class="border p-4 mt-4 bg-light" v-for="match in matches" v-if="!match.is_association">
+            <div class="border p-4 mt-4 bg-light"
+                 v-for="match in matches"
+                 v-if="!match.is_association"
+            >
                 <div class="row justify-content-between">
-                    <div class="col align-self-center">
+                    <div class="col-auto">
+                        <octicon name="chevron-down" scale="3" v-b-toggle="'clusters_match_' + match.id"></octicon>
+                    </div>
+
+                    <div class="col align-self-center" v-b-toggle="'clusters_match_' + match.id">
                         <div class="h2">{{ match.label }}</div>
                     </div>
 
                     <div v-if="getResultForMatch(match.label).clusterings.length > 0" class="col-auto align-self-center">
-                            <div class="h3 text-success">Clustered</div>
+                        <div class="h3 text-success">Clustered</div>
                     </div>
 
                     <div class="col-auto">
@@ -99,12 +106,46 @@
                             <option v-for="association_file_name in job_data.association_files" :value="association_file_name">{{ association_file_name }}</option>
                         </select>
                     </div>
-
-                    <div class="form-group col-1 align-self-center">
-                        <button v-on:click="" type="button" class="ml-3 btn btn-danger"><octicon name="trashcan"></octicon></button>
-                    </div>
                 </div>
+                <b-collapse
+                        @show="getClusters(getResultForMatch(match.label).clusterings[0].clustering_id)"
+                        class="row border-bottom mb-5"
+                        :id="'clusters_match_' + match.id"
+                        accordion="clusters-matches-accordion"
+                >
+                    <div class="col-md-12">
+                        <div id="dataset_linking_stats_cluster_results" style="height: 20em; width:100%; scroll: both; overflow: auto;">
+                            <table class="table table-striped" id="resultTable" style="height: 20em; scroll: both; overflow: auto;">
+                                <thead>
+                                    <tr>
+                                        <th>Ext</th>
+                                        <th>ID</th>
+                                        <th>count</th>
+                                        <th>size</th>
+                                        <th>prop</th>
+                                        <th>sample</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <cluster-table-row-component
+                                            v-for="(cluster_data, cluster_id) in clusters"
+                                            :cluster_id="cluster_id"
+                                            :cluster_data="cluster_data"
+                                            @select:cluster_id="cluster_id_selected = $event"
+                                    />
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </b-collapse>
             </div>
+            <template v-if="cluster_id_selected">
+                <cluster-visualization-component
+                        :clustering_id="clustering_id"
+                        :cluster_id="cluster_id_selected"
+                        :cluster_data="clusters[cluster_id_selected]"
+                />
+            </template>
         </tab-content>
 
         <tab-content title="Validation">
