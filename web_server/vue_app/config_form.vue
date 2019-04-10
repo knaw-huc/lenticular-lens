@@ -168,12 +168,6 @@
                             :cluster_id="cluster_id_selected"
                             :cluster_data="clusters[cluster_id_selected]"
                     />
-
-                    <div class="row justify-content-end">
-                        <div class="col-auto">
-                            <a :href="'/job/' + job_id + '/cluster/' + job_data.results.clusterings[0].clustering_id + '/' + cluster_id_selected" target="_blank" class="btn btn-info">Open in new tab</a>
-                        </div>
-                    </div>
                 </template>
             </template>
         </tab-content>

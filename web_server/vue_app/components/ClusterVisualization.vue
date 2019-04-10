@@ -20,11 +20,18 @@
                     :visible="!Boolean($root.$children[0].association)"
                     id="cluster_plot_row_1"
                     class="row mb-3"
-                    style="background-color:#FFFFE0;"
                     ref="vis_collapse_1"
             >
                 <div id="cluster_plot_col_1" class="col-md-12" style='height: 40em; width:100%; scroll: both; overflow: auto;' >
                     <svg class="plot" id="graph_cluster_1" width="2000" height="800" style="background-color:#FFFFE0;"></svg>
+                </div>
+
+                <div class="col pt-4">
+                    <div class="row justify-content-end">
+                        <div class="col-auto">
+                            <a :href="'/job/' + $root.$children[0].job_id + '/cluster/' + $root.$children[0].job_data.results.clusterings[0].clustering_id + '/' + $root.$children[0].cluster_id_selected" target="_blank" class="btn btn-info">Open in new tab</a>
+                        </div>
+                    </div>
                 </div>
             </b-collapse>
         </div>
@@ -41,9 +48,21 @@
                     </div>
                 </div>
             </div>
-            <b-collapse :visible="Boolean($root.$children[0].association)" id="cluster_plot_row_2" class="row mb-3" style="background-color:#FFFFE0;" >
+            <b-collapse
+                    :visible="Boolean($root.$children[0].association)"
+                    id="cluster_plot_row_2"
+                    class="row mb-3"
+            >
                 <div id="cluster_plot_col_2" class="col-md-12" style='height: 40em; width:100%; scroll: both; overflow: auto;' >
                     <svg class="plot" id="graph_cluster_2" width="2000" height="800" style="background-color:#FFFFE0;"></svg>
+                </div>
+
+                <div class="col pt-4">
+                    <div class="row justify-content-end">
+                        <div class="col-auto">
+                            <a :href="'/job/' + $root.$children[0].job_id + '/cluster/' + $root.$children[0].job_data.results.clusterings[0].clustering_id + '/' + $root.$children[0].cluster_id_selected" target="_blank" class="btn btn-info">Open in new tab</a>
+                        </div>
+                    </div>
                 </div>
             </b-collapse>
         </div>
