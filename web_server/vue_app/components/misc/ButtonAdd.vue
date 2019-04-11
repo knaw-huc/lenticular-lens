@@ -1,5 +1,8 @@
 <template>
-    <button type="button" class="btn btn-outline-info rounded-circle" :title="title" @click="$emit('click')">
+    <button
+            type="button"
+            :class="'btn btn-outline-info rounded-circle' + (scale < 1 ? ' pt-1 pb-1' : '')" :title="title" @click="$emit('click')"
+    >
         <octicon name="plus" :scale="scale"/>
     </button>
 </template>

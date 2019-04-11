@@ -1557,6 +1557,11 @@ def cluster_vis_input(specs, visualisation_obj=None, resources_obj=None, dataset
 
                 # REFORMATTING THE NODE'S LABEL FOR GENERATING A UNIQUE IDEA
                 db_label = get_uri_local_name_plus(i_dataset)
+
+                underscore = db_label.split('__')
+                db_label = underscore[1] if len(underscore) > 1 else db_label
+                label = f'-- {label}'
+
                 resources[formated_uri] = F"{label} ({db_label} {get_uri_local_name_plus(uri)})"
 
                 # CREATE THE NODE OBJECT FOR VISUALISATION
@@ -1857,6 +1862,11 @@ def cluster_vis_input_2(specs, visualisation_obj=None, activated=False):
 
                 # REFORMATTING THE NODE'S LABEL FOR GENERATING A UNIQUE IDEA
                 db_label = get_uri_local_name_plus(i_dataset)
+
+                underscore = db_label.split('__')
+                db_label = underscore[1] if len(underscore) > 1 else db_label
+                label = f'-- {label}'
+
                 resources[formatted_uri] = F"{label} ({db_label} {get_uri_local_name_plus(uri)})" \
                     if visualisation_obj is None else F"{label} ({db_label} {get_uri_local_name_plus(uri)})"
 
@@ -1920,8 +1930,8 @@ def cluster_vis_input_2(specs, visualisation_obj=None, activated=False):
                     "cluster_id": id,
 
                     # "sub_clusters": 'Serialized_Cluster_Reconciled_PH1f99c8924c573d6',
-                    "associations": 'GA-related-paper.csv',
-                    "serialised": 'Serialized_Cluster_Reconciled_PH1f99c8924c573d6',
+                    "associations": specs['associations'],
+                    "serialised": specs['serialised'],
 
 
                     "cluster_data": {
@@ -1939,7 +1949,7 @@ def cluster_vis_input_2(specs, visualisation_obj=None, activated=False):
                 cluster_vis_input_2(specifications, visualisation_obj=sub_vis, activated=activated)
                 # cluster_vis_input_2(specifications, visualisation_obj=vis_data, activated=activated)
 
-                add_vis_evidence(specifications, sub_vis, "Serialized_Cluster_Reconciled_PH1f99c8924c573d6",
+                add_vis_evidence(specifications, sub_vis, specs['sub_clusters'],
                                  resources_obj=resources, dataset_obj=dataset, activated=activated)
 
                 # print_object(sub_vis)

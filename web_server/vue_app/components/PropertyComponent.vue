@@ -1,6 +1,6 @@
 <template>
     <div class="col-auto">
-        <div class="row">
+        <div class="row ml-5">
             <div v-if="!Array.isArray(resources) && value[0]" class="col-auto p-1">
                 <octicon name="arrow-right" />
             </div>
@@ -21,8 +21,11 @@
                     <div class="col-auto border border-info p-1 rounded-pill pl-2 pr-2">
                         {{ $root.$children[0].datasets[$root.$children[0].getResourceById(value[0], resources).dataset_id].title }}
                     </div>
-                    <div class="col-auto border border-info p-1 rounded-pill ml-2 mr-3 pl-2 pr-2">
+                    <div class="col-auto border border-info p-1 rounded-pill ml-2 mr-2 pl-2 pr-2">
                         {{ $root.$children[0].getResourceById(value[0], resources).collection_id }}
+                    </div>
+                    <div class="col-auto ml-0 pl-0">
+                        <button-add :scale="0.8" title="Add another property for this Collection"/>
                     </div>
                 </div>
                 <div class="row" v-else>

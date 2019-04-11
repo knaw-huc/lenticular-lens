@@ -13,7 +13,7 @@
                 </div>
 
                 <div class="col-auto" v-if="$root.$children[0].association" v-b-toggle.cluster_plot_row_1>
-                    <button type="button" @click="getGraphData('cluster')" class="btn btn-info">Get Clusters</button>
+                    <button type="button" @click="getGraphData('cluster')" class="btn btn-info">Load Original Clusters</button>
                 </div>
             </div>
             <b-collapse

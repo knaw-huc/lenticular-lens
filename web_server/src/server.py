@@ -148,12 +148,15 @@ def create_clustering(job_id):
 
     clustering_id = cluster_csv(csv_filepath, job_id, request.json['mapping_label'])
 
-    with db_conn() as conn, conn.cursor() as cur:
-        cur.execute('''
-        INSERT INTO clusterings
-        (clustering_id, job_id, mapping_name, clustering_type)
-        VALUES (%s, %s, %s, %s)
-        ''', (clustering_id, job_id, request.json['mapping_label'], request.json.get('clustering_type', 'default')))
+    try:
+        with db_conn() as conn, conn.cursor() as cur:
+            cur.execute('''
+            INSERT INTO clusterings
+            (clustering_id, job_id, mapping_name, clustering_type)
+            VALUES (%s, %s, %s, %s)
+            ''', (clustering_id, job_id, request.json['mapping_label'], request.json.get('clustering_type', 'default')))
+    except psycopg2.IntegrityError:
+        pass
 
     return jsonify(clustering_id)
 
@@ -167,7 +170,7 @@ def cluster_visualization(job_id, clustering_id, cluster_id):
 def get_cluster_graph_data(job_id, clustering_id, cluster_id):
     cluster_data = request.json['cluster_data'] if 'cluster_data' in request.json else get_cluster_data(clustering_id, cluster_id)
     associations = request.json['associations'] if 'associations' in request.json else None
-    sub_clusters = 'Serialized_Cluster_Reconciled_PH1f99c8924c573d6'
+    sub_clusters = '__PHDemoClustersReconciled__'
     get_cluster = request.json.get('get_cluster', True)
     get_reconciliation = request.json.get('get_reconciliation', True) if associations else False
 
@@ -175,7 +178,7 @@ def get_cluster_graph_data(job_id, clustering_id, cluster_id):
         "data_store": "POSTGRESQL",
         "sub_clusters": sub_clusters,
         "associations": associations,
-        "serialised": 'Serialized_Cluster_PH1f99c8924c573d6_ga',
+        "serialised": '__PHDemoClusters__',
         "cluster_id": cluster_id,
         "cluster_data": {
             "nodes": cluster_data['nodes'],
