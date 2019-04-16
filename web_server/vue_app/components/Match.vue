@@ -59,7 +59,7 @@
                             v-for="(match_resource, index) in resources.sources"
                             :match_resource_id="'source_' + index"
                             :match="match"
-                            :match_resource="match_resource"
+                            :match_resource="$root.$children[0].getResourceById(match_resource)"
                             @input="updateMatchResource('sources', index, $event)"
                             @remove="deleteMatchResource('sources', index)"
                     ></match-resource-component>
@@ -85,24 +85,24 @@
                     <button-add @click="addMatchResource('targets', $event)" title="Add a Collection as a Target"/>
                 </div>
             </div>
-            
+
             <b-modal id="targets-info" title="TARGETS" size="xl" scrollable class="text-center" hide-footer>
                 <div class="h2">MATCHING SOURCE AGAINST TARGET</div>
 
                 <img src="/static/images/Source_Target.png" width="800px">
-                
+
                 <ul class="text-left pt-5">
                     <li>Several collections can be selected as <span class="text-info">SOURCE</span>.</li>
-                
+
                     <li>Several collections can be selected as <span class="text-info">TARGET</span>.</li>
-                    
+
                     <li>For each collection, be it the <span class="text-info">TARGET</span> or the <span class="text-info">SOURCE</span> several properties can be selected.</li>
-                    
+
                     <li>Overall, <strong>ALL</strong> selected properties <strong>MUST</strong> be concistent for a particuilar the type of <span class="text-info">MATCHING METHOD</span> in mind.</li>
-                    
+
 <!--                    <li>When both <span class="text-info">SOURCE</span> and <span class="text-info">TARGET</span> collections are selected, links are discovered <span class="text-info">ONLY</span> accross <span class="text-info">SOURCE'S VRTUAL COLLECTIONS</span> and <span class="text-info">TARGET'S VRTUAL COLLECTIONS</span> contrarily to selecting only <span class="text-info">SOURCE</span> colections where links are be discovered <span class="text-info">WITHIN</span> and <span class="text-info">ACCROSS</span> collections ,</li>-->
                 </ul>
-                
+
                 <hr>
             </b-modal>
 
@@ -112,13 +112,10 @@
                             v-for="(match_resource, index) in resources.targets"
                             :match_resource_id="'target_' + index"
                             :match="match"
-                            :match_resource="match_resource"
+                            :match_resource="$root.$children[0].getResourceById(match_resource)"
                             @input="updateMatchResource('targets', index, $event)"
                             @remove="deleteMatchResource('targets', index)"
                     ></match-resource-component>
-                    <div v-if="resources.targets.length < 1" class="pl-5 text-secondary">
-                        No targets specified. The sources will be used as targets.
-                    </div>
                 </div>
             </div>
         </div>
@@ -174,7 +171,7 @@
 
                 <div class="col-auto">
                     <div class="form-group">
-                        <button-add @click="addCondition($event)" title="Add a Matching Method"/>
+                        <button-add @click="addCondition" title="Add a Matching Method"/>
                     </div>
                 </div>
             </div>
@@ -205,6 +202,7 @@
                             v-for="(condition, index) in match.conditions.items"
                             :condition="condition"
                             :match_id="match.id"
+                            :resources="resources"
                             @remove="match.conditions.items.splice(index, 1)"
                     ></match-condition>
                 </div>
@@ -223,40 +221,22 @@
             'match-resource-component': MatchResource,
             'match-condition': MatchCondition,
         },
-        computed: {
-            resources() {
-                let resources = {
-                    'sources': [],
-                    'targets': [],
-                };
-
-                if (this.match.conditions.items.length < 1) {
-                    resources.sources.push([]);
-                    return resources
-                }
-
-                this.match.conditions.items[0].sources.forEach(property_path => {
-                    resources.sources.push(this.$root.$children[0].getResourceById(property_path[0]));
-                });
-                this.match.conditions.items[0].targets.forEach(property_path => {
-                    resources.targets.push(this.$root.$children[0].getResourceById(property_path[0]));
-                });
-
-                return resources
-            },
+        data() {
+            return {
+                resources: {
+                    sources: [],
+                    targets: [],
+                },
+            }
         },
         props: ['match', 'matches'],
         methods: {
-            addCondition(event) {
-                if (event) {
-                    event.target.blur();
-                }
-
+            addCondition() {
                 function getEmptyResources(from_resources) {
                     let empty_resources = [];
 
                     from_resources.forEach(from_resource => {
-                        empty_resources.push([from_resource[0], '']);
+                        empty_resources.push([from_resource, '']);
                     });
 
                     return empty_resources
@@ -266,8 +246,8 @@
                     'id': this.match.conditions.items.length,
                     'method': '',
                     'method_index': '',
-                    'sources': this.match.conditions.items.length > 0 ? getEmptyResources(this.match.conditions.items[0].sources) : [],
-                    'targets': this.match.conditions.items.length > 0 ? getEmptyResources(this.match.conditions.items[0].targets) : [],
+                    'sources': getEmptyResources(this.resources.sources),
+                    'targets': getEmptyResources(this.resources.targets),
                 };
 
                 this.match.conditions.items.push(condition);
@@ -277,21 +257,25 @@
                     event.target.blur();
                 }
 
-                this.match.conditions.items.forEach(condition => {
-                    condition[resources_key].push(['']);
-                });
+                this.resources[resources_key].push('');
             },
             deleteMatchResource(resources_key, index) {
                 this.match.conditions.items.forEach(condition => {
-                    this.$delete(condition[resources_key], index);
+                    this.$set(condition, resources_key, condition[resources_key].filter(
+                        property => property[0] !== this.resources[resources_key][index]
+                    ));
                 });
+
+                this.$delete(this.resources[resources_key], index);
             },
             scrollTo(ref) {
                 this.$refs[ref].$el.parentNode.scrollIntoView({'behavior':'smooth', 'block':'start'});
             },
             updateMatchResource(resources_key, index, value) {
+                this.$set(this.resources[resources_key], index, value);
+
                 this.match.conditions.items.forEach(condition => {
-                    this.$set(condition[resources_key], index, [value,'']);
+                    condition[resources_key].push([value, '']);
                 });
             },
         },

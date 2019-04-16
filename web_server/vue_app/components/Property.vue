@@ -8,6 +8,8 @@
                 :properties="index === 0 ? dataset[resource.collection_id] : dataset[property[index]]"
                 @input="updateProperty($event, index)"
                 @reset="$emit('resetProperty', index + $event)"
+                @delete="$emit('delete')"
+                @clone="$emit('clone')"
         ></property-component-component>
     </div>
 </template>

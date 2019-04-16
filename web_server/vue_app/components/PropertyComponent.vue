@@ -25,7 +25,11 @@
                         {{ $root.$children[0].getResourceById(value[0], resources).collection_id }}
                     </div>
                     <div class="col-auto ml-0 pl-0">
-                        <button-add :scale="0.8" title="Add another property for this Collection"/>
+                        <button-add
+                                @click="$emit('clone')"
+                                :scale="0.8"
+                                title="Add another property for this Collection"/>
+                        <button-delete @click="$emit('delete')" scale="1.3" title="Remove this property"/>
                     </div>
                 </div>
                 <div class="row" v-else>

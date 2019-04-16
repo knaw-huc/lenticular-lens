@@ -18,6 +18,7 @@
                 {
                   // This ensures that the component works with v-model
                   input: function (event) {
+                      event.target.blur();
                       vm.$emit('input', event.target.value)
                   }
                 }

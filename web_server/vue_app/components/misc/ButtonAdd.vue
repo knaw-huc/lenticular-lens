@@ -1,7 +1,10 @@
 <template>
     <button
             type="button"
-            :class="'btn btn-outline-info rounded-circle' + (scale < 1 ? ' pt-1 pb-1' : '')" :title="title" @click="$emit('click')"
+            :class="'btn btn-outline-info rounded-circle' + (scale < 1 ? ' pt-1 pb-1' : '')"
+            :title="title"
+            @click="handleBtnClick"
+            ref="button"
     >
         <octicon name="plus" :scale="scale"/>
     </button>
@@ -9,6 +12,12 @@
 
 <script>
     export default {
+        methods: {
+            handleBtnClick() {
+                this.$refs['button'].blur();
+                this.$emit('click');
+            },
+        },
         props: {
             scale: {
                 type: Number,
