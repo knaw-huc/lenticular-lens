@@ -41,7 +41,7 @@
                     <div class="h4 col">Sources properties</div>
                 </div>
                 <div v-for="(resource, index) in resources.sources" v-if="resource" class="row">
-                    <div class="col">
+                    <div class="col ml-5">
                             <property-component :property="condition.sources[index]" @resetProperty="resetProperty('sources', index, $event)"/>
                     </div>
                 </div>
@@ -54,7 +54,7 @@
                     <div class="h4 col">Targets properties</div>
                 </div>
                 <div v-for="(resource, index) in resources.targets" v-if="resource" class="row">
-                    <div class="col">
+                    <div class="col ml-5">
                             <property-component :property="condition.targets[index]" @resetProperty="resetProperty('targets', index, $event)"/>
                     </div>
                 </div>

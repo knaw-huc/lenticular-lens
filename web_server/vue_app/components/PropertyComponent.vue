@@ -1,6 +1,6 @@
 <template>
     <div class="col-auto">
-        <div class="row ml-5">
+        <div class="row">
             <div v-if="!Array.isArray(resources) && value[0]" class="col-auto p-1">
                 <octicon name="arrow-right" />
             </div>
