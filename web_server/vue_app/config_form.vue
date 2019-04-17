@@ -586,114 +586,16 @@
                 });
 
                 matches_copy.forEach(match_copy => {
+                    delete match_copy['id'];
                     match_copy.conditions.items.forEach(condition => {
-                        condition.sources.forEach((resource, index) => {
-                            condition.sources[index] = create_references_for_property(resource);
-                        });
-                        condition.targets.forEach((resource, index) => {
-                            condition.targets[index] = create_references_for_property(resource);
-                        });
-                    });
-                });
-
-                let matches = [];
-                matches_copy.forEach(match_original => {
-                    let match = {
-                        'label': match_original.label,
-                        'is_association': match_original.is_association,
-                        'conditions': [],
-                    };
-
-                    match_original.sources.forEach(resource_original => {
-                        if (!resource_original.resource)
-                            return;
-
-                        let resource = {
-                            'resource': this.getResourceById(resource_original.resource).label,
-                            'matching_fields': [],
-                        };
-
-                        resource_original.matching_fields.forEach(matching_field_original => {
-                            let matching_field = {'label': matching_field_original.label};
-                            if (matching_field_original.value.value_type === 'function') {
-                                matching_field.value = {};
-                                matching_field.value = get_value(matching_field_original.value, matching_field.value);
-                                if (matching_field.value.transformers) {
-                                    matching_field.transformers = JSON.parse(JSON.stringify(matching_field.value.transformers));
-                                }
-                                delete matching_field.value.transformers;
-                            } else {
-                                matching_field = get_value(matching_field_original.value, matching_field);
-                            }
-                            resource.matching_fields.push(matching_field);
-                        });
-
-                        match.sources.push(resource);
-                    });
-
-                    match_original.targets.forEach(resource_original => {
-                        if (!resource_original.resource)
-                            return;
-
-                        let resource = {
-                            'resource': this.getResourceById(resource_original.resource).label,
-                            'matching_fields': [],
-                        };
-
-                        resource_original.matching_fields.forEach(matching_field_original => {
-                            let matching_field = {'label': matching_field_original.label};
-                            if (matching_field_original.value.value_type === 'function') {
-                                matching_field.value = {};
-                                matching_field.value = get_value(matching_field_original.value, matching_field.value);
-                                if (matching_field.value.transformers) {
-                                    matching_field.transformers = JSON.parse(JSON.stringify(matching_field.value.transformers));
-                                }
-                                delete matching_field.value.transformers;
-                            } else {
-                                matching_field = get_value(matching_field_original.value, matching_field);
-                            }
-                            resource.matching_fields.push(matching_field);
-                        });
-
-                        match.targets.push(resource);
-                    });
-
-                    if (match.targets.length === 0) {
-                        delete match.targets;
-                    }
-
-                    match.conditions = {
-                        'type': match_original.conditions.type,
-                        'items': [],
-                    };
-
-                    match_original.conditions.items.forEach(item_original => {
-                        if (item_original.matching_field === '')
-                            return;
-
-                        let item = {
-                            'matching_field': match_original.matching_field_labels[item_original.matching_field],
-                        };
-                        if (typeof item_original.method === 'string') {
-                            item.method = item_original.method;
-                        } else {
-                            item.method = {};
-                            Object.keys(item_original.method).forEach(method_name => {
-                                item.method[method_name] = [];
-                                item_original.method[method_name].forEach(parameter_object => {
-                                    if (parameter_object.type === 'matching_label') {
-                                        item.method[method_name].push(this.getMatchById(parameter_object.value).label);
-                                    } else {
-                                        item.method[method_name].push(JSON.parse(JSON.stringify(parameter_object)));
-                                    }
-                                });
+                        ['sources', 'targets'].forEach(resources_key => {
+                            condition[resources_key].forEach((resource, resource_index) => {
+                                delete condition['id'];
+                                delete condition['method_index'];
+                                condition[resources_key][resource_index] = create_references_for_property(resource);
                             });
-                        }
-
-                        match.conditions.items.push(item);
+                        });
                     });
-
-                    matches.push(match);
                 });
 
                 resources_copy.forEach(resource_copy => {
@@ -737,7 +639,7 @@
 
                 let data = {
                     'resources': resources,
-                    'matches': matches,
+                    'matches': matches_copy,
                     'resources_original': this.resources,
                     'matches_original': this.matches,
                 };
