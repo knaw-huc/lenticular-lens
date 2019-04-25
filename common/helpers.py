@@ -33,10 +33,11 @@ def table_to_csv(table_name, file):
         cur.copy_expert(sql, file)
 
 
-def get_absolute_property(property_array, parent_label):
+def get_absolute_property(property_array, parent_label=None):
+    property_array[len(property_array) - 1] = property_array[len(property_array) - 1].lower()
     property_array = list(map(hash_string, property_array))
 
-    if len(property_array) == 1:
+    if parent_label and len(property_array) == 1:
         property_array.insert(0, parent_label)
 
     return property_array
@@ -147,35 +148,18 @@ def update_job_data(job_id, job_data):
 
 
 class PropertyField:
-    def __init__(self, data, parent_label, use_label_for_hash=False):
+    def __init__(self, data):
         self.is_aggregate = False
-        self.parent_label = parent_label
-        self.use_label_for_hash = use_label_for_hash
         self.__data = data
         self.__hash = None
         self.__sql = None
         self.__sql_string = None
         self.__transformers = None
 
-        if 'property' in self.__data:
-            self.__sql = get_property_sql(get_absolute_property(self.__data['property'], self.parent_label))
-        elif isinstance(self.__data['value'], collections.Mapping):
-            sql_function = SqlFunction(self.__data['value'], parent_label)
-            self.is_aggregate = sql_function.is_aggregate
-            self.__sql = sql_function.sql
-        else:
-            self.__sql = psycopg2_sql.Literal(self.__data['value'])
-
-        for transformer in self.transformers[::-1]:
-            self.__sql = psycopg2_sql.SQL('%s({})' % transformer).format(self.__sql)
-
     @property
     def hash(self):
         if not self.__hash:
-            hashable = get_string_from_sql(get_property_sql([self.parent_label, self.label]))\
-                if self.use_label_for_hash\
-                else self.sql_string
-            self.__hash = hash_string(hashable)
+            self.__hash = hash_string(self.sql_string)
 
         return self.__hash
 
@@ -185,6 +169,19 @@ class PropertyField:
 
     @property
     def sql(self):
+        if not self.__sql:
+            if 'property' in self.__data:
+                self.__sql = get_property_sql(get_absolute_property(self.__data['property']))
+            elif isinstance(self.__data['value'], collections.Mapping):
+                sql_function = SqlFunction(self.__data['value'])
+                self.is_aggregate = sql_function.is_aggregate
+                self.__sql = sql_function.sql
+            else:
+                self.__sql = psycopg2_sql.Literal(self.__data['value'])
+
+            for transformer in self.transformers[::-1]:
+                self.__sql = psycopg2_sql.SQL('%s({})' % transformer).format(self.__sql)
+
         return self.__sql
 
     @property
@@ -214,7 +211,7 @@ class PropertyField:
 
 
 class SqlFunction:
-    def __init__(self, function_obj, parent_label):
+    def __init__(self, function_obj, parent_label=None):
         self.parent_label = parent_label
         for function_name, parameters in function_obj.items():
             self.function_name = function_name

@@ -22,7 +22,7 @@ class Resource:
         if 'additional_properties' in self.__data:
             for additional_property in self.__data['additional_properties']:
                 additional_property['label'] = hash_string(additional_property['label'])
-                additional_property = PropertyField(additional_property, self.label, True)
+                additional_property = PropertyField(additional_property)
                 if additional_property.hash not in additional_properties_hashes:
                     additional_properties.append(additional_property)
 
@@ -95,11 +95,11 @@ class Resource:
         matching_fields = self.additional_properties
         matching_fields_hashes = [matching_field.hash for matching_field in matching_fields]
         for match in self.config.matches:
-            match_matching_fields = match.get_matching_fields(self.label)
-            for match_matching_field in match_matching_fields:
-                if match_matching_field not in matching_fields_hashes:
-                    matching_fields_hashes.append(match_matching_field)
-                    matching_fields.append(match_matching_fields[match_matching_field])
+            match_matching_fields = match.get_matching_fields()[self.label]
+            for match_matching_field_label, match_matching_field in match_matching_fields.items():
+                if match_matching_field_label not in matching_fields_hashes:
+                    matching_fields_hashes.append(match_matching_field_label)
+                    matching_fields.append(match_matching_field)
 
         return matching_fields
 
@@ -107,10 +107,11 @@ class Resource:
     def matching_fields_sql(self):
         matching_fields_sqls = [psycopg2_sql.SQL('{}.uri').format(psycopg2_sql.Identifier(self.label))]
 
-        for matching_field in self.matching_fields:
-            matching_fields_sqls.append(psycopg2_sql.SQL('{matching_field} AS {name}')
-                                        .format(matching_field=matching_field.sql,
-                                                name=psycopg2_sql.Identifier(matching_field.hash)))
+        for matching_field_properties in self.matching_fields:
+            for property_field in matching_field_properties:
+                matching_fields_sqls.append(psycopg2_sql.SQL('{matching_field} AS {name}')
+                                            .format(matching_field=property_field.sql,
+                                                    name=psycopg2_sql.Identifier(property_field.hash)))
 
         return psycopg2_sql.SQL(',\n       ').join(matching_fields_sqls)
 

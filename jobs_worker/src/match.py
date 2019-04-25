@@ -1,18 +1,23 @@
 from conditions import Conditions
 from helpers import hash_string, PropertyField
+import json
 from psycopg2 import sql as psycopg_sql
 
 
 class Match:
     def __init__(self, data):
-        data['sources'] = self.objectify_matching_fields(data['sources'])
-        if 'targets' in data:
-            data['targets'] = self.objectify_matching_fields(data['targets'])
+        for condition in data['conditions']['items']:
+            condition['hash'] = hash_string(json.dumps(condition))
+
+            resources_keys = ['sources']
+            if 'targets' in condition:
+                resources_keys.append('targets')
+            for resources_key in resources_keys:
+                for index, resource in condition[resources_key].items():
+                    for property_field in resource:
+                        condition[resources_key][index] = PropertyField(property_field)
 
         self.__data = data
-
-        if 'targets' not in self.__data:
-            self.__data['conditions']['items'].insert(0, {'matching_field': '__uri', 'method': '>', 'similarity': None})
 
     @property
     def conditions(self):
@@ -35,17 +40,18 @@ class Match:
             if 'before_index' in template and template['before_index']:
                 index_sqls.append(psycopg_sql.SQL(template['before_index']))
 
-            resources = self.targets if len(self.targets) > 0 else self.sources
-            for resource in resources:
-                resource_field_name = template['field_name'][2::]\
-                    if template['field_name'].startswith('__')\
-                    else resource['matching_fields'][template['field_name']].hash
+            for condition in self.conditions.conditions_list:
+                resources = condition.targets if len(condition.targets) > 0 else condition.sources
+                for resource_name, property_field in resources.items():
+                    resource_field_name = template['field_name'][2::]\
+                        if template['field_name'].startswith('__')\
+                        else property_field.hash
 
-                template_sql = psycopg_sql.SQL(template['template']).format(
-                    target=psycopg_sql.Identifier(resource_field_name))
+                    template_sql = psycopg_sql.SQL(template['template']).format(
+                        target=psycopg_sql.Identifier(resource_field_name))
 
-                index_sqls.append(psycopg_sql.SQL('CREATE INDEX ON {} USING {};').format(
-                    psycopg_sql.Identifier(hash_string(resource['resource'])), template_sql))
+                    index_sqls.append(psycopg_sql.SQL('CREATE INDEX ON {} USING {};').format(
+                        psycopg_sql.Identifier(hash_string(resource_name)), template_sql))
 
         return psycopg_sql.SQL('\n').join(index_sqls)
 
@@ -61,7 +67,7 @@ class Match:
 
     @property
     def materialize(self):
-        return 'materialize' not in self.meta or self.meta['materialize'] is True
+        return self.meta.get('materialize', True)
 
     @property
     def meta(self):
@@ -85,21 +91,33 @@ class Match:
 
         for condition in self.conditions.conditions_list:
             if condition.similarity_sql:
+                # Add source and target values
+                field_name = psycopg_sql.Identifier(condition.field_name)
+                fields.append(psycopg_sql.SQL('source.{field_name} AS {source_field_name}').format(
+                    field_name=field_name,
+                    source_field_name=psycopg_sql.Identifier(f'source_{condition.field_name}'),
+                ))
+                fields.append(psycopg_sql.SQL('target.{field_name} AS {target_field_name}').format(
+                    field_name=field_name,
+                    target_field_name=psycopg_sql.Identifier(f'target_{condition.field_name}'),
+                ))
+
+                # Add similarity field
                 fields.append(psycopg_sql.SQL('{field} AS {field_name}')
                                  .format(
-                                    field=condition.similarity_sql,
-                                    field_name=psycopg_sql.Identifier(condition.raw_field_name + '_similarity')
+                                    field=condition.similarity_sql.format(field_name=field_name),
+                                    field_name=psycopg_sql.Identifier(condition.field_name + '_similarity')
                 ))
 
         return psycopg_sql.SQL(',\n       ').join(fields)
 
     @property
     def source_sql(self):
-        return self.get_combined_resources_sql(self.sources)
+        return self.get_combined_resources_sql('sources')
 
     @property
     def target_sql(self):
-        return self.get_combined_resources_sql(self.targets) if 'targets' in self.__data else self.source_sql
+        return self.get_combined_resources_sql('targets') if 'targets' in self.__data else self.source_sql
 
     @property
     def sources(self):
@@ -109,48 +127,56 @@ class Match:
     def targets(self):
         return self.__data['targets'] if 'targets' in self.__data else []
 
-    @staticmethod
-    def objectify_matching_fields(resources):
-        for resource in resources:
-            matching_fields = {}
-            for matching_field in resource['matching_fields']:
-                matching_fields[matching_field['label']] = PropertyField(matching_field, hash_string(resource['resource']))
-            resource['matching_fields'] = matching_fields
+    def get_combined_resources_sql(self, resources_key):
+        resources_properties = self.get_matching_fields(resources_key)
 
-        return resources
-
-    def get_combined_resources_sql(self, resources):
         resources_sql = []
 
-        for resource in resources:
-            matching_fields = []
-            for field_name, matching_field in resource['matching_fields'].items():
-                matching_fields.append(psycopg_sql.SQL('{matching_field} AS {field_name}')\
-                                          .format(
-                                            matching_field=psycopg_sql.Identifier(matching_field.hash),
-                                            field_name=psycopg_sql.Identifier(hash_string(field_name))))
-            matching_fields_sql = psycopg_sql.SQL(',\n           ').join(matching_fields)
+        for resource_label, resource_properties in resources_properties.items():
+            property_fields = []
+            for property_label, resource_method_properties in resource_properties.items():
+                for resource_property in resource_method_properties:
+                    property_fields.append(psycopg_sql.SQL('{property_field} AS {field_name}')
+                                           .format(
+                                                property_field=psycopg_sql.Identifier(resource_property.hash),
+                                                field_name=psycopg_sql.Identifier(property_label)))
+
+            property_fields_sql = psycopg_sql.SQL(',\n           ').join(property_fields)
 
             resources_sql.append(psycopg_sql.SQL("""
-    SELECT uri,
+    SELECT {collection} AS collection,
+           uri,
            {matching_fields}
     FROM {resource_label}
-"""
-                                         )
-                                    .format(
-                                        matching_fields=matching_fields_sql,
-                                        resource_label=psycopg_sql.Identifier(hash_string(resource['resource']))
+""").format(
+                collection=psycopg_sql.Literal(resource_label),
+                matching_fields=property_fields_sql,
+                resource_label=psycopg_sql.Identifier(resource_label)
             ))
 
         return psycopg_sql.SQL('    UNION ALL').join(resources_sql)
 
-    def get_matching_fields(self, resource_label=None):
-        matching_fields = {}
+    def get_matching_fields(self, resources_keys=None):
+        if not isinstance(resources_keys, list):
+            resources_keys = ['sources', 'targets']
 
-        for resource in self.resources:
-            if resource_label is None or hash_string(resource['resource']) == resource_label:
-                for matching_field in resource['matching_fields'].values():
-                    if matching_field.hash not in matching_fields:
-                        matching_fields[matching_field.hash] = matching_field
+        # Regroup properties by resource instead of by method
+        for resources_key in resources_keys:
+            resources_properties = {hash_string(resource_name): {} for resource_name in getattr(self, resources_key)}
 
-        return matching_fields
+            for condition in self.conditions.conditions_list:
+                for resource_label, resource_properties in getattr(condition, resources_key).items():
+                    if condition.field_name not in resources_properties[hash_string(resource_label)]:
+                        resources_properties[hash_string(resource_label)][condition.field_name] = []
+
+                    resources_properties[hash_string(resource_label)][condition.field_name].append(resource_properties)
+
+        return resources_properties
+
+        # resources_properties = {
+        #     'Resource label': {
+        #         'value_n': [
+        #             Property,
+        #         ],
+        #     },
+        # }

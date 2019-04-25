@@ -28,7 +28,6 @@
         data() {
             return {
                 'transformers': ['ecartico_full_name', 'to_date_immutable'],
-                'unique_id': 'blah',
             }
         },
         methods: {

@@ -25,10 +25,15 @@ class Conditions:
 
     def r_conditions_sql(self, condition):
         if 'type' in condition and condition['type'] in ['AND', 'OR']:
-            filter_sqls = map(self.r_conditions_sql, condition['items'])
+
+            filter_sqls = []
+            for condition_item in condition['items']:
+                filter_sqls.append(self.r_conditions_sql(condition_item))
+
             return psycopg2_sql.SQL('({})').format(psycopg2_sql.SQL(' %s ' % condition['type']).join(filter_sqls))
 
-        return self.MatchingFunction(condition).sql
+        matching_function = self.MatchingFunction(condition)
+        return matching_function.sql.format(field_name=psycopg2_sql.Identifier(matching_function.field_name))
 
     @property
     def index_templates(self):
@@ -42,10 +47,9 @@ class Conditions:
 
     class MatchingFunction:
         def __init__(self, function_obj):
-            self.raw_field_name = function_obj['matching_field']
-            self.field_name =\
-                self.raw_field_name[2::] if self.raw_field_name.startswith('__')\
-                else hash_string(self.raw_field_name)
+            self.__data = function_obj
+
+            self.field_name = function_obj['hash']
 
             if isinstance(function_obj['method'], str):
                 self.function_name = function_obj['method']
@@ -76,7 +80,7 @@ class Conditions:
 
             return {
                 'template': self.function_info['index_using'],
-                'field_name': self.raw_field_name,
+                'field_name': self.field_name,
                 'before_index': before_index,
             }
 
@@ -92,7 +96,7 @@ class Conditions:
                 for index, parameter in enumerate(self.parameters):
                     template = re.sub('%%%i' % (index + 1), str(parameter), template)
 
-            return psycopg2_sql.SQL(str(template)).format(field_name=psycopg2_sql.Identifier(self.field_name))
+            return psycopg2_sql.SQL(str(template))
 
         @property
         def sql(self):
@@ -104,6 +108,12 @@ class Conditions:
             template = re.sub(r'{source}', 'source.{field_name}', template)
             template = re.sub(r'{target}', 'target.{field_name}', template)
 
-            sql = psycopg2_sql.SQL(template).format(field_name=psycopg2_sql.Identifier(self.field_name))
+            return psycopg2_sql.SQL(str(template))
 
-            return sql
+        @property
+        def sources(self):
+            return self.__data['sources']
+
+        @property
+        def targets(self):
+            return self.__data['targets']

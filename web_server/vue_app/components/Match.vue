@@ -56,7 +56,7 @@
             <div class="row pl-5">
                 <div class="col">
                     <match-resource-component
-                            v-for="(match_resource, index) in resources.sources"
+                            v-for="(match_resource, index) in match.sources"
                             :match_resource_id="'source_' + index"
                             :match="match"
                             :match_resource="$root.$children[0].getResourceById(match_resource)"
@@ -109,7 +109,7 @@
             <div class="row pl-5">
                 <div class="col">
                     <match-resource-component
-                            v-for="(match_resource, index) in resources.targets"
+                            v-for="(match_resource, index) in match.targets"
                             :match_resource_id="'target_' + index"
                             :match="match"
                             :match_resource="$root.$children[0].getResourceById(match_resource)"
@@ -202,7 +202,7 @@
                             v-for="(condition, index) in match.conditions.items"
                             :condition="condition"
                             :match_id="match.id"
-                            :resources="resources"
+                            :resources="match"
                             @remove="match.conditions.items.splice(index, 1)"
                     ></match-condition>
                 </div>
@@ -221,22 +221,14 @@
             'match-resource-component': MatchResource,
             'match-condition': MatchCondition,
         },
-        data() {
-            return {
-                resources: {
-                    sources: [],
-                    targets: [],
-                },
-            }
-        },
         props: ['match', 'matches'],
         methods: {
             addCondition() {
                 function getEmptyResources(from_resources) {
-                    let empty_resources = [];
+                    let empty_resources = {};
 
                     from_resources.forEach(from_resource => {
-                        empty_resources.push([from_resource, '']);
+                        empty_resources[from_resource] = [{'property': [from_resource, '']}];
                     });
 
                     return empty_resources
@@ -246,8 +238,8 @@
                     'id': this.match.conditions.items.length,
                     'method': '',
                     'method_index': '',
-                    'sources': getEmptyResources(this.resources.sources),
-                    'targets': getEmptyResources(this.resources.targets),
+                    'sources': getEmptyResources(this.match.sources),
+                    'targets': getEmptyResources(this.match.targets),
                 };
 
                 this.match.conditions.items.push(condition);
@@ -257,25 +249,23 @@
                     event.target.blur();
                 }
 
-                this.resources[resources_key].push('');
+                this.match[resources_key].push('');
             },
-            deleteMatchResource(resources_key, index) {
+            deleteMatchResource(resources_key, resource_label) {
                 this.match.conditions.items.forEach(condition => {
-                    this.$set(condition, resources_key, condition[resources_key].filter(
-                        property => property[0] !== this.resources[resources_key][index]
-                    ));
+                    this.$delete(condition[resources_key], resource_label);
                 });
 
-                this.$delete(this.resources[resources_key], index);
+                this.$delete(this.match[resources_key], index);
             },
             scrollTo(ref) {
                 this.$refs[ref].$el.parentNode.scrollIntoView({'behavior':'smooth', 'block':'start'});
             },
             updateMatchResource(resources_key, index, value) {
-                this.$set(this.resources[resources_key], index, value);
+                this.$set(this.match[resources_key], index, value);
 
                 this.match.conditions.items.forEach(condition => {
-                    condition[resources_key].push([value, '']);
+                    this.$set(condition[resources_key], value, [{'property': [value, '']}]);
                 });
             },
         },
@@ -284,7 +274,7 @@
                 this.addCondition();
             }
 
-            if (this.resources.sources.length < 1) {
+            if (this.match.sources.length < 1) {
                 this.addMatchResource('sources');
             }
         }

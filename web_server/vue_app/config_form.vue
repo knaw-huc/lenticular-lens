@@ -308,6 +308,8 @@
                     'id': this.matches.length,
                     'is_association': false,
                     'label': 'Alignment ' + (this.matches.length + 1),
+                    'sources': [],
+                    'targets': [],
                     'conditions': {
                         'type': 'AND',
                         'items': [],
@@ -438,6 +440,13 @@
                 return {
                     'clusterings': clusterings,
                 }
+            },
+            getOrCreate(subject, key, default_value) {
+                if (typeof subject[key] === 'undefined') {
+                    this.$set(subject, key, default_value);
+                }
+
+                return subject[key];
             },
             submitForm() {
                 let vue = this;
@@ -587,12 +596,30 @@
 
                 matches_copy.forEach(match_copy => {
                     delete match_copy['id'];
+
+                    ['sources', 'targets'].forEach(resources_key => {
+                        match_copy[resources_key].forEach((resource_id, resource_index) => {
+                            match_copy[resources_key][resource_index] = this.getResourceById(resource_id).label;
+                        });
+                    });
+
                     match_copy.conditions.items.forEach(condition => {
+                        delete condition['id'];
+                        delete condition['method_index'];
+
                         ['sources', 'targets'].forEach(resources_key => {
-                            condition[resources_key].forEach((resource, resource_index) => {
-                                delete condition['id'];
-                                delete condition['method_index'];
-                                condition[resources_key][resource_index] = create_references_for_property(resource);
+                            Object.keys(condition[resources_key]).forEach(resource_id => {
+                                condition[resources_key][resource_id].forEach((property, property_index) => {
+                                    condition[resources_key][resource_id][property_index].property = create_references_for_property(property.property);
+                                    condition[resources_key][resource_id][property_index].property.forEach((property_part, property_part_index) => {
+                                        if (property_part > 0) {
+                                            condition[resources_key][resource_id][property_index].property[property_part_index] = this.getResourceById(property_part).label;
+                                        }
+                                    });
+                                });
+
+                                condition[resources_key][this.getResourceById(resource_id).label] = condition[resources_key][resource_id];
+                                delete condition[resources_key][resource_id];
                             });
                         });
                     });

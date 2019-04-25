@@ -35,55 +35,50 @@
             </div>
         </div>
 
-        <div class="row pl-5 mb-3">
+        <div class="row pl-5 mb-3" v-for="resources_key in ['sources', 'targets']">
             <div class="col">
                 <div class="row">
-                    <div class="h4 col-auto">Sources properties</div>
-                    <div v-if="unusedResources['sources'].length > 0" class="col-auto form-group">
-                        <v-select @input="condition.sources.push([$event, ''])">
+                    <div class="h4 col-auto">{{ resources_key | capitalize }} properties</div>
+                    <div v-if="unusedResources[resources_key].length > 0" class="col-auto form-group">
+                        <v-select @input="condition[resources_key][$event].push({'property': [$event, '']})">
                             <option value="" disabled selected>Add property for Collection:</option>
-                            <option v-for="resource in unusedResources['sources']" :value="resource">
+                            <option v-for="resource in unusedResources[resources_key]" :value="resource">
                                 {{ $root.$children[0].getResourceById(resource).label }}
                             </option>
                         </v-select>
                     </div>
                 </div>
-                <div v-for="(resource, index) in condition.sources" v-if="resource" class="row">
-                    <div class="col ml-5">
-                            <property-component
-                                    :property="condition.sources[index]"
-                                    @clone="condition.sources.splice(index + 1, 0, [condition.sources[index][0], ''])"
-                                    @delete="$delete(condition.sources, index)"
-                                    @resetProperty="resetProperty('sources', index, $event)"
-                            />
-                    </div>
-                </div>
-            </div>
-        </div>
+                <template v-for="collection_properties in condition[resources_key]">
+                    <div v-for="(resource, index) in collection_properties" class="row">
+                        <div class="col ml-5">
+                            <div v-for="(transformer, index) in resource.transformers" class="col-4">
+                                <div class="row">
+                                    <div class="form-group col-8">
+                                        <v-select v-model="resource.transformers[index]">
+                                            <option value="" selected disabled>Select a function</option>
+                                            <option v-for="av_transformer in transformers" :value="av_transformer">{{ av_transformer }}</option>
+                                        </v-select>
+                                    </div>
 
-        <div class="row pl-5 mb-3">
-            <div class="col">
-                <div class="row">
-                    <div class="h4 col-auto">Targets properties</div>
-                    <div v-if="unusedResources['targets'].length > 0" class="col-auto form-group">
-                        <v-select @input="condition.targets.push([$event, ''])">
-                            <option value="" disabled selected>Add property for Collection:</option>
-                            <option v-for="resource in unusedResources['targets']" :value="resource">
-                                {{ $root.$children[0].getResourceById(resource).label }}
-                            </option>
-                        </v-select>
-                    </div>
-                </div>
-                <div v-for="(resource, index) in condition.targets" v-if="resource" class="row">
-                    <div class="col ml-5">
+                                    <div class="form-group">
+                                        <button-delete @click="resource.transformers.splice(index, 1)"/>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <button-add @click="$root.$children[0].getOrCreate(resource, 'transformers', []).push('')" title="Add transformer"/>
+                            </div>
                             <property-component
-                                    :property="condition.targets[index]"
-                                    @clone="condition.targets.splice(index + 1, 0, [condition.targets[index][0], ''])"
-                                    @delete="$delete(condition.targets, index)"
-                                    @resetProperty="resetProperty('targets', index, $event)"
+                                    v-if="resource.property"
+                                    :property="resource.property"
+                                    @clone="collection_properties.splice(index + 1, 0, {'property': [collection_properties[index]['property'][0], '']})"
+                                    @delete="$delete(collection_properties, index)"
+                                    @resetProperty="resetProperty(collection_properties, index, $event)"
                             />
+                        </div>
                     </div>
-                </div>
+                </template>
             </div>
         </div>
     </div>
@@ -103,22 +98,9 @@
                 let unused_resources = {};
 
                 resource_keys.forEach(resource_key => {
-                    unused_resources[resource_key] = this.resources[resource_key].filter(parent_resource => {
-                        let exists = false;
-
-                        if (parent_resource === "") {
-                            exists = true;
-                            return false;
-                        }
-
-                        this.condition[resource_key].forEach(local_resource => {
-                            if (local_resource[0] === parent_resource) {
-                                exists = true;
-                                return false;
-                            }
-                        });
-                        return !exists;
-                    });
+                    unused_resources[resource_key] = Object.keys(this.condition[resource_key]).filter(
+                        resource_id => this.condition[resource_key][resource_id].length < 1
+                    );
                 });
 
                 return unused_resources;
@@ -190,6 +172,7 @@
                         },
                     },
                 ],
+                'transformers': ['ecartico_full_name', 'to_date_immutable'],
             }
         },
         methods: {
@@ -224,15 +207,15 @@
                     }
                 }
             },
-            resetProperty(resource_type, resource_index, property_index) {
-                let property = this.condition[resource_type][resource_index];
+            resetProperty(properties, resource_index, property_index) {
+                let property = properties[resource_index].property;
                 let new_property = property.slice(0, property_index);
                 new_property.push('');
                 if (new_property.length % 2 > 0) {
                     new_property.push('');
                 }
 
-                this.$set(this.condition[resource_type], resource_index, new_property);
+                this.$set(properties[resource_index], 'property', new_property);
             },
         },
         props: ['condition', 'match_id', 'resources'],

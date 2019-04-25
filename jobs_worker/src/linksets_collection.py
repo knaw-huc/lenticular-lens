@@ -25,7 +25,6 @@ class LinksetsCollection:
         self.return_limit = return_limit or 0
         self.results = []
         self.job_id = hash_string(resources_filename.split('/')[-1] + matches_filename.split('/')[-1])
-        self.job_data = get_job_data(self.job_id)
 
         self.__matches = None
         self.__resources = None
@@ -92,7 +91,7 @@ class LinksetsCollection:
         materialize = []
         for match in self.matches:
             for resource in match.resources:
-                resource_label = hash_string(resource['resource'])
+                resource_label = hash_string(resource)
                 if resource_label not in materialize:
                     materialize.append(resource_label)
 
@@ -243,9 +242,12 @@ JOIN ({target}) AS target
         if match.materialize:
             match_sql = (sql.SQL("""
 DROP MATERIALIZED VIEW IF EXISTS {view_name} CASCADE;
-DROP SEQUENCE IF EXISTS {sequence_name} CASCADE;
-CREATE SEQUENCE {sequence_name};
-CREATE MATERIALIZED VIEW {view_name} AS""").format(view_name=sql.Identifier(match.name), sequence_name=sql.Identifier(match.name + '_count'))
+CREATE MATERIALIZED VIEW {view_name} AS""").format(
+                source=match.source_sql,
+                target=match.target_sql,
+                view_name=sql.Identifier(match.name),
+                sequence_name=sql.Identifier(match.name + '_count'),
+            )
                          + match_sql + sql.SQL("""
 SELECT * FROM {view_name};
 """
@@ -259,6 +261,7 @@ SELECT * FROM {view_name};
         sql_composed = sql.SQL("""
 DROP MATERIALIZED VIEW IF EXISTS {view_name} CASCADE;
 CREATE MATERIALIZED VIEW {view_name} AS{sub_query};
+ANALYZE {view_name};
 """
                                )\
             .format(
@@ -357,12 +360,6 @@ ORDER BY uri{limit}
                     sql_part = get_property_sql(sql_part)
 
         return sql_part
-
-    def updateJobData(self, update_data):
-        self.job_data = {**self.job_data, **update_data}
-
-        if not self.sql_only:
-            update_job_data(self.job_id, update_data)
 
     def run(self):
         # self.updateJobData({
