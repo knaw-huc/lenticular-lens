@@ -1,7 +1,11 @@
 <template>
 <div class="border-bottom p-3 mb-3 bg-primary">
     <div class="row">
-        <property-component v-model="condition.property" :resources="$parent.resources" :value_index.number="0"/>
+        <property-component
+                :property="condition.property"
+                :singular="true"
+                @resetProperty="resetProperty(condition.property, $event)"
+        />
     </div>
 
     <div class="row">
@@ -45,10 +49,7 @@
 </template>
 
 <script>
-    import PropertyComponent from "./PropertyComponent";
-
     export default {
-        components: {PropertyComponent},
         computed: {
             datasets() {
                 return this.$parent.datasets
@@ -58,6 +59,17 @@
             },
             resource() {
                 return this.$parent.resource;
+            },
+        },
+        methods: {
+            resetProperty(property, property_index) {
+                let new_property = property.slice(0, property_index);
+                new_property.push('');
+                if (new_property.length % 2 > 0) {
+                    new_property.push('');
+                }
+
+                this.$set(this.condition, 'property', new_property);
             },
         },
         props: ['condition', 'index'],
