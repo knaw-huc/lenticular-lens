@@ -239,8 +239,9 @@ JOIN ({target}) AS target
                 sequence_name=sql.Literal(match.name + '_count'),
         )
 
-        if match.materialize:
-            match_sql = (sql.SQL("""
+        match_sql = (sql.SQL("""
+DROP SEQUENCE IF EXISTS {sequence_name} CASCADE;
+CREATE SEQUENCE {sequence_name} MINVALUE 0 START 0;
 DROP MATERIALIZED VIEW IF EXISTS {view_name} CASCADE;
 CREATE MATERIALIZED VIEW {view_name} AS""").format(
                 source=match.source_sql,
