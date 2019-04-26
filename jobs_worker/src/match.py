@@ -1,27 +1,18 @@
 from conditions import Conditions
-from helpers import hash_string, PropertyField
-import json
+from helpers import hash_string
 from psycopg2 import sql as psycopg_sql
 
 
 class Match:
     def __init__(self, data):
-        for condition in data['conditions']['items']:
-            condition['hash'] = hash_string(json.dumps(condition))
-
-            resources_keys = ['sources']
-            if 'targets' in condition:
-                resources_keys.append('targets')
-            for resources_key in resources_keys:
-                for index, resource in condition[resources_key].items():
-                    for property_field in resource:
-                        condition[resources_key][index] = PropertyField(property_field)
-
         self.__data = data
+        self.__conditions = None
 
     @property
     def conditions(self):
-        return Conditions(self.__data['conditions'])
+        if not self.__conditions:
+            self.__conditions = Conditions(self.__data['conditions'])
+        return self.__conditions
 
     @property
     def conditions_sql(self):
@@ -42,16 +33,17 @@ class Match:
 
             for condition in self.conditions.conditions_list:
                 resources = condition.targets if len(condition.targets) > 0 else condition.sources
-                for resource_name, property_field in resources.items():
-                    resource_field_name = template['field_name'][2::]\
-                        if template['field_name'].startswith('__')\
-                        else property_field.hash
+                for resource_name, resource in resources.items():
+                    for property_field in resource:
+                        resource_field_name = template['field_name'][2::]\
+                            if template['field_name'].startswith('__')\
+                            else property_field.hash
 
-                    template_sql = psycopg_sql.SQL(template['template']).format(
-                        target=psycopg_sql.Identifier(resource_field_name))
+                        template_sql = psycopg_sql.SQL(template['template']).format(
+                            target=psycopg_sql.Identifier(resource_field_name))
 
-                    index_sqls.append(psycopg_sql.SQL('CREATE INDEX ON {} USING {};').format(
-                        psycopg_sql.Identifier(hash_string(resource_name)), template_sql))
+                        index_sqls.append(psycopg_sql.SQL('CREATE INDEX ON {} USING {};').format(
+                            psycopg_sql.Identifier(hash_string(resource_name)), template_sql))
 
         return psycopg_sql.SQL('\n').join(index_sqls)
 
@@ -128,23 +120,28 @@ class Match:
         return self.__data['targets'] if 'targets' in self.__data else []
 
     def get_combined_resources_sql(self, resources_key):
-        resources_properties = self.get_matching_fields(resources_key)
+        resources_properties = self.get_matching_fields([resources_key])
 
         resources_sql = []
 
         for resource_label, resource_properties in resources_properties.items():
             property_fields = []
             for property_label, resource_method_properties in resource_properties.items():
-                for resource_property in resource_method_properties:
-                    property_fields.append(psycopg_sql.SQL('{property_field} AS {field_name}')
-                                           .format(
-                                                property_field=psycopg_sql.Identifier(resource_property.hash),
-                                                field_name=psycopg_sql.Identifier(property_label)))
+                property_field = psycopg_sql.Identifier(resource_method_properties[0].hash)\
+                    if len(resource_method_properties) == 1\
+                    else psycopg_sql.SQL('unnest(ARRAY[{}])').format(
+                        psycopg_sql.SQL(', ').join([
+                            psycopg_sql.Identifier(resource_property.hash)
+                            for resource_property in resource_method_properties]))
+                property_fields.append(psycopg_sql.SQL('{property_field} AS {field_name}')
+                                       .format(
+                                            property_field=property_field,
+                                            field_name=psycopg_sql.Identifier(property_label)))
 
             property_fields_sql = psycopg_sql.SQL(',\n           ').join(property_fields)
 
             resources_sql.append(psycopg_sql.SQL("""
-    SELECT {collection} AS collection,
+    SELECT DISTINCT {collection} AS collection,
            uri,
            {matching_fields}
     FROM {resource_label}
@@ -166,10 +163,10 @@ class Match:
 
             for condition in self.conditions.conditions_list:
                 for resource_label, resource_properties in getattr(condition, resources_key).items():
-                    if condition.field_name not in resources_properties[hash_string(resource_label)]:
-                        resources_properties[hash_string(resource_label)][condition.field_name] = []
+                    resource_label = hash_string(resource_label)
 
-                    resources_properties[hash_string(resource_label)][condition.field_name].append(resource_properties)
+                    resources_properties[resource_label][condition.field_name] =\
+                        resources_properties[resource_label].get(condition.field_name, []) + resource_properties
 
         return resources_properties
 

@@ -1,4 +1,5 @@
-from helpers import hash_string, get_json_from_file
+from helpers import hash_string, get_json_from_file, PropertyField
+import json
 from psycopg2 import sql as psycopg2_sql
 import re
 
@@ -6,16 +7,25 @@ import re
 class Conditions:
     def __init__(self, data):
         self.__data = data
+        self.__conditions_list = None
+
+        self.conditions_list
 
     @property
     def conditions_list(self):
-        conditions_list = self.r_conditions_list(self.__data)
+        if not self.__conditions_list:
+            self.__conditions_list = self.r_conditions_list(self.__data)
 
-        return conditions_list
+        return self.__conditions_list
 
     def r_conditions_list(self, condition):
         if 'type' in condition:
-            return [self.r_conditions_list(item) for item in condition['items']]
+            items = []
+            for index, item in enumerate(condition['items']):
+                condition['items'][index] = self.r_conditions_list(item)
+                items.append(condition['items'][index])
+
+            return items
 
         return self.MatchingFunction(condition)
 
@@ -24,7 +34,7 @@ class Conditions:
         return self.r_conditions_sql(self.__data)
 
     def r_conditions_sql(self, condition):
-        if 'type' in condition and condition['type'] in ['AND', 'OR']:
+        if not isinstance(condition, self.MatchingFunction) and 'type' in condition and condition['type'] in ['AND', 'OR']:
 
             filter_sqls = []
             for condition_item in condition['items']:
@@ -32,32 +42,27 @@ class Conditions:
 
             return psycopg2_sql.SQL('({})').format(psycopg2_sql.SQL(' %s ' % condition['type']).join(filter_sqls))
 
-        matching_function = self.MatchingFunction(condition)
-        return matching_function.sql.format(field_name=psycopg2_sql.Identifier(matching_function.field_name))
+        return condition.sql.format(field_name=psycopg2_sql.Identifier(condition.field_name))
 
     @property
     def index_templates(self):
-        return self.r_index_templates(self.__data)
-
-    def r_index_templates(self, condition):
-        if 'type' in condition:
-            return [self.r_index_templates(item) for item in condition['items'] if item]
-
-        return self.MatchingFunction(condition).index_template
+        return [condition.index_template for condition in self.conditions_list]
 
     class MatchingFunction:
         def __init__(self, function_obj):
             self.__data = function_obj
+            self.__sources = []
+            self.__targets = []
 
-            self.field_name = function_obj['hash']
+            self.field_name = hash_string(json.dumps(function_obj))
 
             if isinstance(function_obj['method'], str):
                 self.function_name = function_obj['method']
-                self.parameters = []
+                self.parameters = {}
             else:
                 for function_name, parameters in function_obj['method'].items():
                     self.function_name = function_name
-                    self.parameters = parameters
+                    self.parameters = dict(enumerate(parameters, 1)) if isinstance(parameters, list) else parameters
 
             matching_functions = get_json_from_file('matching_functions.json')
             if self.function_name in matching_functions:
@@ -74,9 +79,7 @@ class Conditions:
 
             before_index = self.function_info.get('before_index', None)
             if before_index:
-                for index, parameter in enumerate(self.parameters):
-                    before_index = re.sub('%%%i__hash' % (index + 1), hash_string(str(parameter)), before_index)
-                    before_index = re.sub('%%%i' % (index + 1), str(parameter), before_index)
+                before_index = before_index.format(**self.parameters)
 
             return {
                 'template': self.function_info['index_using'],
@@ -91,29 +94,43 @@ class Conditions:
 
             template = self.function_info['similarity']
             if isinstance(self.function_info['similarity'], str):
-                template = re.sub(r'{source}', 'source.{field_name}', template)
-                template = re.sub(r'{target}', 'target.{field_name}', template)
-                for index, parameter in enumerate(self.parameters):
-                    template = re.sub('%%%i' % (index + 1), str(parameter), template)
+                template = re.sub(r'{source}', 'source.{{field_name}}', template)
+                template = re.sub(r'{target}', 'target.{{field_name}}', template)
+                template = template.format(**self.parameters)
 
             return psycopg2_sql.SQL(str(template))
 
         @property
         def sql(self):
             template = self.function_info['sql_template']
-            for index, parameter in enumerate(self.parameters):
-                template = re.sub('%%%i__hash' % (index + 1), hash_string(str(parameter)), template)
-                template = re.sub('%%%i' % (index + 1), str(parameter), template)
 
-            template = re.sub(r'{source}', 'source.{field_name}', template)
-            template = re.sub(r'{target}', 'target.{field_name}', template)
+            template = re.sub(r'{source}', 'source.{{field_name}}', template)
+            template = re.sub(r'{target}', 'target.{{field_name}}', template)
+            template = template.format(**self.parameters)
 
             return psycopg2_sql.SQL(str(template))
 
         @property
         def sources(self):
-            return self.__data['sources']
+            if not self.__sources:
+                self.__sources = self.get_resources('sources')
+
+            return self.__sources
 
         @property
         def targets(self):
-            return self.__data['targets']
+            if not self.__targets:
+                self.__targets = self.get_resources('targets')
+
+            return self.__targets
+
+        def get_resources(self, resources_key):
+            resources = {}
+            for resource_index, resource in self.__data[resources_key].items():
+                resources[resource_index] = []
+                for property_field in resource:
+                    property_field['transformers'] =\
+                        self.function_info.get('transformers', []) + property_field.get('transformers', [])
+                    resources[resource_index].append(PropertyField(property_field))
+
+            return resources

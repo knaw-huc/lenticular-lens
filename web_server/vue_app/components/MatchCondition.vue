@@ -14,17 +14,22 @@
             </div>
 
             <div v-if="condition.method_index > 0 && typeof condition.method === 'object'" class="col-4">
-                <div v-if="Array.isArray(condition.method[method_object.name])" class="row">
+                <div v-if="condition.method[method_object.name] === Object(condition.method[method_object.name])" class="row">
                     <div v-for="(item, index) in condition.method[method_object.name]" class="col">
-                        <div v-if="typeof item === 'number'" class="form-group">
-                            <input class="form-control" type="number" step="any" v-model.number="condition.method[method_object.name][index]">
-                        </div>
+                        <div class="form-group">
+                            <label>
+                                <template v-if="Object.prototype.toString.call(condition.method[method_object.name]) === '[object Object]'">
+                                    {{ method_object.value.items[index].label }}
+                                </template>
+                                <template v-else>Value {{ index + 1 }}</template>
 
-                        <div v-if="item.type === 'matching_label'" class="form-group">
-                            <select class="form-control" v-model="condition.method[method_object.name][index].value">
-                                <option disabled selected value="">Select a Mapping</option>
-                                <option v-for="match in $root.$children[0].matches" :value="match.id">{{ match.label }}</option>
-                            </select>
+                                <input v-if="typeof item === 'number'" class="form-control" type="number" step="any" v-model.number="condition.method[method_object.name][index]">
+
+                                <select v-if="item.type === 'matching_label'" class="form-control" v-model="condition.method[method_object.name][index].value">
+                                    <option disabled selected value="">Select a Mapping</option>
+                                    <option v-for="match in $root.$children[0].matches" :value="match.id">{{ match.label }}</option>
+                                </select>
+                            </label>
                         </div>
                     </div>
                 </div>
@@ -51,24 +56,25 @@
                 <template v-for="collection_properties in condition[resources_key]">
                     <div v-for="(resource, index) in collection_properties" class="row">
                         <div class="col ml-5">
-                            <div v-for="(transformer, index) in resource.transformers" class="col-4">
-                                <div class="row">
-                                    <div class="form-group col-8">
-                                        <v-select v-model="resource.transformers[index]">
-                                            <option value="" selected disabled>Select a function</option>
-                                            <option v-for="av_transformer in transformers" :value="av_transformer">{{ av_transformer }}</option>
-                                        </v-select>
-                                    </div>
+<!--                            <div v-for="(transformer, index) in resource.transformers" class="col-4">-->
+<!--                                <div class="row">-->
+<!--                                    <div class="form-group col-8">-->
+<!--                                        <v-select v-model="resource.transformers[index]">-->
+<!--                                            <option value="" selected disabled>Select a function</option>-->
+<!--                                            <option v-for="av_transformer in transformers" :value="av_transformer">{{ av_transformer }}</option>-->
+<!--                                        </v-select>-->
+<!--                                    </div>-->
 
-                                    <div class="form-group">
-                                        <button-delete @click="resource.transformers.splice(index, 1)"/>
-                                    </div>
-                                </div>
-                            </div>
+<!--                                    <div class="form-group">-->
+<!--                                        <button-delete @click="resource.transformers.splice(index, 1)"/>-->
+<!--                                    </div>-->
+<!--                                </div>-->
+<!--                            </div>-->
 
-                            <div class="form-group">
-                                <button-add @click="$root.$children[0].getOrCreate(resource, 'transformers', []).push('')" title="Add transformer"/>
-                            </div>
+<!--                            <div class="form-group">-->
+<!--                                <button-add @click="$root.$children[0].getOrCreate(resource, 'transformers', []).push('')" title="Add transformer"/>-->
+<!--                            </div>-->
+
                             <property-component
                                     v-if="resource.property"
                                     :property="resource.property"
@@ -142,6 +148,32 @@
                         },
                     },
                     {
+                        'label': 'Time Delta',
+                        'object': {
+                            'name': 'TIME_DELTA',
+                            'value': {
+                                'type': {},
+                                'items':{
+                                    'years': {
+                                        'label': 'Years',
+                                        'type': 0,
+                                        'minValue': 0,
+                                    },
+                                    'months': {
+                                        'label': 'Months',
+                                        'type': 0,
+                                        'minValue': 0,
+                                    },
+                                    'days': {
+                                        'label': 'Days',
+                                        'type': 0,
+                                        'minValue': 0,
+                                    },
+                                },
+                            }
+                        }
+                    },
+                    {
                         'label': 'Distance is between',
                         'object': {
                             'name': 'DISTANCE_IS_BETWEEN',
@@ -202,8 +234,14 @@
                 } else {
                     this.condition.method = {};
                     this.condition.method[this.method_object.name] = JSON.parse(JSON.stringify(this.method_object.value.type));
-                    for (let i = 0; i < (this.method_object.value.listItems.minItems || 1); i++) {
-                        this.condition.method[this.method_object.name].push(this.method_object.value.listItems.type);
+                    if (Array.isArray(this.condition.method[this.method_object.name])) {
+                        for (let i = 0; i < (this.method_object.value.listItems.minItems || 1); i++) {
+                            this.condition.method[this.method_object.name].push(this.method_object.value.listItems.type);
+                        }
+                    } else {
+                        Object.keys(this.method_object.value.items).forEach(value_item_key => {
+                            this.condition.method[this.method_object.name][value_item_key] = this.method_object.value.items[value_item_key].type;
+                        });
                     }
                 }
             },

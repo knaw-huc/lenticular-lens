@@ -19,6 +19,11 @@
     "sql_template": "{source} IS NOT NULL AND {target} IS NOT NULL AND {source} - {target} BETWEEN %1 AND %2",
     "similarity": "{source} - {target}"
   },
+  "TIME_DELTA": {
+    "sql_template": "{source} IS NOT NULL AND {target} IS NOT NULL AND {source} - {target} BETWEEN -({years} * 365 + {months} * 30 + {days}) AND ({years} * 365 + {months} * 30 + {days})",
+    "similarity": "{source} - {target}",
+    "transformers": ["to_date_immutable"]
+  },
   "IS_IN_SET": {
     "sql_template": "({source} IN (SELECT source_uri FROM \"%1__hash\") OR {source} IN (SELECT target_uri FROM \"%1__hash\")) AND ({target} IN (SELECT source_uri FROM \"%1__hash\") OR {target} IN (SELECT target_uri FROM \"%1__hash\"))"
   },
