@@ -2,7 +2,7 @@ from datasets_config import DatasetsConfig
 from config_db import db_conn
 import datetime
 from flask import Flask, jsonify, request, send_file
-from helpers import get_job_data, update_job_data
+from helpers import get_job_data, hasher, update_job_data
 from clustering import cluster_csv, get_cluster_data, hash_string, linkset_to_csv, cluster_reconciliation_csv, cluster_and_reconcile
 import json
 from os.path import join
@@ -137,9 +137,9 @@ def result(job_id, mapping_name):
 
 @app.route('/job/<job_id>/create_clustering/', methods=['POST'])
 def create_clustering(job_id):
-    # csv_filepath = linkset_to_csv(job_id, request.json['mapping_label'])
     from src.LLData.CSV_Alignments import CSV_ALIGNMENTS_DIR
-    csv_filepath = join(CSV_ALIGNMENTS_DIR, 'GA-linkset-paper.csv')
+    filename = f'alignment_{hasher(job_id)}_{request.json["mapping_label"]}.csv'
+    csv_filepath = join(CSV_ALIGNMENTS_DIR, filename)
     if request.json['association_file'] != '':
         if request.json['clustered']:
             cluster_reconciliation_csv(request.json['association_file'], job_id, request.json['mapping_label'])

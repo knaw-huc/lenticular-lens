@@ -155,8 +155,8 @@ if __name__ == '__main__':
                                     prefix = 'alignment'
 
                                 today = datetime.date.isoformat(datetime.date.today()).replace('-', '')
-                                now = f"{today}_{re.findall('..:.*', str(datetime.datetime.now()))[0]}"
-                                filename = f'{prefix}_{hasher(job["job_id"])}_{match.name_original}_{now}.csv'
+                                # now = f"{today}_{re.findall('..:.*', str(datetime.datetime.now()))[0]}"
+                                filename = f'{prefix}_{hasher(job["job_id"])}_{match.name_original}.csv'
 
                                 print('Creating file ' + join(CSV_DIR, filename))
                                 with open(join(CSV_DIR, filename), 'w') as csv_file:

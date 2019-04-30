@@ -25,11 +25,12 @@ def file_date():
 
 
 def table_to_csv(table_name, file):
+    table_name = [psycopg2_sql.Identifier(name_part) for name_part in table_name.split('.')]
+
     with db_conn() as conn, conn.cursor() as cur:
         sql = cur.mogrify(
-            "COPY (SELECT * FROM to_regclass(%s)) TO STDOUT WITH CSV DELIMITER ','",
-            (table_name,)
-        )
+            psycopg2_sql.SQL("COPY (SELECT source_uri, target_uri, 1 FROM {}.{}) TO STDOUT WITH CSV DELIMITER ','")
+                .format(table_name[0], table_name[1]))
         cur.copy_expert(sql, file)
 
 
