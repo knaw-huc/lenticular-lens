@@ -345,6 +345,8 @@
                     });
             },
             getClusters(clustering_id) {
+                this.clustering_id = clustering_id;
+
                 fetch('/job/' + this.job_id + '/clusters/' + clustering_id)
                     .then((response) => response.json())
                     .then((data) => {
