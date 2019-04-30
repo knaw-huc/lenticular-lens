@@ -251,12 +251,18 @@
 
                 this.match[resources_key].push('');
             },
-            deleteMatchResource(resources_key, resource_label) {
+            deleteMatchResource(resources_key, resource_index) {
+                let resource_id = this.match[resources_key][resource_index];
+
                 this.match.conditions.items.forEach(condition => {
-                    this.$delete(condition[resources_key], resource_label);
+                    this.$delete(condition[resources_key], resource_id);
                 });
 
-                this.$delete(this.match[resources_key], index);
+                this.$delete(this.match[resources_key], resource_index);
+
+                if (this.match[resources_key].length < 1) {
+                this.addMatchResource(resources_key);
+            }
             },
             scrollTo(ref) {
                 this.$refs[ref].$el.parentNode.scrollIntoView({'behavior':'smooth', 'block':'start'});
@@ -276,6 +282,10 @@
 
             if (this.match.sources.length < 1) {
                 this.addMatchResource('sources');
+            }
+
+            if (this.match.targets.length < 1) {
+                this.addMatchResource('targets');
             }
         }
     }
