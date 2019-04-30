@@ -228,7 +228,7 @@ SELECT source.uri AS source_uri,
        {fields}
 FROM ({source}) AS source
 JOIN ({target}) AS target
-  ON {conditions} and nextval({sequence_name}) != 0;
+  ON (source.collection != target.collection OR source.uri > target.uri) AND ({conditions}) and nextval({sequence_name}) != 0;
 """
                             )\
             .format(
