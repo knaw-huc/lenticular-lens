@@ -60,6 +60,7 @@
                             :match_resource_id="'source_' + index"
                             :match="match"
                             :match_resource="$root.$children[0].getResourceById(match_resource)"
+                            resources_key="sources"
                             @input="updateMatchResource('sources', index, $event)"
                             @remove="deleteMatchResource('sources', index)"
                     ></match-resource-component>
@@ -113,6 +114,7 @@
                             :match_resource_id="'target_' + index"
                             :match="match"
                             :match_resource="$root.$children[0].getResourceById(match_resource)"
+                            resources_key="targets"
                             @input="updateMatchResource('targets', index, $event)"
                             @remove="deleteMatchResource('targets', index)"
                     ></match-resource-component>

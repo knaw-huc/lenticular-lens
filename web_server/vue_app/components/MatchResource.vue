@@ -7,7 +7,7 @@
                     :id="'match_' + match.id + '_resource_label_' + match_resource_id"
             >
                 <option disabled selected value="">Choose a collection</option>
-                <option v-for="(root_resource, index) in $root.$children[0].resources" :value.number="root_resource.id">{{ root_resource.label }}</option>
+                <option v-for="(root_resource, index) in resources" :value.number="root_resource.id">{{ root_resource.label }}</option>
             </v-select>
         </div>
         <div v-else @mouseenter="hovering = true" @mouseleave="hovering = false" class="ml-3 pt-2">
@@ -23,6 +23,11 @@
 <script>
     export default {
         computed: {
+            resources() {
+                return this.$root.$children[0].resources.filter(resource => {
+                    return !this.match[this.resources_key].includes(resource.id.toString());
+                })
+            },
             showOnHover() {
                 return this.hovering ? '' : ' invisible';
             },
@@ -32,6 +37,6 @@
                 hovering: false,
             }
         },
-        props: ['match', 'match_resource', 'match_resource_id'],
+        props: ['match', 'match_resource', 'match_resource_id', 'resources_key'],
     }
 </script>
