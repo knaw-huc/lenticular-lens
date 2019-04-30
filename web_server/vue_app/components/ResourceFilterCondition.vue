@@ -1,5 +1,5 @@
 <template>
-<div class="border-bottom p-3 mb-3 bg-primary">
+<div :class="'border-bottom p-3 mb-3 ' + $parent.style_class">
     <div class="row">
         <property-component
                 :property="condition.property"
@@ -10,7 +10,7 @@
 
     <div class="row">
         <div class="form-group col-3">
-            <select class="form-control" v-model="condition.type">
+            <v-select v-model="condition.type">
                 <option value="" disabled selected>Choose a filter type</option>
                 <option value="=">=</option>
                 <option value="!=">!=</option>
@@ -18,7 +18,7 @@
                 <option value="appearances">appearances of property</option>
                 <option value="ilike">Contains (use % for wildcard)</option>
                 <option value="not_null">Is not null</option>
-            </select>
+            </v-select>
         </div>
 
         <div v-if="['=', '!=', 'date_is_within', 'ilike'].indexOf(condition.type) > -1" class="form-group col-3">
@@ -26,11 +26,11 @@
         </div>
 
         <div v-if="condition.type == 'appearances'" class="form-group col-2">
-            <select v-model="condition.operator" class="form-control">
+            <v-select v-model="condition.operator">
                 <option value="<=" selected>Max.</option>
                 <option value=">=" selected>Min.</option>
                 <option value="=" selected>Exactly</option>
-            </select>
+            </v-select>
         </div>
         <div v-if="condition.type == 'appearances'" class="form-group col-1">
             <input class="form-control" type="number" min="0" step="1" v-model.number="condition.value">
@@ -42,7 +42,11 @@
         </div>
 
         <div class="form-group col-1">
-            <button @click="$emit('remove')" type="button" class="ml-3 btn btn-danger"><octicon name="trashcan"></octicon></button>
+            <button-delete @click="$emit('remove')"/>
+        </div>
+
+        <div class="form-group">
+            <button-add v-on:click="$emit('add-condition')" title="Add Filter Condition"/>
         </div>
     </div>
 </div>

@@ -15,7 +15,7 @@
         props: {
             scale: {
                 type: [Number, String],
-                default: 1,
+                default: 2,
             },
             title: String,
         },

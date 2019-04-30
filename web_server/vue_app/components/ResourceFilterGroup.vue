@@ -1,20 +1,23 @@
 <template>
-    <div v-if="filter_object.conditions" :class="'p-3 border border-dark mb-3 ' + style_class">
+    <div v-if="filter_object.conditions" :class="'p-5 border border-dark mb-3 ' + style_class">
         <div class="row">
             <div class="col-auto">
                 <octicon name="chevron-down" scale="2" v-b-toggle="uid"></octicon>
             </div>
 
-            <div class="form-group col">
-                <select class="form-control" v-model="filter_object.type">
-                    <option v-if="is_root" value="" selected>No filter</option>
+            <div v-if="filter_object.conditions.length > 1" class="form-group col">
+                <v-select v-model="filter_object.type">
                     <option value="AND">All conditions must be met (AND)</option>
                     <option value="OR">At least one of the conditions must be met (OR)</option>
-                </select>
+                </v-select>
+            </div>
+
+            <div v-if="filter_object.conditions.length < 1" class="col">
+                No filter
             </div>
 
             <div v-if="!is_root" class="form-group col-1">
-                <button @click="$emit('remove')" type="button" class="ml-3 btn btn-danger"><octicon name="trashcan"></octicon></button>
+                <button-delete @click="$emit('remove')"/>
             </div>
         </div>
 
@@ -28,24 +31,24 @@
                         :datasets="datasets"
                         :resource="resource"
                         :resources="resources"
-                        @remove="filter_object.conditions.splice(condition_index, 1)"
+                        @remove="removeCondition(condition_index)"
+                        @promote-condition="$emit('promote-condition', $event)"
+                        @demote-filter-group="$emit('demote-filter-group', $event)"
                 />
 
                 <div class="form-group">
-                    <button v-on:click="addFilterCondition" type="button"
-                            class="form-control btn btn-primary w-25">+ Add condition
-                    </button>
-                </div>
-                <div class="form-group">
-                    <button v-on:click="addFilterGroup" type="button"
-                            class="form-control btn btn-primary w-25">+ Add filter group
-                    </button>
+                    <button-add v-on:click="addFilterCondition" title="Add Filter Condition"/>
                 </div>
             </template>
         </b-collapse>
     </div>
     <div v-else-if="!filter_object.conditions">
-        <filter-condition-component :condition="filter_object" :index="index" @remove="$emit('remove')"/>
+        <filter-condition-component
+                :condition="filter_object"
+                :index="index"
+                @remove="$emit('remove')"
+                @add-condition="$emit('promote-condition', {'filter_object': $parent.$parent.filter_object, 'index': index})"
+        />
     </div>
 </template>
 <script>
@@ -57,7 +60,7 @@
         },
         computed: {
             style_class() {
-                return this.is_root || this.$parent.style_class === 'bg-white' ? 'bg-dark' : 'bg-white'
+                return this.is_root || this.$parent.$parent.style_class === 'bg-dark' ? 'bg-white' : 'bg-dark'
             },
         },
         methods: {
@@ -80,6 +83,13 @@
                     'conditions': [],
                 };
                 this.filter_object.conditions.push(condition);
+            },
+            removeCondition(condition_index) {
+                this.filter_object.conditions.splice(condition_index, 1);
+
+                if (!this.is_root && this.filter_object.conditions.length === 1) {
+                    this.$emit('demote-filter-group', {'filter_object': this.$parent.$parent.filter_object, 'index': this.index})
+                }
             },
         },
         name: 'resource-filter-group-component',

@@ -290,7 +290,7 @@
                     collection_id: '',
                     'id': this.resources_count,
                     'filter': {
-                        'type': '',
+                        'type': 'AND',
                         'conditions': [],
                     },
                     limit: -1,
