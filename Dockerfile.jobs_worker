@@ -14,10 +14,8 @@ ENV LC_ALL de_DE.UTF-8
 ENV LANG en_US.UTF-8
 ENV LANGUAGE en_US.UTF-8
 
-RUN mkdir /output
-WORKDIR /output
-
 COPY common /common
 
 COPY ./jobs_worker/src /app
-CMD ["python", "/app/jobs_worker.py"]
+#CMD ["python", "/app/jobs_worker.py"]
+CMD ["/app/run.sh"]
