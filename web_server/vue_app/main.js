@@ -36,6 +36,11 @@ Vue.use(VueFormWizard);
 
 Vue.component('matching-field-value-component', MatchingFieldValueComponent);
 
+// import VeeValidate from 'vee-validate';
+// Vue.use(VeeValidate, {
+//   events: '',
+// });
+
 Vue.filter('capitalize', function (value) {
   if (!value) return '';
   value = value.toString();

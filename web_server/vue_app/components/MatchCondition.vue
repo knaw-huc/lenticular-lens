@@ -117,7 +117,7 @@
                 hovering: false,
                 'matching_methods': [
                     {
-                        'label': '=',
+                        'label': 'Is Equal',
                         'object': '=',
                     },
                     {
