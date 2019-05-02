@@ -1,5 +1,5 @@
 <template>
-    <tr :clusterid="cluster_id" @click="$emit('select:cluster_id', cluster_id)">
+    <tr :clusterid="cluster_id" @click="$emit('select:cluster_id', cluster_id)" :class="selected ? 'bg-info-light' : ''">
         <td :style="'color: ' + ext_colors['no'] + '; font-weight: bold;'"> {{ 'no' }} </td>
         <td> {{ cluster_id }} </td>
         <td> {{ cluster_data.index }} </td>
@@ -11,6 +11,11 @@
 
 <script>
     export default {
+        computed: {
+            selected() {
+                return this.cluster_id === this.$root.$children[0].cluster_id_selected;
+            },
+        },
         data() {
             return {
                 ext_colors: {
