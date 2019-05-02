@@ -17,5 +17,5 @@ ENV LANGUAGE en_US.UTF-8
 COPY common /common
 
 COPY ./jobs_worker/src /app
-#CMD ["python", "/app/jobs_worker.py"]
-CMD ["/app/run.sh"]
+CMD ["python", "/app/jobs_worker.py"]
+#CMD ["/app/run.sh"]
