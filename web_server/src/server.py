@@ -1,5 +1,5 @@
 from datasets_config import DatasetsConfig
-from config_db import db_conn
+from config_db import db_conn, run_query
 import datetime
 from flask import Flask, jsonify, request, send_file
 from helpers import get_job_data, hasher, update_job_data
@@ -29,10 +29,10 @@ def datasets():
 @app.route('/handle_json_upload/', methods=['POST'])
 def handle_json_upload():
     resources_json = json.dumps(request.json['resources'], indent=2)
-    resources_filename = './generated_json/resources_' + hash_string(resources_json) + '.json'
+    resources_filename = '/common/src/LLData/generated_json/resources_' + hash_string(resources_json) + '.json'
 
     matches_json = json.dumps(request.json['matches'], indent=2)
-    matches_filename = './generated_json/matches_' + hash_string(matches_json) + '.json'
+    matches_filename = '/common/src/LLData/generated_json/matches_' + hash_string(matches_json) + '.json'
 
     job_id = hash_string(resources_filename.split('/')[-1] + matches_filename.split('/')[-1])
 
@@ -89,7 +89,7 @@ def clusters(job_id, clustering_id):
 
 @app.route('/job/<job_id>/result/download')
 def download_rdf(job_id):
-    return send_file('/output/rdf/%s_output.nq.gz' % job_id, as_attachment=True)
+    return send_file('/common/src/LLData/rdf/%s_output.nq.gz' % job_id, as_attachment=True)
 
 
 @app.route('/job/<job_id>/result/<mapping_name>')
@@ -140,23 +140,24 @@ def create_clustering(job_id):
     from src.LLData.CSV_Alignments import CSV_ALIGNMENTS_DIR
     filename = f'alignment_{hasher(job_id)}_{request.json["mapping_label"]}.csv'
     csv_filepath = join(CSV_ALIGNMENTS_DIR, filename)
+    clustering_id = None
     if request.json['association_file'] != '':
         if request.json['clustered']:
             cluster_reconciliation_csv(request.json['association_file'], job_id, request.json['mapping_label'])
         else:
             cluster_and_reconcile(request.json['association_file'], job_id, request.json['mapping_label'], request.json['association_file'])
+    else:
+        clustering_id = cluster_csv(csv_filepath, job_id, request.json['mapping_label'])
 
-    clustering_id = cluster_csv(csv_filepath, job_id, request.json['mapping_label'])
-
-    try:
-        with db_conn() as conn, conn.cursor() as cur:
-            cur.execute('''
-            INSERT INTO clusterings
-            (clustering_id, job_id, mapping_name, clustering_type)
-            VALUES (%s, %s, %s, %s)
-            ''', (clustering_id, job_id, request.json['mapping_label'], request.json.get('clustering_type', 'default')))
-    except psycopg2.IntegrityError:
-        pass
+        try:
+            with db_conn() as conn, conn.cursor() as cur:
+                cur.execute('''
+                INSERT INTO clusterings
+                (clustering_id, job_id, mapping_name, clustering_type)
+                VALUES (%s, %s, %s, %s)
+                ''', (clustering_id, job_id, request.json['mapping_label'], request.json.get('clustering_type', 'default')))
+        except psycopg2.IntegrityError:
+            pass
 
     return jsonify(clustering_id)
 
@@ -170,7 +171,8 @@ def cluster_visualization(job_id, clustering_id, cluster_id):
 def get_cluster_graph_data(job_id, clustering_id, cluster_id):
     cluster_data = request.json['cluster_data'] if 'cluster_data' in request.json else get_cluster_data(clustering_id, cluster_id)
     associations = request.json['associations'] if 'associations' in request.json else None
-    sub_clusters = '__PHDemoClustersReconciled__'
+    mapping_label = run_query("SELECT mapping_name FROM clusterings WHERE clustering_id = %s", (clustering_id,))[0]
+    sub_clusters = f'Reconciled_{hasher(job_id)}_{mapping_label}'
     get_cluster = request.json.get('get_cluster', True)
     get_reconciliation = request.json.get('get_reconciliation', True) if associations else False
 
@@ -178,7 +180,7 @@ def get_cluster_graph_data(job_id, clustering_id, cluster_id):
         "data_store": "POSTGRESQL",
         "sub_clusters": sub_clusters,
         "associations": associations,
-        "serialised": '__PHDemoClusters__',
+        "serialised": clustering_id,
         "cluster_id": cluster_id,
         "cluster_data": {
             "nodes": cluster_data['nodes'],

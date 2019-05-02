@@ -720,7 +720,8 @@ def extend_cluster(serialisation_dir, serialized_cluster_name, csv_association_f
     if len(serialised_id) == 0:
         Ut.problem(tab="\t")
         print("\tMISSING PATTERN [_(PH.*)_] IN THE DESERIALIZED FILE NAME")
-        return None, None
+        # return None, None
+        serialised_id = serialized_cluster_name
     else:
         serialised_id = serialised_id[0]
 

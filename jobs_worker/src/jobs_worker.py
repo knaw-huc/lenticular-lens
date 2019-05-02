@@ -112,7 +112,7 @@ if __name__ == '__main__':
 
                         with subprocess.Popen(['python', '/app/run_json.py', '-r', job['resources_filename'], '-m', job['mappings_filename']],
                                               stdout=subprocess.PIPE, stderr=subprocess.PIPE) as converting_process:
-                            with open('./rdf/%s_output.nq.gz' % job['job_id'], 'wb') as output_file:
+                            with open('/common/src/LLData/rdf/%s_output.nq.gz' % job['job_id'], 'wb') as output_file:
                                 with subprocess.Popen(['gzip'], stdin=converting_process.stdout, stdout=output_file) as gzip_process:
                                     messages_log = ''
                                     for converting_output in converting_process.stderr:

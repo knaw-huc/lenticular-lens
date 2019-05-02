@@ -17,7 +17,7 @@ if __name__ == '__main__':
     else:
         print("Connection to database ok")
 
-    statvfs = os.statvfs('/output/generated_json')
+    statvfs = os.statvfs('/common/src/LLData/generated_json')
     bytes_available = statvfs.f_frsize * statvfs.f_bavail
     if bytes_available < 10737418240:
         has_errors = True
@@ -27,7 +27,7 @@ if __name__ == '__main__':
     print("Free space: %s (%i bytes available)" % (space_status, bytes_available))
 
     try:
-        test_file_path = '/output/generated_json/web_server_write_test'
+        test_file_path = '/common/src/LLData/generated_json/web_server_write_test'
         if os.path.exists(test_file_path):
             os.remove(test_file_path)
         open(test_file_path, 'w').close()
