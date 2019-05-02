@@ -13,6 +13,8 @@ import ButtonAdd from './components/misc/ButtonAdd'
 Vue.component('button-add', ButtonAdd);
 import ButtonDelete from './components/misc/ButtonDelete'
 Vue.component('button-delete', ButtonDelete);
+import ButtonInfo from './components/misc/ButtonInfo'
+Vue.component('button-info', ButtonInfo);
 import VSelect from './components/misc/VSelect'
 Vue.component('v-select', VSelect);
 import Property from './components/Property'

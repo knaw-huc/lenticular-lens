@@ -8,7 +8,12 @@
 
                 <div class="col" v-b-toggle.cluster_plot_row_1>
                     <div class="row">
-                        <div class="col h3">Cluster</div>
+                        <div class="col-auto h3 pr-0">Cluster</div>
+                        <div class="col-auto pl-0">
+                            <button-info popup_title="CLUSTER VISUALIZATION">
+
+                            </button-info>
+                        </div>
                     </div>
                 </div>
 
@@ -44,7 +49,12 @@
 
                 <div class="col" v-b-toggle.cluster_plot_row_2>
                     <div class="row">
-                        <div class="col h3">Reconciled</div>
+                        <div class="col-auto h3 pr-0">Reconciled</div>
+                        <div class="col-auto pl-0">
+                            <button-info popup_title="RECONCILED CLUSTER VISUALIZATION">
+
+                            </button-info>
+                        </div>
                     </div>
                 </div>
             </div>

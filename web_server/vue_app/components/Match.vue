@@ -31,7 +31,17 @@
                             <h3>Sources</h3>
                         </div>
                         <div class="col-auto pl-0">
-                            <b-button class="btn text-info pt-1" v-b-modal.sources-info variant="block"><octicon name="question" scale="1.5"></octicon></b-button>
+                            <button-info popup_title="SOURCES">
+                                <div class="h2">COMPOSING VIRTUAL SOURCE FROM COLLECTIONS</div>
+
+                                <img width="700px" src="/static/images/VirtualCollection.png"/>
+
+                                <p class="h5 text-left pt-4 pb-4">All collections of interest selected as sources are combined into a <strong>SINGLE VIRTUAL COLLECTION</strong>> with the resource's id and the value of the selected properties. For a single dataset, multiple <strong>SEMANTICALLY SIMILAR PROPERTIES</strong> can be selected.</p>
+
+                                <hr>
+
+                                <img class="pb-4" width="1000px" src="/static/images/Documentation.png"/>
+                            </button-info>
                         </div>
                     </div>
                 </div>
@@ -40,18 +50,6 @@
                     <button-add @click="addMatchResource('sources', $event)" title="Add a Collection as a Source"/>
                 </div>
             </div>
-
-            <b-modal id="sources-info" title="SOURCES" size="xl" scrollable class="text-center" hide-footer>
-                <div class="h2">COMPOSING VIRTUAL SOURCE FROM COLLECTIONS</div>
-
-                <img width="700px" src="/static/images/VirtualCollection.png"/>
-
-                <p class="h5 text-left pt-4 pb-4">All collections of interest selected as sources are combined into a <strong>SINGLE VIRTUAL COLLECTION</strong>> with the resource's id and the value of the selected properties. For a single dataset, multiple <strong>SEMANTICALLY SIMILAR PROPERTIES</strong> can be selected.</p>
-
-                <hr>
-
-                <img class="pb-4" width="1000px" src="/static/images/Documentation.png"/>
-            </b-modal>
 
             <div class="row pl-5">
                 <div class="col">
@@ -77,7 +75,25 @@
                             <h3>Targets</h3>
                         </div>
                         <div class="col-auto pl-0">
-                            <b-button class="btn text-info pt-1" v-b-modal.targets-info variant="block"><octicon name="question" scale="1.5"></octicon></b-button>
+                            <button-info popup_title="TARGETS">
+                                <div class="h2">MATCHING SOURCE AGAINST TARGET</div>
+
+                                <img src="/static/images/Source_Target.png" width="800px">
+
+                                <ul class="text-left pt-5">
+                                    <li>Several collections can be selected as <span class="text-info">SOURCE</span>.</li>
+
+                                    <li>Several collections can be selected as <span class="text-info">TARGET</span>.</li>
+
+                                    <li>For each collection, be it the <span class="text-info">TARGET</span> or the <span class="text-info">SOURCE</span> several properties can be selected.</li>
+
+                                    <li>Overall, <strong>ALL</strong> selected properties <strong>MUST</strong> be concistent for a particuilar the type of <span class="text-info">MATCHING METHOD</span> in mind.</li>
+
+            <!--                    <li>When both <span class="text-info">SOURCE</span> and <span class="text-info">TARGET</span> collections are selected, links are discovered <span class="text-info">ONLY</span> accross <span class="text-info">SOURCE'S VRTUAL COLLECTIONS</span> and <span class="text-info">TARGET'S VRTUAL COLLECTIONS</span> contrarily to selecting only <span class="text-info">SOURCE</span> colections where links are be discovered <span class="text-info">WITHIN</span> and <span class="text-info">ACCROSS</span> collections ,</li>-->
+                                </ul>
+
+                                <hr>
+                            </button-info>
                         </div>
                     </div>
                 </div>
@@ -86,26 +102,6 @@
                     <button-add @click="addMatchResource('targets', $event)" title="Add a Collection as a Target"/>
                 </div>
             </div>
-
-            <b-modal id="targets-info" title="TARGETS" size="xl" scrollable class="text-center" hide-footer>
-                <div class="h2">MATCHING SOURCE AGAINST TARGET</div>
-
-                <img src="/static/images/Source_Target.png" width="800px">
-
-                <ul class="text-left pt-5">
-                    <li>Several collections can be selected as <span class="text-info">SOURCE</span>.</li>
-
-                    <li>Several collections can be selected as <span class="text-info">TARGET</span>.</li>
-
-                    <li>For each collection, be it the <span class="text-info">TARGET</span> or the <span class="text-info">SOURCE</span> several properties can be selected.</li>
-
-                    <li>Overall, <strong>ALL</strong> selected properties <strong>MUST</strong> be concistent for a particuilar the type of <span class="text-info">MATCHING METHOD</span> in mind.</li>
-
-<!--                    <li>When both <span class="text-info">SOURCE</span> and <span class="text-info">TARGET</span> collections are selected, links are discovered <span class="text-info">ONLY</span> accross <span class="text-info">SOURCE'S VRTUAL COLLECTIONS</span> and <span class="text-info">TARGET'S VRTUAL COLLECTIONS</span> contrarily to selecting only <span class="text-info">SOURCE</span> colections where links are be discovered <span class="text-info">WITHIN</span> and <span class="text-info">ACCROSS</span> collections ,</li>-->
-                </ul>
-
-                <hr>
-            </b-modal>
 
             <div class="row pl-5">
                 <div class="col">
@@ -131,45 +127,43 @@
                             <h3>Matching Methods</h3>
                         </div>
                         <div class="col-auto pl-0">
-                            <b-button class="btn text-info pt-1" v-b-modal.methods-info variant="block"><octicon name="question" scale="1.5"></octicon></b-button>
+                            <button-info popup_title="MATCHING METHODS AND LOGICAL OPERATOR">
+                                <div class="h3 pt-5 text-info">Simple Matching Scenario-1</div>
+                                <img width="700px" src="/static/images/4_MethodSimple.png">
+
+                                <div class="h5">Matching two datasets using <strong>one</strong> property per dataset</div>
+
+                                <div class="h3 pt-5 text-info">Simple Matching Scenario-2</div>
+                                <img width="700px" src="/static/images/5_MethodProp.png">
+
+                                <div class="h5">
+                                    More than one property per dataset is allowed.<br>
+                                    Only, all aligned property should be semantically similar.
+                                </div>
+
+                                <div class="h3 pt-5 text-info">
+                                    Simple Matching Scenario-3
+                                </div>
+                                <img width="700px" src="/static/images/6_MethodDs.png">
+
+                                <div class="h5">
+                                    More than one dataset is allowed for a <span class="text-info">SOURCE</span> or a <span class="text-info">TARGET</span>.<br>
+                                    Only, all aligned property should be semantically similar.<br>
+                                    The logical expression provide a human readable of how it is implemented.
+                                </div>
+
+                                <div class="h3 pt-5 text-info">Complex Matching Scenario</div>
+                                <img width="700px" src="/static/images/7_MethodFull.png">
+
+                                <div class="h5">
+                                    More than one method is allowed.<br>
+                                    Within each method, a <strong>DISJUNCTION</strong> (<span class="text-info">OR</span>) operator is applied over each pair of properties <strong>across</strong> two datasets.<br>
+                                    A <strong>DISJUNCTION</strong> (<span class="text-info">OR</span>) OR <strong>CONJUNCTION</strong> (<span class="text-info">AND</span>) operator is necessary whenever more than one methods is required.<br>
+                                </div>
+                            </button-info>
                         </div>
                     </div>
                 </div>
-
-                <b-modal id="methods-info" title="MATCHING METHODS AND LOGICAL OPERATOR" size="xl" scrollable class="text-center" hide-footer>
-                    <div class="h3 pt-5 text-info">Simple Matching Scenario-1</div>
-                    <img width="700px" src="/static/images/4_MethodSimple.png">
-
-                    <div class="h5">Matching two datasets using <strong>one</strong> property per dataset</div>
-
-                    <div class="h3 pt-5 text-info">Simple Matching Scenario-2</div>
-                    <img width="700px" src="/static/images/5_MethodProp.png">
-
-                    <div class="h5">
-                        More than one property per dataset is allowed.<br>
-                        Only, all aligned property should be semantically similar.
-                    </div>
-
-                    <div class="h3 pt-5 text-info">
-                        Simple Matching Scenario-3
-                    </div>
-                    <img width="700px" src="/static/images/6_MethodDs.png">
-
-                    <div class="h5">
-                        More than one dataset is allowed for a <span class="text-info">SOURCE</span> or a <span class="text-info">TARGET</span>.<br>
-                        Only, all aligned property should be semantically similar.<br>
-                        The logical expression provide a human readable of how it is implemented.
-                    </div>
-
-                    <div class="h3 pt-5 text-info">Complex Matching Scenario</div>
-                    <img width="700px" src="/static/images/7_MethodFull.png">
-
-                    <div class="h5">
-                        More than one method is allowed.<br>
-                        Within each method, a <strong>DISJUNCTION</strong> (<span class="text-info">OR</span>) operator is applied over each pair of properties <strong>across</strong> two datasets.<br>
-                        A <strong>DISJUNCTION</strong> (<span class="text-info">OR</span>) OR <strong>CONJUNCTION</strong> (<span class="text-info">AND</span>) operator is necessary whenever more than one methods is required.<br>
-                    </div>
-                </b-modal>
 
                 <div class="col-auto">
                     <div class="form-group">
