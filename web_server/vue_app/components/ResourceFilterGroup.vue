@@ -60,7 +60,7 @@
         },
         computed: {
             style_class() {
-                return this.is_root || this.$parent.$parent.style_class === 'bg-dark' ? 'bg-white' : 'bg-dark'
+                return this.is_root || this.$parent.$parent.style_class === 'bg-primary-light' ? 'bg-info-light' : 'bg-primary-light'
             },
         },
         methods: {

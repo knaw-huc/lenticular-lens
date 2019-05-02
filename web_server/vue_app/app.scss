@@ -34,6 +34,14 @@ div#app::before {
   left: 0;
 }
 
+.bg-primary-light {
+  background-color: #f5ecc1 !important;
+}
+
+.bg-info-light {
+  background-color: #c8eae4 !important;
+}
+
 .vue-form-wizard {
   .wizard-title {
     color: #efc501!important;
