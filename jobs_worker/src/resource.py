@@ -71,6 +71,9 @@ class Resource:
 
     def r_get_filter_sql(self, filter_obj):
         if filter_obj['type'] in ['AND', 'OR']:
+            if not filter_obj['conditions']:
+                return psycopg2_sql.SQL('')
+
             filter_sqls = map(self.r_get_filter_sql, filter_obj['conditions'])
             return psycopg2_sql.SQL('({})').format(psycopg2_sql.SQL('\n %s ' % filter_obj['type']).join(filter_sqls))
 
