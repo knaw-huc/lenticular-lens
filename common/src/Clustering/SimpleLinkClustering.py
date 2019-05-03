@@ -1,5 +1,6 @@
 
 
+import gzip
 import re
 import time
 import datetime
@@ -261,7 +262,7 @@ def simple_csv_link_clustering(csv_path, save_in, file_name=None, key=None, acti
         print(F'\n1. ITERATING THROUGH THE CSV FILE OF SIZE {file_size}')
         # **************************************************************************************************
         start = time.time()
-        with open(csv_path, mode="r", encoding="utf-8") as csv:
+        with gzip.open(csv_path, mode="rt", encoding="utf-8") as csv:
 
             # ITERATE THROUGH THE FILE
             position = 0

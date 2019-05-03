@@ -1,5 +1,6 @@
 import datetime
 import fcntl
+import gzip
 from helpers import update_job_data, table_to_csv
 from linksets_collection import LinksetsCollection
 import locale
@@ -156,11 +157,21 @@ if __name__ == '__main__':
 
                                 today = datetime.date.isoformat(datetime.date.today()).replace('-', '')
                                 # now = f"{today}_{re.findall('..:.*', str(datetime.datetime.now()))[0]}"
-                                filename = f'{prefix}_{hasher(job["job_id"])}_{match.name_original}.csv'
+                                filename = f'{prefix}_{hasher(job["job_id"])}_{match.name_original}.csv.gz'
 
                                 print('Creating file ' + join(CSV_DIR, filename))
-                                with open(join(CSV_DIR, filename), 'w') as csv_file:
+                                with gzip.open(join(CSV_DIR, filename), 'wt') as csv_file:
                                     table_to_csv(f'job_{job["job_id"]}.{match.name}', csv_file)
+
+                            print('Cleaning up.')
+                            print('Dropping schema.')
+                            with conn.cursor() as cur:
+                                cur.execute(psycopg2_sql.SQL(
+                                    'DROP SCHEMA {} CASCADE')
+                                            .format(psycopg2_sql.Identifier(f'job_{job["job_id"]}')))
+                                conn.commit()
+                            print(f'Schema job_{job["job_id"]} dropped.')
+                            print('Cleanup complete.')
 
                             print('Job %s finished.' % job['job_id'])
                             update_job_data(job['job_id'], {'status': 'Finished', 'finished_at': str(datetime.datetime.now())})

@@ -138,7 +138,7 @@ def result(job_id, mapping_name):
 @app.route('/job/<job_id>/create_clustering/', methods=['POST'])
 def create_clustering(job_id):
     from src.LLData.CSV_Alignments import CSV_ALIGNMENTS_DIR
-    filename = f'alignment_{hasher(job_id)}_{request.json["mapping_label"]}.csv'
+    filename = f'alignment_{hasher(job_id)}_{request.json["mapping_label"]}.csv.gz'
     csv_filepath = join(CSV_ALIGNMENTS_DIR, filename)
     clustering_id = None
     if request.json['association_file'] != '':
