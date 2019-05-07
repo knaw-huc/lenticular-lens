@@ -576,7 +576,7 @@
             },
             saveIdea() {
                 if (this.job_id) {
-                    this.updateJob();
+                    this.updateJob(this.inputs);
                 } else {
                     this.createJob();
                 }
@@ -647,7 +647,7 @@
 
                     return target_object;
                 }
-                
+
                 function create_references_for_property(property) {
                     // Check if reference
                     if (property.length > 2) {
@@ -813,25 +813,16 @@
                     'matches': matches_copy,
                     'resources_original': this.resources,
                     'matches_original': this.matches,
+                    'status': 'Requested',
                 };
 
-                fetch("/handle_json_upload/",
-                    {
-                        headers: {
-                            'Accept': 'application/json',
-                            'Content-Type': 'application/json',
-                        },
-                        method: "POST",
-                        body: JSON.stringify(data)
-                    }
-                )
-                    .then((response) => response.json())
-                    .then((data) => {
-                        this.setJobId(data.job_id);
-                    }
-                );
+                Object.keys(this.inputs).forEach(key => {
+                    data[key] = this.inputs[key];
+                });
+
+                this.updateJob(data);
             },
-            updateJob() {
+            updateJob(job_data) {
                 fetch("/job/update/",
                     {
                         headers: {
@@ -839,11 +830,12 @@
                             'Content-Type': 'application/json',
                         },
                         method: "POST",
-                        body: JSON.stringify(this.inputs),
+                        body: JSON.stringify(job_data),
                     }
                 )
                     .then((response) => response.json())
                     .then((data) => {
+                        this.getJobData();
                     }
                 );
             },

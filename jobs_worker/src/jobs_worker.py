@@ -111,7 +111,7 @@ if __name__ == '__main__':
 
                         conn.commit()
 
-                        with subprocess.Popen(['python', '/app/run_json.py', '-r', job['resources_filename'], '-m', job['mappings_filename']],
+                        with subprocess.Popen(['python', '/app/run_json.py', '-r', job['resources_filename'], '-m', job['mappings_filename'], '--job-id', job['job_id']],
                                               stdout=subprocess.PIPE, stderr=subprocess.PIPE) as converting_process:
                             with open('/common/src/LLData/rdf/%s_output.nq.gz' % job['job_id'], 'wb') as output_file:
                                 with subprocess.Popen(['gzip'], stdin=converting_process.stdout, stdout=output_file) as gzip_process:
@@ -146,7 +146,7 @@ if __name__ == '__main__':
                             found_new_requests = True
 
                             print("Generating CSVs")
-                            linksets_collection = LinksetsCollection(job['resources_filename'], job['mappings_filename'])
+                            linksets_collection = LinksetsCollection(job['resources_filename'], job['mappings_filename'], job_id=job['job_id'])
                             for match in linksets_collection.matches:
                                 if match.is_association:
                                     from src.LLData.CSV_Associations import CSV_ASSOCIATIONS_DIR as CSV_DIR

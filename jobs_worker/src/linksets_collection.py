@@ -18,13 +18,13 @@ locale.setlocale(locale.LC_ALL, '')
 class LinksetsCollection:
     sql_only = False
 
-    def __init__(self, resources_filename, matches_filename, sql_only=False, resources_only=False, matches_only=False, return_limit=None):
+    def __init__(self, resources_filename, matches_filename, job_id, sql_only=False, resources_only=False, matches_only=False, return_limit=None):
         self.sql_only = sql_only
         self.resources_only = resources_only
         self.matches_only = matches_only
         self.return_limit = return_limit or 0
         self.results = []
-        self.job_id = hash_string(resources_filename.split('/')[-1] + matches_filename.split('/')[-1])
+        self.job_id = job_id
 
         self.__matches = None
         self.__resources = None

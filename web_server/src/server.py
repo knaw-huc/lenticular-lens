@@ -39,46 +39,35 @@ def job_create():
 @app.route('/job/update/', methods=['POST'])
 def job_update():
     job_id = request.json['job_id']
-    del request.json['job_id']
 
-    update_job_data(job_id, request.json)
-
-    return jsonify({'result': 'updated'})
-
-
-@app.route('/handle_json_upload/', methods=['POST'])
-def handle_json_upload():
     resources_json = json.dumps(request.json['resources'], indent=2)
     resources_filename = '/common/src/LLData/generated_json/resources_' + hash_string(resources_json) + '.json'
 
     matches_json = json.dumps(request.json['matches'], indent=2)
     matches_filename = '/common/src/LLData/generated_json/matches_' + hash_string(matches_json) + '.json'
 
-    job_id = hash_string(resources_filename.split('/')[-1] + matches_filename.split('/')[-1])
+    json_file = open(resources_filename, 'w')
+    json_file.write(resources_json)
+    json_file.close()
 
-    response = {'job_id': job_id}
+    json_file = open(matches_filename, 'w')
+    json_file.write(matches_json)
+    json_file.close()
 
-    if not get_job_data(job_id):
-        json_file = open(resources_filename, 'w')
-        json_file.write(resources_json)
-        json_file.close()
+    job_data = {
+        'job_title': request.json['job_title'],
+        'job_description': request.json['job_description'],
+        'resources_form_data': json.dumps(request.json['resources_original']),
+        'mappings_form_data': json.dumps(request.json['matches_original']),
+        'resources_filename': resources_filename,
+        'mappings_filename': matches_filename,
+        'status': request.json['status'],
+        'requested_at': datetime.datetime.now(),
+    }
 
-        json_file = open(matches_filename, 'w')
-        json_file.write(matches_json)
-        json_file.close()
+    update_job_data(job_id, job_data)
 
-        job_data = {
-            'resources_form_data': json.dumps(request.json['resources_original']),
-            'mappings_form_data': json.dumps(request.json['matches_original']),
-            'resources_filename': resources_filename,
-            'mappings_filename': matches_filename,
-            'status': 'Requested',
-            'requested_at': datetime.datetime.now(),
-        }
-
-        update_job_data(job_id, job_data)
-
-    return jsonify(response)
+    return jsonify({'result': 'updated', 'job_id': job_id, 'job_data': job_data})
 
 
 @app.route('/job/<job_id>')
