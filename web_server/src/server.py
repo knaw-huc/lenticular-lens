@@ -26,6 +26,26 @@ def datasets():
     return jsonify(DatasetsConfig().data)
 
 
+@app.route('/job/create/', methods=['POST'])
+def job_create():
+    job_id = hash_string(request.json['job_title'] + request.json['job_description'])
+    del request.json['job_id']
+
+    update_job_data(job_id, request.json)
+
+    return jsonify({'result': 'created', 'job_id': job_id})
+
+
+@app.route('/job/update/', methods=['POST'])
+def job_update():
+    job_id = request.json['job_id']
+    del request.json['job_id']
+
+    update_job_data(job_id, request.json)
+
+    return jsonify({'result': 'updated'})
+
+
 @app.route('/handle_json_upload/', methods=['POST'])
 def handle_json_upload():
     resources_json = json.dumps(request.json['resources'], indent=2)

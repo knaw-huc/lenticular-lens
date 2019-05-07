@@ -4,6 +4,8 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 CREATE TABLE IF NOT EXISTS reconciliation_jobs (
   job_id text primary key,
+  job_title text not null,
+  job_description text not null,
   resources_form_data json,
   mappings_form_data json,
   resources_filename text,
@@ -11,7 +13,8 @@ CREATE TABLE IF NOT EXISTS reconciliation_jobs (
   status text,
   requested_at timestamp,
   processing_at timestamp,
-  finished_at timestamp
+  finished_at timestamp,
+  UNIQUE (job_title, job_description)
 );
 
 CREATE TABLE IF NOT EXISTS timbuctoo_tables (

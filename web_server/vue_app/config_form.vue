@@ -8,6 +8,36 @@
         shape="square"
         ref="formWizard"
     >
+
+        <tab-content title="Idea">
+            <template v-if="idea_form === 'existing' || job_id">
+                <div class="form-group">
+                    <label for="job_id_input">Existing Job ID</label>
+                    <input type="text" class="form-control" id="job_id_input" :disabled="Boolean(job_id)" v-model="inputs.job_id">
+                </div>
+
+                <div v-if="!job_id" class="form-group">
+                    <b-button @click="setJobId(inputs.job_id)">Load</b-button>
+                </div>
+            </template>
+
+            <template v-if="idea_form === 'new' ||  job_id">
+                <div class="form-group">
+                    <label for="idea">What's your idea?</label>
+                    <input type="text" class="form-control" id="idea" v-model="inputs.job_title">
+                </div>
+
+                <div class="form-group">
+                    <label for="description">Description</label>
+                    <textarea class="form-control" id="description" v-model="inputs.job_description"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <b-button @click="saveIdea">{{ job_id ? 'Update' : 'Create' }}</b-button>
+                </div>
+            </template>
+        </tab-content>
+
         <tab-content title="Collections">
         <div id="resources">
             <h2>Collections</h2>
@@ -213,21 +243,42 @@
             </template>
         </tab-content>
 
-        <template v-if="props.activeTabIndex === 1" slot="next" scope="props">
-            <wizard-button
-                    v-if="job_data"
-                    :style="props.fillButtonStyle"
-                    :disabled="props.loading">
-                Results
-            </wizard-button>
-            &nbsp;
-            <wizard-button
-                    v-if="has_changes"
-                    :style="props.fillButtonStyle"
-                    :disabled="props.loading"
-                    @click.native="submitForm">
-                Run Job
-             </wizard-button>
+        <template v-if="(props.activeTabIndex === 0  && !job_id) || props.activeTabIndex === 2" slot="next" scope="props">
+            <template v-if="props.activeTabIndex === 2">
+                <wizard-button
+                        v-if="job_data"
+                        :style="props.fillButtonStyle"
+                        :disabled="props.loading">
+                    Results
+                </wizard-button>
+                &nbsp;
+                <wizard-button
+                        v-if="has_changes"
+                        :style="props.fillButtonStyle"
+                        :disabled="props.loading"
+                        @click.native="submitForm">
+                    Run Job
+                 </wizard-button>
+            </template>
+
+            <template v-if="props.activeTabIndex === 0 && !job_id">
+                <wizard-button
+                        :style="props.fillButtonStyle"
+                        :disabled="props.loading || idea_form === 'existing'"
+                        @click.native.prevent.stop="idea_form='existing'"
+                >
+                    Existing Idea
+                </wizard-button>
+                &nbsp;
+                <wizard-button
+                        v-if="has_changes"
+                        :style="props.fillButtonStyle"
+                        :disabled="props.loading || idea_form === 'new'"
+                        @click.native.prevent.stop="idea_form='new'"
+                >
+                    New Idea
+                 </wizard-button>
+            </template>
         </template>
         <template slot="finish" scope="props" style="display: none">&#8203;</template>
     </form-wizard>
@@ -263,6 +314,12 @@
                 clustering_id: null,
                 clusters: [],
                 datasets: [],
+                idea_form: '',
+                inputs: {
+                    job_id: '',
+                    job_title: '',
+                    job_description: '',
+                },
                 job_id: '',
                 job_data: null,
                 resources: [],
@@ -270,9 +327,33 @@
                 limit_all: -1,
                 matches: [],
                 matches_count: 0,
+                steps: [
+                    'idea',
+                    'collections',
+                    'alignment',
+                    'results',
+                    'clustering',
+                    'validation',
+                ],
             }
         },
         methods: {
+            activateStep(step_name, jump=false) {
+                let step_index = this.steps.indexOf(step_name);
+
+                if (step_index < 0 || typeof this.$refs['formWizard'].tabs[step_index] === 'undefined')
+                    return false;
+
+                for (let i = 0; i <= step_index; i++) {
+                    this.$set(this.$refs['formWizard'].tabs[i], 'checked', true);
+                }
+
+                this.$set(this.$refs['formWizard'], 'maxStep', step_index);
+
+                if (jump) {
+                    this.$refs['formWizard'].changeTab(this.$refs['formWizard'].activeTabIndex, step_index);
+                }
+            },
             addFilterCondition(resource) {
                 let condition = {
                     'type': '',
@@ -322,6 +403,16 @@
                     this.$set(resource, 'limit', this.limit_all);
                 });
             },
+            clearForm() {
+                this.resources = [];
+                this.matches = [];
+                this.resources_count = 0;
+                this.matches_count = 0;
+                this.association = '';
+                this.cluster_id_selected = null;
+                this.clustering_id = null;
+                this.limit_all = -1;
+            },
             createClustering(mapping_label, event) {
                 let btn = event.target;
                 btn.setAttribute('disabled', 'disabled');
@@ -343,6 +434,23 @@
                     .then((data) => {
                         this.getJobData();
                     });
+            },
+            createJob() {
+                fetch("/job/create/",
+                    {
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json',
+                        },
+                        method: "POST",
+                        body: JSON.stringify(this.inputs),
+                    }
+                )
+                    .then((response) => response.json())
+                    .then((data) => {
+                        this.setJobId(data.job_id);
+                    }
+                );
             },
             getClusters(clustering_id) {
                 this.clustering_id = clustering_id;
@@ -384,14 +492,10 @@
                         let urlParams = new URLSearchParams(window.location.search);
                         let job_id = urlParams.get('job_id');
                         if (job_id) {
-                            this.$refs.formWizard.activateAll();
-                            this.$refs.formWizard.changeTab(0, 2);
-
                             this.job_id = job_id;
+                            this.idea_form = 'existing';
+                            this.$set(this.inputs, 'job_id', job_id);
                             this.getJobData();
-                        } else {
-                            this.addResource();
-                            this.addMatch();
                         }
                     });
             },
@@ -401,16 +505,36 @@
                         .then((response) => response.json())
                         .then((data) => {
                             this.job_data = JSON.parse(JSON.stringify(data));
+
+                            this.$set(this.inputs, 'job_title', data.job_title);
+                            this.$set(this.inputs, 'job_description', data.job_description);
+
+                            this.activateStep('collections');
+
                             if (this.resources_count < 1) {
-                                this.resources = data.resources_form_data;
-                                this.resources_count = this.resources.length;
-                            }
-                            if (this.matches.length < 1) {
-                                this.matches = data.mappings_form_data;
+                                if (data.resources_form_data) {
+                                    this.resources = data.resources_form_data;
+                                    this.resources_count = this.resources.length;
+                                } else {
+                                    this.addResource();
+                                }
                             }
 
-                            if (this.job_data.status !== 'Finished' && !this.job_data.status.startsWith('FAILED')) {
-                                setTimeout(this.getJobData, 5000);
+                            if (this.matches.length < 1) {
+                                if (data.mappings_form_data) {
+                                    this.matches = data.mappings_form_data;
+                                    this.activateStep('alignment');
+                                } else {
+                                    this.addMatch();
+                                }
+                            }
+
+                            if (this.job_data.status) {
+                                this.activateStep(this.job_data.status === 'Finished' ? 'clustering' : 'validation');
+
+                                if (this.job_data.status !== 'Finished' && !this.job_data.status.startsWith('FAILED')) {
+                                    setTimeout(this.getJobData, 5000);
+                                }
                             }
                         })
                     ;
@@ -449,6 +573,24 @@
                 }
 
                 return subject[key];
+            },
+            saveIdea() {
+                if (this.job_id) {
+                    this.updateJob();
+                } else {
+                    this.createJob();
+                }
+            },
+            setJobId(job_id) {
+                this.$set(this, 'job_id', job_id);
+                this.$set(this.inputs, 'job_id', job_id);
+
+                let parsedUrl = new URL(window.location.href);
+                parsedUrl.searchParams.set('job_id', job_id);
+                window.history.pushState(null, null, parsedUrl.href);
+
+                this.clearForm();
+                this.getJobData();
             },
             submitForm() {
                 let vue = this;
@@ -685,16 +827,26 @@
                 )
                     .then((response) => response.json())
                     .then((data) => {
-                        this.$set(this, 'job_id', data.job_id);
-
-                        let parsedUrl = new URL(window.location.href);
-                        parsedUrl.searchParams.set('job_id', data.job_id);
-                        window.history.pushState(null, null, parsedUrl.href);
-
-                        this.getJobData();
+                        this.setJobId(data.job_id);
                     }
                 );
-            }
+            },
+            updateJob() {
+                fetch("/job/update/",
+                    {
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json',
+                        },
+                        method: "POST",
+                        body: JSON.stringify(this.inputs),
+                    }
+                )
+                    .then((response) => response.json())
+                    .then((data) => {
+                    }
+                );
+            },
         },
         mounted() {
             this.getDatasets();
