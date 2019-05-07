@@ -1,5 +1,5 @@
 import collections
-from config_db import db_conn
+from config_db import db_conn, run_query
 import datetime
 from hashlib import md5
 from os import listdir
@@ -130,16 +130,15 @@ def update_job_data(job_id, job_data):
         try:
             with db_conn() as conn:
                 with conn.cursor(cursor_factory=psycopg2_extras.DictCursor) as cur:
-                    cur.execute(psycopg2_sql.SQL("""
-                    INSERT INTO reconciliation_jobs AS rj (job_id, %s) VALUES %s
-                        ON CONFLICT (job_id) DO UPDATE
-                            SET {} WHERE rj.job_id = %s
-                            """).format(psycopg2_sql.SQL(', '.join('%s = EXCLUDED.%s' % (key, key) for key in job_data.keys()))),
-                                (
-                                    AsIs(', '.join(job_data.keys())),
-                                    tuple([job_id] + list(job_data.values())),
-                                    job_id
-                                ))
+                    if run_query('SELECT 1 FROM reconciliation_jobs WHERE job_id = %s', (job_id,))[0]:
+                        cur.execute(psycopg2_sql.SQL("UPDATE reconciliation_jobs SET ({}) = ROW %s WHERE job_id = %s")
+                            .format(
+                            psycopg2_sql.SQL(', '.join(job_data.keys()))),
+                            (tuple(job_data.values()), job_id))
+                    else:
+                        cur.execute(psycopg2_sql.SQL("INSERT INTO reconciliation_jobs (job_id, %s) VALUES %s"),
+                                    (AsIs(', '.join(job_data.keys())), tuple([job_id] + list(job_data.values()))))
+
         except (psycopg2.InterfaceError, psycopg2.OperationalError):
             n += 1
             print('Database error. Retry %i' % n)
