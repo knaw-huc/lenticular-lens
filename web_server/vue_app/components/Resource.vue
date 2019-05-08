@@ -34,13 +34,20 @@
         </div>
 
         <template v-if="resource.collection_id != ''">
-            <h3>Filter</h3>
+            <div class="pb-3 pt-5 row">
+                <div class="h3 col-auto">Filter</div>
+                <div class="col-auto pl-0">
+                    <button-add @click="addRootFilterCondition" title="Add Filter Condition"/>
+                </div>
+            </div>
+
             <resource-filter-group-component
                     :datasets="datasets"
                     :filter_object="resource.filter"
                     :index="0"
                     :is_root="true"
                     :uid="'resource_' + resource.id + '_filter_group_0'"
+                    ref="filterGroupComponents"
                     :resource="resource"
                     :resources="resources"
                     @promote-condition="promoteCondition($event)"
@@ -150,6 +157,9 @@
                     'remote_property': '',
                 };
                 this.resource.related.push(relation);
+            },
+            addRootFilterCondition() {
+                this.$refs['filterGroupComponents'].addFilterCondition();
             },
             demoteFilterGroup(group_info) {
                 let condition = group_info.filter_object.conditions[group_info.index].conditions[0];

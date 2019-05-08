@@ -1,5 +1,5 @@
 <template>
-    <div class="row">
+    <div class="row pl-3">
         <property-component-component
                 v-for="(n, index) in property.length"
                 v-if="index % 2 === 0"

@@ -1,11 +1,29 @@
 <template>
-<div :class="'border-bottom p-3 mb-3 ' + $parent.style_class">
-    <div class="row">
-        <property-component
-                :property="condition.property"
-                :singular="true"
-                @resetProperty="resetProperty(condition.property, $event)"
-        />
+<div class="border border-white p-3 mb-3">
+    <div class="row justify-content-between">
+        <div class="col-10">
+            <div class="row">
+                <div class="col-auto form-group mb-0">
+                    <label>Property:</label>
+                </div>
+            </div>
+            <property-component
+                    :property="condition.property"
+                    :singular="true"
+                    @resetProperty="resetProperty(condition.property, $event)"
+            />
+        </div>
+        <div class="col-auto">
+            <div class="row justify-content-end">
+                <div class="form-group col-auto">
+                    <button-delete @click="$emit('remove')" title="Delete this Filter Condition" class="pt-1 pr-0"/>
+                </div>
+
+                <div class="form-group col-auto">
+                    <button-add v-on:click="$emit('add-condition')" title="Add Filter Condition and Create Group"/>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="row">
@@ -39,14 +57,6 @@
         <div class="form-check">
             <input v-model.boolean="condition.invert" type="checkbox" class="form-check-input" :id="'resource_' + resource.id + '_condition_' + index + '_invert'">
             <label class="form-check-label" :for="'resource_' + resource.id + '_condition_' + index + '_invert'">Invert</label>
-        </div>
-
-        <div class="form-group col-1">
-            <button-delete @click="$emit('remove')"/>
-        </div>
-
-        <div class="form-group">
-            <button-add v-on:click="$emit('add-condition')" title="Add Filter Condition"/>
         </div>
     </div>
 </div>

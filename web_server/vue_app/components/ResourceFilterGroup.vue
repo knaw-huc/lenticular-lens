@@ -1,5 +1,5 @@
 <template>
-    <div v-if="filter_object.conditions" :class="'p-5 border border-dark mb-3 ' + style_class">
+    <div v-if="filter_object.conditions" :class="'p-3 border mb-3 ' + style_class">
         <div class="row">
             <div class="col-auto">
                 <octicon name="chevron-down" scale="2" v-b-toggle="uid"></octicon>
@@ -16,8 +16,12 @@
                 No filter
             </div>
 
-            <div v-if="!is_root" class="form-group col-1">
-                <button-delete @click="$emit('remove')"/>
+            <div v-if="!is_root" class="form-group col-auto">
+                <button-delete @click="$emit('remove')" title="Delete this Group" class="pt-1 pr-0"/>
+            </div>
+
+            <div v-if="!is_root" class="form-group col-auto">
+                <button-add v-on:click="addFilterCondition" title="Add Filter Condition"/>
             </div>
         </div>
 
@@ -35,10 +39,6 @@
                         @promote-condition="$emit('promote-condition', $event)"
                         @demote-filter-group="$emit('demote-filter-group', $event)"
                 />
-
-                <div class="form-group">
-                    <button-add v-on:click="addFilterCondition" title="Add Filter Condition"/>
-                </div>
             </template>
         </b-collapse>
     </div>
@@ -60,7 +60,7 @@
         },
         computed: {
             style_class() {
-                return this.is_root || this.$parent.$parent.style_class === 'bg-primary-light' ? 'bg-info-light' : 'bg-primary-light'
+                return this.is_root || this.$parent.$parent.style_class === 'bg-primary-light border-primary' ? 'bg-info-light border-info' : 'bg-primary-light border-primary'
             },
         },
         methods: {
