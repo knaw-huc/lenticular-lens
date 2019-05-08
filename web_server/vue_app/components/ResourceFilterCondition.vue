@@ -1,5 +1,5 @@
 <template>
-<div class="border border-white p-3 mb-3">
+<div class="border border-dark p-3 mb-3">
     <div class="row justify-content-between">
         <div class="col-10">
             <div class="row">

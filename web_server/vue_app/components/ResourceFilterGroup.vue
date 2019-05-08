@@ -1,5 +1,5 @@
 <template>
-    <div v-if="filter_object.conditions" :class="'p-3 border mb-3 ' + style_class">
+    <div v-if="filter_object.conditions" :class="'shadow p-3 border mb-3 ' + style_class">
         <div class="row">
             <div class="col-auto">
                 <octicon name="chevron-down" scale="2" v-b-toggle="uid"></octicon>
