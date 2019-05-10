@@ -6,24 +6,24 @@ import time
 import datetime
 import traceback
 import networkx as nx
-from os.path import join, splitext as get_file_name, basename
 from os import stat, remove
+from rdflib import util, Graph
 import src.Generic.Utility as Ut
 import src.Generic.Settings as St
-from src.Generic.Utility import print_object
-import src.DataAccess.Middleware as Middleware
-from src.Generic.Utility import pickle_serializer, pickle_deserializer, \
-    to_nt_format, get_uri_local_name_plus, undo_nt_format, hash_number
-import src.DataAccess.Stardog.Query as Stardog
+from os.path import join, splitext as get_file_name, basename
+from src.Generic.Utility import pickle_serializer, hasher, problem
+
 
 # GET PATH OF THE SERIALISED DIRECTORY
-from src.LLData.CSV_Associations import CSV_ASSOCIATIONS_DIR
+# from src.LLData.CSV_Associations import CSV_ASSOCIATIONS_DIR
 from src.LLData.Serialisation import CLUSTER_SERIALISATION_DIR
+
 
 _format = "It is %a %b %d %Y %H:%M:%S"
 date = datetime.datetime.today()
 _line = "--------------------------------------------------------------" \
         "--------------------------------------------------------------"
+
 
 # *************************************************************
 # *************************************************************
@@ -31,16 +31,21 @@ _line = "--------------------------------------------------------------" \
 # *************************************************************
 # *************************************************************
 
+
 def simple_csv_link_clustering(csv_path, save_in, file_name=None, key=None, activated=False):
 
     """
     :param csv_path: THE PATH OF THE CSV FILE
+    :param save_in:
     :param file_name: THE NAME OF THE GRAPH TO CLUSTER WITHOUT -1 (CLUSTERS) OR -2(ROOT) OR EXTENTION
-    :param serialisation_dir: THE DIRECTORY TO SAVE THE CLUSTER SERIALIZATIONS
+    :param key:
+    # :param serialisation_dir: THE DIRECTORY TO SAVE THE CLUSTER SERIALIZATIONS
+    :param activated:
     :return:
     """
 
     if activated is False:
+        problem(text="--> THE FUNCTION [simple_csv_link_clustering] IS NOT ACTIVATED.")
         return
 
     print("\n{:.^100}".format(" WE ARE ABOUT TO CLUSTER AND SERIALISED "))
@@ -72,7 +77,6 @@ def simple_csv_link_clustering(csv_path, save_in, file_name=None, key=None, acti
 
     # THE FIRST CLUSTER IS UPDATED WITH UNIQUE NAMED AND SAVED IN NEW CLUSTER
     new_clusters = dict()
-
 
     # **************************************************************************************************
     # HELPER FUNCTIONS
@@ -119,7 +123,7 @@ def simple_csv_link_clustering(csv_path, save_in, file_name=None, key=None, acti
             # THE CLUSTER COMPOSED OF NODES, LINKS AND STRENGTHS
             key_1 = "key_{}".format(str(Ut.hasher(link)).replace("-", "N"))
             clusters[parent] = {
-                'nodes': set([child_1, child_2]), 'links': set([link]), 'strengths': {key_1: [strength]}}
+                'nodes': {child_1, child_2}, 'links': {link}, 'strengths': {key_1: [strength]}}
             # print "1",clusters[parent]
 
             # print parent, child_1, child_2
@@ -292,12 +296,10 @@ def simple_csv_link_clustering(csv_path, save_in, file_name=None, key=None, acti
                             print(F"\tRESOURCE {links:>10}:   {subject:>40}    =    {t_object}")
                             check += standard
                         iteration += 1
-                        # print(iteration)
 
             elapse = datetime.timedelta(seconds=time.time() - start)
             print(F"\t>>> {links} links clustered in {elapse}")
             print(F"\t>>> {len(clusters)} NUMBER OF CLUSTER FOUND")
-
 
         # **************************************************************************************************
         print("\n2. PROCESSING THE CLUSTERS FOR UNIQUE ID AND PREPARING FOR SERIALISATION")
@@ -396,6 +398,8 @@ def simple_csv_link_clustering(csv_path, save_in, file_name=None, key=None, acti
 # *************************************************************
 " EXTENDS EXISTING CLUSTERS WITH EVENT-BASED ASSOCIATION"
 # *************************************************************
+
+
 def extend_cluster(serialisation_dir, serialized_cluster_name, csv_association_file,
                    save_in, reconciled_name=None, condition_30=False, activated=False):
 
@@ -404,12 +408,15 @@ def extend_cluster(serialisation_dir, serialized_cluster_name, csv_association_f
     :param serialized_cluster_name: THE NAME OF THE SERIALISED CLUSTER FILE (THE MAIN NAME WITHOUT NUMBER OF EXTENSION)
     :param csv_association_file: THE NAME OF THE ASSOCIATION [CSV] FILE (THE MAIN NAME WITHOUT NUMBER OF EXTENSION)
     :param save_in: THE DIRECTORY IN WHICH THE GENERATED FILES ARE SAVED
-    :param condition_30: FOR SPEED, DO NOT BOTHER COMPUTING DATA ON CLUSTERS BIGGER THAN 30
+    :param reconciled_name: THE NAME OF THE SERIALISED RECONCILED DICTIONARY OBJECT
+    (THE MAIN NAME WITHOUT NUMBER OF EXTENSION)
+    :param condition_30: FOR SPEED, DO NOT BOTHER COMPUTING DATA ON CLUSTERS BIGGER THAN 30 "FALSE"
     :param activated: JUS A BOOLEAN ARGUMENT FOR MAKING SURE THE FUNCTION IS TO RUN
     :return:
     """
 
     if activated is False:
+        problem(text="--> THE FUNCTION [extend_cluster] IS NOT ACTIVATED.")
         return
 
     position = 0    # THE LINK POSITION IN THE CSV FILE
@@ -561,14 +568,14 @@ def extend_cluster(serialisation_dir, serialized_cluster_name, csv_association_f
             else:
                 # print '\t\tThe was some path-strengths there, ',
                 add = True
-                for start_n, end_n, strength in cycle_paths[source_cluster]:
+                for start_n, end_n, link_strength in cycle_paths[source_cluster]:
 
                     # UPDATING AN EXISTING PATH-STRENGTH
                     if (start_n, end_n) == (related_nodes[0], src_node):
 
                         # THE DISCOVERED PATH IS UPDATED FOR ITS STRENGTH IS SMALLER
-                        if strength < subj_r_strength:
-                            list(cycle_paths[source_cluster]).remove((start_n, end_n, strength))
+                        if link_strength < subj_r_strength:
+                            list(cycle_paths[source_cluster]).remove((start_n, end_n, link_strength))
                             # print 'and there was this particular one with smaller strength, removing... '
 
                         # THE DISCOVERED PATH IS NOT UPDATED FOR ITS STRENGTH IS BIGGER OR EQUAL
@@ -590,14 +597,14 @@ def extend_cluster(serialisation_dir, serialized_cluster_name, csv_association_f
             else:
                 # print '\t\tThe was some path-strengths there, ',
                 add = True
-                for start_n, end_n, strength in cycle_paths[target_cluster]:
+                for start_n, end_n, link_strength in cycle_paths[target_cluster]:
 
                     # UPDATING AN EXISTING PATH-STRENGTH
                     if (start_n, end_n) == (related_nodes[1], trg_node):
 
                         # THE DISCOVERED PATH IS UPDATED FOR ITS STRENGTH IS SMALLER
-                        if strength < obj_r_strength:
-                            list(cycle_paths[target_cluster]).remove((start_n, end_n, strength))
+                        if link_strength < obj_r_strength:
+                            list(cycle_paths[target_cluster]).remove((start_n, end_n, link_strength))
                             # print 'and there was this particular one with smaller strength, removing... '
 
                         # THE DISCOVERED PATH IS NOT UPDATED FOR ITS STRENGTH IS BIGGER OR EQUAL
@@ -610,6 +617,7 @@ def extend_cluster(serialisation_dir, serialized_cluster_name, csv_association_f
                     cycle_paths[target_cluster] += [(related_nodes[1], trg_node, obj_r_strength)]
                     # print 'adding new path-strength for {}, adding ({}, {}, {})'.format(
                     # target_cluster, related_nodes[1], trg_node, obj_strength)
+    "END OF THE CYCLE HELPER FUNCTION"
 
     def derive_reconciliation(cluster_id, detail=False):
 
@@ -632,11 +640,13 @@ def extend_cluster(serialisation_dir, serialized_cluster_name, csv_association_f
         # plt.show()
 
         while True:
+
             remain = 0
 
             for c1, c2 in combinations:
 
                 # THIS IS A RECONCILED LINK
+                # [R] STANDS FOR RECONCILED AND [D] STANDS FOR DERIVED
                 if (c1, c2, "R") in investigated["links"] or (c1, c2, "D") in investigated["links"]:
                     if detail:
                         print("\tIN: ", (c1, c2, "R/D"))
@@ -647,7 +657,7 @@ def extend_cluster(serialisation_dir, serialized_cluster_name, csv_association_f
                     if detail:
                         print("\tOUT:", (c1, c2, "R"))
 
-                    # FIND ALL BASE CYCLE FROM THE FULLY CONNECTED GRAPH
+                    # FIND ALL BASE CYCLES FROM THE FULLY CONNECTED GRAPH
                     base_cycles = filter(lambda x: len(x) == 3, list(nx.all_simple_paths(network, c1, c2, cutoff=2)))
                     # if len(base_cycles) > 0:
                     #     remain += 1
@@ -664,13 +674,17 @@ def extend_cluster(serialisation_dir, serialized_cluster_name, csv_association_f
 
                             if key_2 in investigated["strengths"]:
                                 remain += 1
-                                strength = max(investigated["strengths"][key_2]) * max(
+                                curr_strength = max(investigated["strengths"][key_2]) * max(
                                     investigated["strengths"][key_1])
 
                                 if detail:
                                     print("\t>> Keys {} * {} = {}".format(
-                                        investigated["strengths"][key_1], investigated["strengths"][key_2], strength))
-                                temp += [(c1, c2, Ut.get_key(c1, c2), strength)]
+                                        investigated["strengths"][key_1],
+                                        investigated["strengths"][key_2], curr_strength))
+
+                                temp += [(c1, c2, Ut.get_key(c1, c2), curr_strength)]
+
+            # END OF THE FOR LOOP COMBINATION
 
                                 # else:
                                 #     remain = 0 if remain - 1 < 0 else remain - 1
@@ -683,7 +697,7 @@ def extend_cluster(serialisation_dir, serialized_cluster_name, csv_association_f
             if remain == 0:
                 break
 
-            for node1, node2, link_key, strength in temp:
+            for node1, node2, link_key, link_strength in temp:
 
                 # NEW LINK
                 if (node1, node2, "D") not in investigated["links"]:
@@ -691,9 +705,9 @@ def extend_cluster(serialisation_dir, serialized_cluster_name, csv_association_f
 
                 # NEW STRENGTH
                 if link_key in investigated["strengths"]:
-                    investigated["strengths"][link_key] += [strength]
+                    investigated["strengths"][link_key] += [link_strength]
                 else:
-                    investigated["strengths"][link_key] = [strength]
+                    investigated["strengths"][link_key] = [link_strength]
             temp = []
 
         if "strengths" in investigated:
@@ -705,24 +719,28 @@ def extend_cluster(serialisation_dir, serialized_cluster_name, csv_association_f
                     #     Ut.print_list(investigated["links"], comment="LINKS")
                     #     Ut.print_dict(investigated["strengths"], comment="STRENGTHS")
                     # print metric(investigated["links"], investigated["strengths"])
+    "END OF THE derive_reconciliation FUNCTION"
 
     print('\n{:.^100}'.format(" EXTENDING {} ".format(serialized_cluster_name)))
-    print('{:.^100}'.format(' USING ASSOCIATION FROM {} '.format(csv_association_file)))
+    print('{:.^100}'.format(' USING ASSOCIATION FROM {} '))
+    print('{:.^100}'.format(' {} '.format(csv_association_file)))
     print("{:.^100}".format(" *** MAYBE TIME FOR A COFFEE? *** "))
     start = time.time()
+
     # **************************************************************************************************
     print('\n--> 1. DE-SERIALIZING THE CLUSTERS AND ROOT DICTIONARY')
     # **************************************************************************************************
     # 1. DESERIALIZE THE CLUSTER DICTIONARY NAD THE CLUSTER ROOT DICTIONARY
     # ID OF THE SERIALIZED FILE. IF THE PATTERN IS NOT FOUND IT WILL NOT WORK!!!!
-    serialised_id = re.findall(pattern="_(PH.*)_",string=serialized_cluster_name)
+    serialised_id = re.findall(pattern="_(PH.*)_", string=serialized_cluster_name)
 
     # EXIT THE CODE BECAUSE THE FILE NAME HAS A MISSING PATTERN
     if len(serialised_id) == 0:
-        Ut.problem(tab="\t")
-        print("\tMISSING PATTERN [_(PH.*)_] IN THE DESERIALIZED FILE NAME")
-        # return None, None
+        Ut.problem(tab="\t", text="MISSING PATTERN [_(PH.*)_] IN THE DESERIALIZED FILE NAME")
         serialised_id = serialized_cluster_name
+
+        if serialised_id is None:
+            return None, None
     else:
         serialised_id = serialised_id[0]
 
@@ -731,10 +749,10 @@ def extend_cluster(serialisation_dir, serialized_cluster_name, csv_association_f
 
     # EXIT THE CODE AS THE CLUSTER HAS NO NODE
     if clusters is None:
-        Ut.problem(tab="\t")
-        print(F"\tFILE: {serialized_cluster_name}"
-              F"\n\tIF YOU ARE EXPECTING TO READ SOME DATA, WE ARE AFRAID, THE CLUSTER HAS NO NODES."
-              F"\n\tEITHER IT WAS NOT POSSIBLE TO READ THE PROVIDED FILE OR THE FILE NAME IS INCORRECT.")
+        Ut.problem(tab="\t",
+                   text=F"\tFILE: {serialized_cluster_name} "
+                   F"\nIF YOU ARE EXPECTING TO READ SOME DATA, WE ARE AFRAID, THE CLUSTER HAS NO NODES. "
+                   F"\nEITHER IT WAS NOT POSSIBLE TO READ THE PROVIDED FILE OR THE FILE NAME IS INCORRECT.")
         return None, None
     node2cluster = clusters_dictionary['node2cluster_id']
     print("\t[{}] ILNs CLUSTERED FROM [{}] RESOURCES".format(len(clusters), len(node2cluster)))
@@ -742,113 +760,121 @@ def extend_cluster(serialisation_dir, serialized_cluster_name, csv_association_f
     # **************************************************************************************************
     print('\n--> 2. ITERATING THROUGH THE ASSOCIATION FILE FOR SEARCH OF CLUSTER EXTENSIONS AND CYCLES')
     # **************************************************************************************************
-    with open(csv_association_file, mode='r', encoding='utf-8') as csv:
+    try:
 
-        print('\t1. READING FROM FILE: {}'.format(csv_association_file))
-        for line in csv:
+        with gzip.open(csv_association_file, mode='rt', encoding='utf-8') as csv:
 
-            position += 1
+            print('\t1. READING FROM FILE: {}'.format(csv_association_file))
+            for line in csv:
 
-            # SPLIT THE CSV TO EXTRACT THE SUBJECT OBJECT AND STRENGTH
-            split = (line.strip()).split(sep=',')
+                position += 1
 
-            # PRINT PROBLEM IF ANY
-            if len(split) != 2:
-                print(F'PROBLEM WITH THE DATA AT LINE {position}')
+                # SPLIT THE CSV TO EXTRACT THE SUBJECT OBJECT AND STRENGTH
+                split = (line.strip()).split(sep=',')
 
-            # CLUSTER THE LINKS
-            else:
-                # GETTING RID OF THE HEADER
-                if position > 1:
+                # PRINT PROBLEM IF ANY
+                if len(split) != 2:
+                    print(F'PROBLEM WITH THE DATA AT LINE {position}')
 
-                    # 2.1 GET THE RELATED NODES
-                    sub, obj = Ut.to_nt_format(split[0]), Ut.to_nt_format(split[1])
+                # CLUSTER THE LINKS
+                else:
+                    # GETTING RID OF THE HEADER
+                    if position > 1:
 
-                    # 2.2 CHECK WHETHER EACH SIDE BELONG TO A CLUSTER
-                    if sub in node2cluster and obj in node2cluster:
+                        # 2.1 GET THE RELATED NODES
+                        sub, obj = Ut.to_nt_format(split[0]), Ut.to_nt_format(split[1])
 
-                        # 2.2.1 FETCH THE CLUSTER ID OF THE NODES IN THE ASSOCIATION
-                        src_cluster_id, trg_cluster_id = node2cluster[sub], node2cluster[obj]
+                        # 2.2 CHECK WHETHER EACH SIDE BELONG TO A CLUSTER
+                        if sub in node2cluster and obj in node2cluster:
 
-                        # ****************************************************************
-                        # 2.2.2 TO SAVE TIME, WE DO NOT EVALUATE CLUSTERS OF SIZE BIGGER THAN 30
-                        # ****************************************************************
-                        if condition_30 is True:
-                            condition = \
-                                len(clusters[src_cluster_id]['nodes']) <= 30 and len(
-                                    clusters[trg_cluster_id]['nodes']) <= 30
+                            # 2.2.1 FETCH THE CLUSTER ID OF THE NODES IN THE ASSOCIATION
+                            src_cluster_id, trg_cluster_id = node2cluster[sub], node2cluster[obj]
 
-                            if condition is False:
-                                 continue
+                            # ***********************************************************************
+                            # 2.2.2 TO SAVE TIME, WE DO NOT EVALUATE CLUSTERS OF SIZE BIGGER THAN 30
+                            # ***********************************************************************
+                            if condition_30 is True:
+                                condition = \
+                                    len(clusters[src_cluster_id]['nodes']) <= 30 and len(
+                                        clusters[trg_cluster_id]['nodes']) <= 30
 
-                        # 2.2.3 EXTENSION - CYCLE AND RECONCILIATION
-                        if src_cluster_id != trg_cluster_id:
+                                if condition is False:
+                                    continue
 
-                            # **********************************************************************************
-                            # 1. CHECKING FOR EXTENSION
-                            # IF THE CLUSTER TO WHICH THE NODES BELONG ARE NOT THE SAME THEN THE CLUSTERS EXTEND
-                            # **********************************************************************************
-                            # =THE CLUSTERS EXTEND BECAUSE EACH NODE OF THE ASSOCIATION BELONGS TO A DIFFERENT CLUSTER
-                            extended_clusters.add(src_cluster_id)
-                            extended_clusters.add(trg_cluster_id)
+                            # 2.2.3 EXTENSION - CYCLE AND RECONCILIATION
+                            if src_cluster_id != trg_cluster_id:
 
-                            # **********************************************************************************
-                            # CHECKING AND DOCUNENTING CYCLES IN A SPECIFIC ORDER TO MAKE SURE OF A UNIQUE LIST
-                            # **********************************************************************************
+                                # **********************************************************************************
+                                # 1. CHECKING FOR EXTENSION
+                                # IF THE CLUSTER TO WHICH THE NODES BELONG ARE NOT THE SAME THEN THE CLUSTERS EXTEND
+                                # **********************************************************************************
+                                # THE CLUSTERS EXTEND BECAUSE EACH NODE OF
+                                # THE ASSOCIATION BELONGS TO A DIFFERENT CLUSTER
+                                extended_clusters.add(src_cluster_id)
+                                extended_clusters.add(trg_cluster_id)
 
-                            # DOCUMENT PAIR STARTING FROM THE SOURCE
-                            if src_cluster_id < trg_cluster_id:
+                                # **********************************************************************************
+                                # CHECKING AND DOCUMENTING CYCLES IN A SPECIFIC ORDER TO MAKE SURE OF A UNIQUE LIST
+                                # **********************************************************************************
 
-                                # IF THE PAIR OR CLUSTER ALREADY EXIST IN GHE CLUSTER PAIR DICTIONARY
-                                # IT MEANS THAT THERE IS A CYCLE BETWEEN THE TWO EXTENDED CLUSTERS
-                                if (src_cluster_id, trg_cluster_id) in dict_clusters_pairs.keys():
+                                # DOCUMENT PAIR STARTING FROM THE SOURCE
+                                if src_cluster_id < trg_cluster_id:
 
-                                    # IT HAS A CYCLE
-                                    list_extended_clusters_cycle.add(src_cluster_id)
-                                    list_extended_clusters_cycle.add(trg_cluster_id)
+                                    # IF THE PAIR OR CLUSTER ALREADY EXIST IN GHE CLUSTER PAIR DICTIONARY
+                                    # IT MEANS THAT THERE IS A CYCLE BETWEEN THE TWO EXTENDED CLUSTERS
+                                    if (src_cluster_id, trg_cluster_id) in dict_clusters_pairs.keys():
 
-                                    # DOCUMENTING THE CYCLE START AND END FOR THIS SPECIFIC ORDER
-                                    cycle(
-                                        src_node=sub, trg_node=obj,
-                                        source_cluster=src_cluster_id, target_cluster=trg_cluster_id)
+                                        # IT HAS A CYCLE
+                                        list_extended_clusters_cycle.add(src_cluster_id)
+                                        list_extended_clusters_cycle.add(trg_cluster_id)
 
-                                    # DOCUMENTING THE EXTENDED CLUSTERS AND RELATED NODES THAT EXTEND THE CLUSTERS
-                                    dict_clusters_pairs[(src_cluster_id, trg_cluster_id)] += [(sub, obj)]
+                                        # DOCUMENTING THE CYCLE START AND END FOR THIS SPECIFIC ORDER
+                                        cycle(
+                                            src_node=sub, trg_node=obj,
+                                            source_cluster=src_cluster_id, target_cluster=trg_cluster_id)
 
-                                # THE PAIR OF EXTENDED CLUSTER WAS NEVER DOCUMENTED BEFORE
+                                        # DOCUMENTING THE EXTENDED CLUSTERS AND RELATED NODES THAT EXTEND THE CLUSTERS
+                                        dict_clusters_pairs[(src_cluster_id, trg_cluster_id)] += [(sub, obj)]
+
+                                    # THE PAIR OF EXTENDED CLUSTER WAS NEVER DOCUMENTED BEFORE
+                                    else:
+                                        # WE DO NOT USE THE VALUE OF THE DICTIONARY SO ITS EMPTY
+                                        # DOCUMENTING FIRST OCCURRENCE
+                                        dict_clusters_pairs[(src_cluster_id, trg_cluster_id)] = [(sub, obj)]
+
+                                # DOCUMENT PAIRS STARTING FROM THE TARGET
                                 else:
-                                    # WE DO NOT USE THE VALUE OF THE DICTIONARY SO ITS EMPTY
-                                    # DOCUMENTING FIRST OCCURRENCE
-                                    dict_clusters_pairs[(src_cluster_id, trg_cluster_id)] = [(sub, obj)]
 
-                            # DOCUMENT PAIRS STARTING FROM THE TARGET
-                            else:
+                                    if (trg_cluster_id, src_cluster_id) in dict_clusters_pairs.keys():
 
-                                if (trg_cluster_id, src_cluster_id) in dict_clusters_pairs.keys():
+                                        # IT HAS A CYCLE
+                                        list_extended_clusters_cycle.add(src_cluster_id)
+                                        list_extended_clusters_cycle.add(trg_cluster_id)
 
-                                    # IT HAS A CYCLE
-                                    list_extended_clusters_cycle.add(src_cluster_id)
-                                    list_extended_clusters_cycle.add(trg_cluster_id)
+                                        # DOCUMENTING THE CYCLE START AND END FOR THIS SPECIFIC ORDER
+                                        cycle(
+                                            src_node=obj, trg_node=sub,
+                                            source_cluster=trg_cluster_id, target_cluster=src_cluster_id)
 
-                                    # DOCUMENTING THE CYCLE START AND END FOR THIS SPECIFIC ORDER
-                                    cycle(
-                                        src_node=obj, trg_node=sub,
-                                        source_cluster=trg_cluster_id, target_cluster=src_cluster_id)
+                                        # DOCUMENTING THE EXTENDED CLUSTERS AND RELATED NODES THAT EXTEND THE CLUSTERS
+                                        dict_clusters_pairs[(trg_cluster_id, src_cluster_id)] += [(obj, sub)]
 
-                                    # DOCUMENTING THE EXTENDED CLUSTERS AND RELATED NODES THAT EXTEND THE CLUSTERS
-                                    dict_clusters_pairs[(trg_cluster_id, src_cluster_id)] += [(obj, sub)]
+                                    else:
+                                        # WE DO NOT USE THE VALUE OF THE DICTIONARY SO ITS EMPTY
+                                        # DOCUMENTING FIRST OCCURRENCE
+                                        dict_clusters_pairs[(trg_cluster_id, src_cluster_id)] = [(obj, sub)]
+                            # else:
+                            #     print(F'{sub}\t{obj}')
 
-                                else:
-                                    # WE DO NOT USE THE VALUE OF THE DICTIONARY SO ITS EMPTY
-                                    # DOCUMENTING FIRST OCCURRENCE
-                                    dict_clusters_pairs[(trg_cluster_id, src_cluster_id)] = [(obj, sub)]
-                        # else:
-                        #     print(F'{sub}\t{obj}')
-        file_stats = stat(join(serialisation_dir, csv_association_file))
-        print('\t\tTHE FILE IS OF SIZE [{}]'.format(Ut.file_size(join(serialisation_dir, csv_association_file))))
-        print('\t\tTHE FILE IS OF [{}] LINES'.format(position))
-        elapse = datetime.timedelta(seconds=time.time() - start)
-        print(F'\t\t{elapse} SO FAR...')
+            # file_stats = stat(join(serialisation_dir, csv_association_file))
+            print('\t\tTHE FILE IS OF SIZE [{}]'.format(Ut.file_size(join(serialisation_dir, csv_association_file))))
+            print('\t\tTHE FILE IS OF [{}] LINES'.format(position))
+            elapse = datetime.timedelta(seconds=time.time() - start)
+            print(F'\t\t{elapse} SO FAR...')
+
+    except FileNotFoundError as err:
+        problem(text=err)
+        return None, None
 
     # ***************************************************************************************************
     print("\n--> 3. SERIALISING THE EXTENDED CLUSTERS DICTIONARIES AND THE LIST OF CLUSTERS IN A CYCLE...")
@@ -856,29 +882,24 @@ def extend_cluster(serialisation_dir, serialized_cluster_name, csv_association_f
     if len(extended_clusters) != 0 and len(list_extended_clusters_cycle) != 0:
         # start = time.time()
         # SERIALISATION
-        if reconciled_name is None:
-            f_name = get_file_name(basename(csv_association_file))[0]
-            related_graph_mane = Ut.get_uri_local_name_plus(f_name)
-            extended_file_name = "ExtendedBy_{}_{}".format(related_graph_mane, serialised_id)
 
-            s_file_1 = join(save_in, F"{extended_file_name}-1.txt")
-            s_file_2 = join(save_in, F"{extended_file_name}-2.txt")
-            s_file_3 = join(save_in, F"{extended_file_name}-3.txt")
-            s_file_4 = join(save_in, F"{extended_file_name}-4.txt")
+        f_name = get_file_name(basename(csv_association_file))[0]
+        related_graph_mane = Ut.get_uri_local_name_plus(f_name)
+        extended_file_name = F"{serialized_cluster_name}_ExtendedBy_{related_graph_mane}_{serialised_id}"
 
-        else:
-
-            s_file_1 = join(save_in, F"{reconciled_name}-1.txt")
-            s_file_2 = join(save_in, F"{reconciled_name}-2.txt")
-            s_file_3 = join(save_in, F"{reconciled_name}-3.txt")
-            s_file_4 = join(save_in, F"{reconciled_name}-4.txt")
+        s_file_1 = join(save_in, F"{extended_file_name}-1.txt")
+        s_file_2 = join(save_in, F"{extended_file_name}-2.txt")
+        s_file_3 = join(save_in, F"{extended_file_name}-3.txt")
+        s_file_4 = join(save_in, F"{extended_file_name}-4.txt")
 
         data = {'extended_clusters': list(extended_clusters),
                 'list_extended_clusters_cycle': list(list_extended_clusters_cycle),
                 'cycle_paths': cycle_paths}
 
+        # LIST OF CLUSTERS THAT EXTEND THE CURRENT CLUSTER
         pickle_serializer(CLUSTER_SERIALISATION_DIR, data['extended_clusters'], s_file_1)
 
+        # LIST OF CLUSTERS FOR WITCH A CYCLE EXISTS
         pickle_serializer(CLUSTER_SERIALISATION_DIR, data['list_extended_clusters_cycle'], s_file_2)
 
         # DICTIONARY OF THE CYCLE PATHS
@@ -916,6 +937,7 @@ def extend_cluster(serialisation_dir, serialized_cluster_name, csv_association_f
         reconciled_nodes[key]['nodes'] = nodes
 
     print("\t1. COMPUTING THE DERIVED STRENGTHS")
+    # -------------------------------------------
     strength_start = time.time()
     for key in reconciled_nodes.keys():
         # reconciled_nodes[key]['nodes'] = list(reconciled_nodes[key]['nodes'])
@@ -925,31 +947,40 @@ def extend_cluster(serialisation_dir, serialized_cluster_name, csv_association_f
     print(F'\t\tDERIVED STRENGTHS COMPUTED IN {elapse_s} BUT IS HAS BEEN {elapse} SO FAR...')
 
     print("\t2. BUILDING UP THE REFINED CLUSTER DATA")
-    refined_start = time.time()
+    # ------------------------------------------------
+    # refined_start = time.time()
+    # THE RECONCILIATION FILE IS CREATED WITH LINKS AND STRENGTHS FOR TIME COMPLEXITY
+    # THE RECONCILED NODES ARE FOUND USING THE CYCLE HELPER IN THE ASSOCIATION
+    # -------------------------------------------------------------------------------
+    reconciled_clusters_serialised_file = None
+    if len(reconciled_nodes) > 0:
+        date_formatted = datetime.datetime.today().strftime('%a %b %d %Y %H:%M:%S.%f')
+        file_name = F"reconciled_file_{Ut.hasher(date_formatted)}"
+        reconciled_file_path = join(serialisation_dir, F"{file_name}.csv")
+        with gzip.open(reconciled_file_path, mode='wt', encoding='utf-8') as reconciled_file:
+            for key, reconciled in reconciled_nodes.items():
+                strengths = reconciled['strengths']
+                for link in reconciled['links']:
+                    # c_data += [(link[0], link[1], strengths[Ut.get_key(link[0], link[1])])]
+                    strength = strengths[Ut.get_key(link[0], link[1])]
+                    max_strength = max(map(float, strength))
+                    line = F"{link[0]},{link[1]},{max_strength}\n"
+                    reconciled_file.write(line)
 
-    # THE FILE IS CREATED FOR TIME COMPLEXITY
-    date = datetime.datetime.today().strftime('%a %b %d %Y %H:%M:%S.%f')
-    file_name = F"reconciled_file_{Ut.hasher(date)}"
-    reconciled_file_path = join(serialisation_dir, F"{file_name}.csv")
-    with open(reconciled_file_path, mode='w', encoding='utf-8') as reconciled_file:
-        for key, reconciled in reconciled_nodes.items():
-            strengths = reconciled['strengths']
-            for link in reconciled['links']:
-                # c_data += [(link[0], link[1], strengths[Ut.get_key(link[0], link[1])])]
-                strength = strengths[Ut.get_key(link[0], link[1])]
-                max_strength = max(map(float, strength))
-                line = F"{link[0]},{link[1]},{max_strength}\n"
-                reconciled_file.write(line)
+        # CLUSTERING FHE RECONCILED NODES ...............................
+        if not reconciled_name:
+            reconciled_name = F"{serialized_cluster_name}_Reconciled_{serialised_id}"
+        reconciled_clusters_serialised_file = simple_csv_link_clustering(
+            csv_path=reconciled_file_path, save_in=serialisation_dir,
+            file_name=reconciled_name, key=F"Reconciled_{serialised_id}", activated=True)
 
-    # CLUSTERING FHE RECONCILED NODES ...............................
-    reconciled_clusters_serialised_file = simple_csv_link_clustering(
-        csv_path=reconciled_file_path, save_in=serialisation_dir,
-        file_name=reconciled_name, key=F"Reconciled_{serialised_id}", activated=True)
+        # THE FILE IS AGAIN REMOVED TO SAVE HARD DISC SPACE
+        # *************************************************
+        remove(reconciled_file_path)
+        # *************************************************
 
-    # THE FILE IS AGAIN REMOVED TO SAVE HARD DISC SPACE
-    # *************************************************
-    remove(reconciled_file_path)
-    # *************************************************
+    else:
+        print("\t3. NO RECONCILIATION AS NO CYCLE COULD BE FOUND.")
 
     elapse = datetime.timedelta(seconds=time.time() - start)
     print(F'\t{elapse} SO FAR...')
@@ -958,20 +989,76 @@ def extend_cluster(serialisation_dir, serialized_cluster_name, csv_association_f
     print("\n4. results\n\t1. FOUND [{}] EXTENDED CLUSTERS".format(len(extended_clusters)))
     print("\t2. FOUND [{}] CYCLES".format(len(list_extended_clusters_cycle)))
     elapse = datetime.timedelta(seconds=time.time() - start)
-    Ut.completed(elapse)
+    Ut.completed(start)
     # print('{:.^100}'.format(F" COMPLETED IN {elapse} "))
     # print('{:.^100}'.format(F" JOB DONE! "))
     # print("\n{:.^100}".format(" WE ARE ABOUT TO CLUSTER AND SERIALISED"))
 
+    # EXTENDED FILE NAME IS NONE IF WE DO NOT FINE ANY CYCLES.
+    # EVEN IF THE CLUSTERS EXTEND, NO EXTENDED FILE WILL BE GENERATED IF NO CYCLE IS FOUND
     return extended_file_name, reconciled_clusters_serialised_file
 
 
 # *************************************************************
 # *************************************************************
-"THESE FUNCTIONS BELOW ARE USED IN THE EXTENSION AND" \
-"FOR COMPUTING CYCLES AND RESOURCES RECONCILIATIONS"
+"THESE FUNCTIONS BELOW ARE USED IN THE EXTENSION AND FOR COMPUTING CYCLES AND RESOURCES RECONCILIATIONS"
 # *************************************************************
 # *************************************************************
+
+# **************************************************************************************
+# GIVEN TWO NODES, FIND THE SHORTEST PATHS
+# THE LINK NETWORK INPUT IS A LIST OF TUPLES WHERE A TUPLE REPRESENTS LINKS BETWEEN
+# A PAIR OF NODES. THE FUNCTION MAKES USE OF THE NETWORKS LIBRARY
+# **************************************************************************************
+
+
+def shortest_paths(link_network, start_node, end_node):
+
+    # EXTRACT THE NODES FROM THE NETWORK OF LINKS
+    nodes = set([n1 for n1, n2 in link_network] + [n2 for n1, n2 in link_network])
+
+    # INSTANTIATE THE GRAPH
+    g = nx.Graph()
+
+    # add nodes
+    for node in nodes:
+        g.add_node(node)
+
+    # add edges
+    for edge in link_network:
+        g.add_edge(edge[0], edge[1])
+
+    problem(label=" COMPUTING SHORTEST PATH ",
+            text="--> LENGTH : {}\n--> CONNECTED : {}\n--> DIRECTED : {}".format(g.order(), nx.is_connected(g), g.is_directed()))
+    # print(g.nodes(data=True))
+    # print(g.edges(data=True))
+    # print(str(g))
+    # print("LENGTH", len(g))
+    # print(start_node, end_node)
+    # print(g.order())
+    # exit()
+
+    # GET THE LIT OF PATHS
+    # results = list(nx.shortest_simple_paths(g, source=start_node, target=end_node))
+    # if start_node not in g or end_node+" " not in g:
+    #     print(start_node in g, end_node in g)
+    #
+    #     print(len(g))
+    # exit()
+    # print("nx.is_connected(g)", nx.is_connected(g))
+    results = shortest_paths_lite(g, start_node=start_node, end_node=end_node)
+
+    # EXTRACT THE SHORTEST PATH  OF THE SMALLEST SIZE
+    # for item in results:
+    #
+    #     if len(item) == len(results[0]):
+    #         final += [item]
+    #
+    #     else:
+    #         break
+
+    print("DONE COMPUTING PATH!")
+    return results
 
 
 def link_cluster_deserialization(serialisation_dir, main_file_name):
@@ -1012,22 +1099,23 @@ def shortest_paths_lite(link_network, start_node, end_node, strengths=None):
     for edge in link_network:
         g.add_edge(edge[0], edge[1])
 
+    # g = g.to_undirected()
+
     # GET THE SHORTEST PATH (THE FUNCTION RETURNS ONLY ONE PATH)
-    # print "GRAPH-1:", g.__str__()
-    # print "\t\t\v ", start_node, "AND", end_node
     result = nx.shortest_path(g, source=start_node, target=end_node)
     diameter = len(result) - 1
-    # print "RESULT-1:", result
     results = []
 
     # FIND OTHER PATHS OF THE SAME SIZE
-    if len(nodes) > 30:
+    if g.order() > 30:
         results = [result]
 
     # FINDING ALL SHORTEST PATHS AND GET THE HIGHEST WEIGHTED ONE
     # HOWEVER, IF THE CLUSTER IS TOO BIG, DO NO BOTHER USE THE ONLY ONE PROVIDED BY RESULT
     elif result is not None:
 
+        # print("LOOKING FOR OTHER PATHS")
+        # g = deepcopy(link_network)
         results = [result]
         size = len(result)
         diameter = size - 1
@@ -1111,9 +1199,16 @@ def shortest_paths_lite_size(link_network, start_node, end_node):
 def reconciliation_strength(sim, ev_diameter, ev_w_diameter, c_penalty=10):
 
     # print "\t\t>>> SIM DATA:", "sim = ", "ev_diameter = ", ev_diameter, "ev_W_diameter = ", ev_w_diameter
-    validation_strength = (100 - c_penalty * (2 * ev_diameter - ev_w_diameter - 1)) / float(100)
+
+    # ITS A CLUSTER OF ONE NODE
+    if ev_diameter == 0:
+        return 1
+
+    validation_strength = (100 - c_penalty * abs(2 * ev_diameter - ev_w_diameter - 1)) / float(100)
     strength = min(float(sim), validation_strength) if float(sim) > 0 else validation_strength
-    return 0 if strength < 0 else strength
+    strength = 0 if strength < 0 else strength
+
+    return strength
 
 
 def evidence_penalty(investigated_diameter, evidence_diameter, penalty_percentage=10):
@@ -1122,263 +1217,16 @@ def evidence_penalty(investigated_diameter, evidence_diameter, penalty_percentag
     return 0 if penalty < 0 else (1 / float(investigated_diameter)) * penalty
 
 
-
 # ****************************************************
-# ****************************************************
-" STATISTICS"
-# ****************************************************
+"             COMPRESSED VISUALISATION               "
 # ****************************************************
 
 
-def ilns_distribution(serialisation_dir, serialized_cluster_name,
-                      label="ILNs DISTRIBUTION", print_latex=False, xmax=None, activated=False):
-
-    print(serialisation_dir)
-    print(serialized_cluster_name)
-    print(label)
-    print(print_latex)
-    print(xmax)
-    print(activated)
-
-
-    if activated is False:
-        return
-
-    """
-    :param serialisation_dir: THE DIRECTORY OF THE SERIALISED FILE
-    :param serialized_cluster_name: THE NAME OF THE SERIALISED FILE WITHOUT EXTENSION AND WITHOUT NUMBER
-    :param label: THE LABEL OF THE GRAPH FOR LATEX REFERENCE
-    :param print_latex: BOOLEAN VALUE FOR PRINTING THE LATEX HISTOGRAM ONTO THE CONSOLE
-    :param xmax: THE MAXIMUM X AXIS VALUE FOR THE HISTOGRAM
-    :return:
-    """
-
-    print("{:.^100}".format(' LINK DISTRIBUTION '))
-    print("{:.^100}".format(' ********** '))
-
-    label = label.replace(" ", "_")
-    count = 0
-    hist = ""
-    total = 0
-    first, second, stat_up, stat_down = 0, 0, 0, 0
-    ilns = link_cluster_deserialization(serialisation_dir, serialized_cluster_name)
-    distribution = {}
-
-    # COMPUTE THE FREQUENCY
-    for id, cluster in ilns['clusters'].items():
-        size = len(cluster['nodes'])
-        if size not in distribution:
-            distribution[size] = 1
-        else:
-            distribution[size] += 1
-
-    for key in sorted(distribution.keys()):
-
-        # COUNT CLUSTER BELOW 31 AND ABOVE 30
-        if key < 31:
-            first += distribution[key]
-        else:
-            second += distribution[key]
-
-        total += distribution[key]
-
-        # BUILDING THE HISTOGRAM FOR LATEX
-        if count == 0:
-            hist += (F'\n\t\t({key}, {distribution[key]}) ')
-        elif count % 5 == 0:
-            hist += (F'\n\t\t({key}, {distribution[key]}) ')
-        else:
-            hist += (F'\t\t({key}, {distribution[key]}) ')
-
-        count += 1
-
-    accumulated = 0
-    count_20 = 0
-    x_max = 0
-    x_95 = 0
-    y_95 = 0
-    for key in sorted(distribution.keys()):
-        if round(((accumulated / float(total)) * 100 ), 2) < 95:
-            accumulated += distribution[key]
-            x_95 = key
-            y_95 = 3 * distribution[key]
-        else:
-            count_20 += 1
-            if count_20 > 16:
-                break
-        x_max = key
-
-    if xmax is None:
-        xmax = x_max
-
-    hist = F"""
-    \\begin{{figure}}[ht]
-    \pgfplotsset{{width=12cm, height=3.5cm}}
-    \\begin{{tikzpicture}}
-    \\begin{{axis}}[
-      title=Identity-Link-Networks using approximate name similarity,
-      axis lines = left,                xmax={xmax},
-      ybar interval,                    ybar interval=0.8,
-      ylabel=Number of ILNs,            xlabel=ILN Size,
-      ymajorgrids=true,                 xmajorgrids=false,      grid style=dashed,
-      ticklabel style={{font=\\tiny}},  minor y tick num = 3,
-      colormap/greenyellow,
-      % ymax=3000,                      ymin=0, xmin=1,
-      % xtick={{3, 5, 7, 9, 11, 13, 15, 17, 19}},
-      % xmajorgrids=true,
-      % hide axis,
-    ]
-    \\addplot coordinates {{
-        {hist}
-    }}  ;
-    \\addplot [ybar, bar width=6pt, color=red] coordinates {{ ({x_95}.5, {y_95}) }};
-    \end{{axis}}
-    \end{{tikzpicture}}
-    \\vspace{{-7pt}}
-    \caption{{Identity Link Networks Distribution}}
-    \label{{fig_{label}}}
-    \\vspace{{-0.5CM}}
-    \end{{figure}}
-    """
-
-    if print_latex is True:
-        print(hist, end="\n\n")
-
-    stat_up = round((first/ (first + second)) * 100, 2)
-    stat_down = round((second / (first + second)) * 100, 2)
-    print("{:.^100}".format(' DISTRIBUTION RESULTS '))
-    print("\tTHE TOTAL NUMBER OF CLUSTERS        {} ".format(first + second))
-    print("\t95% CLUSTERS IS REACHED AT SIZE     {} ".format(x_95))
-    print("\tNUMBER OF CLUSTERS OF SIZE BELOW 31 {} REPRESENTING {}% OF THE TOTAL".format(first, stat_up))
-    print("\tNUMBER OF CLUSTERS OF SIZE ABOVE 30 {} REPRESENTING {}% OF THE TOTAL".format(second, stat_down))
-    print("{:.^100}".format(''))
-
-    return hist
-
-
-# ****************************************************
-"       VISUALISATION: INVESTIGATED vs EVIDENCE     "
-# ****************************************************
-
-def cluster_vis_input(specs, visualisation_obj=None, resources_obj=None, dataset_obj=None, activated=False):
-    # print_object(specs)
-    """
-    :param specs: CONTAINS ALL INFORMATION FOR GENERATING
-                  THE CLUSTER FOR VISUALISATION PURPOSES.
-    :param activated: BOOLEAN ARGUMENT FOR NOT RUNNING THE FUNCTION UNLESS SPECIFICALLY REQUESTED
-    param visualisation_obj: A DICTIONARY ABOUT LIST OF NODES AND LINKS AND MORE. T
-                             HIS IS THE NEEDED OBJECT FOR VISUALISATION
-    param resources_obj: THIS IS A DICTIONARY THAT MAPS THE URI OF A NODE TO ITS UNIQUE LABEL
-    :return: A DICTIONARY DESCRIBED BELOW
-    """
-
-    """
-    DESCRIPTION OF THE FUNCTION'S PARAMETERS
-    ----------------------------------------
-    specs = {
-
-        "data_store"          : THE DATA STORE. FOR EXAMPLE STARDOG, POSTGRESQL, VIRTUOSO
-        "cluster_id"          : THE ID OF THE CLUSTER TO BE VISUALISED
-        "cluster_data"        : DICTIONARY OF NODES[], LINKS[] AND LINK STRENGTHS{KEY: VALUE}
-        "properties": []
-            # LIST OF DICTIONARIES WITH THE FOLLOWING KEYS
-            #   dataset       : THE URI OF THE DATASET
-            #   entity_type   : THE URI OF THE ENTITY TYPE
-            #   property      : THE URI OF THE PROPERTY
-    }
-
-    DESCRIPTION OF THE PROPERTIES FOR NODE'S LABEL VISUALISATION OBJECT
-    -------------------------------------------------------------------
-    nodes_vis_properties =
-    [
-        {
-            graph               : THE DATASET URI
-            data = LIST OF DICTIONARIES
-                [
-                    entity_type : THE ENTITY TYPE OF INTEREST
-                    properties  : THE PROPERTIES SELECTED BY THE USER FOR THE ABOVE TYPE
-                ]
-        },
-        ...
-    ]
-
-    DESCRIPTION OF THE CLUSTER DATA NEEDED FOR GRAPH VISUALISATION
-    --------------------------------------------------------------
-    cluster_data =
-    {
-        id: THE ID OF THE CLUSTER
-        confidence  (FLOAT)     : THE SMALLEST STRENGTH
-        decision    (FLOAT)     : e_Q VALUE
-        metric      (STRING)    : e_Q message
-        messageConf (STRING)    : A WHATEVER STRING
-
-        "nodes": [] THE NODES IS A LIST OF DICTIONARIES WITH THE FOLLOWING KEYS
-            #   id     (STRING)     : LABEL OF THE RESOURCE
-            #   uri    (STRING)     : THE URI OF THE RESOURCE
-            #   group  (INT)        : INDEX REPRESENTING THE DATASET FROM WHICH THE
-            #                         RESOURCE ORIGINATED FROM. THIS HELPS COLORING THE NODE
-            #   size   (STRING)     : THE SIZE OF THE NODE FOR DIFFERENTIATING
-            #                         INVESTIGATED [10] ILN FROM EVIDENCE [5] ILN
-
-        "links": [] THE LINKS IS A LIST OF DICTIONARIES WITH THE FOLLOWING KEYS:
-            #   source   (STRING)   : LABEL OF THE RESOURCE. IT IS THE SAME AS THE KEY "id" IN THE NODE
-            #   target   (STRING)   : LABEL OF THE RESOURCE. IT IS THE SAME AS THE KEY "id" IN THE NODE
-            #   strength (STRING)   : THE SIMILARITY SCORE OR THE RECONCILIATION SCORE OR THE DERIVED SCORE
-            #   distance (INT)      : THE LENGTH OF THE LINK.
-            #                         A STANDARD LINK HAS A DEFAULT DISTANCE OF [150] AND THE ASSOCIATION IS [250]
-            #   value    (INT)      : THICKNESS OF LINK. THE DEFAULT VALUE IS [4]
-            #   color    (STRING)   : THE COLOR OF THE LINK
-            #                 BLACK         -> EXACT MATCH  => (STRENGTH = 1)
-            #                 RED           -> APPROX MATCH => (STRENGTH = [0, 1[)
-            #                 PURPLE        -> ASSOCIATION
-            #   dash     (STRING)   : THE PATTERN OF THE LINK LINE
-            #                 APPROX        -> CONCATENATE "3," AND STRING OF "20 * (1 - LINK STRENGTH)"
-            #                 ASSOCIATION   -> A STRING OF "20,10,5,5,5,10"
-    }
-    """
-
-    if activated is False:
-        return
-
-    start = time.time()
-    tab = "" if visualisation_obj is None else "\t"
-    fill = 100 if visualisation_obj is None else 96
-
-    print("\n{}{:.^{}}".format(tab, F"", fill))
-    print("{}{:.^{}}".format(tab,
-        F" VISUALISING CLUSTER {specs['cluster_id']} OF SIZE {len(specs['cluster_data']['nodes'])} ", fill))
-    print("{}{:.^{}}".format(tab, F" OPTION-1: INVESTIGATED vs EVIDENCE ", fill))
-    print("{}{:.^{}}".format(tab, F"", fill))
-
-    dataset_index = {} if dataset_obj is None else dataset_obj
-
-    # THE DICTIONARY TO RETURN FOR VISUALISATION
-    vis_data = {
-        "id": specs["cluster_id"],
-        "confidence": 1,
-        "decision": 1,
-        "metric": "e_Q MESSAGE",
-        "messageConf": "",
-        "nodes": [],
-        "links": []
-    } if visualisation_obj is None else visualisation_obj
-
-    # BOOK KEEPING OF THE NODES IN THE CLUSTER
-    resources = {} if resources_obj is None else resources_obj
-
-    # query = None
-    data_store = specs[St.data_store]
-
-    # CHANGING THE PROPERTIES INPUT DATA STRUCTURE WHICH IS A LIST
-    # TO A DICTIONARY DATA STRUCTURE
-    nodes_vis_properties = []
-
-    # PRINTING THE SPECIFICATIONS (INPUT)
-    print_object(specs, comment="USER SPECIFICATIONS", overview=False, activated=False)
-
+def convert_properties(properties):
     # CONVERT THE PROPERTY LIST INTO A DICTIONARY SUCH THAT A QUERY
     # CAN BE AUTOMATED FOR FETCHING NODE LABELS FOR VISUALISATION
-    for property_data in specs[St.properties]:
+    nodes_vis_properties = []
+    for property_data in properties:
 
         ds_exists = False
         dataset = property_data[St.dataset]
@@ -1394,7 +1242,7 @@ def cluster_vis_input(specs, visualisation_obj=None, resources_obj=None, dataset
                 data = ds[St.data]
                 for type_prop in data:
 
-                    # THE DATATYPE EXISTS ALREADY FOR THIS DATASET
+                    # THE DATA-TYPE EXISTS ALREADY FOR THIS DATASET
                     if e_type == type_prop[St.entity_type]:
 
                         # APPEND THE PROPERTY ONLY IF IT DOES NOT ALREADY EXIST
@@ -1420,723 +1268,14 @@ def cluster_vis_input(specs, visualisation_obj=None, resources_obj=None, dataset
                         St.properties: [prop]
                     }
                 ]}]
+    return nodes_vis_properties
 
-    # PRINTING SELECTED PROPERTIES FOR EACH GRAPHS
-    print_object(nodes_vis_properties,
-                 comment="SELECTED PROPERTIES PER GRAPH AND ENTITY TYPE", overview=False, activated=False)
 
-    # CONVERTING THE NODES TO A SET FOR GENERATING NODE DE-DUPLICATION
-    overall_nodes = set(specs["cluster_data"]["nodes"])
-
-    # IF AN ASSOCIATION FILE IS PROVIDED THEN READ THE FILE TO EXTRACT THE PAIRED NODES
-    associations = None
-
-    # THE PAIRED NODES WILL ALLOW TO FETCH THE CLUSTER THAT EXTEND THE CURRENT CLUSTER
-    paired_nodes = set()
-
-    # ***************************************************************
-    # --> 1 and 2. THIS FIRST PART DEALS WITH ASSOCIATIONS. FROM THE
-    # PROVIDED ASSOCIATION CSV FILE, THE CODE EXTRACTS THE NODES OF
-    # THE CURRENT CLUSTER THAT EXTEND THE CLUSTER WITH NEW CLUSTERS
-    # ***************************************************************
-    if 'associations' in specs and specs['associations']:
-
-        # ***************************************************************
-        print(F"\n{tab}--> 1. FETCHING THE ASSOCIATED NODES ")
-        # ***************************************************************
-
-        with open(join(CSV_ASSOCIATIONS_DIR, specs['associations']), 'r') as file:
-
-            # LOOK FOR THE NODES IN ASSOCIATION
-            associations = find_associations(specs['cluster_data']['nodes'], file.read())
-
-            # ADD THE ASSOCIATION NODES TO THE OVERALL NODES TO PLOT
-            for link in associations:
-
-                src = to_nt_format(link[0])
-                trg = to_nt_format(link[1])
-
-                if src not in overall_nodes:
-                    paired_nodes.add(src)
-
-                if trg not in overall_nodes:
-                    paired_nodes.add(trg)
-
-            # print_object(paired_nodes)
-
-        # ***************************************************************
-        print(F"\n{tab}--> 2. FETCHING THE ASSOCIATED CLUSTERS ")
-        # ***************************************************************
-
-        # COLLECTS THE CLUSTER ID OF THE CLUSTERS THAT EXTEND THE CURRENT CLUSTER
-        extended = set()
-
-        # THE MAPPING OBJECT THAT DOCUMENT THE MAPPING BETWEEN NODE AND CLUSTER THEY BELONG TO
-        root = pickle_deserializer(serialised_folder=CLUSTER_SERIALISATION_DIR, name=F"{specs['serialised']}-2.txt")
-
-        # THE DICTIONARY OF THE CLUSTERS
-        clusters = pickle_deserializer(serialised_folder=CLUSTER_SERIALISATION_DIR, name=F"{specs['serialised']}-1.txt")
-
-        for paired in paired_nodes:
-            extended.add(root[to_nt_format(paired)])
-        print(F"\tTHE CLUSTERS EXTENDS TO {len(extended)} OTHER CLUSTERS")
-
-        # RUN A RECURSIVE CODE BASED ON THE NEW CLUSTERS (EXTENDED CLUSTERS) FOUND
-        for evidence_id in extended:
-            ext_cluster = clusters[evidence_id]
-            ext_specifications = {
-
-                "data_store": specs['data_store'],
-                "cluster_id": evidence_id,
-                # "sub_clusters": 'Serialized_Cluster_Reconciled_PH1f99c8924c573d6',
-                # "associations": 'GA-related-paper.csv',
-                # "serialised": 'Serialized_Cluster_PH1f99c8924c573d6_ga',
-                "cluster_data": {
-
-                    "nodes": ext_cluster['nodes'] if ext_cluster else [],
-
-                    'strengths': ext_cluster['strengths'] if ext_cluster else {},
-
-                    "links": ext_cluster["links"] if ext_cluster else []
-                },
-                "properties": specs['properties']
-            }
-
-            # RECURSIVE CALL
-            cluster_vis_input(
-                ext_specifications, visualisation_obj=vis_data,
-                resources_obj=resources, dataset_obj=dataset_index, activated=activated)
-
-
-    # ***************************************************************
-    print(F"\n{tab}--> 3. FETCHING THE QUERY RESULT DEPENDING ON THE QUERY TYPE")
-    # ***************************************************************
-    # NOW, CONVERTS THE SET OF NODE TO A LIST FOR FETCHING THE LABELS
-    specs["cluster_data"]["nodes"] = list(overall_nodes)
-
-    try:
-        query = Middleware.node_labels_switcher[data_store](
-            resources=specs["cluster_data"]["nodes"], targets=nodes_vis_properties)
-        # print(query)
-
-    except KeyError as err:
-        query = None
-        print(F"\tKEY ERROR: {err}")
-
-    # ***************************************************************
-    print(F"\n{tab}--> 4. RUNNING THE QUERY")
-    # ***************************************************************
-    # query = "select distinct ?subject " \
-    #         "{ GRAPH <http://risis.eu/dataset/eter_2014> {?subject a ?o} } limit 3"
-    result = None
-    if data_store in Middleware.run_query_matrix_switcher:
-        result = Middleware.run_query_matrix_switcher[data_store](query)
-    # Stardog.display_matrix(result, spacing=130, is_activated=True)
-    table = result[St.result] if isinstance(result, dict) else result
-
-    # ***************************************************************
-    print(F"\n{tab}--> 5. BUILDING VISUALISATION OBJECT FOR UI")
-    # ***************************************************************
-
-    # NO NEED TO CONTINUE AS NO RESULT WAS FETCHED FROM THE DB SEVER
-    if table is not None:
-
-        # ITERATING THROUGH THE RETURN TABLE FROM THE DB SERVER
-        # --> 1. CRATING THE NODE FOR THE VISUALISATION
-        for i in range(1, len(table)):
-
-            # CONVERT THE DATASET NAME INTO A DIGIT FOR SETTING A NODE'S COLOR
-            i_dataset = table[i][1]
-            label = table[i][3]
-            uri = table[i][0]
-            formated_uri = to_nt_format(uri)
-            if i_dataset not in dataset_index:
-                dataset_index[i_dataset] = hash_number(i_dataset)
-
-            # DOCUMENTING THE RESOURCE LABELS.
-            # THIS MAKES SURE NODE WITH ALTERNATIVE NAME DO NOT CAME MORE THAN ONCE
-            if formated_uri not in resources:
-
-                # REFORMATTING THE NODE'S LABEL FOR GENERATING A UNIQUE IDEA
-                db_label = get_uri_local_name_plus(i_dataset)
-
-                underscore = db_label.split('__')
-                db_label = underscore[1] if len(underscore) > 1 else db_label
-                label = f'-- {label}'
-
-                resources[formated_uri] = F"{label} ({db_label} {get_uri_local_name_plus(uri)})"
-
-                # CREATE THE NODE OBJECT FOR VISUALISATION
-                node_dict = {
-                    'id': resources[formated_uri],
-                    "uri": uri,
-                    "group": dataset_index[i_dataset],
-                    "size": "8" if visualisation_obj is None else "5"}
-
-                vis_data["nodes"].append(node_dict)
-
-        # --> 2. CREATE THE LINKS: THE NODE NETWORK OBJECT
-        cluster_strengths = specs["cluster_data"]["strengths"]
-        for source, target in specs["cluster_data"]["links"]:
-            # print(source, target )
-            # EXTRACTING THE LINK'S STRENGTH
-            current_link = (source, target) if source < target else (target, source)
-            key_1 = "key_{}".format(str(Ut.hasher(current_link)).replace("-", "N"))
-
-            # GETTING THE MAXIMUM STRENGTH IS MORE STRENGTH IS COMPUTED FOR THE LINK
-            strength = float(max(cluster_strengths[key_1]))
-            association = False
-            link_dict = {
-                "source": resources[to_nt_format(source)],
-                "target": resources[to_nt_format(target)],
-                "strength": F"{strength}",
-                "distance": 250 if association is True else 150, "value": 4,
-                "color": "purple" if association is True else("black" if strength == 1 else "red"),
-                "dash": "20,10,5,5,5,10" if association is True else F"3,{20 * (1 - strength)}"
-            }
-            vis_data["links"].append(link_dict)
-            # print(source, target)
-
-        # ADDING THE ASSOCIATION LINKS
-        if associations is not None:
-            for link in associations:
-                link_dict = {
-                    "source": resources[to_nt_format(link[0])],
-                    "target": resources[to_nt_format(link[1])],
-                    "distance": 250, "value": 4,
-                    "color": "purple",
-                    "dash": "20,10,5,5,5,10"
-                }
-                vis_data["links"].append(link_dict)
-
-        # --> 3. RETURNING THE VISUALISATION OBJECT FOR RENDERING
-        # print_object(vis_data)
-
-        if visualisation_obj is None:
-            Ut.completed(datetime.timedelta(seconds=time.time() -start))
-        return vis_data
-
-    # RETURN FEEDBACK
-    else:
-
-        print('\n\tTHE QUERY DID NOT YEILD ANY RESULT...'
-              '\n\tIF YOU ARE EXPECTING RESULTS, PLEASE CHECK THE AUTOMATED QUERY FOR FURTHER DEBUGGING.')
-
-        if len(specs["cluster_data"]["nodes"]) == 0:
-            print('\tA QUICK CHECK SHOWS THAT THE CLUSTER HAS NO RESOURCE (NO NODES).')
-
-            # IF THE INVESTIGATED CLUSTER EXTENDS, COLLECT ALL ILNS IT EXTENDS TO
-            # FOR EACH EXTENDED CLUSTER, ADD THE NODES
-            # FOR EACH EXTENDED CLUSTER, ADD THE LINKS
-            # ADD THE ASSOCIATION
-
-            # LIST OF CLUSTERS THAT EXTEND
-
-            # print_object(root_reconciled)
-            # print(type(root_reconciled))
-
-
-# ****************************************************
-"    VISUALISATION: INVESTIGATED vs SUB-CLUSTERS     "
-# ****************************************************
-
-def cluster_vis_input_2(specs, visualisation_obj=None, activated=False):
-
-    """
-    :param specs: CONTAINS ALL INFORMATION FOR GENERATING
-                  THE CLUSTER FOR VISUALISATION PURPOSES.
-    param visualisation_obj: A DICTIONARY ABOUT LIST OF NODES AND LINKS AND MORE. T
-                                 HIS IS THE NEEDED OBJECT FOR VISUALISATION
-    :param activated: BOOLEAN ARGUMENT FOR NOT RUNNING THE FUNCTION UNLESS SPECIFICALLY REQUESTED
-    :return: A DICTIONARY DESCRIBED BELOW
-    """
-
-    """
-    DESCRIPTION OF THE FUNCTION'S PARAMETERS
-    ----------------------------------------
-    specs = {
-
-        "data_store"          : THE DATA STORE. FOR EXAMPLE STARDOG, POSTGRESQL, VIRTUOSO
-        "cluster_id"          : THE ID OF THE CLUSTER TO BE VISUALISED
-        "cluster_data"        : DICTIONARY OF NODES[], LINKS[] AND LINK STRENGTHS{KEY: VALUE}
-        "properties": []
-            # LIST OF DICTIONARIES WITH THE FOLLOWING KEYS
-            #   dataset       : THE URI OF THE DATASET
-            #   entity_type   : THE URI OF THE ENTITY TYPE
-            #   property      : THE URI OF THE PROPERTY
-    }
-
-    DESCRIPTION OF THE PROPERTIES FOR NODE'S LABEL VISUALISATION OBJECT
-    -------------------------------------------------------------------
-    nodes_vis_properties =
-    [
-        {
-            graph               : THE DATASET URI
-            data = LIST OF DICTIONARIES
-                [
-                    entity_type : THE ENTITY TYPE OF INTEREST
-                    properties  : THE PROPERTIES SELECTED BY THE USER FOR THE ABOVE TYPE
-                ]
-        },
-        ...
-    ]
-
-    DESCRIPTION OF THE CLUSTER DATA NEEDED FOR GRAPH VISUALISATION
-    --------------------------------------------------------------
-    cluster_data =
-    {
-        id: THE ID OF THE CLUSTER
-        confidence  (FLOAT)     : THE SMALLEST STRENGTH
-        decision    (FLOAT)     : e_Q VALUE
-        metric      (STRING)    : e_Q message
-        messageConf (STRING)    : A WHATEVER STRING
-
-        "nodes": [] THE NODES IS A LIST OF DICTIONARIES WITH THE FOLLOWING KEYS
-            #   id     (STRING)     : LABEL OF THE RESOURCE
-            #   uri    (STRING)     : THE URI OF THE RESOURCE
-            #   group  (INT)        : INDEX REPRESENTING THE DATASET FROM WHICH THE
-            #                         RESOURCE ORIGINATED FROM. THIS HELPS COLORING THE NODE
-            #   size   (STRING)     : THE SIZE OF THE NODE FOR DIFFERENTIATING
-            #                         INVESTIGATED [10] ILN FROM EVIDENCE [5] ILN
-
-        "links": [] THE LINKS IS A LIST OF DICTIONARIES WITH THE FOLLOWING KEYS:
-            #   source   (STRING)   : LABEL OF THE RESOURCE. IT IS THE SAME AS THE KEY "id" IN THE NODE
-            #   target   (STRING)   : LABEL OF THE RESOURCE. IT IS THE SAME AS THE KEY "id" IN THE NODE
-            #   strength (STRING)   : THE SIMILARITY SCORE OR THE RECONCILIATION SCORE OR THE DERIVED SCORE
-            #   distance (INT)      : THE LENGTH OF THE LINK.
-            #                         A STANDARD LINK HAS A DEFAULT DISTANCE OF [150] AND THE ASSOCIATION IS [250]
-            #   value    (INT)      : THICKNESS OF LINK. THE DEFAULT VALUE IS [4]
-            #   color    (STRING)   : THE COLOR OF THE LINK
-            #                 BLACK         -> EXACT MATCH  => (STRENGTH = 1)
-            #                 RED           -> APPROX MATCH => (STRENGTH = [0, 1[)
-            #                 PURPLE        -> ASSOCIATION
-            #   dash     (STRING)   : THE PATTERN OF THE LINK LINE
-            #                 APPROX        -> CONCATENATE "3," AND STRING OF "20 * (1 - LINK STRENGTH)"
-            #                 ASSOCIATION   -> A STRING OF "20,10,5,5,5,10"
-    }
-    """
-
-    if activated is False:
-        return
-
-    start = time.time()
-    tab = "" if visualisation_obj is None else "\t"
-    fill = 100 if visualisation_obj is None else 96
-    print("\n{}{:.^{}}".format(tab, F"", fill))
-    print("{}{:.^{}}".format(tab,
-        F" VISUALISING CLUSTER {specs['cluster_id']} OF SIZE {len(specs['cluster_data']['nodes'])} ", fill))
-    print("{}{:.^{}}".format(tab, F" OPTION-2: INVESTIGATED vs SUB-CLUSTERS ", fill))
-    print("{}{:.^{}}".format(tab, F"", fill))
-
-    # query = None
-    data_store = specs[St.data_store]
-
-    # CHANGING THE PROPERTIES INPUT DATA STRUCTURE WHICH IS A LIST
-    # TO A DICTIONARY DATA STRUCTURE
-    nodes_vis_properties = []
-
-    # PRINTING THE SPECIFICATIONS (INPUT)
-    print_object(specs, comment="USER SPECIFICATIONS", overview=False, activated=False)
-
-    # CONVERT THE PROPERTY LIST INTO A DICTIONARY SUCH THAT A QUERY
-    # CAN BE AUTOMATED FOR FETCHING NODE LABELS FOR VISUALISATION
-    for property_data in specs[St.properties]:
-
-        ds_exists = False
-        dataset = property_data[St.dataset]
-        e_type = property_data[St.entity_type]
-        prop = property_data[St.property]
-
-        for ds in nodes_vis_properties:
-
-            # A DICTIONARY WITH THE SPECIFIED DATASET EXISTS
-            if dataset == ds[St.graph]:
-                ds_exists = True
-                # CHECKING WHETHER THE ENTITY TYPE HAS ALREADY BEEN DOCUMENTED
-                data = ds[St.data]
-                for type_prop in data:
-
-                    # THE DATATYPE EXISTS ALREADY FOR THIS DATASET
-                    if e_type == type_prop[St.entity_type]:
-
-                        # APPEND THE PROPERTY ONLY IF IT DOES NOT ALREADY EXIST
-                        if prop not in type_prop[St.properties]:
-                            type_prop[St.properties] += [prop]
-
-                    # THE DATA TYPE DOES NOT EXIST
-                    else:
-                        data += [
-                            {
-                                St.entity_type: e_type,
-                                St.properties: [prop]
-                            }
-                        ]
-
-        #   THE DATASET IS NOT YET IN THE DICTIONARY
-        if ds_exists is False:
-            nodes_vis_properties += [{
-                St.graph: dataset,
-                St.data: [
-                    {
-                        St.entity_type: e_type,
-                        St.properties: [prop]
-                    }
-                ]}]
-
-    # PRINTING SELECTED PROPERTIES FOR EACH GRAPHS
-    print_object(nodes_vis_properties,
-                 comment="SELECTED PROPERTIES PER GRAPH AND ENTITY TYPE", overview=False, activated=False)
-
-    # ***************************************************************
-    print(F"\n{tab}--> 1. FETCHING THE QUERY RESULT DEPENDING ON THE QUERY TYPE")
-    # ***************************************************************
-
-    try:
-        query = Middleware.node_labels_switcher[data_store](
-            resources=specs["cluster_data"]["nodes"], targets=nodes_vis_properties)
-        # print(query)
-    except KeyError as err:
-        query = None
-        print(F"\tKEY ERROR: {err}")
-
-    # ***************************************************************
-    print(F"\n{tab}--> 2. RUNNING THE QUERY")
-    # ***************************************************************
-    # query = "select distinct ?subject " \
-    #         "{ GRAPH <http://risis.eu/dataset/eter_2014> {?subject a ?o} } limit 3"
-    result = None
-    if data_store in Middleware.run_query_matrix_switcher:
-        result = Middleware.run_query_matrix_switcher[data_store](query)
-    # Stardog.display_matrix(result, spacing=130, is_activated=True)
-    table = result[St.result] if isinstance(result, dict) else result
-
-    # ***************************************************************
-    print(F"\n{tab}--> 3. BUILDING VISUALISATION OBJECT FOR UI")
-    # ***************************************************************
-
-    dataset = {}
-    # BOOK KEEPING OF THE NODES IN THE CLUSTER
-    resources = {}
-    # THE RECONCILED CLUSTERS
-    reconciled = None
-    # FOE FETCHING THE IDs OF THE SUB-CLUSTERS
-    sub_clusters_id = set()
-    # THE DICTIONARY TO RETURN FOR VISUALISATION
-    vis_data = {
-        "id": specs["cluster_id"],
-        "confidence": 1,
-        "decision": 1,
-        "metric": "e_Q MESSAGE",
-        "messageConf": "",
-        "nodes": [],
-        "links": []
-    } if visualisation_obj is None else visualisation_obj
-    # FRO CHECKING WHETHER THE MAIN CLUSTER HAS BEEN RESTRUCTURED BASED ON ASSOCIATIONS
-    is_restructured = True if 'sub_clusters' in specs else False
-
-    # DE-SERIALISING THE RECONCILED CLUSTERS
-    if is_restructured is True:
-        reconciled = pickle_deserializer(CLUSTER_SERIALISATION_DIR, F"{specs['sub_clusters']}-1.txt")
-        root_reconciled = pickle_deserializer(CLUSTER_SERIALISATION_DIR, F"{specs['sub_clusters']}-2.txt")
-
-    # NO NEED TO CONTINUE AS NO RESULT WAS FETCHED FROM THE DB SEVER
-    sub_vis = None
-    if table is not None:
-
-        # ITERATING THROUGH THE RETURN TABLE FROM THE DB SERVER
-        # --> 1. CRATING THE NODE FOR THE VISUALISATION
-        for i in range(1, len(table)):
-
-            # CONVERT THE DATASET NAME INTO A DIGIT FOR SETTING A NODE'S COLOR
-            i_dataset = table[i][1]
-            label = table[i][3]
-            uri = table[i][0]
-            formatted_uri = to_nt_format(uri)
-            if i_dataset not in dataset:
-                dataset[i_dataset] = hash_number(i_dataset)
-
-            # DOCUMENTING THE RESOURCE LABELS.
-            # THIS MAKES SURE NODE WITH ALTERNATIVE NAME DO NOT CAME MORE THAN ONCE
-            if formatted_uri not in resources:
-
-                if is_restructured is True and formatted_uri in root_reconciled:
-                    sub_clusters_id.add(root_reconciled[formatted_uri])
-
-                # REFORMATTING THE NODE'S LABEL FOR GENERATING A UNIQUE IDEA
-                db_label = get_uri_local_name_plus(i_dataset)
-
-                underscore = db_label.split('__')
-                db_label = underscore[1] if len(underscore) > 1 else db_label
-                label = f'-- {label}'
-
-                resources[formatted_uri] = F"{label} ({db_label} {get_uri_local_name_plus(uri)})" \
-                    if visualisation_obj is None else F"{label} ({db_label} {get_uri_local_name_plus(uri)})"
-
-                # CREATE THE NODE OBJECT FOR VISUALISATION
-                node_dict = {
-                    'id': resources[formatted_uri],
-                    "uri": uri,
-                    "group": dataset[i_dataset],
-                    "size": "8" if visualisation_obj is not None else "5" }
-
-                vis_data["nodes"].append(node_dict)
-
-        # --> 2. CREATE THE LINKS: THE NODE NETWORK OBJECT
-        cluster_strengths = specs["cluster_data"]["strengths"]
-        for source, target in specs["cluster_data"]["links"]:
-            # print(source, target )
-            # EXTRACTING THE LINK'S STRENGTH
-            current_link = (source, target) if source < target else (target, source)
-            key_1 = "key_{}".format(str(Ut.hasher(current_link)).replace("-", "N"))
-
-            # GETTING THE MAXIMUM STRENGTH IS MORE STRENGTH IS COMPUTED FOR THE LINK
-            strength = float(max(cluster_strengths[key_1]))
-            association = False
-            link_dict = {
-                "source": resources[to_nt_format(source)],
-                "target": resources[to_nt_format(target)],
-                "strength": F"{strength}",
-                "distance": 150, "value": 4,
-                "color": "black" if strength == 1 else "red",
-                "dash": F"3,{20 * (1 - strength)}"
-            }
-            vis_data["links"].append(link_dict)
-
-            # print(source, target)
-
-        # IF THERE IS A SUBSET, RUN A RECURSIVE CALL BY CREATING
-        # A NEW SPECIFICATION AND PROVIDE THE VISUALISATION OBJECT AS WELL
-        sub_vis = {
-        "id": specs["cluster_id"],
-        "confidence": 1,
-        "decision": 1,
-        "metric": "e_Q MESSAGE",
-        "messageConf": "",
-        "nodes": [],
-        "links": []
-        }
-
-
-        if len(sub_clusters_id) > 0:
-            # ***************************************************************
-            print(F"\n{tab}--> 4. THE MAIN CLUSTER HAS BEEN RESTRUCTURED")
-            print("\t{:*^41}".format(F""))
-            print("\t{:*^41}".format(F" GENERATING {len(sub_clusters_id)} SUB-CLUSTERS "))
-            # ***************************************************************
-
-            for id in sub_clusters_id:
-                temp = reconciled[id]
-                specifications = {
-
-                    "data_store": specs['data_store'],
-                    "cluster_id": id,
-
-                    # "sub_clusters": 'Serialized_Cluster_Reconciled_PH1f99c8924c573d6',
-                    "associations": specs['associations'],
-                    "serialised": specs['serialised'],
-
-
-                    "cluster_data": {
-
-                        "nodes": temp['nodes'] if temp else [],
-
-                        'strengths': temp['strengths'] if temp else {},
-
-                        "links": temp["links"] if temp else []
-                    },
-
-                    "properties": specs['properties']
-                }
-
-                cluster_vis_input_2(specifications, visualisation_obj=sub_vis, activated=activated)
-                # cluster_vis_input_2(specifications, visualisation_obj=vis_data, activated=activated)
-
-                add_vis_evidence(specifications, sub_vis, specs['sub_clusters'],
-                                 resources_obj=resources, dataset_obj=dataset, activated=activated)
-
-                # print_object(sub_vis)
-
-
-        # --> 3. RETURNING THE VISUALISATION OBJECT FOR RENDERING
-        # print_object(vis_data)
-        if visualisation_obj is None:
-            Ut.completed(datetime.timedelta(seconds=time.time() - start))
-        return vis_data, sub_vis
-        # return vis_data
-
-    # RETURN FEEDBACK
-    else:
-
-        print('\n\tTHE QUERY DID NOT YEILD ANY RESULT...'
-              '\n\tIF YOU ARE EXPECTING RESULTS, PLEASE CHECK THE AUTOMATED QUERY FOR FURTHER DEBUGGING.')
-
-        if len(specs["cluster_data"]["nodes"]) == 0:
-            print('\tA QUICK CHECK SHOWS THAT THE CLUSTER HAS NO RESOURCE (NO NODES).')
-
-    # IF THE INVESTIGATED CLUSTER EXTENDS, COLLECT ALL ILNS IT EXTENDS TO
-    # FOR EACH EXTENDED CLUSTER, ADD THE NODES
-    # FOR EACH EXTENDED CLUSTER, ADD THE LINKS
-    # ADD THE ASSOCIATION
-
-    # LIST OF CLUSTERS THAT EXTEND
-
-    # print_object(root_reconciled)
-    # print(type(root_reconciled))
-
-
-def find_associations(nodes, text):
-
-    associated = []
-
-    for i in range(0, len(nodes)):
-        nodes[i] = undo_nt_format(nodes[i])
-
-    # THE PATTERN FOR A RESOURCE
-    example = "<*({0})>*[,]+(.*)|(.*)[,]+<*({0})>*"
-    pattern = example.format(nodes[0])
-    for i in range(1, len(nodes)):
-        pattern += F"|{example.format(nodes[i])}"
-
-    # EXTRACT THE LINKS
-    found = re.findall(pattern, text)
-
-    # REFINE THE LINK FOR ONLY TUPLES
-    for group in found:
-        temp = ()
-        for item in group:
-            if len(item) > 0:
-                temp += (item,)
-        if len(temp) > 0:
-            associated.append(temp)
-
-    # print_object(associated)
-
-    return associated
-
-
-def add_vis_evidence(specs, vis_obj, serialised, resources_obj=None, dataset_obj=None, activated=False):
-
-    tab = "" if vis_obj is None else "\t"
-
-    # CONVERTING THE NODES TO A SET FOR GENERATING NODE DE-DUPLICATION
-    overall_nodes = set(specs["cluster_data"]["nodes"])
-
-    # IF AN ASSOCIATION FILE IS PROVIDED THEN READ THE FILE TO EXTRACT THE PAIRED NODES
-    associations = None
-
-    # THE PAIRED NODES WILL ALLOW TO FETCH THE CLUSTER THAT EXTEND THE CURRENT CLUSTER
-    paired_nodes = set()
-
-    # GET THE PAIRED NODE ON THE OTHER SIDE OF THE ASSOCIATION
-    # ***************************************************************
-    # --> 1 and 2. THIS FIRST PART DEALS WITH ASSOCIATIONS. FROM THE
-    # PROVIDED ASSOCIATION CSV FILE, THE CODE EXTRACTS THE NODES OF
-    # THE CURRENT CLUSTER THAT EXTEND THE CLUSTER WITH NEW CLUSTERS
-    # ***************************************************************
-    if 'associations' in specs:
-
-        # ***************************************************************
-        print(F"\n{tab}--> 1. FETCHING THE ASSOCIATED NODES ")
-        # ***************************************************************
-
-        with open(join(CSV_ASSOCIATIONS_DIR, specs['associations']), 'r') as file:
-
-            # LOOK FOR THE NODES IN ASSOCIATION
-            associations = find_associations(specs['cluster_data']['nodes'], file.read())
-
-            # ADD THE ASSOCIATION NODES TO THE OVERALL NODES TO PLOT
-            for link in associations:
-
-                src = to_nt_format(link[0])
-                trg = to_nt_format(link[1])
-
-                if src not in overall_nodes:
-                    paired_nodes.add(src)
-
-                if trg not in overall_nodes:
-                    paired_nodes.add(trg)
-
-                    # print_object(paired_nodes)
-
-        # ***************************************************************
-        print(F"\n{tab}--> 2. FETCHING THE ASSOCIATED CLUSTERS ")
-        # ***************************************************************
-
-        # COLLECTS THE CLUSTER ID OF THE CLUSTERS THAT EXTEND THE CURRENT CLUSTER
-        extended = set()
-
-        # THE MAPPING OBJECT THAT DOCUMENT THE MAPPING BETWEEN NODE AND CLUSTER THEY BELONG TO
-        root = pickle_deserializer(serialised_folder=CLUSTER_SERIALISATION_DIR, name=F"{serialised}-2.txt")
-
-        # THE DICTIONARY OF THE CLUSTERS
-        clusters = pickle_deserializer(serialised_folder=CLUSTER_SERIALISATION_DIR, name=F"{serialised}-1.txt")
-
-        for paired in paired_nodes:
-            formatted = to_nt_format(paired)
-            if formatted in root:
-                extended.add(root[formatted])
-
-        # RUN A RECURSIVE CODE BASED ON THE NEW CLUSTERS (EXTENDED CLUSTERS) FOUND
-        for evidence_id in extended:
-            ext_cluster = clusters[evidence_id]
-            ext_specifications = {
-
-                "data_store": specs['data_store'],
-                "cluster_id": evidence_id,
-                # "sub_clusters": 'Serialized_Cluster_Reconciled_PH1f99c8924c573d6',
-                # "associations": 'GA-related-paper.csv',
-                # "serialised": 'Serialized_Cluster_PH1f99c8924c573d6_ga',
-                "cluster_data": {
-
-                    "nodes": ext_cluster['nodes'] if ext_cluster else [],
-
-                    'strengths': ext_cluster['strengths'] if ext_cluster else {},
-
-                    "links": ext_cluster["links"] if ext_cluster else []
-                },
-                "properties": specs['properties']
-            }
-
-            # RECURSIVE CALL
-            cluster_vis_input(
-                ext_specifications, visualisation_obj=vis_obj,
-                resources_obj=resources_obj, dataset_obj=dataset_obj, activated=activated)
-
-    # ADDING THE ASSOCIATION LINKS
-    if associations is not None:
-        for link in associations:
-            formatted_src = to_nt_format(link[0])
-            formatted_trg = to_nt_format(link[1])
-            if formatted_src in resources_obj and formatted_src in resources_obj:
-                link_dict = {
-                    "source": resources_obj[formatted_src],
-                    "target": resources_obj[formatted_trg],
-                    "distance": 250, "value": 4,
-                    "color": "purple",
-                    "dash": "20,10,5,5,5,10"
-                }
-                vis_obj["links"].append(link_dict)
-
-# lavale
-
-
-
-
-
-
-
-
-
-
-
-
-import rdflib
-from rdflib import Graph
 def convert_rdf(source, save_in, convert_to="nt"):
 
     data = Graph()
     start = time.time()
-    data.parse(source, format=rdflib.util.guess_format(source))
+    data.parse(source, format=util.guess_format(source))
     elapse = datetime.timedelta(seconds=time.time() - start)
     print(F"\t>>> {len(data)} links clustered in {elapse}")
 
@@ -2147,7 +1286,6 @@ def convert_rdf(source, save_in, convert_to="nt"):
 
     # for stmt in data:
     #     print(stmt)
-
 
     # convert_rdf(source="C:\Productivity\\3-MatchingTools\Data\grid-2019-02-17\grid.ttl",
     #     save_in= "C:\Productivity\\3-MatchingTools\Data\grid-2019-02-17\grid.nt")
@@ -2162,116 +1300,3 @@ def file_sample(source, save_as, sample_size):
             line += 1
             if line == sample_size:
                 break
-
-
-source_file = "C:\Productivity\\3-MatchingTools\Data\grid-2019-02-17\grid.nt"
-save_file_as = "C:\Productivity\\3-MatchingTools\Data\grid-2019-02-17\grid-02.nt"
-# file_sample(source=source_file, save_as=save_file_as, sample_size=500000)
-
-
-#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-"RETESTING GOLDEN AGENT 50 YEARS RESTRICTION"
-#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-
-
-# GOLDEN_DIR = "C:\Productivity\ALenticularLens\Golden_50_Years"
-# GOLDEN_LINKSET_CSV = "GA-linkset-paper.csv"
-#
-# # 1. GENERATE THE ILN CLUSTERS
-# SCA = simple_csv_link_clustering(
-#     csv_path=join(GOLDEN_DIR, GOLDEN_LINKSET_CSV),
-#     graph_name="GOLDEN AGENT 50 YEARS RESTRICTION", save_in=GOLDEN_DIR, activated=False)
-#
-# # 2. EXTEND THE CLUSTERS
-# extend_cluster(
-#     GOLDEN_DIR, serialized_cluster_name="Serialized_Cluster",
-#     csv_association_file=join(GOLDEN_DIR, "GA-related-paper.csv"),
-#     save_in=GOLDEN_DIR,  condition_30=True, activated=False)
-#
-# # 3. OUTPUTS THE DISTRIBUTION OF THE CLUSTERS FOR LATEX VISUALISATION
-# distributions = ilns_distribution(
-#     GOLDEN_DIR, serialized_cluster_name="Serialized_Cluster",
-#     label="golden agent data II",  print_latex=True, xmax=None, activated=False)
-
-# import sys
-# def current_line(n=1):
-#     CURSOR_UP_ONE = '\x1b[1A'
-#     ERASE_LINE = '\x1b[2K'
-#     for _ in range(n):
-#         sys.stdout.write(CURSOR_UP_ONE)
-#         sys.stdout.write(ERASE_LINE)
-#
-#
-# for i in range(1000000):
-#     # print(i)
-#     sys.stdout.write('\r'+str(i)+",")
-
-
-# print(max(map(float, [1, 2, 3, 4])))
-
-
-
-# # PLOTS
-# import matplotlib.pyplot as plt
-#
-# # An "interface" to matplotlib.axes.Axes.hist() method
-# n, bins, patches = plt.hist(x=d, bins='auto', color='#0504aa',
-#                             alpha=0.7, rwidth=0.85)
-# plt.grid(axis='y', alpha=0.75)
-# plt.xlabel('Value')
-# plt.ylabel('Frequency')
-# plt.title('My Very Own Histogram')
-# plt.text(23, 45, r'$\mu=15, b=3$')
-# maxfreq = n.max()
-# # Set a clean upper y-axis limit.
-# plt.ylim(ymax=np.ceil(maxfreq / 10) * 10 if maxfreq % 10 else maxfreq + 10)
-
-# DISTRIBUTION
-golden = 'Serialized_Cluster_P5033440649046249801'
-# cedric = 'Serialized_Cluster_PHfbfe75a2326666c2ef85'
-# ludo = "Serialized_Cluster_PH76371785fe735ad1b74f"
-# ilns_distribution = ilns_distribution("C:\Productivity\ALenticularLens", golden,
-#                                  label="golden agent data",  print_latex=False, xmax=None, activated=False)
-# print(distributions)
-
-# f_name = simple_csv_link_clustering(
-#     "C:\Productivity\ALenticularLens\export.csv", "mygraph", "C:\Productivity\ALenticularLens")
-# sca = link_cluster_deserialization("C:\Productivity\ALenticularLens", "Serialized_Cluster_PH76371785fe735ad1b74f")
-
-
-# extend_cluster("C:\Productivity\ALenticularLens", "Serialized_Cluster_PH76371785fe735ad1b74f", "related.csv")
-# print(sys.version)
-
-# DEDRIC
-# f_name = simple_csv_link_clustering(
-#     "C:\Productivity\ALenticularLens\\14dfe6fbe0fd677288ae055ede75f49b_output.csv",
-#     "mygraph", "C:\Productivity\ALenticularLens")
-# link_cluster_deserialization("C:\Productivity\ALenticularLens", "Serialized_Cluster_PHfbfe75a2326666c2ef85")
-
-
-
-# cedric = "E:\\14dfe6fbe0fd677288ae055ede75f49b_output.nq\\14dfe6fbe0fd677288ae055ede75f49b_output.nq"
-#
-# with open(cedric, encoding='utf-8', mode='r') as linkset:
-#     temp = ""
-#     count, pair = 0, 0
-#     patern = "(<.*>) <http://www.w3.org/2002/07/owl#sameAs> (<.*>)"
-#     for line in linkset:
-#         # print(line)
-#         count += 1
-#         if line.__contains__("<http://www.w3.org/1999/02/22-rdf-syntax-ns#type> "):
-#             continue
-#         else:
-#             result = re.findall(pattern=patern, string=line)
-#             if result:
-#                 pair += 1
-#                 temp = "{}".format(result[0][0])
-#                 if pair == 2:
-#                     pair = 0
-#                     temp += " {} 1".format(result[0][0])
-#                     print(temp)
-#
-#         if count == 50:
-#             break

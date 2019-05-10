@@ -2,17 +2,20 @@ from datasets_config import DatasetsConfig
 from config_db import db_conn, run_query
 import datetime
 from flask import Flask, jsonify, request, send_file
+import gzip
 from helpers import get_job_data, hasher, update_job_data
-from clustering import cluster_csv, get_cluster_data, hash_string, linkset_to_csv, cluster_reconciliation_csv, cluster_and_reconcile
+from clustering import cluster_csv, get_cluster_data, hash_string, linkset_to_csv, cluster_reconciliation_csv, \
+    cluster_and_reconcile
 import json
 from os.path import join
 import pickle
 import psycopg2
 from psycopg2 import extras as psycopg2_extras, sql as psycopg2_sql
 import random
-from src.Clustering.SimpleLinkClustering import cluster_vis_input_2 as visualise_2, cluster_vis_input as visualise_1
+from src.Clustering.IlnVisualisation import plot_reconciliation as visualise_2, plot as visualise_1, plot_compact as visualise_3
 import subprocess
 import time
+
 app = Flask(__name__)
 
 
@@ -80,7 +83,7 @@ def clusters(job_id, clustering_id):
     clusters = {}
     try:
         from src.LLData.Serialisation import CLUSTER_SERIALISATION_DIR
-        with open(join(CLUSTER_SERIALISATION_DIR, f'{clustering_id}-1.txt'), 'rb') as clusters_file:
+        with gzip.open(join(CLUSTER_SERIALISATION_DIR, f'{clustering_id}-1.txt'), 'rb') as clusters_file:
             clusters_data = pickle.load(clusters_file)
     except FileNotFoundError:
         pass
@@ -90,7 +93,7 @@ def clusters(job_id, clustering_id):
             i += 1
             cluster_data['index'] = i
             clusters[cluster_id] = cluster_data
-            if i == 100:
+            if i == 20:
                 break
 
     return jsonify(clusters)
@@ -154,7 +157,8 @@ def create_clustering(job_id):
         if request.json['clustered']:
             cluster_reconciliation_csv(request.json['association_file'], job_id, request.json['mapping_label'])
         else:
-            cluster_and_reconcile(request.json['association_file'], job_id, request.json['mapping_label'], request.json['association_file'])
+            cluster_and_reconcile(request.json['association_file'], job_id, request.json['mapping_label'],
+                                  request.json['association_file'])
     else:
         clustering_id = cluster_csv(csv_filepath, job_id, request.json['mapping_label'])
 
@@ -164,7 +168,8 @@ def create_clustering(job_id):
                 INSERT INTO clusterings
                 (clustering_id, job_id, mapping_name, clustering_type)
                 VALUES (%s, %s, %s, %s)
-                ''', (clustering_id, job_id, request.json['mapping_label'], request.json.get('clustering_type', 'default')))
+                ''', (
+                clustering_id, job_id, request.json['mapping_label'], request.json.get('clustering_type', 'default')))
         except psycopg2.IntegrityError:
             pass
 
@@ -178,11 +183,13 @@ def cluster_visualization(job_id, clustering_id, cluster_id):
 
 @app.route('/job/<job_id>/cluster/<clustering_id>/<cluster_id>/graph', methods=['POST'])
 def get_cluster_graph_data(job_id, clustering_id, cluster_id):
-    cluster_data = request.json['cluster_data'] if 'cluster_data' in request.json else get_cluster_data(clustering_id, cluster_id)
+    cluster_data = request.json['cluster_data'] if 'cluster_data' in request.json else get_cluster_data(clustering_id,
+                                                                                                        cluster_id)
     associations = request.json['associations'] if 'associations' in request.json else None
     mapping_label = run_query("SELECT mapping_name FROM clusterings WHERE clustering_id = %s", (clustering_id,))[0]
-    sub_clusters = f'Reconciled_{hasher(job_id)}_{mapping_label}'
+    sub_clusters = f'Reconciled_{hasher(job_id)}_{mapping_label}_{hasher(associations)}'
     get_cluster = request.json.get('get_cluster', True)
+    get_cluster_compact = request.json.get('get_cluster_compact', True)
     get_reconciliation = request.json.get('get_reconciliation', True) if associations else False
 
     golden_agents_specifications = {
@@ -226,9 +233,13 @@ def get_cluster_graph_data(job_id, clustering_id, cluster_id):
         ]
     }
 
+    # import sys
+    # print(golden_agents_specifications, file=sys.stderr)
     return jsonify({
         'cluster_graph': visualise_1(specs=golden_agents_specifications, activated=True) if get_cluster else None,
-        'reconciliation_graph': visualise_2(specs=golden_agents_specifications, activated=True)[1] if get_reconciliation else None,
+        'cluster_graph_compact': visualise_3(specs=golden_agents_specifications, activated=True)[0] if get_cluster_compact else None,
+        'reconciliation_graph': visualise_2(specs=golden_agents_specifications, activated=True)[
+            1] if get_reconciliation else None,
     })
 
 

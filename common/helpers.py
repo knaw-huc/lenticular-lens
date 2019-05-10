@@ -24,13 +24,13 @@ def file_date():
     return f"{today}_{re.findall('..:.*', str(datetime.datetime.now()))[0]}"
 
 
-def table_to_csv(table_name, file):
+def table_to_csv(table_name, columns, file):
     table_name = [psycopg2_sql.Identifier(name_part) for name_part in table_name.split('.')]
 
     with db_conn() as conn, conn.cursor() as cur:
         sql = cur.mogrify(
-            psycopg2_sql.SQL("COPY (SELECT source_uri, target_uri, 1 FROM {}.{}) TO STDOUT WITH CSV DELIMITER ','")
-                .format(table_name[0], table_name[1]))
+            psycopg2_sql.SQL("COPY (SELECT {columns} FROM {schema}.{table}) TO STDOUT WITH CSV DELIMITER ','")
+                .format(columns=psycopg2_sql.SQL(', ').join(columns), schema=table_name[0], table=table_name[1]))
         cur.copy_expert(sql, file)
 
 
@@ -118,7 +118,7 @@ def get_job_data(job_id):
 
     #     Add association files
         job_data['association_files'] = [
-            f for f in listdir(CSV_ASSOCIATIONS_DIR) if isfile(join(CSV_ASSOCIATIONS_DIR, f)) and f.endswith('.csv')
+            f for f in listdir(CSV_ASSOCIATIONS_DIR) if isfile(join(CSV_ASSOCIATIONS_DIR, f)) and f.endswith(('.csv', '.csv.gz'))
         ]
 
     return job_data
@@ -130,7 +130,7 @@ def update_job_data(job_id, job_data):
         try:
             with db_conn() as conn:
                 with conn.cursor(cursor_factory=psycopg2_extras.DictCursor) as cur:
-                    if run_query('SELECT 1 FROM reconciliation_jobs WHERE job_id = %s', (job_id,))[0]:
+                    if run_query('SELECT 1 FROM reconciliation_jobs WHERE job_id = %s', (job_id,)):
                         cur.execute(psycopg2_sql.SQL("UPDATE reconciliation_jobs SET ({}) = ROW %s WHERE job_id = %s")
                             .format(
                             psycopg2_sql.SQL(', '.join(job_data.keys()))),
