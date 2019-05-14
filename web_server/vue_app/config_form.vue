@@ -10,38 +10,32 @@
     >
 
         <tab-content title="Idea">
-            <div class="h2">Idea</div>
-            <div v-if="idea_form === 'new' ||  job_id" class="border p-4 mt-4 bg-light">
+            <template v-if="idea_form === 'existing' || job_id">
                 <div class="form-group">
-                    <label class="h3" for="idea">What's your idea?</label>
-                    <input type="text" class="form-control" id="idea" v-model="inputs.job_title">
-                </div>
-
-                <div class="form-group pt-3">
-                    <label class="h3" for="description">Describe your idea</label>
-                    <textarea class="form-control" id="description" v-model="inputs.job_description"></textarea>
-                </div>
-
-                <div class="form-group row justify-content-end pt-3 mb-0">
-                    <div class="col-auto">
-                        <b-button @click="saveIdea" variant="info">{{ job_id ? 'Update' : 'Create' }}</b-button>
-                    </div>
-                </div>
-            </div>
-
-            <div v-if="idea_form === 'existing' || job_id" class="border p-4 mt-4 bg-light">
-                <div class="form-group row justify-content-end mb-0">
-                    <label class="h3 col-auto" for="job_id_input">{{ job_id ? '' : 'Existing ' }}Job ID</label>
-                    <input type="text" class="form-control col-md-3 col-auto" ref="job_id_input" id="job_id_input" :disabled="Boolean(job_id)" v-model="inputs.job_id">
-                    <div class="col-auto">
-                        <b-button @click="copyToClipboard($refs['job_id_input'])"><octicon name="clippy" class="align-text-top"></octicon></b-button>
-                    </div>
+                    <label for="job_id_input">Existing Job ID</label>
+                    <input type="text" class="form-control" id="job_id_input" :disabled="Boolean(job_id)" v-model="inputs.job_id">
                 </div>
 
                 <div v-if="!job_id" class="form-group">
-                    <b-button @click="setJobId(inputs.job_id)" variant="info">Load</b-button>
+                    <b-button @click="setJobId(inputs.job_id)">Load</b-button>
                 </div>
-            </div>
+            </template>
+
+            <template v-if="idea_form === 'new' ||  job_id">
+                <div class="form-group">
+                    <label for="idea">What's your idea?</label>
+                    <input type="text" class="form-control" id="idea" v-model="inputs.job_title">
+                </div>
+
+                <div class="form-group">
+                    <label for="description">Description</label>
+                    <textarea class="form-control" id="description" v-model="inputs.job_description"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <b-button @click="saveIdea">{{ job_id ? 'Update' : 'Create' }}</b-button>
+                </div>
+            </template>
         </tab-content>
 
         <tab-content title="Collections">
@@ -66,7 +60,7 @@
         </div>
         </tab-content>
 
-        <tab-content title="Alignments">
+        <tab-content title="Mappings">
         <div id="matches" class="mt-5">
             <div class="row justify-content-between">
                 <div class="col-auto">
@@ -90,7 +84,7 @@
         </div>
         </tab-content>
 
-        <tab-content title="Link Validation">
+        <tab-content title="Results">
         <div v-if="job_data">
             <div>
                 Request received at: {{ job_data.requested_at }}
@@ -113,17 +107,17 @@
         </div>
         </tab-content>
 
-        <tab-content title="Clusters">
+        <tab-content title="Clustering">
             <div class="border p-4 mt-4 bg-light"
                  v-for="match in matches"
                  v-if="!match.is_association"
             >
                 <div class="row justify-content-between">
                     <div class="col-auto">
-                        <octicon name="chevron-down" scale="3" v-b-toggle="'clustering_clusters_match_' + match.id"></octicon>
+                        <octicon name="chevron-down" scale="3" v-b-toggle="'clusters_match_' + match.id"></octicon>
                     </div>
 
-                    <div class="col align-self-center" v-b-toggle="'clustering_clusters_match_' + match.id">
+                    <div class="col align-self-center" v-b-toggle="'clusters_match_' + match.id">
                         <div class="h2">{{ match.label }}</div>
                     </div>
 
@@ -146,12 +140,12 @@
                 <b-collapse
                         @show="getClusters(getResultForMatch(match.label).clusterings[0].clustering_id)"
                         class="row border-bottom mb-5"
-                        :id="'clustering_clusters_match_' + match.id"
+                        :id="'clusters_match_' + match.id"
                         accordion="clusters-matches-accordion"
                 >
                     <div class="col-md-12">
-                        <div id="clustering_dataset_linking_stats_cluster_results" style="height: 20em; width:100%; scroll: both; overflow: auto;">
-                            <table class="table table-striped" id="clustering_resultTable" style="height: 20em; scroll: both; overflow: auto;">
+                        <div id="dataset_linking_stats_cluster_results" style="height: 20em; width:100%; scroll: both; overflow: auto;">
+                            <table class="table table-striped" id="resultTable" style="height: 20em; scroll: both; overflow: auto;">
                                 <thead>
                                     <tr>
                                         <th>Ext</th>
@@ -165,7 +159,6 @@
                                 <tbody>
                                     <cluster-table-row-component
                                             v-for="(cluster_data, cluster_id) in clusters"
-                                            :key="'clustering_cluster_' + cluster_id"
                                             :cluster_id="cluster_id"
                                             :cluster_data="cluster_data"
                                             @select:cluster_id="cluster_id_selected = $event"
@@ -178,7 +171,6 @@
             </div>
             <template v-if="cluster_id_selected">
                 <cluster-visualization-component
-                        parent_tab="clustering"
                         :clustering_id="clustering_id"
                         :cluster_id="cluster_id_selected"
                         :cluster_data="clusters[cluster_id_selected]"
@@ -186,7 +178,7 @@
             </template>
         </tab-content>
 
-        <tab-content title="Cluster Validation">
+        <tab-content title="Validation">
             <template v-if="job_data">
                 <div class="border mb-5 p-3">
                     <div class="border p-4 mt-4 bg-light"
@@ -243,7 +235,6 @@
 
                 <template v-if="cluster_id_selected">
                     <cluster-visualization-component
-                            parent_tab="validation"
                             :clustering_id="clustering_id"
                             :cluster_id="cluster_id_selected"
                             :cluster_data="clusters[cluster_id_selected]"
@@ -339,10 +330,10 @@
                 steps: [
                     'idea',
                     'collections',
-                    'alignments',
-                    'link_validation',
-                    'clusters',
-                    'cluster_validation',
+                    'alignment',
+                    'results',
+                    'clustering',
+                    'validation',
                 ],
             }
         },
@@ -421,26 +412,6 @@
                 this.cluster_id_selected = null;
                 this.clustering_id = null;
                 this.limit_all = -1;
-            },
-            copyToClipboard(el) {
-                let disabled = el.hasAttribute('disabled');
-                if (disabled) {
-                    el.removeAttribute('disabled');
-                }
-
-                let selected = document.getSelection().rangeCount > 0 ? document.getSelection().getRangeAt(0) : false;
-
-                el.select();
-                document.execCommand('copy');
-
-                document.getSelection().removeAllRanges();
-                if (selected) {
-                    document.getSelection().addRange(selected);
-                }
-
-                if (disabled) {
-                    el.setAttribute('disabled', 'disabled');
-                }
             },
             createClustering(mapping_label, event) {
                 let btn = event.target;
@@ -552,14 +523,14 @@
                             if (this.matches.length < 1) {
                                 if (data.mappings_form_data) {
                                     this.matches = data.mappings_form_data;
-                                    this.activateStep('alignments');
+                                    this.activateStep('alignment');
                                 } else {
                                     this.addMatch();
                                 }
                             }
 
                             if (this.job_data.status) {
-                                this.activateStep(this.job_data.status === 'Finished' ? 'clusters' : 'cluster_validation');
+                                this.activateStep(this.job_data.status === 'Finished' ? 'clustering' : 'validation');
 
                                 if (this.job_data.status !== 'Finished' && !this.job_data.status.startsWith('FAILED')) {
                                     setTimeout(this.getJobData, 5000);
@@ -779,36 +750,6 @@
                     match_copy.conditions.items.forEach(condition => {
                         delete condition['id'];
                         delete condition['method_index'];
-
-                        // For method parameter type "matching_label", replace match IDs with labels
-                        if (typeof condition['method'] === 'object') {
-                            Object.keys(condition['method']).forEach(method_name => {
-                                let method_parameters = condition['method'][method_name];
-                                let new_parameters;
-
-                                if (Array.isArray(method_parameters)) {
-                                    new_parameters = [];
-                                    method_parameters.forEach(parameter => {
-                                        if (typeof parameter === 'object' && parameter.type === "matching_label") {
-                                            new_parameters.push(this.getMatchById(parameter.value).label);
-                                        } else {
-                                            new_parameters.push(parameter);
-                                        }
-                                    });
-                                } else {
-                                    new_parameters = {};
-                                    Object.keys(method_parameters).forEach(parameter_key => {
-                                        let parameter = method_parameters[parameter_key];
-                                        if (typeof parameter === 'object' && parameter.type === "matching_label") {
-                                            new_parameters[parameter_key] = this.getMatchById(parameter.value);
-                                        } else {
-                                            new_parameters[parameter_key] = parameter;
-                                        }
-                                    });
-                                }
-                                condition['method'][method_name] = new_parameters;
-                            });
-                        }
 
                         ['sources', 'targets'].forEach(resources_key => {
                             Object.keys(condition[resources_key]).forEach(resource_id => {

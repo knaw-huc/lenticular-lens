@@ -148,14 +148,12 @@ if __name__ == '__main__':
                             print("Generating CSVs")
                             linksets_collection = LinksetsCollection(job['resources_filename'], job['mappings_filename'], job_id=job['job_id'])
                             for match in linksets_collection.matches:
-                                columns = [psycopg2_sql.Identifier('source_uri'), psycopg2_sql.Identifier('target_uri')]
                                 if match.is_association:
                                     from src.LLData.CSV_Associations import CSV_ASSOCIATIONS_DIR as CSV_DIR
                                     prefix = 'association'
                                 else:
                                     from src.LLData.CSV_Alignments import CSV_ALIGNMENTS_DIR as CSV_DIR
                                     prefix = 'alignment'
-                                    columns.append(psycopg2_sql.Literal(1))
 
                                 today = datetime.date.isoformat(datetime.date.today()).replace('-', '')
                                 # now = f"{today}_{re.findall('..:.*', str(datetime.datetime.now()))[0]}"
@@ -163,7 +161,7 @@ if __name__ == '__main__':
 
                                 print('Creating file ' + join(CSV_DIR, filename))
                                 with gzip.open(join(CSV_DIR, filename), 'wt') as csv_file:
-                                    table_to_csv(f'job_{job["job_id"]}.{match.name}', columns, csv_file)
+                                    table_to_csv(f'job_{job["job_id"]}.{match.name}', csv_file)
 
                             print('Cleaning up.')
                             print('Dropping schema.')

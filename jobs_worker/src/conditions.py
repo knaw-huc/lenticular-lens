@@ -50,7 +50,6 @@ class Conditions:
 
     class MatchingFunction:
         def __init__(self, function_obj):
-            self.function_obj = function_obj
             self.__data = function_obj
             self.__sources = []
             self.__targets = []
@@ -59,11 +58,11 @@ class Conditions:
 
             if isinstance(function_obj['method'], str):
                 self.function_name = function_obj['method']
-                self.parameters = ()
+                self.parameters = {}
             else:
                 for function_name, parameters in function_obj['method'].items():
                     self.function_name = function_name
-                    self.parameters = parameters
+                    self.parameters = dict(enumerate(parameters, 1)) if isinstance(parameters, list) else parameters
 
             matching_functions = get_json_from_file('matching_functions.json')
             if self.function_name in matching_functions:
@@ -80,7 +79,7 @@ class Conditions:
 
             before_index = self.function_info.get('before_index', None)
             if before_index:
-                before_index = self.format_template(before_index)
+                before_index = before_index.format(**self.parameters)
 
             return {
                 'template': self.function_info['index_using'],
@@ -97,21 +96,17 @@ class Conditions:
             if isinstance(self.function_info['similarity'], str):
                 template = re.sub(r'{source}', 'source.{{field_name}}', template)
                 template = re.sub(r'{target}', 'target.{{field_name}}', template)
-                template = self.format_template(template)
+                template = template.format(**self.parameters)
 
             return psycopg2_sql.SQL(str(template))
 
         @property
         def sql(self):
-            def hash_match_group(match):
-                return hash_string(match.group(1))
-
             template = self.function_info['sql_template']
 
             template = re.sub(r'{source}', 'source.{{field_name}}', template)
             template = re.sub(r'{target}', 'target.{{field_name}}', template)
-            template = self.format_template(template)
-            template = re.sub(r'__hash\(([^)]*)\)', hash_match_group, template)
+            template = template.format(**self.parameters)
 
             return psycopg2_sql.SQL(str(template))
 
@@ -128,21 +123,14 @@ class Conditions:
                 self.__targets = self.get_resources('targets')
 
             return self.__targets
-        
-        def format_template(self, template):
-            if isinstance(self.parameters, dict):
-                return template.format(**self.parameters)
-            return template.format(*self.parameters)
 
         def get_resources(self, resources_key):
             resources = {}
             for resource_index, resource in self.__data[resources_key].items():
                 resources[resource_index] = []
                 for property_field in resource:
-                    # Add method's default transformers
                     property_field['transformers'] =\
                         self.function_info.get('transformers', []) + property_field.get('transformers', [])
-
                     resources[resource_index].append(PropertyField(property_field))
 
             return resources

@@ -97,11 +97,9 @@ class Resource:
     def matching_fields(self):
         matching_fields = self.additional_properties
         matching_fields_hashes = [matching_field.hash for matching_field in matching_fields]
-        import sys
         for match in self.config.matches:
             match_matching_fields = match.get_matching_fields()[self.label]
             for match_matching_field_label, match_matching_field in match_matching_fields.items():
-                # print(match_matching_field_label, file=sys.stderr)
                 if match_matching_field_label not in matching_fields_hashes:
                     matching_fields_hashes.append(match_matching_field_label)
                     matching_fields.append(match_matching_field)

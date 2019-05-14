@@ -1,4 +1,4 @@
-# import src.Generic.Utility as Ut
+import src.Generic.Utility as Ut
 import src.Generic.Settings as St
 import src.DataAccess.Stardog.Query as Stardog
 import src.DataAccess.PostgreSQL.Query as Postgre
@@ -17,12 +17,12 @@ run_query_xml_switcher = {
 
 # RETURNS THE RESULT OF A QUERY IN A TABLE (A MATRIX)
 run_query_matrix_switcher = {
-    # St.Stardog: Stardog.sparql_xml_to_matrix,
+    St.Stardog: Stardog.sparql_xml_to_matrix,
     St.Postgre: Postgre.execute_query
 }
 
 
-# from src.DataAccess.Stardog.Query import investigate_resources
+from src.DataAccess.Stardog.Query import investigate_resources
 data_example = {
     'dataset-1': [
         {
