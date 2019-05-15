@@ -31,7 +31,7 @@ def cluster_csv(csv_filepath, job_id, mapping_label):
 
 def cluster_reconciliation_csv(related_filename, job_id, mapping_label):
 
-    filename = f'Reconciled_{hasher(job_id)}_{mapping_label}'
+    filename = f'Reconciled_{hasher(job_id)}_{mapping_label}_{hasher(related_filename)}'
     # filename = '__PHDemoClustersReconciled__'
     serialised = f'Cluster_{hasher(job_id)}_{mapping_label}'
     # serialised = '__PHDemoClusters__'

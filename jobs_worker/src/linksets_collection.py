@@ -129,6 +129,8 @@ class LinksetsCollection:
         affected_count = 0
         with db_conn() as conn:
             sql_string = composed.as_string(conn)
+            with open('%s.sql' % self.job_id, 'a') as sql_file:
+                sql_file.write(sql_string)
 
             if self.sql_only:
                 print(sql_string)
@@ -139,6 +141,7 @@ class LinksetsCollection:
 
                     if re.search(r'\S', statement):
                         if re.match(r'^\s*SELECT', statement) and not re.search(r'set_config\(', statement):
+                            continue
                             with conn.cursor(cursor_factory=extras.DictCursor, name='cursor') as named_cur:
                                 self.log('Converting linkset to RDF.')
                                 named_cur.execute(statement)
@@ -222,6 +225,10 @@ class LinksetsCollection:
         return True
 
     def generate_match_sql(self, match):
+        # fields_sql = match.similarity_fields_sql
+        # if fields_sql == sql.SQL(''):
+        #     return fields_sql
+
         match_sql = sql.SQL("""
 SELECT source.uri AS source_uri,
        target.uri AS target_uri,
@@ -242,6 +249,14 @@ JOIN ({target}) AS target
         match_sql = (sql.SQL("""
 DROP SEQUENCE IF EXISTS {sequence_name} CASCADE;
 CREATE SEQUENCE {sequence_name} MINVALUE 0 START 0;
+-- DROP MATERIALIZED VIEW IF EXISTS source CASCADE;
+-- CREATE MATERIALIZED VIEW source AS {{source}};
+-- ANALYZE source;
+-- CREATE INDEX ON source (uri);
+-- DROP MATERIALIZED VIEW IF EXISTS target CASCADE;
+-- CREATE MATERIALIZED VIEW target AS {{target}};
+-- ANALYZE target;
+-- CREATE INDEX ON target (uri);
 DROP MATERIALIZED VIEW IF EXISTS {view_name} CASCADE;
 CREATE MATERIALIZED VIEW {view_name} AS""").format(
                 source=match.source_sql,
@@ -363,6 +378,8 @@ ORDER BY uri{limit}
         return sql_part
 
     def run(self):
+        open('%s.sql' % self.job_id, 'w').close()
+
         # self.updateJobData({
         #     'status': 'Processing',
         #     'processing_at': str(datetime.datetime.now()),

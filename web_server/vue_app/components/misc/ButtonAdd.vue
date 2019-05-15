@@ -20,7 +20,7 @@
         },
         props: {
             scale: {
-                type: Number,
+                type: [Number, String],
                 default: 1,
             },
             title: String,

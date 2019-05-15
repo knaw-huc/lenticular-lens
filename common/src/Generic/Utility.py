@@ -7,6 +7,7 @@ import os
 import ast
 import sys
 import time
+import gzip
 import rdflib
 import codecs
 import datetime
@@ -19,8 +20,8 @@ import builtins
 import xmltodict
 import requests
 import subprocess
-from os import stat
-from os import listdir
+import collections
+from os import stat, listdir, mkdir
 import os.path as path
 import zipfile as f_zip
 # import io.BytesIO as Buffer
@@ -39,6 +40,7 @@ from kitchen.text.converters import to_bytes, to_unicode
 
 OPE_SYS = platform.system().lower()
 mac_weird_name = "darwin"
+_format = " It is %a %b %d %Y %H:%M:%S"
 
 
 #################################################################
@@ -46,13 +48,41 @@ mac_weird_name = "darwin"
 #################################################################
 
 
-def problem(tab="\t"):
-    print("\n{0}{1:.^30}\n{0}{2:.^30}".format(tab, "", " PROBLEM "))
+def print_time(pading=100):
+    empty = ""
+    print(F"\n{datetime.datetime.today().strftime(_format):.>{pading}}\n{empty:.>{pading}}\n")
 
 
-def completed(elapse):
-    print('\n{:.^100}'.format(F" COMPLETED IN {elapse} "))
-    print('{:.^100}'.format(F" JOB DONE! "))
+def print_heading(text):
+
+    heading = ""
+    text = text.split("\n")
+    formatted = "{:.^100}\n"
+    for text in text:
+        if text.strip():
+            heading += formatted.format(F" {text} ")
+
+    print("\n{}{}{}".format(formatted.format(""), heading, formatted.format("")))
+
+
+def date():
+
+    today = datetime.date.isoformat(datetime.date.today()).replace('-', '')
+    return F"{today}_{re.findall('..:.*', str(datetime.datetime.now()))[0]}"
+
+
+def problem(tab="\t", label="PROBLEM", text=None):
+    text = text.split('\n')
+    temp = ""
+    for line in text:
+        temp += F"{tab}{line}\n"
+    print("\n{0}{1:.^30}\n{0}{2:.^30} \n{3}".format(tab, "", F" {label} ", F"{temp}"))
+
+
+def completed(started, tab="\t"):
+    datetime.timedelta(seconds=time.time() - started)
+    print('\n{}{:.^100}'.format(tab, F" COMPLETED IN {datetime.timedelta(seconds=time.time() - started)} "))
+    print('{}{:.^100}'.format(tab, F" JOB DONE! "))
 
 
 def hasher(object):
@@ -60,7 +90,6 @@ def hasher(object):
     # h = blake2b(digest_size=10)
     # h.update(bytes(object.__str__(), encoding='utf-8'))
     # print(F"H{h.hexdigest()}")
-    from hashlib import md5
     h = md5()
     h.update(bytes(object.__str__(), encoding='utf-8'))
     return F"H{h.hexdigest()[:15]}"
@@ -72,6 +101,7 @@ def hash_number(text):
     # THE NUMBER OF A NONE STRING       :  69783645
     numbers = re.findall(pattern="\d", string=hasher(text))
     return "".join(x for x in numbers)
+
 
 def convert_bytes(num):
 
@@ -238,8 +268,10 @@ def get_uri_local_name(uri, sep="_"):
     if len(uri) == 0:
         return None
 
-    # if type(uri) is not str:
-    #     return None
+    if type(uri) is not str:
+        print(uri)
+        print(type(uri), "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        return None
 
     check = re.findall("<([^<>]*)>/*", uri)
 
@@ -301,12 +333,21 @@ def get_uri_local_name_plus(uri, sep="_"):
         return name
 
     else:
-        pattern = ".*[\/\#](.*)$"
+
+        pattern = ".*[\/\#:](.*)$"
+        bad_pattern = "(.*)[\/\#:]$"
         local = re.findall(pattern, uri)
         if len(local) > 0 and len(local[0]) > 0:
             return local[0]
         else:
-            return uri
+            bad_uri = re.findall(bad_pattern, uri)
+            if len(bad_uri) > 0:
+
+                # local_name = get_uri_local_name_plus(bad_uri[0])
+                # print("BAD:", uri, "LOCAL NAME:", local_name)
+                return get_uri_local_name_plus(bad_uri[0])
+            else:
+                return uri
 
 
 def split_property_path(property_path):
@@ -697,6 +738,7 @@ def dir_files(directory, extension_list):
     # print list
     return lst
 
+
 #######################################################################
 """   USER FRIENDLY PRINTING OF A LIST TUPLE OR DICTIONARY OBJECT   """
 #######################################################################
@@ -713,56 +755,46 @@ def print_tuple(tuple_list,  comment="", return_print=False, overview=True, tab=
         tabs += "\t"
 
     if tab == 0:
-        print("\n{:.^100}".format(F" PRINTING A TUPLE OF SIZE {len(tuple_list)} "))
-        print("{:.^100}\n".format(F" {comment} ")) if comment else print("{:.^100}\n".format(F""))
+        print("\n\t{}{:.^100}".format(tabs, F" PRINTING A TUPLE OF SIZE {len(tuple_list)} "))
+        print("\t{}{:.^100}\n".format(tabs, F" {comment} ")) if comment else print("\t{}{:.^100}\n".format(tabs, F""))
 
     if return_print is False:
         print(F"{tabs}", " | ".join(x.__str__() for x in tuple_list))
         return ""
 
     else:
-        return F"{tabs}", " | ".join(x.__str__() for x in tuple_list)
+        return F"{tabs}" + " | ".join(x.__str__() for x in tuple_list)
 
 
 # PRINT/RETURN  A LIST AS A STRING
 def print_list(data_list, comment="", return_print=False, overview=True, tab=0, activated=True):
 
-
     if activated is False:
         return
 
+    tabs = ""
+    builder = io.StringIO()
+
+    for i in range(0, tab):
+        tabs += "\t"
+    tabs_2 = tabs + "\t"
+
     if tab == 0:
-        print("\n{:.^100}".format(F" PRINTING A LIST OF SIZE {len(data_list)} "))
-        print("{:.^100}\n".format(F" {comment} ")) if comment else print("{:.^100}\n".format(F""))
+        print("\n\t{}{:.^100}".format(tabs, F" PRINTING A LIST OF SIZE {len(data_list)} "))
+        print("\t{}{:.^100}\n".format(tabs, F" {comment} ")) if comment else print("\t{}{:.^100}\n".format(tabs, F""))
+
+        if return_print is True:
+            builder.write("\n\t{}{:.^100}".format(tabs, F" PRINTING A LIST OF SIZE {len(data_list)}\n"))
+            builder.write("\t{}{:.^100}\n".format(tabs, F" {comment} ")) if comment else print(
+                "\t{}{:.^100}\n".format(tabs, F""))
 
     if type(data_list) is not list and type(data_list) is not set:
 
         print(F"\tTHE INPUT DATA STRUCTURE IS NOT A LIST. IT IS OF TYPE: {type(data_list)}")
-        return ""
 
-    builder = io.StringIO()
-    tabs = ""
-    for i in range(0, tab):
-        tabs += "\t"
-
-    if return_print is True:
-
-        for item in data_list:
-            try:
-                if type(item) == tuple:
-                    builder.write("\t{}\n".format(print_tuple(item, return_print=return_print)))
-
-                elif type(item) == list:
-                    builder.write("\t{}\n".format(print_list(item)))
-
-                else:
-                    builder.write("\t{}\n".format(item))
-
-            except IOError:
-                print("PROBLEM!!!")
-
-        builder.write(headings("\n{}\nDICTIONARY SIZE : {}".format(comment, len(data_list))) + "\n\n")
-        return builder.getvalue()
+        if return_print is True:
+            builder.write(F"\tTHE INPUT DATA STRUCTURE IS NOT A LIST. IT IS OF TYPE: {type(data_list)}\n")
+            return builder.getvalue()
 
     for item in data_list:
 
@@ -770,14 +802,26 @@ def print_list(data_list, comment="", return_print=False, overview=True, tab=0, 
             if type(item) == tuple:
                 print_tuple(item, comment, return_print, overview, tab=tab+1, activated=activated)
 
+                if return_print is True:
+                    builder.write(print_tuple(item, comment, return_print, overview, tab=tab+1, activated=activated))
+
             elif type(item) == list:
                 print_list(item, comment, return_print, overview, tab=tab+1, activated=activated)
+
+                if return_print is True:
+                    builder.write(print_list(item, comment, return_print, overview, tab=tab+1, activated=activated))
 
             elif type(item) == dict:
                 print_dict(item, overview=False, tab=tab+1)
 
+                if return_print is True:
+                    builder.write(print_dict(item, overview=False, tab=tab+1))
+
             else:
-                print(tabs, item)
+                print(tabs_2 + str(item))
+
+                if return_print is True:
+                    builder.write((tabs_2 + str(item) + "\n"))
 
         except IOError:
             print("PROBLEM!!!")
@@ -788,10 +832,17 @@ def print_list(data_list, comment="", return_print=False, overview=True, tab=0, 
     if len(comment) == 0 and overview is True:
         print("{}\n>>> LIST SIZE : {}".format(comment, len(data_list)))
 
+        if return_print is True:
+            builder.write("{}\n>>> LIST SIZE : {}\n".format(comment, len(data_list)))
+
     elif overview is True:
         print(headings("\n>>> {}\n>>LIST SIZE : {}".format(comment, len(data_list))))
 
-    return ""
+        if return_print is True:
+            builder.write(headings("\n>>> {}\n>>LIST SIZE : {}\n".format(comment, len(data_list))))
+
+    if return_print is True:
+        return builder.getvalue()
 
 
 # PRINT/RETURN  A LIST AS A STRING WHERE EACH LINE PRINTS THE DICTIONARY'S KEY ITEM-SIZE AND ITEM
@@ -800,19 +851,29 @@ def print_dict(data_dict, comment="", return_print=False, overview=True, tab=0, 
     if activated is False:
         return
 
-    if tab == 0:
-        print("\n{:.^100}".format(F" PRINTING A DICTIONARY OF SIZE {len(data_dict)} "))
-        print("{:.^100}\n".format(F" {comment} ")) if comment else print("{:.^100}\n".format(F""))
-
-    if type(data_dict) is not dict:
-        print(f"\tTHE INPUT DATA STRUCTURE IS NOT A DICTIONARY. IT IS OF TYPE: {type(data_dict)}")
-        return ""
-
+    builder = io.StringIO()
     tabs = ""
     data = []
     keys = dict(data_dict).keys()
     for i in range(0, tab):
         tabs += "\t"
+    tabs_2 = tabs + "\t"
+
+    if tab == 0:
+        print("\n\t{}{:.^100}".format(tabs, F" PRINTING A DICTIONARY OF SIZE {len(data_dict)} "))
+        print("\t{}{:.^100}\n".format(tabs, F" {comment} ")) if comment else print("\t{}{:.^100}\n".format(tabs, F""))
+        if return_print is True:
+            builder.write("\n\t{}{:.^100}".format(tabs, F" PRINTING A DICTIONARY OF SIZE {len(data_dict)}\n"))
+            builder.write("\t{}{:.^100}\n".format(tabs, F" {comment} ")) if comment else print("\t{}{:.^100}\n".format(tabs, F""))
+
+    check = True if isinstance(data_dict, dict) else (True if isinstance(data_dict, collections.defaultdict) else False)
+    if check is False:
+        print(f"\tTHE INPUT DATA STRUCTURE IS NOT A DICTIONARY. IT IS OF TYPE: {type(data_dict)}")
+        if return_print is True:
+            builder.write(f"\tTHE INPUT DATA STRUCTURE IS NOT A DICTIONARY. IT IS OF TYPE: {type(data_dict)}")
+            return builder.getValue()
+
+        return ""
 
     for x in keys:
         if type(x) is str:
@@ -820,47 +881,63 @@ def print_dict(data_dict, comment="", return_print=False, overview=True, tab=0, 
 
     max_length = max(data) if len(data) != 0 else 6
 
-    if return_print is True:
-
-        builder = io.StringIO()
-        for key, value in data_dict.items():
-            try:
-                builder.write(
-                    "ITEM KEY: {1:<23}  ITEM SIZE: {2:<6} ITEM: {3}\n".format(max_length, key, len(value), str(value)))
-
-            except IOError:
-                print("PROBLEM!!!")
-
-        builder.write(headings("\n{}\nDICTIONARY SIZE : {}".format(comment, len(data_dict))) + "\n\n")
-        return builder.getvalue()
-
-    # print("")
+    # ********************************
+    # ITERATING THROUGH THE DICTIONARY
+    # ********************************
     for key, value in data_dict.items():
-        # print(type(value))
+
         try:
+
             if type(value) is list:
-                print(F"{tabs}KEY: {key} \t\t {type(value)} BELOW")
-                print_list(value, overview=False, tab=tab+1)
+                line = F"{tabs_2}KEY: {key} \t\t {type(value)} BELOW"
+                print(line)
+                print_list(value, overview=False, tab=tab+1, return_print=False, activated=True)
+
+                if return_print is True:
+                    builder.write(F"{line}\n")
+                    builder.write(print_list(value, overview=False, tab=tab+1, return_print=True, activated=True))
 
             elif type(value) is tuple:
-                print(F"{tabs}KEY: {key} \t\t {type(value)} BELOW")
+                print(F"{tabs_2}KEY: {key} \t\t {type(value)} BELOW")
                 print_tuple(value, overview=False, tab=tab+1)
 
+                if return_print is True:
+                    builder.write(F"{tabs_2}KEY: {key} \t\t {type(value)} BELOW\n")
+                    builder.write(print_tuple(value, overview=False, tab=tab+1, return_print=True, activated=True))
+
             elif type(value) is dict:
-                print(F"{tabs}KEY: {key} \t\t {type(value)} BELOW")
+                print(F"{tabs_2}KEY: {key} \t\t {type(value)} BELOW")
                 print_dict(value, comment, return_print, overview, tab=tab+1, activated=True)
+
+                if return_print is True:
+                    builder.write(F"{tabs_2}KEY: {key} \t\t {type(value)} BELOW\n")
+                    builder.write(print_dict(
+                        value, comment, overview=overview, tab=tab+1, return_print=True, activated=True,))
+
             else:
                 try:
+
                     print("{4}KEY: {1:<{0}} \t\t ITEM (SIZE = {2}): {3}".format(
                         max_length, key,
-                        len(value)
-                        if type(value) is not int and type(value) is not float and not isinstance(value, type)
-                        else 1,
-                        str(value), tabs))
+                        len(value) if type(value) is not int and type(value) is not float
+                        and not isinstance(value, type) else 1, str(value), tabs_2))
+
+                    if return_print is True:
+                        builder.write("{4}KEY: {1:<{0}} \t\t ITEM (SIZE = {2}): {3}\n".format(
+                            max_length, key,
+                            len(value) if type(value) is not int and type(value) is not float
+                            and not isinstance(value, type) else 1, str(value), tabs_2 ))
+
                 except TypeError:
                     print("{4}KEY: {1:<{0}} \t\t ITEM (SIZE = {2}): {3}".format(
-                        max_length, key, "NA", str(value), tabs))
+                        max_length, key, "NA", str(value), tabs_2))
 
+                    if return_print is True:
+                        builder.write("{4}KEY: {1:<{0}} \t\t ITEM (SIZE = {2}): {3}\n".format(
+                            max_length, key, "NA", str(value), tabs_2))
+
+            if return_print is True:
+                return builder.getvalue()
 
         except IOError:
             print("PROBLEM!!!")
@@ -872,15 +949,17 @@ def print_dict(data_dict, comment="", return_print=False, overview=True, tab=0, 
         print(headings("{}\nDICTIONARY SIZE : {}".format(comment, len(data_dict))))
 
 
-def print_object(data_structure, comment="", return_print=False, overview=True, tab=0, activated=True):
+def print_object(data_structure, comment="", return_print=False, overview=False, tab=0, activated=True):
 
-    if isinstance(data_structure, dict):
+    if isinstance(data_structure, dict) or isinstance(data_structure, collections.OrderedDict) or \
+            isinstance(data_structure, collections.defaultdict):
         print_dict(data_structure, comment, return_print, overview, tab, activated)
+
     elif isinstance(data_structure, list) or isinstance(data_structure, set) :
         print_list(data_structure, comment, return_print, overview, tab, activated)
+
     elif isinstance(data_structure, tuple):
         print_tuple(data_structure, comment, return_print, overview, tab, activated)
-
 
 
 ###################################################################
@@ -888,12 +967,13 @@ def print_object(data_structure, comment="", return_print=False, overview=True, 
 ###################################################################
 
 
-def pickle_serializer(directory, data_object, name):
+def pickle_serializer(directory, data_object, name, tab="\t"):
 
     """
     :param directory:
     :param data_object:
     :param name:
+    :param tab:
     :return:
     """
 
@@ -921,15 +1001,19 @@ def pickle_serializer(directory, data_object, name):
     If fix_imports is true and protocol is less than 3, pickle will try to map the new Python 3 names t
     """
 
-    print("\tSERIALIZING DICTIONARY OF SIZE: {}...".format(len(data_object)))
+    print("{}\tSERIALIZING DICTIONARY OF SIZE: {}...".format(tab, len(data_object)))
     start = time.time()
+    if path.isdir(directory) is False:
+        mkdir(directory)
+
     file_path = join(directory, name)
 
     # PROTOCOL TWO IS CHOSEN FOR COMPATIBILITY ISSUE WITH LENTICULAR LENS 1
-    with open(file_path, 'wb') as writer:
+    print(f'{tab}\tWRITING PICKLED DATA TO FILE {file_path}')
+    with gzip.open(file_path, 'wb') as writer:
         pickle.dump(obj=data_object, file=writer, protocol=2, fix_imports=True)
 
-    print("\tDONE READING THE FILE IN {}".format(datetime.timedelta(seconds=time.time() - start)),
+    print("{}\tDONE WRITING THE FILE IN {}".format(tab, datetime.timedelta(seconds=time.time() - start)),
           sep=" ")
 
     return file_path
@@ -988,7 +1072,7 @@ safe_builtins = {
     'complex',
     'set',
     'frozenset',
-    'slice',
+    'slice'
 }
 
 
@@ -1006,27 +1090,67 @@ class RestrictedUnpickler(pickle.Unpickler):
 def restricted_loads(data_object):
 
     """Helper function analogous to pickle.loads()."""
-    if type(data_object) is io.BufferedReader:
+    if isinstance(data_object, (io.BufferedReader, gzip.GzipFile)):
         return RestrictedUnpickler(data_object).load()
     else:
         return RestrictedUnpickler(io.BytesIO(data_object)).load()
 
 
-def pickle_deserializer(serialised_folder, name):
+def pickle_deserializer(serialised_folder, name, tab="\t"):
 
+    try:
+        if serialised_folder is None or name is None:
+            return None
+
+        start = time.time()
+        file = (join(serialised_folder, name))
+
+        if isfile(file) is False:
+            problem(tab="\t", text=F"THE FILE DOES NOT EXIST \n\t{file}", label="PROBLEM")
+            return None
+
+        if isfile(file)is not True:
+            print(F"\tTHE FILE [{file}] DOES NOT EXITS")
+            return None
+
+        with gzip.open(file, 'rb') as pickle_data:
+            de_serialised = restricted_loads(pickle_data)
+
+        print("{}DONE READING THE FILE OF AN OBJECT OF SIZE {} IN {}".format(tab,
+            len(de_serialised), datetime.timedelta(seconds=time.time() - start)))
+
+        return de_serialised
+    except TypeError as err:
+        problem(text=F"pickle_deserializer: {err}")
+        raise
+
+
+def serialize_dict(directory, dictionary, name, cluster_limit=1000):
+    print("\tSERIALIZING DICTIONARY OF SIZE: {}...".format(len(dictionary)))
     start = time.time()
-    file = (join(serialised_folder, name))
-    if isfile(file)is not True:
-        print(F"\tTHE FILE [{file}] DOES NOT EXITS")
-        return None
 
-    with open(file, 'rb') as pickle_data:
-        de_serialised = restricted_loads(pickle_data)
+    with open(join(directory, "Serialized_{}".format(name)), 'wb') as writer:
 
-    print("\tDONE READING THE FILE OF AN OBJECT OF SIZE {} IN {}".format(
-        len(de_serialised), datetime.timedelta(seconds=time.time() - start)))
+        counting = 0
+        sub_cluster = {}
 
-    return de_serialised
+        for key, value in dictionary.items():
+            start_2 = time.time()
+            counting += 1
+            sub_cluster[key] = value
+
+            if counting == cluster_limit:
+                writer.write(sub_cluster.__str__() + "\n")
+                sub_cluster = {}
+                counting = 0
+
+            # print "\n\tFINISH READING LINE {} IN {}".format(
+            #     counting, datetime.timedelta(seconds=time.time() - start_2))
+
+        if counting != 0:
+            writer.write(sub_cluster.__str__() + "\n")
+
+    print("\tDONE READING THE FILE IN {}".format(datetime.timedelta(seconds=time.time() - start)))
 
 
 def de_serialise_dict(serialised_directory_path, name):
@@ -1044,9 +1168,6 @@ def de_serialise_dict(serialised_directory_path, name):
 
     print("\tDONE READING THE FILE IN {}\n".format(datetime.timedelta(seconds=time.time() - reading_start)))
     return dictionary
-
-
-# print(len(DT))
 
 
 ###################################################################
@@ -1731,9 +1852,11 @@ def extract_ref(text):
         return local
     return result[0]
 
+
 #######################################################################
 """                         MAPPING LETTERS                         """
 #######################################################################
+
 
 def diacritic_character_mapping(input_text):
     temp = str(input_text, "utf-8")
@@ -1850,7 +1973,6 @@ def character_mapping(input_text):
     if type(input_text) is str:
         return unidecode(input_text)
     print(unidecode("""super-schwüler gewählt für."""))
-
 
 
 def to_alphanumeric(input_text, spacing="_"):
@@ -2242,8 +2364,6 @@ def confusion_matrix(true_p=0, false_p=0, true_n=0, false_n=0,
 
     confusion_zero += [(confusion.getvalue(), latex_cmd, f_1, accuracy)]
     return confusion_zero
-
-
 
 
 def combinations(paths):

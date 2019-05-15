@@ -154,20 +154,24 @@ class Match:
         return psycopg_sql.SQL('    UNION ALL').join(resources_sql)
 
     def get_matching_fields(self, resources_keys=None):
+        import sys
         if not isinstance(resources_keys, list):
             resources_keys = ['sources', 'targets']
 
         # Regroup properties by resource instead of by method
-        for resources_key in resources_keys:
-            resources_properties = {hash_string(resource_name): {} for resource_name in getattr(self, resources_key)}
-
-            for condition in self.conditions.conditions_list:
+        # resources_properties = {hash_string(resource_name): {} for resource_name in getattr(self, 'sources') + getattr(self, 'targets')}
+        resources_properties = {}
+        for condition in self.conditions.conditions_list:
+            for resources_key in resources_keys:
                 for resource_label, resource_properties in getattr(condition, resources_key).items():
                     resource_label = hash_string(resource_label)
+                    if resource_label not in resources_properties:
+                        resources_properties[resource_label] = {}
 
-                    resources_properties[resource_label][condition.field_name] =\
+                    resources_properties[resource_label][condition.field_name] = \
                         resources_properties[resource_label].get(condition.field_name, []) + resource_properties
 
+        # print(resources_properties, file=sys.stderr)
         return resources_properties
 
         # resources_properties = {

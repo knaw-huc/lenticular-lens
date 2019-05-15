@@ -23,11 +23,16 @@
                                 </template>
                                 <template v-else>Value {{ index + 1 }}</template>
 
-                                <input v-if="typeof item === 'number'" class="form-control" type="number" step="any" v-model.number="condition.method[method_object.name][index]">
+                                <input v-if="typeof item === 'number' && !method_object.value.items[index].choices" class="form-control" type="number" step="any" v-model.number="condition.method[method_object.name][index]">
 
                                 <select v-if="item.type === 'matching_label'" class="form-control" v-model="condition.method[method_object.name][index].value">
                                     <option disabled selected value="">Select a Mapping</option>
                                     <option v-for="match in $root.$children[0].matches" :value="match.id">{{ match.label }}</option>
+                                </select>
+
+                                <select v-if="method_object.value.items && method_object.value.items[index].choices" class="form-control" v-model="condition.method[method_object.name][index]">
+                                    <option disabled selected value="">Select an option</option>
+                                    <option v-for="(choice_value, choice_label) in method_object.value.items[index].choices" :value="choice_value">{{ choice_label }}</option>
                                 </select>
                             </label>
                         </div>
@@ -55,26 +60,7 @@
                 </div>
                 <template v-for="collection_properties in condition[resources_key]">
                     <div v-for="(resource, index) in collection_properties" class="row">
-                        <div class="col ml-5">
-<!--                            <div v-for="(transformer, index) in resource.transformers" class="col-4">-->
-<!--                                <div class="row">-->
-<!--                                    <div class="form-group col-8">-->
-<!--                                        <v-select v-model="resource.transformers[index]">-->
-<!--                                            <option value="" selected disabled>Select a function</option>-->
-<!--                                            <option v-for="av_transformer in transformers" :value="av_transformer">{{ av_transformer }}</option>-->
-<!--                                        </v-select>-->
-<!--                                    </div>-->
-
-<!--                                    <div class="form-group">-->
-<!--                                        <button-delete @click="resource.transformers.splice(index, 1)"/>-->
-<!--                                    </div>-->
-<!--                                </div>-->
-<!--                            </div>-->
-
-<!--                            <div class="form-group">-->
-<!--                                <button-add @click="$root.$children[0].getOrCreate(resource, 'transformers', []).push('')" title="Add transformer"/>-->
-<!--                            </div>-->
-
+                        <div class="col ml-5 p-3 border-top">
                             <property-component
                                     v-if="resource.property"
                                     :property="resource.property"
@@ -82,6 +68,32 @@
                                     @delete="$delete(collection_properties, index)"
                                     @resetProperty="resetProperty(collection_properties, index, $event)"
                             />
+
+                            <div class="row">
+                                <div class="col-auto h5 pt-1">Transformers</div>
+
+                                <div class="form-group col-auto p-0">
+                                    <button-add
+                                            @click="$root.$children[0].getOrCreate(resource, 'transformers', []).push('')"
+                                            scale="0.7"
+                                            title="Add Transformer"
+                                    />
+                                </div>
+                                <div v-for="(transformer, index) in resource.transformers" class="col-auto">
+                                    <div class="row">
+                                        <div class="form-group col-auto pr-0">
+                                            <v-select v-model="resource.transformers[index]">
+                                                <option value="" selected disabled>Select a function</option>
+                                                <option v-for="av_transformer in transformers" :value="av_transformer">{{ av_transformer }}</option>
+                                            </v-select>
+                                        </div>
+
+                                        <div class="form-group col-auto pl-0">
+                                            <button-delete @click="resource.transformers.splice(index, 1)" scale="1.3" class="pt-1"/>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </template>
@@ -154,18 +166,17 @@
                             'value': {
                                 'type': {},
                                 'items':{
-                                    'years': {
-                                        'label': 'Years',
-                                        'type': 0,
-                                        'minValue': 0,
-                                    },
-                                    'months': {
-                                        'label': 'Months',
-                                        'type': 0,
-                                        'minValue': 0,
+                                    'multiplier': {
+                                        'label': '',
+                                        'type': '',
+                                        'choices': {
+                                            'Years': 365,
+                                            'Months': 30,
+                                            'Days': 1,
+                                        },
                                     },
                                     'days': {
-                                        'label': 'Days',
+                                        'label': '',
                                         'type': 0,
                                         'minValue': 0,
                                     },

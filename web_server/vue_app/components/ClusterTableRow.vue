@@ -1,6 +1,7 @@
 <template>
     <tr :clusterid="cluster_id" @click="$emit('select:cluster_id', cluster_id)" :class="selected ? 'bg-info-light' : ''">
-        <td :style="'color: ' + ext_colors['no'] + '; font-weight: bold;'"> {{ 'no' }} </td>
+        <td :style="'color: ' + ext_colors[cluster_data.extended] + '; font-weight: bold;'"> {{ cluster_data.extended }} </td>
+        <td :style="'color: ' + ext_colors[cluster_data.reconciled] + '; font-weight: bold;'"> {{ cluster_data.reconciled }} </td>
         <td> {{ cluster_id }} </td>
         <td> {{ cluster_data.index }} </td>
         <td> {{ cluster_data.nodes.length }} </td>

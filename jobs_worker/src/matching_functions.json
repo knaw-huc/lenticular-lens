@@ -12,23 +12,23 @@
   "TRIGRAM_DISTANCE": {
     "sql_template": "{source} % {target}",
     "similarity": "similarity({source}, {target})",
-    "before_index": "SELECT set_config('pg_trgm.similarity_threshold', '%1', true);",
+    "before_index": "SELECT set_config('pg_trgm.similarity_threshold', '{0}', true);",
     "index_using": "gin({target} gin_trgm_ops)"
   },
   "DISTANCE_IS_BETWEEN": {
-    "sql_template": "{source} IS NOT NULL AND {target} IS NOT NULL AND {source} - {target} BETWEEN %1 AND %2",
+    "sql_template": "{source} IS NOT NULL AND {target} IS NOT NULL AND {source} - {target} BETWEEN {0} AND {1}",
     "similarity": "{source} - {target}"
   },
   "TIME_DELTA": {
-    "sql_template": "{source} IS NOT NULL AND {target} IS NOT NULL AND {source} - {target} BETWEEN -({years} * 365 + {months} * 30 + {days}) AND ({years} * 365 + {months} * 30 + {days})",
+    "sql_template": "{source} IS NOT NULL AND {target} IS NOT NULL AND {source} - {target} BETWEEN -({days} * {multiplier}) AND ({days} * {multiplier})",
     "similarity": "{source} - {target}",
     "transformers": ["to_date_immutable"]
   },
   "IS_IN_SET": {
-    "sql_template": "({source} IN (SELECT source_uri FROM \"%1__hash\") OR {source} IN (SELECT target_uri FROM \"%1__hash\")) AND ({target} IN (SELECT source_uri FROM \"%1__hash\") OR {target} IN (SELECT target_uri FROM \"%1__hash\"))"
+    "sql_template": "({source} IN (SELECT source_uri FROM \"__hash({0})\") OR {source} IN (SELECT target_uri FROM \"__hash({0})\")) AND ({target} IN (SELECT source_uri FROM \"__hash({0})\") OR {target} IN (SELECT target_uri FROM \"__hash({0})\"))"
   },
     "LEVENSHTEIN": {
-      "sql_template": "levenshtein_less_equal({source}, {target}, %1) <= %1",
-      "similarity": "levenshtein_less_equal({source}, {target}, %1)"
+      "sql_template": "levenshtein_less_equal({source}, {target}, {0}) <= {0}",
+      "similarity": "levenshtein_less_equal({source}, {target}, {0})"
   }
 }
