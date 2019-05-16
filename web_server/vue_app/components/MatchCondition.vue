@@ -23,7 +23,7 @@
                                 </template>
                                 <template v-else>Value {{ index + 1 }}</template>
 
-                                <input v-if="typeof item === 'number' && !method_object.value.items[index].choices" class="form-control" type="number" step="any" v-model.number="condition.method[method_object.name][index]">
+                                <input v-if="typeof item === 'number' && (!method_object.value.items || !method_object.value.items[index].choices)" class="form-control" type="number" step="any" v-model.number="condition.method[method_object.name][index]">
 
                                 <select v-if="item.type === 'matching_label'" class="form-control" v-model="condition.method[method_object.name][index].value">
                                     <option disabled selected value="">Select a Mapping</option>

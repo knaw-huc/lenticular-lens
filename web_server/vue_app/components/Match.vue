@@ -5,7 +5,7 @@
             <octicon name="chevron-down" scale="3" v-b-toggle="'match_' + match.id"></octicon>
         </div>
 
-        <div class="col" v-b-toggle="'match_' + match.id">
+        <div class="col-5" v-b-toggle="'match_' + match.id">
             <div class="row">
                 <edit-label-component v-model="match.label"/>
             </div>
