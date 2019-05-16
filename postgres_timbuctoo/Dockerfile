@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y \
 RUN echo listen_addresses='0.0.0.0' >> /usr/lib/tmpfiles.d/postgresql.conf
 
 RUN pip3 install requests
+RUN pip3 install unidecode
 
 ENV PYTHONPATH "/app"
 COPY src /app

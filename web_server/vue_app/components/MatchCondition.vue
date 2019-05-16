@@ -133,6 +133,10 @@
                         'object': '=',
                     },
                     {
+                        'label': 'Similar Soundex',
+                        'object': 'LL_SOUNDEX',
+                    },
+                    {
                         'label': 'Trigram distance',
                         'object': {
                             'name': 'TRIGRAM_DISTANCE',

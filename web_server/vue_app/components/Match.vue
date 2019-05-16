@@ -17,6 +17,29 @@
             </div>
         </div>
 
+        <div class="col-5">
+            <div v-if="app.job_data">
+                <div>
+                    Request received at: {{ app.job_data.requested_at }}
+                </div>
+                <div>
+                    Status: <pre>{{ app.job_data.status }}</pre>
+                </div>
+                <div v-if="app.job_data.processing_at">
+                    Processing started at: {{ app.job_data.processing_at }}
+                </div>
+                <div v-if="app.job_data.finished_at">
+                    Processing finished at: {{ app.job_data.finished_at }}
+                    <div v-for="root_match in matches" v-if="root_match.id === match.id">
+                        <a :href="'/job/' + app.job_id + '/result/' + root_match.label" target="_blank">Results for {{ root_match.label }}</a>
+                    </div>
+                    <div>
+                        <a :href="'/job/' + app.job_id + '/result/download'" download>Download RDF</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="form-group col-1 text-right">
             <button-delete @click="$emit('remove')" :scale="2" title="Delete this Alignment"/>
         </div>
@@ -216,6 +239,11 @@
         components: {
             'match-resource-component': MatchResource,
             'match-condition': MatchCondition,
+        },
+        data() {
+            return {
+                app: this.$root.$children[0],
+            }
         },
         props: ['match', 'matches'],
         methods: {
