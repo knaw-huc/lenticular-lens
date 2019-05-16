@@ -4,6 +4,7 @@ jstyleson
 kitchen
 psycopg2-binary
 networkx
+python-intervals
 rdflib
 requests
 unidecode
