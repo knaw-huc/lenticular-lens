@@ -30,12 +30,12 @@
         <div class="form-group col-3">
             <v-select v-model="condition.type">
                 <option value="" disabled selected>Choose a filter type</option>
-                <option value="=">=</option>
-                <option value="!=">!=</option>
+                <option value="=">Equal to</option>
+                <option value="!=">Not equal to</option>
+                <option value="not_null">Is not null</option>
                 <option value="date_is_within">date is within</option>
                 <option value="appearances">appearances of property</option>
                 <option value="ilike">Contains (use % for wildcard)</option>
-                <option value="not_null">Is not null</option>
             </v-select>
         </div>
 

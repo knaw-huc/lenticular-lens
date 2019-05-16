@@ -129,7 +129,7 @@
                 hovering: false,
                 'matching_methods': [
                     {
-                        'label': 'Is Equal',
+                        'label': 'Exact Match',
                         'object': '=',
                     },
                     {
