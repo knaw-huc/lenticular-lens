@@ -7,11 +7,12 @@ from helpers import get_job_data, hasher, update_job_data
 from clustering import cluster_csv, get_cluster_data, hash_string, linkset_to_csv, cluster_reconciliation_csv, \
     cluster_and_reconcile
 import json
-from os.path import join
+from os.path import join, splitext
 import pickle
 import psycopg2
 from psycopg2 import extras as psycopg2_extras, sql as psycopg2_sql
 import random
+from src.Generic.Utility import pickle_deserializer
 from src.Clustering.IlnVisualisation import plot_reconciliation as visualise_2, plot as visualise_1, plot_compact as visualise_3
 import subprocess
 import time
@@ -88,20 +89,31 @@ def job_data(job_id):
 @app.route('/job/<job_id>/clusters/<clustering_id>')
 def clusters(job_id, clustering_id):
     clusters = {}
-    try:
-        from src.LLData.Serialisation import CLUSTER_SERIALISATION_DIR
-        with gzip.open(join(CLUSTER_SERIALISATION_DIR, f'{clustering_id}-1.txt'), 'rb') as clusters_file:
-            clusters_data = pickle.load(clusters_file)
-    except FileNotFoundError:
-        pass
-    else:
-        i = 1
-        for cluster_id, cluster_data in clusters_data.items():
-            i += 1
-            cluster_data['index'] = i
-            clusters[cluster_id] = cluster_data
-            if i == 20:
-                break
+    from src.LLData.Serialisation import CLUSTER_SERIALISATION_DIR
+    clusters_data = pickle_deserializer(CLUSTER_SERIALISATION_DIR, f'{clustering_id}-1.txt')
+
+    extended_filename_base = F"{clustering_id}_ExtendedBy_{splitext(request.args.get('association'))[0]}_{clustering_id}"
+    extended_data = pickle_deserializer(CLUSTER_SERIALISATION_DIR, f"{extended_filename_base}-1.txt")
+    cycles_data = pickle_deserializer(CLUSTER_SERIALISATION_DIR, f"{extended_filename_base}-2.txt")
+
+    if not clusters_data:
+        response = jsonify(clusters_data)
+        response.status_code = 500
+        return response
+
+    i = 1
+    for cluster_id, cluster_data in clusters_data.items():
+        i += 1
+        cluster_data['index'] = i
+        if cluster_id in cycles_data:
+            cluster_data['extended'] = 'yes'
+            cluster_data['reconciled'] = 'yes'
+        else:
+            cluster_data['reconciled'] = 'no'
+            cluster_data['extended'] = 'yes' if cluster_id in extended_data else 'no'
+        clusters[cluster_id] = cluster_data
+        if i == 20:
+            break
 
     return jsonify(clusters)
 
