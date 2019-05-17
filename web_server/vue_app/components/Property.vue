@@ -11,6 +11,7 @@
                 @reset="$emit('resetProperty', index + $event)"
                 @delete="$emit('delete')"
                 @clone="$emit('clone')"
+                ref="propertyComponents"
         ></property-component-component>
     </div>
 </template>
@@ -28,6 +29,12 @@
             },
         },
         methods: {
+            validateProperty() {
+                return !this.$refs.propertyComponents
+                    .map(propertyComponent => propertyComponent.validatePropertyComponent())
+                    .includes(false);
+            },
+
             getResourcesForIndex(index) {
                 if (index === 0)
                     return this.$root.$children[0].resources;

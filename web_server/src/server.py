@@ -1,7 +1,7 @@
 from datasets_config import DatasetsConfig
 from config_db import db_conn, run_query
 import datetime
-from flask import Flask, jsonify, request, send_file
+from flask import Flask, jsonify, request, send_file, abort
 import gzip
 from helpers import get_job_data, hasher, update_job_data
 from clustering import cluster_csv, get_cluster_data, hash_string, linkset_to_csv, cluster_reconciliation_csv, \
@@ -83,7 +83,10 @@ def job_update():
 
 @app.route('/job/<job_id>')
 def job_data(job_id):
-    return jsonify(get_job_data(job_id))
+    job_data = get_job_data(job_id)
+    if job_data:
+        return jsonify(job_data)
+    return abort(404)
 
 
 @app.route('/job/<job_id>/clusters/<clustering_id>')

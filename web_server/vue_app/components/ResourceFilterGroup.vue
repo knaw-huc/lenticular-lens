@@ -38,6 +38,7 @@
                         @remove="removeCondition(condition_index)"
                         @promote-condition="$emit('promote-condition', $event)"
                         @demote-filter-group="$emit('demote-filter-group', $event)"
+                        ref="filterGroupComponents"
                 />
             </template>
         </b-collapse>
@@ -48,13 +49,16 @@
                 :index="index"
                 @remove="$emit('remove')"
                 @add-condition="$emit('promote-condition', {'filter_object': $parent.$parent.filter_object, 'index': index})"
+                ref="filterConditionComponent"
         />
     </div>
 </template>
 <script>
-    import ResourceFilterCondition from './ResourceFilterCondition'
+    import ResourceFilterCondition from './ResourceFilterCondition';
+    import ValidationMixin from "../mixins/ValidationMixin";
 
     export default {
+        mixins: [ValidationMixin],
         components: {
             'filter-condition-component': ResourceFilterCondition,
         },
@@ -64,6 +68,17 @@
             },
         },
         methods: {
+            validateFilterGroup() {
+                if (this.filter_object.conditions && this.filter_object.conditions.length > 0)
+                    return !this.$refs.filterGroupComponents
+                        .map(filterGroupComponent => filterGroupComponent.validateFilterGroup())
+                        .includes(false);
+                else if (!this.filter_object.conditions)
+                    return this.$refs.filterConditionComponent.validateFilterCondition();
+
+                return true;
+            },
+
             addFilterCondition(event) {
                 if (event) {
                     event.target.blur();

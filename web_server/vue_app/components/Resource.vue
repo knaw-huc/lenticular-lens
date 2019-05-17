@@ -18,18 +18,26 @@
         <div class="row">
             <div class="form-group col-8">
                 <label :for="'dataset_' + resource.id">Dataset</label>
-                <v-select v-model="resource.dataset_id" :id="'dataset_' + resource.id" v-on:change="resource.collection_id = ''">
+                <v-select v-model="resource.dataset_id" :id="'dataset_' + resource.id" v-on:change="resource.collection_id = ''"
+                          v-bind:class="{'is-invalid': errors.includes('dataset')}">
                     <option value="" selected disabled>Choose a dataset</option>
                     <option v-for="(data, dataset) in datasets" v-bind:value="dataset">{{ data.title }}</option>
                 </v-select>
+                <div class="invalid-feedback" v-show="errors.includes('dataset')">
+                    Please select a dataset
+                </div>
             </div>
 
             <div v-if="resource.dataset_id != ''" class="form-group collection-input col-4">
                 <label :for="'collection_' + resource.id">Subset</label>
-                <v-select v-model="resource.collection_id" :id="'collection_' + resource.id">
+                <v-select v-model="resource.collection_id" :id="'collection_' + resource.id"
+                          v-bind:class="{'is-invalid': errors.includes('collection')}">
                     <option value="" selected disabled>Choose a subset</option>
                     <option v-for="(data, collection) in datasets[resource.dataset_id].collections" v-bind:value="collection">{{ collection }}</option>
                 </v-select>
+                <div class="invalid-feedback" v-show="errors.includes('collection')">
+                    Please select a subset
+                </div>
             </div>
         </div>
 
@@ -57,7 +65,11 @@
             <h3>Sample</h3>
             <div class="form-group row align-items-end">
                 <label class="col-auto" :for="'resource_' + resource.id + '_limit'">Only use a sample of this amount of records (-1 is no limit):</label>
-                <input type="number" min="-1" v-model.number="resource.limit" class="form-control col-1" :id="'resource_' + resource.id + '_limit'">
+                <input type="number" min="-1" v-model.number="resource.limit" class="form-control col-1" :id="'resource_' + resource.id + '_limit'"
+                       v-bind:class="{'is-invalid': errors.includes('limit')}">
+                <div class="invalid-feedback" v-show="errors.includes('limit')">
+                    Please provide a limit, or -1 if there is no limit
+                </div>
             </div>
             <div class="form-check">
                 <input v-model.boolean="resource.random" type="checkbox" class="form-check-input" :id="'resource_' + resource.id + '_random'">
@@ -81,26 +93,36 @@
                 <div v-for="(relation, index) in resource.related" class="row">
                     <div class="form-group col-4">
                         <label :for="'resource_' + resource.id + '_related_' + relation.id + '_resource'">Related collection</label>
-                        <v-select v-model="relation.resource" :id="'resource_' + resource.id + '_related_' + relation.id + '_resource'">
+                        <v-select v-model="relation.resource" :id="'resource_' + resource.id + '_related_' + relation.id + '_resource'"
+                                  v-bind:class="{'is-invalid': errors.includes(`resource_${index}`)}">
                             <option disabled selected value="">Choose a collection</option>
                             <option v-for="(root_resource, index) in resources" :value="root_resource.id" v-if="root_resource.id != resource.id">{{ root_resource.label }}</option>
                         </v-select>
+                        <div class="invalid-feedback" v-show="errors.includes(`resource_${index}`)">
+                            Please provide a related collection
+                        </div>
                     </div>
 
                     <div v-if="relation.resource > 0" class="form-group col-4">
                         <label :for="'resource_' + resource.id + '_related_' + relation.id + '_local_property'">Local property</label>
-                        <v-select v-model="relation.local_property">
+                        <v-select v-model="relation.local_property" v-bind:class="{'is-invalid': errors.includes(`local_prop_${index}`)}">
                             <option value="" selected disabled>Select local property</option>
                             <option v-for="(property_info, property) in datasets[resource.dataset_id]['collections'][resource.collection_id]" :value="property">{{ property }}</option>
                         </v-select>
+                        <div class="invalid-feedback" v-show="errors.includes(`local_prop_${index}`)">
+                            Please provide a local property
+                        </div>
                     </div>
 
                     <div v-if="relation.resource > 0" class="form-group col-3">
                         <label :for="'resource_' + resource.id + '_related_' + relation.id + '_remote_property'">Remote property</label>
-                        <v-select v-model="relation.remote_property">
+                        <v-select v-model="relation.remote_property" v-bind:class="{'is-invalid': errors.includes(`remote_prop_${index}`)}">
                             <option value="" selected disabled>Select remote property</option>
                             <option v-for="(property_info, property) in get_properties_for_resource(relation.resource)" :value="property">{{ property }}</option>
                         </v-select>
+                        <div class="invalid-feedback" v-show="errors.includes(`remote_prop_${index}`)">
+                            Please provide a remote property
+                        </div>
                     </div>
 
                     <div class="form-group col-1 align-self-end">
@@ -119,11 +141,13 @@
 
 <script>
     import ResourceFilterGroupComponent from "./ResourceFilterGroup";
+    import ValidationMixin from "../mixins/ValidationMixin";
 
     export default {
+        mixins: [ValidationMixin],
         components: {
             ResourceFilterGroupComponent,
-            },
+        },
         computed: {
             resource_label() {
                 if (typeof this.label_input !== 'undefined' && this.label_input !== '') {
@@ -147,6 +171,44 @@
             initial_label: String,
         },
         methods: {
+            validateResource() {
+                const datasetValid = this.validateField('dataset',
+                    this.resource.dataset_id && this.datasets.hasOwnProperty(this.resource.dataset_id));
+
+                const datasets = this.datasets[this.resource.dataset_id];
+                const collectionValid = this.validateField('collection',
+                    this.resource.collection_id &&
+                    datasets && datasets.collections.hasOwnProperty(this.resource.collection_id));
+
+                const limit = parseInt(this.resource.limit);
+                const limitValid = this.validateField('limit', !isNaN(limit) && (limit === -1 || limit > 0));
+
+                let relatedValid = true;
+                this.resource.related.forEach((related, idx) => {
+                    const remoteResource = this.resources.find(res => res.id === parseInt(related.resource));
+                    const resourceValid = this.validateField(`resource_${idx}`,
+                        related.resource && remoteResource);
+
+                    const localProperties = datasets && datasets.collections[this.resource.collection_id];
+                    const localPropValid = this.validateField(`local_prop_${idx}`,
+                        related.local_property && localProperties && localProperties.hasOwnProperty(related.local_property));
+
+                    const remoteDatasets = remoteResource && this.datasets[remoteResource.dataset_id];
+                    const remoteProperties = remoteDatasets && remoteDatasets.collections[remoteResource.collection_id];
+                    const remotePropValid = this.validateField(`remote_prop_${idx}`,
+                        related.remote_property && remoteProperties && remoteProperties.hasOwnProperty(related.remote_property));
+
+                    if (!(resourceValid && localPropValid && remotePropValid))
+                        relatedValid = false;
+                });
+
+                let filtersGroupsValid = true;
+                if (this.$refs.filterGroupComponents)
+                    filtersGroupsValid = this.$refs.filterGroupComponents.validateFilterGroup();
+
+                return collectionValid && datasetValid && limitValid && relatedValid && filtersGroupsValid;
+            },
+
             addRelation(event) {
                 if (event) {
                     event.target.blur();
