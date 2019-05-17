@@ -105,12 +105,12 @@ def clusters(job_id, clustering_id):
     for cluster_id, cluster_data in clusters_data.items():
         i += 1
         cluster_data['index'] = i
-        if cluster_id in cycles_data:
+        if cycles_data and cluster_id in cycles_data:
             cluster_data['extended'] = 'yes'
             cluster_data['reconciled'] = 'yes'
         else:
             cluster_data['reconciled'] = 'no'
-            cluster_data['extended'] = 'yes' if cluster_id in extended_data else 'no'
+            cluster_data['extended'] = 'yes' if extended_data and cluster_id in extended_data else 'no'
         clusters[cluster_id] = cluster_data
         if i == 20:
             break
