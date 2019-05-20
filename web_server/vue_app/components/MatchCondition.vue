@@ -19,20 +19,20 @@
                         <div class="form-group">
                             <label>
                                 <template v-if="Object.prototype.toString.call(condition.method[method_object.name]) === '[object Object]'">
-                                    {{ method_object.value.items[index].label }}
+                                    {{ searchObjectInArray(method_object.value.items, 'key', index).label }}
                                 </template>
                                 <template v-else>Value {{ index + 1 }}</template>
 
-                                <input v-if="typeof item === 'number' && (!method_object.value.items || !method_object.value.items[index].choices)" class="form-control" type="number" step="any" v-model.number="condition.method[method_object.name][index]">
+                                <input v-if="typeof item === 'number' && (!method_object.value.items || !searchObjectInArray(method_object.value.items, 'key', index).choices)" class="form-control" type="number" step="any" v-model.number="condition.method[method_object.name][index]">
 
                                 <select v-if="item.type === 'matching_label'" class="form-control" v-model="condition.method[method_object.name][index].value">
                                     <option disabled selected value="">Select a Mapping</option>
                                     <option v-for="match in $root.$children[0].matches" :value="match.id">{{ match.label }}</option>
                                 </select>
 
-                                <select v-if="method_object.value.items && method_object.value.items[index].choices" class="form-control" v-model="condition.method[method_object.name][index]">
+                                <select v-if="method_object.value.items && searchObjectInArray(method_object.value.items, 'key', index).choices" class="form-control" v-model="condition.method[method_object.name][index]">
                                     <option disabled selected value="">Select an option</option>
-                                    <option v-for="(choice_value, choice_label) in method_object.value.items[index].choices" :value="choice_value">{{ choice_label }}</option>
+                                    <option v-for="(choice_value, choice_label) in searchObjectInArray(method_object.value.items, 'key', index).choices" :value="choice_value">{{ choice_label }}</option>
                                 </select>
                             </label>
                         </div>
@@ -169,8 +169,15 @@
                             'name': 'TIME_DELTA',
                             'value': {
                                 'type': {},
-                                'items':{
-                                    'multiplier': {
+                                'items':[
+                                    {
+                                        'key': 'days',
+                                        'label': '',
+                                        'type': 0,
+                                        'minValue': 0,
+                                    },
+                                    {
+                                        'key': 'multiplier',
                                         'label': '',
                                         'type': '',
                                         'choices': {
@@ -179,12 +186,7 @@
                                             'Days': 1,
                                         },
                                     },
-                                    'days': {
-                                        'label': '',
-                                        'type': 0,
-                                        'minValue': 0,
-                                    },
-                                },
+                                ],
                             }
                         }
                     },
@@ -254,8 +256,8 @@
                             this.condition.method[this.method_object.name].push(this.method_object.value.listItems.type);
                         }
                     } else {
-                        Object.keys(this.method_object.value.items).forEach(value_item_key => {
-                            this.condition.method[this.method_object.name][value_item_key] = this.method_object.value.items[value_item_key].type;
+                        this.method_object.value.items.forEach(value_item => {
+                            this.condition.method[this.method_object.name][value_item.key] = value_item.type;
                         });
                     }
                 }
@@ -269,6 +271,17 @@
                 }
 
                 this.$set(properties[resource_index], 'property', new_property);
+            },
+            searchObjectInArray(haystack, key, value) {
+                let result;
+                haystack.forEach(item => {
+                    if (item[key] === value) {
+                        result = item;
+                        return false;
+                    }
+                });
+
+                return result;
             },
         },
         props: ['condition', 'match_id', 'resources'],
