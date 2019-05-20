@@ -14,7 +14,7 @@
         </div>
     </div>
 
-    <b-collapse :id="'resource_' + resource.id" accordion="resources-accordion">
+    <b-collapse :id="'resource_' + resource.id" accordion="resources-accordion" :ref="'resource_' + resource.id">
         <div class="row">
             <div class="form-group col-8">
                 <label :for="'dataset_' + resource.id">Dataset</label>
@@ -84,7 +84,7 @@
                     <h3>Relations</h3>
                 </div>
             </div>
-            <b-collapse :id="'resource_' + resource.id + '_relations'">
+            <b-collapse :id="'resource_' + resource.id + '_relations'" :ref="'resource_' + resource.id + '_relations'">
                 <div v-if="resource.related.length > 0" class="form-group form-check">
                     <input :id="resource.label + 'related_array'" class="form-check-input" type="checkbox" v-model="resource.related_array">
                     <label :for="resource.label + 'related_array'" class="form-check-label">Use relations as combined source</label>
@@ -202,11 +202,22 @@
                         relatedValid = false;
                 });
 
+                if (this.$refs[`resource_${this.resource.id}_relations`]) {
+                    const relationsAreShown = this.$refs[`resource_${this.resource.id}_relations`].show;
+                    if (!relatedValid && !relationsAreShown)
+                        this.$root.$emit('bv::toggle::collapse', `resource_${rhis.resource.id}_relations`);
+                }
+
                 let filtersGroupsValid = true;
                 if (this.$refs.filterGroupComponents)
                     filtersGroupsValid = this.$refs.filterGroupComponents.validateFilterGroup();
 
-                return collectionValid && datasetValid && limitValid && relatedValid && filtersGroupsValid;
+                const valid = collectionValid && datasetValid && limitValid && relatedValid && filtersGroupsValid;
+                const isShown = this.$refs[`resource_${this.resource.id}`].show;
+                if (!valid && !isShown)
+                    this.$root.$emit('bv::toggle::collapse', `resource_${this.resource.id}`);
+
+                return valid;
             },
 
             addRelation(event) {

@@ -60,6 +60,10 @@ div#app::before {
     border-radius: 2px!important;
   }
 
+  .wizard-icon-container {
+    background-color: inherit !important;
+  }
+
   .wizard-nav-pills>li>a {
     color: rgba(0, 0, 0, 0.6)!important;
 

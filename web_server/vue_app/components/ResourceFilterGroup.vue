@@ -25,7 +25,7 @@
             </div>
         </div>
 
-        <b-collapse visible :id="uid">
+        <b-collapse visible :id="uid" :ref="uid">
             <template v-if="filter_object.type">
                 <resource-filter-group-component
                         v-for="(condition, condition_index) in filter_object.conditions"
@@ -69,10 +69,17 @@
         },
         methods: {
             validateFilterGroup() {
-                if (this.filter_object.conditions && this.filter_object.conditions.length > 0)
-                    return !this.$refs.filterGroupComponents
+                if (this.filter_object.conditions && this.filter_object.conditions.length > 0) {
+                    const valid = !this.$refs.filterGroupComponents
                         .map(filterGroupComponent => filterGroupComponent.validateFilterGroup())
                         .includes(false);
+
+                    const isShown = this.$refs[this.uid].show;
+                    if (!valid && !isShown)
+                        this.$root.$emit('bv::toggle::collapse', this.uid);
+
+                    return valid;
+                }
                 else if (!this.filter_object.conditions)
                     return this.$refs.filterConditionComponent.validateFilterCondition();
 

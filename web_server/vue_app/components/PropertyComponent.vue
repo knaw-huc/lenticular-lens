@@ -62,9 +62,6 @@
                     </div>
                 </div>
             </template>
-            <div class="invalid-feedback" v-show="errors.includes('value')">
-                Please select a property
-            </div>
         </div>
     </div>
 </template>
