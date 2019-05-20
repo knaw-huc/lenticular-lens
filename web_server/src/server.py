@@ -47,11 +47,7 @@ def job_update():
     job_data = {
         'job_title': request.json['job_title'],
         'job_description': request.json['job_description'],
-        'requested_at': datetime.datetime.now(),
     }
-
-    if 'status' in request.json:
-        job_data['status'] = request.json['status']
 
     if 'resources_original' in request.json:
         job_data['resources_form_data'] = json.dumps(request.json['resources_original'])
@@ -260,6 +256,20 @@ def get_cluster_graph_data(job_id, clustering_id, cluster_id):
         'reconciliation_graph': visualise_2(specs=golden_agents_specifications, activated=True)[
             1] if get_reconciliation else None,
     })
+
+
+@app.route('/job/<job_id>/run_alignment/<alignment>', methods=['POST'])
+def run_alignment(job_id, alignment):
+    if 'restart' in request.json and request.json['restart'] is True:
+        query = psycopg2_sql.SQL("DELETE FROM alignment_jobs WHERE job_id = %s AND alignment = %s")
+        params = (job_id, alignment)
+        run_query(query, params)
+
+    query = psycopg2_sql.SQL("INSERT INTO alignment_jobs (job_id, alignment, status, requested_at) VALUES (%s, %s, %s, now())")
+    params = (job_id, alignment, 'Requested')
+    run_query(query, params)
+
+    return jsonify('ok')
 
 
 @app.route('/server_status/')

@@ -1,5 +1,5 @@
 import collections
-from config_db import db_conn, run_query
+from config_db import db_conn, execute_query, run_query
 import datetime
 from hashlib import md5
 from os import listdir
@@ -116,12 +116,35 @@ def get_job_data(job_id):
                 print('Database error. Retry %i' % n)
                 time.sleep((2 ** n) + (random.randint(0, 1000) / 1000))
 
+    #     Add alignment data
+        alignments = execute_query({'query': "SELECT * FROM alignment_jobs WHERE job_id = %s", 'parameters': (job_id,)}, {'cursor_factory': psycopg2_extras.RealDictCursor})
+        job_data['results']['alignments'] = {alignment['alignment']: alignment for alignment in alignments}
+
     #     Add association files
         job_data['association_files'] = [
             f for f in listdir(CSV_ASSOCIATIONS_DIR) if isfile(join(CSV_ASSOCIATIONS_DIR, f)) and f.endswith(('.csv', '.csv.gz'))
         ]
 
     return job_data
+
+
+def update_alignment_job(job_id, alignment, job_data):
+    n = 0
+    while True:
+        try:
+            with db_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(psycopg2_sql.SQL("UPDATE alignment_jobs SET ({}) = ROW %s WHERE job_id = %s AND alignment = %s")
+                            .format(
+                            psycopg2_sql.SQL(', '.join(job_data.keys()))),
+                            (tuple(job_data.values()), job_id, alignment))
+
+        except (psycopg2.InterfaceError, psycopg2.OperationalError):
+            n += 1
+            print('Database error. Retry %i' % n)
+            time.sleep((2 ** n) + (random.randint(0, 1000) / 1000))
+        else:
+            break
 
 
 def update_job_data(job_id, job_data):

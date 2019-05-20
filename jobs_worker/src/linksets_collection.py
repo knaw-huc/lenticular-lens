@@ -18,13 +18,24 @@ locale.setlocale(locale.LC_ALL, '')
 class LinksetsCollection:
     sql_only = False
 
-    def __init__(self, resources_filename, matches_filename, job_id, sql_only=False, resources_only=False, matches_only=False, return_limit=None):
+    def __init__(
+            self,
+            resources_filename,
+            matches_filename,
+            job_id,
+            run_match=None,
+            sql_only=False,
+            resources_only=False,
+            matches_only=False,
+            return_limit=None
+    ):
         self.sql_only = sql_only
         self.resources_only = resources_only
         self.matches_only = matches_only
         self.return_limit = return_limit or 0
         self.results = []
         self.job_id = job_id
+        self.run_match = str(run_match)
 
         self.__matches = None
         self.__resources = None
@@ -33,6 +44,13 @@ class LinksetsCollection:
             'resources': self.get_json_config(resources_filename),
             'matches': self.get_json_config(matches_filename),
         }
+
+        self.run_matches = []
+        if self.run_match:
+            for match in self.matches:
+                if match.id == self.run_match:
+                    self.run_matches.append(match.name_original)
+                    self.run_matches += match.matches_dependencies
 
     def __enter__(self):
         return self
@@ -69,10 +87,17 @@ class LinksetsCollection:
     def generate_matches(self):
         generated = []
 
-        while len(generated) < len(self.matches):
+        self.log(self.run_matches)
+        while (not self.run_match and len(generated) < len(self.matches)) or (self.run_match and len(generated) < len(self.run_matches)):
             generated_this_cycle = 0
             for match in self.matches:
-                if match.name_original not in generated and not self.get_option('skip', options=match.meta) and all(m in generated for m in match.matches_dependencies):
+                if self.run_match and match.name_original not in self.run_matches:
+                    continue
+
+                if match.name_original not in generated and not self.get_option('skip', options=match.meta):
+                    if not all(m in generated for m in match.matches_dependencies):
+                        continue
+
                     generated.append(match.name_original)
                     generated_this_cycle += 1
                     self.log('Generating linkset %s.' % match.name)
@@ -90,6 +115,9 @@ class LinksetsCollection:
 
         materialize = []
         for match in self.matches:
+            if self.run_match and match.name_original not in self.run_matches:
+                continue
+
             for resource in match.resources:
                 resource_label = hash_string(resource)
                 if resource_label not in materialize:

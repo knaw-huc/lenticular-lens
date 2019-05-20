@@ -19,6 +19,10 @@ class Match:
         return self.conditions.conditions_sql
 
     @property
+    def id(self):
+        return str(self.__data.get('id', ''))
+
+    @property
     def is_association(self):
         return self.__data.get('is_association', False)
 

@@ -1,7 +1,7 @@
 import datetime
 import fcntl
 import gzip
-from helpers import update_job_data, table_to_csv
+from helpers import update_alignment_job, table_to_csv
 from linksets_collection import LinksetsCollection
 import locale
 import psycopg2
@@ -47,7 +47,7 @@ def teardown(signum=0, frame=None):
     print('Worker stopped.')
 
     if current_job:
-        update_job_data(current_job['job_id'], {'status': current_job['status']})
+        update_alignment_job(current_job['job_id'], current_job['alignment'], {'status': current_job['status']})
 
     exit(signum)
 
@@ -75,10 +75,12 @@ if __name__ == '__main__':
                         with conn.cursor(cursor_factory=psycopg2_extras.DictCursor) as cur:
                             sql_string = """
                                 SELECT *
-                                FROM reconciliation_jobs
-                                WHERE status = 'Requested'
-                                OR status = 'Downloading'
-                                ORDER BY requested_at"""
+                                FROM alignment_jobs aj
+                                JOIN reconciliation_jobs rj
+                                    ON aj.job_id = rj.job_id
+                                WHERE aj.status = 'Requested'
+                                OR aj.status = 'Downloading'
+                                ORDER BY aj.requested_at"""
 
                             cur.execute(sql_string)
 
@@ -94,24 +96,25 @@ if __name__ == '__main__':
 
                         # Lock, check, update, commit
                         with conn.cursor(cursor_factory=psycopg2_extras.DictCursor) as cur:
-                            cur.execute("LOCK TABLE reconciliation_jobs IN ACCESS EXCLUSIVE MODE;")
-                            cur.execute("SELECT status FROM reconciliation_jobs WHERE job_id = %s", (job['job_id'],))
+                            cur.execute("LOCK TABLE alignment_jobs IN ACCESS EXCLUSIVE MODE;")
+                            cur.execute("SELECT status FROM alignment_jobs WHERE job_id = %s AND alignment = %s", (job['job_id'], job['alignment']))
                             if cur.fetchone()['status'] not in ['Requested', 'Downloading']:
+                                print('Job status changed. Aborting.')
                                 conn.commit()
                                 continue
 
-                            print('Job %s started.' % job['job_id'])
+                            print('Starting alignment %s for job %s.' % (job['alignment'], job['job_id']))
                             process_start_time = str(datetime.datetime.now())
                             cur.execute(
-                                """UPDATE reconciliation_jobs
+                                """UPDATE alignment_jobs
                                 SET status = 'Processing', processing_at = %s
-                                WHERE job_id = %s""",
-                                (process_start_time, job['job_id'])
+                                WHERE job_id = %s AND alignment = %s""",
+                                (process_start_time, job['job_id'], job['alignment'])
                             )
 
                         conn.commit()
 
-                        with subprocess.Popen(['python', '/app/run_json.py', '-r', job['resources_filename'], '-m', job['mappings_filename'], '--job-id', job['job_id']],
+                        with subprocess.Popen(['python', '/app/run_json.py', '-r', job['resources_filename'], '-m', job['mappings_filename'], '--job-id', job['job_id'], '--run-mapping', str(job['alignment'])],
                                               stdout=subprocess.PIPE, stderr=subprocess.PIPE) as converting_process:
                             with open('/common/src/LLData/rdf/%s_output.nq.gz' % job['job_id'], 'wb') as output_file:
                                 with subprocess.Popen(['gzip'], stdin=converting_process.stdout, stdout=output_file) as gzip_process:
@@ -120,7 +123,7 @@ if __name__ == '__main__':
                                         message = converting_output.decode('utf-8')
                                         print(message)
                                         messages_log += message + '\n'
-                                        update_job_data(job['job_id'], {'status': message})
+                                        update_alignment_job(job['job_id'], current_job['alignment'], {'status': message})
                                         if message.startswith('Generating linkset '):
                                             view_name = re.search(r'(?<=Generating linkset ).+(?=.$)', message)[0]
                                             next_out = None
@@ -140,7 +143,7 @@ if __name__ == '__main__':
                                                         conn1.commit()
                                                 inserted_message = '%s links found so far.' % locale.format_string('%i', inserted, grouping=True)
                                                 print(inserted_message)
-                                                update_job_data(job['job_id'], {'status': inserted_message})
+                                                update_alignment_job(job['job_id'], current_job['alignment'], {'status': inserted_message})
 
                         if converting_process.returncode == 0:
                             found_new_requests = True
@@ -148,6 +151,9 @@ if __name__ == '__main__':
                             print("Generating CSVs")
                             linksets_collection = LinksetsCollection(job['resources_filename'], job['mappings_filename'], job_id=job['job_id'])
                             for match in linksets_collection.matches:
+                                if match.id != job['alignment']:
+                                    continue
+
                                 columns = [psycopg2_sql.Identifier('source_uri'), psycopg2_sql.Identifier('target_uri')]
                                 if match.is_association:
                                     from src.LLData.CSV_Associations import CSV_ASSOCIATIONS_DIR as CSV_DIR
@@ -176,14 +182,14 @@ if __name__ == '__main__':
                             print('Cleanup complete.')
 
                             print('Job %s finished.' % job['job_id'])
-                            update_job_data(job['job_id'], {'status': 'Finished', 'finished_at': str(datetime.datetime.now())})
+                            update_alignment_job(job['job_id'], current_job['alignment'], {'status': 'Finished', 'finished_at': str(datetime.datetime.now())})
                         elif converting_process.returncode == 3:
                             print('Job %s downloading.' % job['job_id'])
-                            update_job_data(job['job_id'], {'status': 'Downloading'})
+                            update_alignment_job(job['job_id'], current_job['alignment'], {'status': 'Downloading'})
                         else:
                             found_new_requests = True
                             print('Job %s failed.' % job['job_id'])
-                            update_job_data(job['job_id'], {'status': 'FAILED: ' + messages_log})
+                            update_alignment_job(job['job_id'], current_job['alignment'], {'status': 'FAILED: ' + messages_log})
 
                     if not found_new_requests:
                         time.sleep(2)

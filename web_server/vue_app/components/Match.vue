@@ -15,21 +15,27 @@
                     <label class="form-check-label" :for="'match_' + match.id + '_is_association'">Association</label>
                 </div>
             </div>
+
+            <div class="row">
+                <div class="col-auto">
+                    <b-button variant="info" @click="runAlignment">Run Alignment</b-button>
+                </div>
+            </div>
         </div>
 
         <div class="col-5">
-            <div v-if="app.job_data">
+            <div v-if="app.job_data.results.alignments[match.id]">
                 <div>
-                    Request received at: {{ app.job_data.requested_at }}
+                    Request received at: {{ app.job_data.results.alignments[match.id].requested_at }}
                 </div>
                 <div>
-                    Status: <pre>{{ app.job_data.status }}</pre>
+                    Status: <pre>{{ app.job_data.results.alignments[match.id].status }}</pre>
                 </div>
-                <div v-if="app.job_data.processing_at">
-                    Processing started at: {{ app.job_data.processing_at }}
+                <div v-if="app.job_data.results.alignments[match.id].processing_at">
+                    Processing started at: {{ app.job_data.results.alignments[match.id].processing_at }}
                 </div>
-                <div v-if="app.job_data.finished_at">
-                    Processing finished at: {{ app.job_data.finished_at }}
+                <div v-if="app.job_data.results.alignments[match.id].finished_at">
+                    Processing finished at: {{ app.job_data.results.alignments[match.id].finished_at }}
                     <div v-for="root_match in matches" v-if="root_match.id === match.id">
                         <a :href="'/job/' + app.job_id + '/result/' + root_match.label" target="_blank">Results for {{ root_match.label }}</a>
                     </div>
@@ -285,8 +291,27 @@
                 this.$delete(this.match[resources_key], resource_index);
 
                 if (this.match[resources_key].length < 1) {
-                this.addMatchResource(resources_key);
-            }
+                    this.addMatchResource(resources_key);
+                }
+            },
+            runAlignment() {
+                this.app.submitForm();
+
+                fetch("/job/" + this.$root.$children[0].job_id + "/run_alignment/" + this.match.id,
+                    {
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json',
+                        },
+                        method: "POST",
+                        body: JSON.stringify({'restart': false}),
+                    }
+                )
+                    .then((response) => response.json())
+                    .then((data) => {
+                        this.$set(this.app, 'refresh_job_data', true);
+                    }
+                );
             },
             scrollTo(ref) {
                 this.$refs[ref].$el.parentNode.scrollIntoView({'behavior':'smooth', 'block':'start'});

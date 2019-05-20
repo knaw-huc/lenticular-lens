@@ -10,11 +10,18 @@ CREATE TABLE IF NOT EXISTS reconciliation_jobs (
   mappings_form_data json,
   resources_filename text,
   mappings_filename text,
-  status text,
-  requested_at timestamp,
-  processing_at timestamp,
-  finished_at timestamp,
   UNIQUE (job_title, job_description)
+);
+
+CREATE TABLE IF NOT EXISTS alignment_jobs (
+    job_id text not null,
+    alignment int not null,
+    status text,
+    requested_at timestamp,
+    processing_at timestamp,
+    finished_at timestamp,
+    links_count bigint,
+    PRIMARY KEY (job_id, alignment)
 );
 
 CREATE TABLE IF NOT EXISTS timbuctoo_tables (

@@ -33,7 +33,7 @@ def execute_query(query_dict: Mapping, cursor_args: Mapping = None) -> List[Sequ
     with conn, conn.cursor(**cursor_args) as cur:
         cur.execute(query_dict['query'], query_dict['parameters'])
 
-        return cur.fetchall() if not query_dict['header'] else [query_dict['header']] + cur.fetchall()
+        return cur.fetchall() if 'header' not in query_dict or not query_dict['header'] else [query_dict['header']] + cur.fetchall()
 
 
 def run_query(query, args=None):

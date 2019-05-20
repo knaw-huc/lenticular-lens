@@ -390,6 +390,8 @@
                 limit_all: -1,
                 matches: [],
                 matches_count: 0,
+                planned_refresh_job_data: false,
+                refresh_job_data: false,
                 steps: [
                     'idea',
                     'collections',
@@ -588,6 +590,8 @@
                     });
             },
             getJobData() {
+                this.planned_refresh_job_data = false;
+
                 if (this.job_id !== '') {
                     fetch('/job/' + this.job_id)
                         .then((response) => response.json())
@@ -617,12 +621,28 @@
                                 }
                             }
 
-                            if (this.job_data.status) {
-                                this.activateStep(this.job_data.status === 'Finished' ? 'clusters' : 'cluster_validation');
+                            let has_finished = false;
+                            let has_unfinished = false;
+                            Object.keys(this.job_data.results.alignments).forEach(alignment_key => {
+                                let alignment = this.job_data.results.alignments[alignment_key];
+                                if (alignment.status === 'Finished') {
+                                    has_finished = true;
+                                } else if (!alignment.status.startsWith('FAILED')) {
+                                    has_unfinished = true;
+                                }
+                            });
 
-                                if (this.job_data.status !== 'Finished' && !this.job_data.status.startsWith('FAILED')) {
+                            if (has_finished) {
+                                this.activateStep('clusters');
+                            }
+
+                            if (has_unfinished) {
+                                if (!this.planned_refresh_job_data) {
+                                    this.planned_refresh_job_data = true;
                                     setTimeout(this.getJobData, 5000);
                                 }
+                            } else {
+                                this.refresh_job_data = false;
                             }
                         })
                     ;
@@ -827,8 +847,6 @@
                 });
 
                 matches_copy.forEach(match_copy => {
-                    delete match_copy['id'];
-
                     ['sources', 'targets'].forEach(resources_key => {
                         match_copy[resources_key].forEach((resource_id, resource_index) => {
                             match_copy[resources_key][resource_index] = this.getResourceById(resource_id).label;
