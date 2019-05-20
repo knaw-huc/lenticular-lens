@@ -151,7 +151,7 @@ if __name__ == '__main__':
                             print("Generating CSVs")
                             linksets_collection = LinksetsCollection(job['resources_filename'], job['mappings_filename'], job_id=job['job_id'])
                             for match in linksets_collection.matches:
-                                if match.id != job['alignment']:
+                                if str(match.id) != str(job['alignment']):
                                     continue
 
                                 columns = [psycopg2_sql.Identifier('source_uri'), psycopg2_sql.Identifier('target_uri')]
