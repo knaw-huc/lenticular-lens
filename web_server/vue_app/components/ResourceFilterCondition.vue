@@ -79,7 +79,7 @@
             <template v-else-if="errors.includes('value') && condition.type === 'appearances'">
                 Please provide a number for the condition
             </template>
-            <template v-else>
+            <template v-else-if="errors.includes('value')">
                 Please provide a value for the condition
             </template>
         </div>
