@@ -72,7 +72,8 @@
         mixins: [ValidationMixin],
         methods: {
             validatePropertyComponent() {
-                return this.validateField('value', this.value.find(value => value === '') === undefined);
+                return this.validateField('value', (this.value[0] === '__value__') ||
+                    (this.value.find(value => value === '') === undefined));
             },
 
             updateInput(new_value, index) {
