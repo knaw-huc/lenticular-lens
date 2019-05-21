@@ -322,8 +322,8 @@
                         v-if="has_changes"
                         :style="props.fillButtonStyle"
                         :disabled="props.loading"
-                        @click.native="submitForm">
-                    Run Job
+                        @click.native.stop="submitForm">
+                    Save
                  </wizard-button>
             </template>
 
