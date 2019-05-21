@@ -51,7 +51,16 @@
 
         <tab-content title="Collections">
         <div id="resources">
-            <h2>Collections</h2>
+            <div class="row justify-content-between">
+                <div class="col-auto">
+                    <h2>Collections</h2>
+                </div>
+                <div class="col-auto">
+                    <div class="form-group mb-0 pr-2 pt-3">
+                        <button-add @click="addResource" title="Add a Collection"/>
+                    </div>
+                </div>
+            </div>
             <resource-component
                     :initial_label="'Collection ' + resource.id"
                     :resource="resource"
@@ -62,12 +71,6 @@
                     v-on:remove="resources.splice(index, 1)"
                     @update:label="resource.label = $event"
             ></resource-component>
-
-            <div class="form-group mt-4">
-                <button v-on:click="addResource" type="button" class="add-resource form-control btn btn-primary w-25">
-                    + Add Collection
-                </button>
-            </div>
         </div>
         </tab-content>
 
