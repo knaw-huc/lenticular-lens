@@ -294,7 +294,7 @@
                     this.addMatchResource(resources_key);
                 }
             },
-            runAlignment() {
+            runAlignment(force = false) {
                 this.app.submitForm();
 
                 fetch("/job/" + this.$root.$children[0].job_id + "/run_alignment/" + this.match.id,
@@ -304,12 +304,15 @@
                             'Content-Type': 'application/json',
                         },
                         method: "POST",
-                        body: JSON.stringify({'restart': false}),
+                        body: JSON.stringify({'restart': force}),
                     }
                 )
                     .then((response) => response.json())
                     .then((data) => {
                         this.$set(this.app, 'refresh_job_data', true);
+                        if (data.result === 'exists' && confirm('This Alignment job already exists.\nDo you want to overwrite it with the current configuration?')) {
+                            this.runAlignment(true);
+                        }
                     }
                 );
             },

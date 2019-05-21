@@ -265,11 +265,14 @@ def run_alignment(job_id, alignment):
         params = (job_id, alignment)
         run_query(query, params)
 
-    query = psycopg2_sql.SQL("INSERT INTO alignment_jobs (job_id, alignment, status, requested_at) VALUES (%s, %s, %s, now())")
-    params = (job_id, alignment, 'Requested')
-    run_query(query, params)
+    try:
+        query = psycopg2_sql.SQL("INSERT INTO alignment_jobs (job_id, alignment, status, requested_at) VALUES (%s, %s, %s, now())")
+        params = (job_id, alignment, 'Requested')
+        run_query(query, params)
+    except psycopg2.errors.UniqueViolation:
+        return jsonify({'result': 'exists'})
 
-    return jsonify('ok')
+    return jsonify({'result': 'ok'})
 
 
 @app.route('/server_status/')
