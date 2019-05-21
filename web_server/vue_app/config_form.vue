@@ -9,17 +9,25 @@
         ref="formWizard"
     >
 
-        <tab-content title="Idea">
+        <tab-content title="Idea" :before-change="validateIdeaTab">
             <div class="h2">Idea</div>
             <div v-if="idea_form === 'new' ||  job_id" class="border p-4 mt-4 bg-light">
                 <div class="form-group">
                     <label class="h3" for="idea">What's your idea?</label>
-                    <input type="text" class="form-control" id="idea" v-model="inputs.job_title">
+                    <input type="text" class="form-control" id="idea" v-model="inputs.job_title"
+                           v-bind:class="{'is-invalid': errors.includes('idea')}">
+                    <div class="invalid-feedback" v-show="errors.includes('idea')">
+                        Please indicate a name for your idea
+                    </div>
                 </div>
 
                 <div class="form-group pt-3">
                     <label class="h3" for="description">Describe your idea</label>
-                    <textarea class="form-control" id="description" v-model="inputs.job_description"></textarea>
+                    <textarea class="form-control" id="description" v-model="inputs.job_description"
+                              v-bind:class="{'is-invalid': errors.includes('description')}"></textarea>
+                    <div class="invalid-feedback" v-show="errors.includes('description')">
+                        Please indicate a description for your idea
+                    </div>
                 </div>
 
                 <div class="form-group row justify-content-end pt-3 mb-0">
@@ -47,9 +55,13 @@
                     </div>
                 </div>
             </div>
+
+            <b-alert variant="danger" class="mt-4" :show="tab_error !== ''">
+                {{ tab_error }}
+            </b-alert>
         </tab-content>
 
-        <tab-content title="Collections">
+        <tab-content title="Collections" :before-change="validateCollectionsTab">
         <div id="resources">
             <div class="row justify-content-between">
                 <div class="col-auto">
@@ -70,7 +82,12 @@
                     :key="resource.id"
                     v-on:remove="resources.splice(index, 1)"
                     @update:label="resource.label = $event"
+                    ref="resourceComponents"
             ></resource-component>
+
+            <b-alert variant="danger" class="mt-4" :show="tab_error !== ''">
+                {{ tab_error }}
+            </b-alert>
         </div>
         </tab-content>
 
@@ -309,7 +326,7 @@
             </template>
         </tab-content>
 
-        <template v-if="(props.activeTabIndex === 0  && !job_id) || props.activeTabIndex === 2" slot="next" scope="props">
+        <template v-if="(props.activeTabIndex === 0  && !job_id) || props.activeTabIndex === 2" slot="next" slot-scope="props">
             <template v-if="props.activeTabIndex === 2">
                 <wizard-button
                         v-if="job_data"
@@ -346,7 +363,7 @@
                  </wizard-button>
             </template>
         </template>
-        <template slot="finish" scope="props" style="display: none">&#8203;</template>
+        <template slot="finish" slot-scope="props" style="display: none">&#8203;</template>
     </form-wizard>
     </form>
 </div>
@@ -357,9 +374,11 @@
     import Match from './components/Match'
     import ClusterVisualizationComponent from "./components/ClusterVisualization";
     import ClusterTableRowComponent from "./components/ClusterTableRow";
+    import ValidationMixin from "./mixins/ValidationMixin";
 
     export default {
         name: 'app',
+        mixins: [ValidationMixin],
         components: {
             ClusterTableRowComponent,
             ClusterVisualizationComponent,
@@ -386,6 +405,7 @@
                     job_title: '',
                     job_description: '',
                 },
+                tab_error: '',
                 job_id: '',
                 job_data: null,
                 resources: [],
@@ -406,6 +426,31 @@
             }
         },
         methods: {
+            isTabValid(isValid, message) {
+                this.tab_error = isValid ? '' : message;
+                return !!isValid;
+            },
+
+            validateIdea() {
+                const ideaValid = this.validateField('idea', this.inputs.job_title);
+                const descriptionValid = this.validateField('description', this.inputs.job_description);
+                return ideaValid && descriptionValid;
+            },
+
+            validateIdeaTab() {
+                return this.isTabValid(this.job_data, 'Please update or create your idea first!');
+            },
+
+            validateCollectionsTab() {
+                const results = this.$refs.resourceComponents
+                    .map(resourceComponent => resourceComponent.validateResource());
+
+                if (results.includes(false))
+                    return this.isTabValid(false, 'One or more resources contain errors!');
+
+                return this.isTabValid(this.resources.length > 0, 'Please add at least one resource!');
+            },
+
             activateStep(step_name, jump=false) {
                 let step_index = this.steps.indexOf(step_name);
 
@@ -648,7 +693,9 @@
                                 this.refresh_job_data = false;
                             }
                         })
-                    ;
+                        .catch(() => {
+                            this.job_data = null;
+                        });
                 }
             },
             getMatchById(match_id) {
@@ -686,10 +733,13 @@
                 return subject[key];
             },
             saveIdea() {
-                if (this.job_id) {
-                    this.updateJob(this.inputs);
-                } else {
-                    this.createJob();
+                if (this.validateIdea()) {
+                    if (this.job_id) {
+                        this.updateJob(this.inputs);
+                    }
+                    else {
+                        this.createJob();
+                    }
                 }
             },
             setJobId(job_id) {

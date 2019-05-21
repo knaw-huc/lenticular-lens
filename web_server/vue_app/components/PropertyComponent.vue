@@ -5,18 +5,21 @@
                 <octicon name="arrow-right" />
             </div>
             <div v-if="!value[0] || (Array.isArray(resources) && !singular) || (value[0] && !Array.isArray(resources))" class="form-group col-auto">
-                <v-select v-if="!value[0]" :value="value[0]" @input="updateInput($event, 0)">
-                    <template v-if="Array.isArray(resources)">
-                        <option v-for="collection in resources" :key="collection.id" :value="collection.id">{{ collection.label }}
-                        </option>
-                    </template>
-                    <template v-else>
-                        <option value="" disabled selected>Choose a referenced collection</option>
-                        <option value="__value__">Value (do not follow reference)</option>
-                        <option v-for="collection in Object.keys(resources)" :key="collection" :value="collection">{{ collection }}
-                        </option>
-                    </template>
-                </v-select>
+                <template v-if="!value[0]">
+                    <v-select :value="value[0]" @input="updateInput($event, 0)"
+                              v-bind:class="{'is-invalid': errors.includes('value')}">
+                        <template v-if="Array.isArray(resources)">
+                            <option v-for="collection in resources" :key="collection.id" :value="collection.id">{{ collection.label }}
+                            </option>
+                        </template>
+                        <template v-else>
+                            <option value="" disabled selected>Choose a referenced collection</option>
+                            <option value="__value__">Value (do not follow reference)</option>
+                            <option v-for="collection in Object.keys(resources)" :key="collection" :value="collection">{{ collection }}
+                            </option>
+                        </template>
+                    </v-select>
+                </template>
                 <div v-else-if="Array.isArray(resources) && !singular" class="row">
                     <template v-if="!singular">
                         <div class="col-auto border border-info p-1 rounded-pill pl-2 pr-2">
@@ -46,10 +49,13 @@
                 </div>
                 <div class="form-group col-auto">
                     <div class="row">
-                        <v-select v-if="!value[1]" class="form-control col-auto" :value="value[1]" @input="updateInput($event, 1)">
-                            <option value="" selected disabled>Choose a property</option>
-                            <option v-for="property_opt in Object.keys(properties)" :value="property_opt">{{ property_opt }}</option>
-                        </v-select>
+                        <template v-if="!value[1]">
+                            <v-select class="form-control col-auto" :value="value[1]" @input="updateInput($event, 1)"
+                                      v-bind:class="{'is-invalid': errors.includes('value')}">
+                                <option value="" selected disabled>Choose a property</option>
+                                <option v-for="property_opt in Object.keys(properties)" :value="property_opt">{{ property_opt }}</option>
+                            </v-select>
+                        </template>
                         <button v-else type="button" class=" mt-1 col-auto btn-info btn pb-0 pt-0 rounded-pill" @click="$emit('reset', 1)">
                             {{ value[1] }}
                         </button>
@@ -60,8 +66,15 @@
     </div>
 </template>
 <script>
+    import ValidationMixin from "../mixins/ValidationMixin";
+
     export default {
+        mixins: [ValidationMixin],
         methods: {
+            validatePropertyComponent() {
+                return this.validateField('value', this.value.find(value => value === '') === undefined);
+            },
+
             updateInput(new_value, index) {
                 this.$emit('input', [index, new_value]);
             },

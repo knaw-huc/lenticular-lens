@@ -25,7 +25,7 @@
             </div>
         </div>
 
-        <b-collapse visible :id="uid">
+        <b-collapse visible :id="uid" :ref="uid">
             <template v-if="filter_object.type">
                 <resource-filter-group-component
                         v-for="(condition, condition_index) in filter_object.conditions"
@@ -38,6 +38,7 @@
                         @remove="removeCondition(condition_index)"
                         @promote-condition="$emit('promote-condition', $event)"
                         @demote-filter-group="$emit('demote-filter-group', $event)"
+                        ref="filterGroupComponents"
                 />
             </template>
         </b-collapse>
@@ -48,13 +49,16 @@
                 :index="index"
                 @remove="$emit('remove')"
                 @add-condition="$emit('promote-condition', {'filter_object': $parent.$parent.filter_object, 'index': index})"
+                ref="filterConditionComponent"
         />
     </div>
 </template>
 <script>
-    import ResourceFilterCondition from './ResourceFilterCondition'
+    import ResourceFilterCondition from './ResourceFilterCondition';
+    import ValidationMixin from "../mixins/ValidationMixin";
 
     export default {
+        mixins: [ValidationMixin],
         components: {
             'filter-condition-component': ResourceFilterCondition,
         },
@@ -64,6 +68,24 @@
             },
         },
         methods: {
+            validateFilterGroup() {
+                if (this.filter_object.conditions && this.filter_object.conditions.length > 0) {
+                    const valid = !this.$refs.filterGroupComponents
+                        .map(filterGroupComponent => filterGroupComponent.validateFilterGroup())
+                        .includes(false);
+
+                    const isShown = this.$refs[this.uid].show;
+                    if (!valid && !isShown)
+                        this.$root.$emit('bv::toggle::collapse', this.uid);
+
+                    return valid;
+                }
+                else if (!this.filter_object.conditions)
+                    return this.$refs.filterConditionComponent.validateFilterCondition();
+
+                return true;
+            },
+
             addFilterCondition(event) {
                 if (event) {
                     event.target.blur();

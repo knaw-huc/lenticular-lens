@@ -11,6 +11,7 @@
                     :property="condition.property"
                     :singular="true"
                     @resetProperty="resetProperty(condition.property, $event)"
+                    ref="propertyComponent"
             />
         </div>
         <div class="col-auto">
@@ -28,7 +29,7 @@
 
     <div class="row">
         <div class="form-group col-3">
-            <v-select v-model="condition.type">
+            <v-select v-model="condition.type" v-bind:class="{'is-invalid': errors.includes('condition')}">
                 <option value="" disabled selected>Choose a filter type</option>
                 <option value="=">Equal to</option>
                 <option value="!=">Not equal to</option>
@@ -40,7 +41,8 @@
         </div>
 
         <div v-if="['=', '!=', 'date_is_within', 'ilike'].indexOf(condition.type) > -1" class="form-group col-3">
-            <input class="form-control" type="text" v-model="condition.value" placeholder="Enter a value">
+            <input class="form-control" type="text" v-model="condition.value" placeholder="Enter a value"
+                   v-bind:class="{'is-invalid': errors.includes('value')}">
         </div>
 
         <div v-if="condition.type == 'appearances'" class="form-group col-2">
@@ -51,7 +53,8 @@
             </v-select>
         </div>
         <div v-if="condition.type == 'appearances'" class="form-group col-1">
-            <input class="form-control" type="number" min="0" step="1" v-model.number="condition.value">
+            <input class="form-control" type="number" min="0" step="1" v-model.number="condition.value"
+                   v-bind:class="{'is-invalid': errors.includes('value')}">
         </div>
 
         <div class="form-check">
@@ -59,11 +62,36 @@
             <label class="form-check-label" :for="'resource_' + resource.id + '_condition_' + index + '_invert'">Invert</label>
         </div>
     </div>
+
+    <div class="row" v-show="errors.includes('property') || errors.includes('condition') || errors.includes('value')">
+        <div class="invalid-feedback d-block pl-3">
+            <template v-if="errors.includes('property')">
+                Please select a property
+            </template>
+
+            <template v-if="errors.includes('property') && (errors.includes('condition') || errors.includes('value'))">
+                <br/>
+            </template>
+
+            <template v-if="errors.includes('condition')">
+                Please provide a filter type
+            </template>
+            <template v-else-if="errors.includes('value') && condition.type === 'appearances'">
+                Please provide a number for the condition
+            </template>
+            <template v-else>
+                Please provide a value for the condition
+            </template>
+        </div>
+    </div>
 </div>
 </template>
 
 <script>
+    import ValidationMixin from "../mixins/ValidationMixin";
+
     export default {
+        mixins: [ValidationMixin],
         computed: {
             datasets() {
                 return this.$parent.datasets
@@ -76,6 +104,22 @@
             },
         },
         methods: {
+            validateFilterCondition() {
+                const propertyValid = this.validateField('property' ,this.$refs.propertyComponent.validateProperty());
+                const conditionValid = this.validateField('condition', this.condition.type);
+
+                let valueValid = false;
+                if (['=', '!=', 'date_is_within', 'ilike'].includes(this.condition.type))
+                    valueValid = this.validateField('value', this.condition.value);
+                else if (this.condition.type === 'appearances')
+                    valueValid = this.validateField('value', !isNaN(parseInt(this.condition.value))
+                        && parseInt(this.condition.value) > 0);
+                else
+                    valueValid = this.validateField('value', true);
+
+                return propertyValid && conditionValid && valueValid;
+            },
+
             resetProperty(property, property_index) {
                 let new_property = property.slice(0, property_index);
                 new_property.push('');
