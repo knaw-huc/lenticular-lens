@@ -21,7 +21,7 @@ services:
     environment:
       - DATABASE_CONFIG={"host":"postgres","database":"postgres","user":"postgres","password":"postgres"}
     volumes:
-      - output:/output
+      - output:/common/src/LLData
 
   timbuctoo_worker:
     build:
@@ -45,7 +45,7 @@ services:
     ports:
       - 8000:8000
     volumes:
-      - output:/output
+      - output:/common/src/LLData
 
   status_monitor:
     build:
