@@ -13,4 +13,4 @@ ENV FLASK_ENV=development
 ENV PYTHONPATH /app:/common:
 
 COPY ./web_server/src /app
-CMD ["gunicorn", "-b", ":8000", "--reload", "server:app", "-t", "600"]
+CMD ["gunicorn", "-b", ":8000", "--reload", "server:app", "-t", "900"]
