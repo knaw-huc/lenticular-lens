@@ -387,12 +387,11 @@ def simple_csv_link_clustering(csv_path, save_in, file_name=None, key=None, acti
         print("\n5. JOB DONE!!!\n\t>>> DATA RETURNED TO THE CLIENT SIDE TO BE PROCESSED FOR DISPLAY\n")
         round(stat(csv_path).st_size / (1024 * 1024 * 1024), 3)
 
-        return file_name
-
     except Exception as err:
         traceback.print_exc()
         print(err.__str__())
-        return file_name
+
+    return {'file_name': file_name, 'clusters_count': len(new_clusters)}
 
 
 # *************************************************************
@@ -417,7 +416,7 @@ def extend_cluster(serialisation_dir, serialized_cluster_name, csv_association_f
 
     if activated is False:
         problem(text="--> THE FUNCTION [extend_cluster] IS NOT ACTIVATED.")
-        return
+        return False
 
     position = 0    # THE LINK POSITION IN THE CSV FILE
     cycle_paths = {}
@@ -740,7 +739,7 @@ def extend_cluster(serialisation_dir, serialized_cluster_name, csv_association_f
         serialised_id = serialized_cluster_name
 
         if serialised_id is None:
-            return None, None
+            return False
     else:
         serialised_id = serialised_id[0]
 
@@ -753,7 +752,7 @@ def extend_cluster(serialisation_dir, serialized_cluster_name, csv_association_f
                    text=F"\tFILE: {serialized_cluster_name} "
                    F"\nIF YOU ARE EXPECTING TO READ SOME DATA, WE ARE AFRAID, THE CLUSTER HAS NO NODES. "
                    F"\nEITHER IT WAS NOT POSSIBLE TO READ THE PROVIDED FILE OR THE FILE NAME IS INCORRECT.")
-        return None, None
+        return False
     node2cluster = clusters_dictionary['node2cluster_id']
     print("\t[{}] ILNs CLUSTERED FROM [{}] RESOURCES".format(len(clusters), len(node2cluster)))
 
@@ -874,7 +873,7 @@ def extend_cluster(serialisation_dir, serialized_cluster_name, csv_association_f
 
     except FileNotFoundError as err:
         problem(text=err)
-        return None, None
+        return False
 
     # ***************************************************************************************************
     print("\n--> 3. SERIALISING THE EXTENDED CLUSTERS DICTIONARIES AND THE LIST OF CLUSTERS IN A CYCLE...")
@@ -972,7 +971,7 @@ def extend_cluster(serialisation_dir, serialized_cluster_name, csv_association_f
             reconciled_name = F"{serialized_cluster_name}_Reconciled_{serialised_id}"
         reconciled_clusters_serialised_file = simple_csv_link_clustering(
             csv_path=reconciled_file_path, save_in=serialisation_dir,
-            file_name=reconciled_name, key=F"Reconciled_{serialised_id}", activated=True)
+            file_name=reconciled_name, key=F"Reconciled_{serialised_id}", activated=True)['file_name']
 
         # THE FILE IS AGAIN REMOVED TO SAVE HARD DISC SPACE
         # *************************************************
@@ -996,7 +995,12 @@ def extend_cluster(serialisation_dir, serialized_cluster_name, csv_association_f
 
     # EXTENDED FILE NAME IS NONE IF WE DO NOT FINE ANY CYCLES.
     # EVEN IF THE CLUSTERS EXTEND, NO EXTENDED FILE WILL BE GENERATED IF NO CYCLE IS FOUND
-    return extended_file_name, reconciled_clusters_serialised_file
+    return {
+        'extended_file_name': extended_file_name,
+        'reconciled_clusters_serialised_file_name': reconciled_clusters_serialised_file,
+        'extended_clusters_count': len(extended_clusters),
+        'cycles_count': len(list_extended_clusters_cycle),
+    }
 
 
 # *************************************************************

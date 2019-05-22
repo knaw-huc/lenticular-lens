@@ -552,8 +552,11 @@
                 }, 2000)
             },
             createClustering(mapping_label, event) {
-                let btn = event.target;
-                btn.setAttribute('disabled', 'disabled');
+                if (event) {
+                    let btn = event.target;
+                    btn.setAttribute('disabled', 'disabled');
+                }
+                const clustered = this.getResultForMatch(mapping_label).clusterings.length > 0;
 
                 fetch('/job/' + this.job_id + '/create_clustering/',
                     {
@@ -564,13 +567,19 @@
                         method: "POST",
                         body: JSON.stringify({
                             'mapping_label': mapping_label,
-                            'association_file': this.association,
-                            'clustered': this.getResultForMatch(mapping_label).clusterings.length > 0,
+                            'association_file': clustered ? this.association : '',
+                            'clustered': clustered,
                         })
                     })
                     .then((response) => response.json())
                     .then((data) => {
-                        this.getJobData();
+                        if (!clustered && this.association) {
+                            this.getJobData(() => {
+                                this.createClustering(mapping_label);
+                            });
+                        } else {
+                            this.getJobData();
+                        }
                     });
             },
             createJob() {
@@ -637,7 +646,7 @@
                         }
                     });
             },
-            getJobData() {
+            getJobData(callback) {
                 this.planned_refresh_job_data = false;
 
                 if (this.job_id !== '') {
@@ -691,6 +700,10 @@
                                 }
                             } else {
                                 this.refresh_job_data = false;
+                            }
+
+                            if (callback) {
+                                callback();
                             }
                         })
                         .catch(() => {

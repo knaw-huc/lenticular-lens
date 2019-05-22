@@ -170,28 +170,45 @@ def create_clustering(job_id):
     from src.LLData.CSV_Alignments import CSV_ALIGNMENTS_DIR
     filename = f'alignment_{hasher(job_id)}_{request.json["mapping_label"]}.csv.gz'
     csv_filepath = join(CSV_ALIGNMENTS_DIR, filename)
-    clustering_id = None
     if request.json['association_file'] != '':
         if request.json['clustered']:
-            cluster_reconciliation_csv(request.json['association_file'], job_id, request.json['mapping_label'])
+            reconciliation_result = cluster_reconciliation_csv(request.json['association_file'], job_id, request.json['mapping_label'])
+
+            with db_conn() as conn, conn.cursor() as cur:
+                cur.execute('''
+                UPDATE clusterings
+                SET extended_count = %s, cycles_count = %s
+                WHERE job_id = %s AND mapping_name = %s
+                ''', (
+                    reconciliation_result['extended_clusters_count'],
+                    reconciliation_result['cycles_count'],
+                    job_id,
+                    request.json['mapping_label'],
+                ))
+
+            return jsonify(reconciliation_result)
         else:
-            cluster_and_reconcile(request.json['association_file'], job_id, request.json['mapping_label'],
-                                  request.json['association_file'])
+            abort(400)
     else:
-        clustering_id = cluster_csv(csv_filepath, job_id, request.json['mapping_label'])
+        clustering_result = cluster_csv(csv_filepath, job_id, request.json['mapping_label'])
 
         try:
             with db_conn() as conn, conn.cursor() as cur:
                 cur.execute('''
                 INSERT INTO clusterings
-                (clustering_id, job_id, mapping_name, clustering_type)
-                VALUES (%s, %s, %s, %s)
+                (clustering_id, job_id, mapping_name, clustering_type, clusters_count)
+                VALUES (%s, %s, %s, %s, %s)
                 ''', (
-                clustering_id, job_id, request.json['mapping_label'], request.json.get('clustering_type', 'default')))
+                    clustering_result['file_name'],
+                    job_id,
+                    request.json['mapping_label'],
+                    request.json.get('clustering_type', 'default'),
+                    clustering_result['clusters_count'],
+                ))
         except psycopg2.IntegrityError:
             pass
 
-    return jsonify(clustering_id)
+        return jsonify(clustering_result)
 
 
 @app.route('/job/<job_id>/cluster/<clustering_id>/<cluster_id>')
