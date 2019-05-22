@@ -148,6 +148,20 @@ if __name__ == '__main__':
                         if converting_process.returncode == 0:
                             found_new_requests = True
 
+                            with db_conn() as conn1:
+                                with conn1.cursor() as cur:
+                                    cur.execute(psycopg2_sql.SQL('SELECT last_value FROM {}.{}').format(
+                                        psycopg2_sql.Identifier('job_' + job['job_id']),
+                                        psycopg2_sql.Identifier(view_name + '_count'),
+                                    ))
+                                    inserted = cur.fetchone()[0]
+
+                                with conn1.cursor() as cur:
+                                    cur.execute(
+                                        "UPDATE alignment_jobs SET links_count = %s WHERE job_id = %s AND alignment = %s",
+                                        (inserted, job['job_id'], job['alignment'])
+                                    )
+
                             print("Generating CSVs")
                             linksets_collection = LinksetsCollection(job['resources_filename'], job['mappings_filename'], job_id=job['job_id'])
                             for match in linksets_collection.matches:

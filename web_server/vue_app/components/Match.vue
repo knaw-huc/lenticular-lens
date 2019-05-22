@@ -31,6 +31,9 @@
                 <div>
                     Status: <pre>{{ app.job_data.results.alignments[match.id].status }}</pre>
                 </div>
+                <div v-if="app.job_data.results.alignments[match.id].links_count">
+                    Links found: {{ app.job_data.results.alignments[match.id].links_count }}
+                </div>
                 <div v-if="app.job_data.results.alignments[match.id].processing_at">
                     Processing started at: {{ app.job_data.results.alignments[match.id].processing_at }}
                 </div>
