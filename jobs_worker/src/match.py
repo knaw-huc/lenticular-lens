@@ -35,19 +35,22 @@ class Match:
             if 'before_index' in template and template['before_index']:
                 index_sqls.append(psycopg_sql.SQL(template['before_index']))
 
-            for condition in self.conditions.conditions_list:
-                resources = condition.targets if len(condition.targets) > 0 else condition.sources
-                for resource_name, resource in resources.items():
-                    for property_field in resource:
-                        resource_field_name = template['field_name'][2::]\
-                            if template['field_name'].startswith('__')\
-                            else property_field.hash
+        for condition in self.conditions.conditions_list:
+            if 'template' not in condition.index_template:
+                continue
 
-                        template_sql = psycopg_sql.SQL(template['template']).format(
-                            target=psycopg_sql.Identifier(resource_field_name))
+            resources = condition.targets if len(condition.targets) > 0 else condition.sources
+            for resource_name, resource in resources.items():
+                for property_field in resource:
+                    resource_field_name = condition.index_template['field_name'][2::]\
+                        if condition.index_template['field_name'].startswith('__')\
+                        else property_field.hash
 
-                        index_sqls.append(psycopg_sql.SQL('CREATE INDEX ON {} USING {};').format(
-                            psycopg_sql.Identifier(hash_string(resource_name)), template_sql))
+                    template_sql = psycopg_sql.SQL(condition.index_template['template']).format(
+                        target=psycopg_sql.Identifier(resource_field_name))
+
+                    index_sqls.append(psycopg_sql.SQL('CREATE INDEX ON {} USING {};').format(
+                        psycopg_sql.Identifier(hash_string(resource_name)), template_sql))
 
         return psycopg_sql.SQL('\n').join(index_sqls)
 
