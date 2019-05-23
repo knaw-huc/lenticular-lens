@@ -134,7 +134,21 @@
                     },
                     {
                         'label': 'Similar Soundex',
-                        'object': 'LL_SOUNDEX',
+                        'object': {
+                            'name': 'LL_SOUNDEX',
+                            'value': {
+                                'type': {},
+                                'items': [
+                                    {
+                                        'key': 'threshold',
+                                        'label': 'Similarity threshold',
+                                        'type': 0.7,
+                                        'minValue': 0,
+                                        'maxValue': 1,
+                                    },
+                                ]
+                            },
+                        }
                     },
                     {
                         'label': 'Trigram distance',
