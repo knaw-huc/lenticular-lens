@@ -33,7 +33,7 @@
   },
   "LL_SOUNDEX": {
     "sql_template": "ll_soundex({source}) = ll_soundex({target}) AND 1 - (levenshtein({source}, {target})::decimal / greatest(char_length({source}), char_length({target}))) >= {threshold}",
-    "similarity": "levenshtein({source}, {target})",
+    "similarity": "1 - (levenshtein({source}, {target})::decimal / greatest(char_length({source}), char_length({target})))",
     "index_using": "btree(ll_soundex({target}))"
   }
 }
