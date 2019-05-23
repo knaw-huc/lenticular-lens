@@ -175,7 +175,7 @@ if __name__ == '__main__':
                                 else:
                                     from src.LLData.CSV_Alignments import CSV_ALIGNMENTS_DIR as CSV_DIR
                                     prefix = 'alignment'
-                                    columns.append(psycopg2_sql.Literal(1))
+                                    columns.append(psycopg2_sql.Identifier('__cluster_similarity'))
 
                                 today = datetime.date.isoformat(datetime.date.today()).replace('-', '')
                                 # now = f"{today}_{re.findall('..:.*', str(datetime.datetime.now()))[0]}"

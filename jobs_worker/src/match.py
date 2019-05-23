@@ -105,6 +105,11 @@ class Match:
                                     field_name=psycopg_sql.Identifier(condition.field_name + '_similarity')
                 ))
 
+                cluster_field = condition.similarity_sql.format(field_name=field_name)
+
+        # This is a temporary way to select the similarity of the last matching method for the clustering
+        fields.append(psycopg_sql.SQL('{} AS __cluster_similarity').format(cluster_field))
+
         return psycopg_sql.SQL(',\n       ').join(fields)
 
     @property
