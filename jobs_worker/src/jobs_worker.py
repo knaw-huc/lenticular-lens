@@ -150,9 +150,9 @@ if __name__ == '__main__':
 
                             with db_conn() as conn1:
                                 with conn1.cursor() as cur:
-                                    cur.execute(psycopg2_sql.SQL('SELECT last_value FROM {}.{}').format(
+                                    cur.execute(psycopg2_sql.SQL('SELECT count(*) FROM {}.{}').format(
                                         psycopg2_sql.Identifier('job_' + job['job_id']),
-                                        psycopg2_sql.Identifier(view_name + '_count'),
+                                        psycopg2_sql.Identifier(view_name),
                                     ))
                                     inserted = cur.fetchone()[0]
 
