@@ -269,6 +269,10 @@ def get_cluster_graph_data(job_id, clustering_id, cluster_id):
              "entity_type": "saaOnt_Person",
              "property": "saaOnt_full_name"
              },
+            {"dataset": "ufab7d657a250e3461361c982ce9b38f3816e0c4b__rijksmuseum",
+             "entity_type": "edm_Agent",
+             "property": "skos_prefLabelList"
+             },
         ]
     }
 
