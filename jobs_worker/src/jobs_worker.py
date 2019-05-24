@@ -179,7 +179,7 @@ if __name__ == '__main__':
 
                                 today = datetime.date.isoformat(datetime.date.today()).replace('-', '')
                                 # now = f"{today}_{re.findall('..:.*', str(datetime.datetime.now()))[0]}"
-                                filename = f'{prefix}_{hasher(job["job_id"])}_{match.name_original}.csv.gz'
+                                filename = f'{prefix}_{hasher(job["job_id"])}_alignment_{match.id}.csv.gz'
 
                                 print('Creating file ' + join(CSV_DIR, filename))
                                 with gzip.open(join(CSV_DIR, filename), 'wt') as csv_file:

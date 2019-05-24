@@ -40,10 +40,11 @@ CREATE TABLE IF NOT EXISTS timbuctoo_tables (
 CREATE TABLE IF NOT EXISTS clusterings (
   clustering_id text unique not null,
   job_id text not null,
-  mapping_name text not null,
-  alignment_csv text not null,
-  association_csv text,
-  clustering_type text not null
+  alignment int not null,
+  clustering_type text not null,
+  clusters_count bigint,
+  extended_count int,
+  cycles_count int
 );
 
 CREATE OR REPLACE FUNCTION public.ecartico_full_name(text) RETURNS text IMMUTABLE AS $$

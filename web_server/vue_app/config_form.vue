@@ -152,13 +152,13 @@
                         <div class="h2">{{ match.label }}</div>
                     </div>
 
-                    <div v-if="getResultForMatch(match.label).clusterings.length > 0" class="col-auto align-self-center">
+                    <div v-if="getResultForMatch(match.id).clusterings.length > 0" class="col-auto align-self-center">
                         <div class="h3 text-success">Clustered</div>
                     </div>
 
                     <div class="col-auto">
-                        <button v-if="getResultForMatch(match.label).clusterings.length > 0" type="button" class="btn btn-info" @click="createClustering(match.label, $event)" :disabled="association === ''" :title="association === '' ? 'Choose an association first' : ''">Reconcile</button>
-                        <button v-if="getResultForMatch(match.label).clusterings.length === 0" type="button" class="btn btn-info" @click="createClustering(match.label, $event)">Cluster<template v-if="association !== ''"> &amp; Reconcile</template></button>
+                        <button v-if="getResultForMatch(match.id).clusterings.length > 0" type="button" class="btn btn-info" @click="createClustering(match.id, $event)" :disabled="association === ''" :title="association === '' ? 'Choose an association first' : ''">Reconcile</button>
+                        <button v-if="getResultForMatch(match.id).clusterings.length === 0" type="button" class="btn btn-info" @click="createClustering(match.id, $event)">Cluster<template v-if="association !== ''"> &amp; Reconcile</template></button>
                     </div>
 
                     <div v-if="job_data" class="col-auto align-self-center form-group">
@@ -169,14 +169,14 @@
                     </div>
                 </div>
 
-                <div class="row" v-if="getResultForMatch(match.label).clusterings.length > 0">
+                <div class="row" v-if="getResultForMatch(match.id).clusterings.length > 0">
                     <div class="col-5">
                         <div class="row">
                             <div class="col-6">
                                 Clusters:
                             </div>
                             <div class="col-6">
-                                {{ getResultForMatch(match.label).clusterings[0].clusters_count }}
+                                {{ getResultForMatch(match.id).clusterings[0].clusters_count }}
                             </div>
                         </div>
                         <div class="row">
@@ -184,7 +184,7 @@
                                 Extended Clusters:
                             </div>
                             <div class="col-6">
-                                {{ getResultForMatch(match.label).clusterings[0].extended_count }}
+                                {{ getResultForMatch(match.id).clusterings[0].extended_count }}
                             </div>
                         </div>
                         <div class="row">
@@ -192,7 +192,7 @@
                                 Clusters with Cycles:
                             </div>
                             <div class="col-6">
-                                {{ getResultForMatch(match.label).clusterings[0].cycles_count }}
+                                {{ getResultForMatch(match.id).clusterings[0].cycles_count }}
                             </div>
                         </div>
                     </div>
@@ -202,7 +202,7 @@
                                 Clusters not Extended:
                             </div>
                             <div class="col-6">
-                                {{ getResultForMatch(match.label).clusterings[0].clusters_count - getResultForMatch(match.label).clusterings[0].extended_count }}
+                                {{ getResultForMatch(match.id).clusterings[0].clusters_count - getResultForMatch(match.id).clusterings[0].extended_count }}
                             </div>
                         </div>
                         <div class="row">
@@ -210,14 +210,14 @@
                                 Clusters without Cycles:
                             </div>
                             <div class="col-6">
-                                {{ getResultForMatch(match.label).clusterings[0].clusters_count - getResultForMatch(match.label).clusterings[0].cycles_count }}
+                                {{ getResultForMatch(match.id).clusterings[0].clusters_count - getResultForMatch(match.id).clusterings[0].cycles_count }}
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <b-collapse
-                        @show="getClusters(getResultForMatch(match.label).clusterings[0].clustering_id)"
+                        @show="getClusters(getResultForMatch(match.id).clusterings[0].clustering_id)"
                         class="row border-bottom mb-5"
                         :id="'clustering_clusters_match_' + match.id"
                         accordion="clusters-matches-accordion"
@@ -277,12 +277,12 @@
                             </div>
 
                             <div class="col-auto align-self-center" v-b-toggle="'clusters_match_' + match.id">
-                                <div v-if="getResultForMatch(match.label).clusterings.length > 0" class="h3 text-success">Clustered</div>
+                                <div v-if="getResultForMatch(match.id).clusterings.length > 0" class="h3 text-success">Clustered</div>
                                 <div v-else class="h3 text-danger">Not clustered</div>
                             </div>
                         </div>
                         <b-collapse
-                                @show="getClusters(getResultForMatch(match.label).clusterings[0].clustering_id)"
+                                @show="getClusters(getResultForMatch(match.id).clusterings[0].clustering_id)"
                                 class="row border-bottom mb-5"
                                 :id="'clusters_match_' + match.id"
                                 accordion="clusters-matches-accordion"
@@ -551,12 +551,12 @@
                     this.$refs['clipboard_copy_message'].setAttribute('hidden', 'hidden');
                 }, 2000)
             },
-            createClustering(mapping_label, event) {
+            createClustering(mapping_id, event) {
                 if (event) {
                     let btn = event.target;
                     btn.setAttribute('disabled', 'disabled');
                 }
-                const clustered = this.getResultForMatch(mapping_label).clusterings.length > 0;
+                const clustered = this.getResultForMatch(mapping_id).clusterings.length > 0;
 
                 fetch('/job/' + this.job_id + '/create_clustering/',
                     {
@@ -566,7 +566,7 @@
                         },
                         method: "POST",
                         body: JSON.stringify({
-                            'mapping_label': mapping_label,
+                            'alignment': mapping_id,
                             'association_file': clustered ? this.association : '',
                             'clustered': clustered,
                         })
@@ -575,7 +575,7 @@
                     .then((data) => {
                         if (!clustered && this.association) {
                             this.getJobData(() => {
-                                this.createClustering(mapping_label);
+                                this.createClustering(mapping_id);
                             });
                         } else {
                             this.getJobData();
@@ -723,12 +723,12 @@
                         return resources[i];
                 }
             },
-            getResultForMatch(match_label) {
+            getResultForMatch(match_id) {
                 let clusterings = [];
 
                 if (this.job_data) {
                     this.job_data.results.clusterings.forEach(clustering => {
-                        if (clustering.mapping_name === match_label) {
+                        if (clustering.alignment === match_id) {
                             clusterings.push(clustering);
                         }
                     });

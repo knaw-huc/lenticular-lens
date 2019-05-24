@@ -168,40 +168,40 @@ def result(job_id, mapping_name):
 @app.route('/job/<job_id>/create_clustering/', methods=['POST'])
 def create_clustering(job_id):
     from src.LLData.CSV_Alignments import CSV_ALIGNMENTS_DIR
-    filename = f'alignment_{hasher(job_id)}_{request.json["mapping_label"]}.csv.gz'
+    filename = f'alignment_{hasher(job_id)}_alignment_{request.json["alignment"]}.csv.gz'
     csv_filepath = join(CSV_ALIGNMENTS_DIR, filename)
     if request.json['association_file'] != '':
         if request.json['clustered']:
-            reconciliation_result = cluster_reconciliation_csv(request.json['association_file'], job_id, request.json['mapping_label'])
+            reconciliation_result = cluster_reconciliation_csv(request.json['association_file'], job_id, request.json['alignment'])
 
             with db_conn() as conn, conn.cursor() as cur:
                 cur.execute('''
                 UPDATE clusterings
                 SET extended_count = %s, cycles_count = %s
-                WHERE job_id = %s AND mapping_name = %s
+                WHERE job_id = %s AND alignment = %s
                 ''', (
                     reconciliation_result['extended_clusters_count'],
                     reconciliation_result['cycles_count'],
                     job_id,
-                    request.json['mapping_label'],
+                    request.json['alignment'],
                 ))
 
             return jsonify(reconciliation_result)
         else:
             abort(400)
     else:
-        clustering_result = cluster_csv(csv_filepath, job_id, request.json['mapping_label'])
+        clustering_result = cluster_csv(csv_filepath, job_id, request.json['alignment'])
 
         try:
             with db_conn() as conn, conn.cursor() as cur:
                 cur.execute('''
                 INSERT INTO clusterings
-                (clustering_id, job_id, mapping_name, clustering_type, clusters_count)
+                (clustering_id, job_id, alignment, clustering_type, clusters_count)
                 VALUES (%s, %s, %s, %s, %s)
                 ''', (
                     clustering_result['file_name'],
                     job_id,
-                    request.json['mapping_label'],
+                    request.json['alignment'],
                     request.json.get('clustering_type', 'default'),
                     clustering_result['clusters_count'],
                 ))
@@ -221,7 +221,7 @@ def get_cluster_graph_data(job_id, clustering_id, cluster_id):
     cluster_data = request.json['cluster_data'] if 'cluster_data' in request.json else get_cluster_data(clustering_id,
                                                                                                         cluster_id)
     associations = request.json['associations'] if 'associations' in request.json else None
-    mapping_label = run_query("SELECT mapping_name FROM clusterings WHERE clustering_id = %s", (clustering_id,))[0]
+    mapping_label = run_query("SELECT alignment FROM clusterings WHERE clustering_id = %s", (clustering_id,))[0]
     sub_clusters = f'Reconciled_{hasher(job_id)}_{mapping_label}_{hasher(associations)}'
     get_cluster = request.json.get('get_cluster', True)
     get_cluster_compact = request.json.get('get_cluster_compact', True)
@@ -283,6 +283,9 @@ def run_alignment(job_id, alignment):
     if 'restart' in request.json and request.json['restart'] is True:
         query = psycopg2_sql.SQL("DELETE FROM alignment_jobs WHERE job_id = %s AND alignment = %s")
         params = (job_id, alignment)
+        run_query(query, params)
+
+        query = psycopg2_sql.SQL("DELETE FROM clusterings WHERE job_id = %s AND alignment = %s")
         run_query(query, params)
 
     try:
