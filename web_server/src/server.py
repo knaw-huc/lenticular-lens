@@ -91,9 +91,13 @@ def clusters(job_id, clustering_id):
     from src.LLData.Serialisation import CLUSTER_SERIALISATION_DIR
     clusters_data = pickle_deserializer(CLUSTER_SERIALISATION_DIR, f'{clustering_id}-1.txt')
 
-    extended_filename_base = F"{clustering_id}_ExtendedBy_{splitext(request.args.get('association'))[0]}_{clustering_id}"
-    extended_data = pickle_deserializer(CLUSTER_SERIALISATION_DIR, f"{extended_filename_base}-1.txt")
-    cycles_data = pickle_deserializer(CLUSTER_SERIALISATION_DIR, f"{extended_filename_base}-2.txt")
+    if request.args.get('association'):
+        extended_filename_base = F"{clustering_id}_ExtendedBy_{splitext(request.args.get('association'))[0]}_{clustering_id}"
+        extended_data = pickle_deserializer(CLUSTER_SERIALISATION_DIR, f"{extended_filename_base}-1.txt")
+        cycles_data = pickle_deserializer(CLUSTER_SERIALISATION_DIR, f"{extended_filename_base}-2.txt")
+    else:
+        extended_data = []
+        cycles_data = []
 
     if not clusters_data:
         response = jsonify(clusters_data)
