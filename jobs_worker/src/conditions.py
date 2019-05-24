@@ -129,9 +129,9 @@ class Conditions:
 
             return self.__targets
         
-        def format_template(self, template):
+        def format_template(self, template, **additional_params):
             if isinstance(self.parameters, dict):
-                return template.format(**self.parameters)
+                return template.format(**self.parameters, **additional_params)
             return template.format(*self.parameters)
 
         def get_resources(self, resources_key):

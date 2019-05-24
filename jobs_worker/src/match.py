@@ -46,7 +46,12 @@ class Match:
                         if condition.index_template['field_name'].startswith('__')\
                         else property_field.hash
 
-                    template_sql = psycopg_sql.SQL(condition.index_template['template']).format(
+                    template =\
+                        condition.format_template(condition.index_template['template'], target='{target}')\
+                        if condition.parameters else\
+                        condition.index_template['template']
+
+                    template_sql = psycopg_sql.SQL(template).format(
                         target=psycopg_sql.Identifier(resource_field_name))
 
                     index_sqls.append(psycopg_sql.SQL('CREATE INDEX ON {} USING {};').format(

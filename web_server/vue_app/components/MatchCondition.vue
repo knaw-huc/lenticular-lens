@@ -205,6 +205,27 @@
                         }
                     },
                     {
+                        'label': 'Same Year/Month',
+                        'object': {
+                            'name': 'SAME_YEAR_MONTH',
+                            'value': {
+                                'type': {},
+                                'items': [
+                                    {
+                                        'key': 'date_part',
+                                        'label': 'Same',
+                                        'type': '',
+                                        'choices': {
+                                            'Year': 'year',
+                                            'Month': 'month',
+                                            'Year and Month': 'year_month',
+                                        },
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    {
                         'label': 'Distance is between',
                         'object': {
                             'name': 'DISTANCE_IS_BETWEEN',

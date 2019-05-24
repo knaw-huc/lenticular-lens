@@ -96,10 +96,39 @@ CREATE OR REPLACE FUNCTION public.get_year(text) RETURNS int IMMUTABLE AS $$
     year text;
   BEGIN
     year = substr($1, 0, 5);
-    IF year = '' THEN
-      RETURN 0;
+    IF year~E'^\\d+$' THEN
+      RETURN year::int;
     ELSE
-      RETURN year;
+      RETURN NULL;
+    END IF;
+  END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION public.get_month(text) RETURNS int IMMUTABLE AS $$
+  DECLARE
+    month text;
+  BEGIN
+    month = substr($1, 6, 2);
+    IF month~E'^\\d+$' THEN
+      RETURN month::int;
+    ELSE
+      RETURN NULL;
+    END IF;
+  END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION public.get_year_month(text) RETURNS text IMMUTABLE AS $$
+  DECLARE
+    month int;
+    year int;
+  BEGIN
+    month = get_month($1);
+    year = get_year($1);
+
+    IF month IS NULL OR year IS NULL THEN
+        RETURN NULL;
+    ELSE
+        RETURN year::text || '-' || month::text;
     END IF;
   END;
 $$ LANGUAGE plpgsql;

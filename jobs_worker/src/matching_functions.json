@@ -24,6 +24,10 @@
     "similarity": "{source} - {target}",
     "transformers": ["to_date_immutable"]
   },
+  "SAME_YEAR_MONTH": {
+    "sql_template": "get_{date_part}({source}) = get_{date_part}({target})",
+    "index_using": "btree(get_{date_part}({target}))"
+  },
   "IS_IN_SET": {
     "sql_template": "({source} IN (SELECT source_uri FROM \"__hash({0})\") OR {source} IN (SELECT target_uri FROM \"__hash({0})\")) AND ({target} IN (SELECT source_uri FROM \"__hash({0})\") OR {target} IN (SELECT target_uri FROM \"__hash({0})\"))"
   },
