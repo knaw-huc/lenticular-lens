@@ -1,7 +1,7 @@
 {
   "=": {
     "sql_template": "{source} = {target}",
-    "similarity": 100,
+    "similarity": 1,
     "index_using": "btree({target})"
   },
   ">": {
