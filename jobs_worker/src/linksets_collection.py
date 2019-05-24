@@ -203,10 +203,10 @@ class LinksetsCollection:
         return sql.Composed(joins)
 
     def r_get_join_sql(self, parent_resource, relation, joins, left_join=False):
+        left_join = True
         if isinstance(relation, list):
-            left_join = True
             for sub_relation in relation:
-                joins = self.r_get_join_sql(parent_resource, sub_relation, joins, left_join)
+                joins = self.r_get_join_sql(parent_resource, sub_relation, joins, True)
             return joins
 
         resource = self.get_resource_by_label(hash_string(relation['resource']))
