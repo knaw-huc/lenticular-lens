@@ -134,6 +134,9 @@ CREATE OR REPLACE FUNCTION public.get_year_month(text) RETURNS text IMMUTABLE AS
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION public.ll_soundex(input text) RETURNS text IMMUTABLE AS $$
+    if input is None:
+        return None
+
     from unidecode import unidecode
     vowels = ('a', 'e', 'i', 'o', 'u', 'y', 'h', 'w')
 
