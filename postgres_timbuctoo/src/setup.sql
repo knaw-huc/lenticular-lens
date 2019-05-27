@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS reconciliation_jobs (
   mappings_form_data json,
   resources_filename text,
   mappings_filename text,
+  created_at timestamp default now() not null,
   UNIQUE (job_title, job_description)
 );
 

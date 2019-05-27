@@ -10,7 +10,10 @@
     >
 
         <tab-content title="Idea" :before-change="validateIdeaTab">
-            <div class="h2">Idea</div>
+            <div class="row align-items-center justify-content-between">
+                <div class="h2 col-auto">Idea</div>
+                <div v-if="job_data" class="h4 col-auto">Created {{ job_data.created_at }}</div>
+            </div>
             <div v-if="idea_form === 'new' ||  job_id" class="border p-4 mt-4 bg-light">
                 <div class="form-group">
                     <label class="h3" for="idea">What's your idea?</label>
