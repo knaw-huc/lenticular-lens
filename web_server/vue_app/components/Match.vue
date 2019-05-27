@@ -27,25 +27,25 @@
                 <div class="col-6">
                     <div v-if="app.job_data.results.alignments[match.id]">
                         <div>
-                            Request received at: {{ app.job_data.results.alignments[match.id].requested_at }}
-                        </div>
-                        <div>
-                            Status: <pre>{{ app.job_data.results.alignments[match.id].status }}</pre>
-                        </div>
-                        <div v-if="app.job_data.results.alignments[match.id].links_count">
-                            Links found: {{ app.job_data.results.alignments[match.id].links_count }}
+                            <strong>Request received at: </strong>{{ app.job_data.results.alignments[match.id].requested_at }}
                         </div>
                         <div v-if="app.job_data.results.alignments[match.id].processing_at">
-                            Processing started at: {{ app.job_data.results.alignments[match.id].processing_at }}
+                            <strong>Processing started at: </strong>{{ app.job_data.results.alignments[match.id].processing_at }}
                         </div>
                         <div v-if="app.job_data.results.alignments[match.id].finished_at">
-                            Processing finished at: {{ app.job_data.results.alignments[match.id].finished_at }}
-                            <div v-for="root_match in matches" v-if="root_match.id === match.id">
-                                <a :href="'/job/' + app.job_id + '/result/' + root_match.label" target="_blank">Results for {{ root_match.label }}</a>
-                            </div>
-                            <div>
-                                <a :href="'/job/' + app.job_id + '/result/download'" download>Download RDF</a>
-                            </div>
+                            <strong>Processing finished at: </strong>{{ app.job_data.results.alignments[match.id].finished_at }}
+<!--                            <div v-for="root_match in matches" v-if="root_match.id === match.id">-->
+<!--                                <a :href="'/job/' + app.job_id + '/result/' + root_match.label" target="_blank">Results for {{ root_match.label }}</a>-->
+<!--                            </div>-->
+<!--                            <div>-->
+<!--                                <a :href="'/job/' + app.job_id + '/result/download'" download>Download RDF</a>-->
+<!--                            </div>-->
+                        </div>
+                        <div>
+                            <strong>Status: </strong><pre class="d-inline">{{ app.job_data.results.alignments[match.id].status }}</pre>
+                        </div>
+                        <div v-if="app.job_data.results.alignments[match.id].status === 'Finished'">
+                            <strong>Links found:</strong> {{ app.job_data.results.alignments[match.id].links_count || 0 }}
                         </div>
                     </div>
                 </div>
