@@ -101,7 +101,7 @@ class LinksetsCollection:
                     generated.append(match.name_original)
                     generated_this_cycle += 1
                     self.log('Generating linkset %s.' % match.name)
-                    result = self.process_sql(self.generate_match_sql(match))
+                    result = self.process_sql(self.generate_match_sql(match), match.before_alignment)
                     self.log('Linkset %s generated. %s links created in %s.' % (
                         match.name, locale.format_string('%i', result['affected'], grouping=True), result['duration']))
                     if not self.sql_only:
@@ -143,7 +143,7 @@ class LinksetsCollection:
     def log(message):
         print(message, file=sys.stderr)
 
-    def process_sql(self, composed):
+    def process_sql(self, composed, inject=None):
         query_starting_time = time.time()
 
         schema_name_sql = sql.Identifier('job_' + self.job_id)
@@ -157,6 +157,8 @@ class LinksetsCollection:
         affected_count = 0
         with db_conn() as conn:
             sql_string = composed.as_string(conn)
+            inject = inject.as_string(conn) if inject else ''
+
             with open('%s.sql' % self.job_id, 'a') as sql_file:
                 sql_file.write(sql_string)
 
@@ -164,6 +166,8 @@ class LinksetsCollection:
                 print(sql_string)
             else:
                 for statement in sql_string.split(';\n'):
+                    statement = statement.strip()
+
                     if statement.startswith('--'):
                         continue
 
@@ -186,6 +190,9 @@ class LinksetsCollection:
                             self.log('Linkset converted, %s links total.' % locale.format_string('%i', processed_count, grouping=True))
                         else:
                             with conn.cursor() as cur:
+                                if inject:
+                                    cur.execute(inject)
+                                    conn.commit()
                                 cur.execute(statement)
                                 conn.commit()
                                 if cur.rowcount > 0:
@@ -219,13 +226,13 @@ class LinksetsCollection:
             extra_filter = sql.SQL('\nAND ({resource_filter})').format(resource_filter=extra_filter)
 
         joins.append(sql.SQL('\n{left}JOIN {resource_view} AS {alias}\nON {lhs} = {rhs}{extra_filter}')
-                        .format(
-                            left=sql.SQL(left),
-                            resource_view=sql.Identifier(resource.cached_view),
-                            alias=sql.Identifier(hash_string(relation['resource'])),
-                            lhs=get_property_sql(get_absolute_property(relation['local_property'], parent_resource)),
-                            rhs=get_property_sql(get_absolute_property(relation['remote_property'], hash_string(relation['resource']))),
-                            extra_filter=extra_filter,
+            .format(
+            left=sql.SQL(left),
+            resource_view=sql.Identifier(resource.cached_view),
+            alias=sql.Identifier(hash_string(relation['resource'])),
+            lhs=get_property_sql(get_absolute_property(relation['local_property'], parent_resource)),
+            rhs=get_property_sql(get_absolute_property(relation['remote_property'], hash_string(relation['resource']))),
+            extra_filter=extra_filter,
         ))
 
         for relation in resource.related:

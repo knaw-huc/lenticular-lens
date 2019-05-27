@@ -151,6 +151,33 @@
                         }
                     },
                     {
+                        'label': 'Similar Bloothooft Reduction',
+                        'object': {
+                            'name': 'BLOOTHOOFT_REDUCT',
+                            'value': {
+                                'type': {},
+                                'items': [
+                                    {
+                                        'key': 'name_type',
+                                        'label': 'Type of Name',
+                                        'type': '',
+                                        'choices': {
+                                            'First name': 'first_name',
+                                            'Family name': 'family name',
+                                        },
+                                    },
+                                    {
+                                        'key': 'threshold',
+                                        'label': 'Similarity threshold',
+                                        'type': 0.7,
+                                        'minValue': 0,
+                                        'maxValue': 1,
+                                    },
+                                ]
+                            },
+                        }
+                    },
+                    {
                         'label': 'Trigram distance',
                         'object': {
                             'name': 'TRIGRAM_DISTANCE',

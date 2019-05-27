@@ -74,6 +74,10 @@ class Conditions:
                 raise NameError('Matching function %s is not defined' % self.function_name)
 
         @property
+        def before_alignment(self):
+            return self.function_info.get('before_alignment', '')
+
+        @property
         def index_template(self):
             if 'index_using' not in self.function_info:
                 return {}

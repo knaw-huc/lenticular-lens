@@ -39,5 +39,11 @@
     "sql_template": "ll_soundex({source}) = ll_soundex({target}) AND 1 - (levenshtein({source}, {target})::decimal / greatest(char_length({source}), char_length({target}))) >= {threshold}",
     "similarity": "1 - (levenshtein({source}, {target})::decimal / greatest(char_length({source}), char_length({target})))",
     "index_using": "btree(ll_soundex({target}))"
+  },
+  "BLOOTHOOFT_REDUCT": {
+    "before_alignment": "SELECT bloothooft_bootstrap();",
+    "sql_template": "bloothooft_reduct({source}, '{name_type}') = bloothooft_reduct({target}, '{name_type}') AND 1 - (levenshtein({source}, {target})::decimal / greatest(char_length({source}), char_length({target}))) >= {threshold}",
+    "similarity": "1 - (levenshtein({source}, {target})::decimal / greatest(char_length({source}), char_length({target})))",
+    "index_using": "btree(bloothooft_reduct({target}, '{name_type}'))"
   }
 }

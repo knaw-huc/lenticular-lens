@@ -9,6 +9,16 @@ class Match:
         self.__conditions = None
 
     @property
+    def before_alignment(self):
+        sqls = []
+
+        for matching_function in self.conditions.conditions_list:
+            if matching_function.before_alignment:
+                sqls.append(psycopg_sql.SQL(matching_function.before_alignment))
+
+        return psycopg_sql.SQL('\n').join(sqls)
+
+    @property
     def conditions(self):
         if not self.__conditions:
             self.__conditions = Conditions(self.__data['conditions'])
