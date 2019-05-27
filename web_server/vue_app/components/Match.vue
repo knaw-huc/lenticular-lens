@@ -1,56 +1,67 @@
 <template>
 <div class="border p-4 mt-4 bg-light">
-    <div class="row">
-        <div class="col-auto">
+    <div class="row justify-content-between">
+        <div class="col-auto" title="Expand / Collapse">
             <octicon name="chevron-down" scale="3" v-b-toggle="'match_' + match.id"></octicon>
         </div>
 
-        <div class="col-5" v-b-toggle="'match_' + match.id">
+        <div class="col-9">
             <div class="row">
-                <edit-label-component v-model="match.label"/>
-            </div>
-            <div class="row">
-                <div class="col form-group form-check mb-1">
-                    <input type="checkbox" class="form-check-input" :id="'match_' + match.id + '_is_association'" v-model.boolean="match.is_association">
-                    <label class="form-check-label" :for="'match_' + match.id + '_is_association'">Association</label>
+                <div class="col-6">
+                    <div class="row">
+                        <edit-label-component v-model="match.label"/>
+                    </div>
+                    <div class="row">
+                        <div class="col form-group form-check mb-1 pl-0">
+                            <b-form-checkbox
+                                    :id="'match_' + match.id + '_is_association'"
+                                    v-model.boolean="match.is_association"
+                                    title="Check this box if this Alignment is intended for creating associations"
+                            >
+                                Association
+                            </b-form-checkbox>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-6">
+                    <div v-if="app.job_data.results.alignments[match.id]">
+                        <div>
+                            Request received at: {{ app.job_data.results.alignments[match.id].requested_at }}
+                        </div>
+                        <div>
+                            Status: <pre>{{ app.job_data.results.alignments[match.id].status }}</pre>
+                        </div>
+                        <div v-if="app.job_data.results.alignments[match.id].links_count">
+                            Links found: {{ app.job_data.results.alignments[match.id].links_count }}
+                        </div>
+                        <div v-if="app.job_data.results.alignments[match.id].processing_at">
+                            Processing started at: {{ app.job_data.results.alignments[match.id].processing_at }}
+                        </div>
+                        <div v-if="app.job_data.results.alignments[match.id].finished_at">
+                            Processing finished at: {{ app.job_data.results.alignments[match.id].finished_at }}
+                            <div v-for="root_match in matches" v-if="root_match.id === match.id">
+                                <a :href="'/job/' + app.job_id + '/result/' + root_match.label" target="_blank">Results for {{ root_match.label }}</a>
+                            </div>
+                            <div>
+                                <a :href="'/job/' + app.job_id + '/result/download'" download>Download RDF</a>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
+        </div>
 
+        <div class="col-auto">
             <div class="row">
-                <div class="col-auto">
+                <div class="col-auto pt-1">
                     <b-button variant="info" @click="runAlignment">Run Alignment</b-button>
                 </div>
-            </div>
-        </div>
 
-        <div class="col-5">
-            <div v-if="app.job_data.results.alignments[match.id]">
-                <div>
-                    Request received at: {{ app.job_data.results.alignments[match.id].requested_at }}
-                </div>
-                <div>
-                    Status: <pre>{{ app.job_data.results.alignments[match.id].status }}</pre>
-                </div>
-                <div v-if="app.job_data.results.alignments[match.id].links_count">
-                    Links found: {{ app.job_data.results.alignments[match.id].links_count }}
-                </div>
-                <div v-if="app.job_data.results.alignments[match.id].processing_at">
-                    Processing started at: {{ app.job_data.results.alignments[match.id].processing_at }}
-                </div>
-                <div v-if="app.job_data.results.alignments[match.id].finished_at">
-                    Processing finished at: {{ app.job_data.results.alignments[match.id].finished_at }}
-                    <div v-for="root_match in matches" v-if="root_match.id === match.id">
-                        <a :href="'/job/' + app.job_id + '/result/' + root_match.label" target="_blank">Results for {{ root_match.label }}</a>
-                    </div>
-                    <div>
-                        <a :href="'/job/' + app.job_id + '/result/download'" download>Download RDF</a>
-                    </div>
+                <div class="form-group col-1 text-right">
+                    <button-delete @click="$emit('remove')" :scale="2" title="Delete this Alignment"/>
                 </div>
             </div>
-        </div>
-
-        <div class="form-group col-1 text-right">
-            <button-delete @click="$emit('remove')" :scale="2" title="Delete this Alignment"/>
         </div>
     </div>
 
