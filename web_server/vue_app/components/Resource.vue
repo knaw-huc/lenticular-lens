@@ -156,7 +156,7 @@
                 }
 
                 if (this.resource.dataset_id && this.resource.collection_id) {
-                    let label = this.datasets[this.resource.dataset_id].title + ' --> ' + this.resource.collection_id;
+                    let label = this.datasets[this.resource.dataset_id].title + ' [type: ' + this.resource.collection_id + ']';
                     this.$emit('update:label', label);
                     return label;
                 }
@@ -275,7 +275,7 @@
         },
         updated() {
             if ((!this.resource.label || this.resource_label === this.initial_label) && this.resource.dataset_id && this.resource.collection_id) {
-                this.$set(this.resource, 'label', this.datasets[this.resource.dataset_id].title + ' --> ' + this.resource.collection_id)
+                this.$set(this.resource, 'label', this.datasets[this.resource.dataset_id].title + ' [type: ' + this.resource.collection_id + ']')
             }
         },
     }
