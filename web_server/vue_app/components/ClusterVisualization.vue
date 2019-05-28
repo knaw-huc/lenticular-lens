@@ -267,6 +267,20 @@
                 </div>
             </b-collapse>
         </div>
+
+        <b-modal
+                id="visualization_popup"
+                ref="visualization_popup"
+                title="CLUSTER DETAIL"
+                size="xl"
+                hide-footer
+                :return-focus="$root.$children[0].$el"
+                @shown="centerVisualization('cluster_plot_col_4')"
+        >
+            <div id="cluster_plot_col_4" class="col-md-12" style='height: 40em; width:100%; scroll: both; overflow: auto;' >
+                <svg class="plot" id="graph_cluster_4" width="1060" height="800" style="background-color:#FFFFE0;"></svg>
+            </div>
+        </b-modal>
     </div>
 </template>
 
@@ -275,7 +289,15 @@
 
     export default {
         methods: {
+            centerVisualization(id) {
+                const plot_col = document.getElementById(id);
+                    if (plot_col) {
+                        plot_col.scrollLeft = plot_col.scrollWidth - plot_col.clientWidth;
+                        plot_col.scrollTop = (plot_col.scrollHeight - plot_col.clientHeight) / 2;
+                    }
+            },
             draw(graph_parent, svg_name) {
+                const app = this;
                 let svg = d3.select(svg_name);
 
                 var pi = Math.PI;
@@ -290,7 +312,7 @@
                 var clicks = 0
 
                 // var svg = d3.select(".parent")
-                var svg_child = d3.select(".child")
+                var svg_child = d3.select("svg#graph_cluster_4")
                 var simulation_parent = simulator(svg)
                 var simulation_child
 
@@ -541,6 +563,7 @@
                     svg_child.selectAll("*").remove()
                     simulation_child = simulator(svg_child)
                     update(svg_child, child_graph, simulation_child);   ////// NEW CODE
+                    app.$refs['visualization_popup'].show();
                 }
 
                 // D3 GRAPH FORCE SIMULATOR
@@ -568,30 +591,46 @@
                 function node_dblclick(d)
                 {
                     //d.fixed = true;
-                    if (d.child) { // for compact with child, expand
                         selected_node = d;
+        if (d.child) {
+
+            // for compact with child, expand
+            //selected_node = d;
                         update(svg, graph_parent, simulation_parent)
                         new_plot(d.child)
                     }
                     else if (d.nodes) // for compact without child, just highlight
                     {
-                        selected_node = d;
+            //selected_node = d;
                         update(svg, graph_parent, simulation_parent)
                     }
+
+        else if (graph_child)
+            // it is the child of compact
+            update(svg_child, graph_child, simulation_child)
+
+        else
+            // not compact
+            update(svg, graph_parent, simulation_parent)
                 }
 
                 function node_mousedown(d)
                 {
                     d3.event.preventDefault();
                     clicked_node = d;
-                    //         // alert(clicks)
-                    //         clicks = 0;             //after action performed, reset counter
-                    if (d.nodes) // it is the parent (compact)
-                        { //alert('parent')
-                        update(svg, graph_parent, simulation_parent) }
-                    else // it is the child
-                        { //alert('child')
-                        update(svg_child, graph_child, simulation_child) }
+        //alert('Test')
+
+        if (d.nodes)
+            // it is the parent (compact)
+            update(svg, graph_parent, simulation_parent)
+
+        else if (graph_child)
+            // it is the child of compact
+            update(svg_child, graph_child, simulation_child)
+
+        else
+            // not compact
+            update(svg, graph_parent, simulation_parent)
                 }
 
 
@@ -599,7 +638,8 @@
                 {
                     if (!d3.event.active)
                       if (d.nodes) simulation_parent.alphaTarget(0.2).restart(graph_parent)
-                      else simulation_child.alphaTarget(0.2).restart(graph_child)
+          else if (graph_child) simulation_child.alphaTarget(0.2).restart(graph_child)
+          else simulation_parent.alphaTarget(0.2).restart(graph_parent)
 
                     d.fx = d.x;
                     d.fy = d.y;
@@ -615,10 +655,10 @@
                 {
                     if (!d3.event.active)
                         if (d.nodes) simulation_parent.alphaTarget(0);
-                        else simulation_child.alphaTarget(0);
+                        else if (simulation_child) simulation_child.alphaTarget(0);
 
-                    d.fx = null;
-                    d.fy = null;
+                    // d.fx = null;
+                    // d.fy = null;
                 }
             },
             getGraphData(type) {
