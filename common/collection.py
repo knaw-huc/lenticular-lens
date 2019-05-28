@@ -1,5 +1,4 @@
-from config_db import db_conn, run_query, table_exists
-import datetime
+from config_db import db_conn
 from helpers import hash_string
 from psycopg2 import extras as psycopg2_extras, sql as psycopg2_sql
 
@@ -32,10 +31,12 @@ class Collection:
     @property
     def expanded_columns_sql(self):
         def column_sql(column_name, column_type):
-            sql_string = 'jsonb_array_elements_text({col_name}) as {col_name}' if column_type == 'jsonb'\
-                else '{col_name}'
+            sql_string = '{col_name_expanded} AS {col_name}' if column_type == 'jsonb' else '{col_name}'
 
-            return psycopg2_sql.SQL(sql_string).format(col_name=psycopg2_sql.Identifier(column_name))
+            return psycopg2_sql.SQL(sql_string).format(
+                col_name=psycopg2_sql.Identifier(column_name),
+                col_name_expanded=psycopg2_sql.Identifier(column_name + '_expanded'),
+            )
 
         columns_sqls = []
         for info in self.columns.values():
@@ -117,12 +118,9 @@ class Collection:
                         psycopg2_sql.Identifier(self.table_name),
                         self.columns_sql,
                     ))
-                with conn.cursor() as cur:
-                    cur.execute(psycopg2_sql.SQL('CREATE VIEW {} AS SELECT {} FROM {} ORDER BY uri').format(
-                        psycopg2_sql.Identifier(self.table_name + '_expanded'),
-                        self.expanded_columns_sql,
-                        psycopg2_sql.Identifier(self.table_name),
-                    ))
+
+                self.create_view(conn)
+
                 with conn.cursor() as cur:
                     cur.execute(
                         '''INSERT INTO timbuctoo_tables
@@ -139,5 +137,32 @@ class Collection:
         return table_data
 
     @property
+    def table_with_expanded(self):
+        sqls = [psycopg2_sql.Identifier(self.table_name)]
+        for info in self.columns.values():
+            if info['LIST']:
+                sql = psycopg2_sql.SQL("""
+                jsonb_array_elements_text(
+                case when jsonb_array_length({table_name}.{column_name}) > 0
+                    then {table_name}.{column_name}
+                    else to_jsonb(array[null]) end
+                ) AS {column_name_expanded}""").format(
+                    table_name=psycopg2_sql.Identifier(self.table_name),
+                    column_name=psycopg2_sql.Identifier(hash_string(info['name'])),
+                    column_name_expanded=psycopg2_sql.Identifier(hash_string(info['name']) + '_expanded'),
+                )
+                sqls.append(sql)
+
+        return psycopg2_sql.SQL(',\n').join(sqls)
+
+    @property
     def view_name(self):
         return self.table_data['view_name']
+
+    def create_view(self, conn):
+        with conn.cursor() as cur:
+            cur.execute(psycopg2_sql.SQL('CREATE OR REPLACE VIEW {} AS SELECT {} FROM {} ORDER BY uri').format(
+                psycopg2_sql.Identifier(self.table_name + '_expanded'),
+                self.expanded_columns_sql,
+                self.table_with_expanded,
+            ))
