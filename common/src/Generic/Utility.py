@@ -10,28 +10,26 @@ import time
 import gzip
 import rdflib
 import codecs
+import pickle
+import shutil
 import datetime
 import platform
-# import cStringIO
-import pickle
 import builtins
-
-# import base64
-import xmltodict
 import requests
+import xmltodict
 import subprocess
 import collections
-from os import stat, listdir, mkdir
 import os.path as path
 import zipfile as f_zip
-# import io.BytesIO as Buffer
-import src.Generic.NameSpace as Ns
-from hashlib import md5  # blake2b,
-import src.DataAccess.Stardog.Query as Stardog
 import src.Generic.Settings as St
+import src.Generic.NameSpace as Ns
 import src.Generic.Server_Settings as Svr
-from os.path import isfile, join
+import src.DataAccess.Stardog.Query as Stardog
+
+from hashlib import md5  # blake2b,
 from unidecode import unidecode
+from os import stat, listdir, mkdir
+from os.path import isfile, join, splitext
 from kitchen.text.converters import to_bytes, to_unicode
 
 
@@ -80,18 +78,19 @@ def problem(tab="\t", label="PROBLEM", text=None):
 
 
 def completed(started, tab="\t"):
+
     datetime.timedelta(seconds=time.time() - started)
     print('\n{}{:.^100}'.format(tab, F" COMPLETED IN {datetime.timedelta(seconds=time.time() - started)} "))
     print('{}{:.^100}'.format(tab, F" JOB DONE! "))
 
 
-def hasher(object):
+def hasher(obj):
 
     # h = blake2b(digest_size=10)
     # h.update(bytes(object.__str__(), encoding='utf-8'))
     # print(F"H{h.hexdigest()}")
     h = md5()
-    h.update(bytes(object.__str__(), encoding='utf-8'))
+    h.update(bytes(obj.__str__(), encoding='utf-8'))
     return F"H{h.hexdigest()[:15]}"
 
 
@@ -99,7 +98,7 @@ def hash_number(text):
 
     # THE NUMBER FROM AN EMPTY STRING   :  418980020
     # THE NUMBER OF A NONE STRING       :  69783645
-    numbers = re.findall(pattern="\d", string=hasher(text))
+    numbers = re.findall(pattern="\\d", string=hasher(text))
     return "".join(x for x in numbers)
 
 
@@ -122,37 +121,42 @@ def convert_bytes(num):
         num /= 1024.0
 
 
-def get_obj_size(obj, seen=None):
+def get_obj_size(obj, seen=None, converted=True):
 
-    def helper(obj, seen=None):
+    def helper(data, seen_set=None):
 
         # From https://goshippo.com/blog/measure-real-size-any-python-object/
         # Recursively finds size of objects
-        size = sys.getsizeof(obj)
-        if seen is None:
-            seen = set()
-        obj_id = id(obj)
-        if obj_id in seen:
+        size = sys.getsizeof(data)
+        if seen_set is None:
+            seen_set = set()
+        obj_id = id(data)
+        if obj_id in seen_set:
             return 0
         # Important mark as seen *before* entering recursion to gracefully handle
         # self-referential objects
-        seen.add(obj_id)
-        if isinstance(obj, dict):
-          size += sum([helper(v, seen) for v in obj.values()])
-          size += sum([helper(k, seen) for k in obj.keys()])
+        seen_set.add(obj_id)
+        if isinstance(data, dict):
+            size += sum([helper(v, seen_set) for v in data.values()])
+            size += sum([helper(k, seen_set) for k in data.keys()])
 
-        elif hasattr(obj, '__dict__'):
-          size += helper(obj.__dict__, seen)
+        elif hasattr(data, '__dict__'):
+            size += helper(data.__dict__, seen_set)
 
-        elif hasattr(obj, '__iter__') and not isinstance(obj, (str, bytes, bytearray)):
-          size += sum([helper(i, seen) for i in obj])
+        elif hasattr(data, '__iter__') and not isinstance(data, (str, bytes, bytearray)):
+            size += sum([helper(i, seen_set) for i in data])
 
         return size
 
     start = time.time()
-    result = convert_bytes(helper(obj, seen))
-    print(F"\tSIZE [{result}] COMPUTED IN {datetime.timedelta(seconds=time.time() - start)}.")
-    return result
+    if converted is True:
+        result = convert_bytes(helper(obj, seen))
+        print(F"\tSIZE [{result}] COMPUTED IN {datetime.timedelta(seconds=time.time() - start)}.")
+        return result
+    else:
+        result = helper(obj, seen)
+        print(F"\tSIZE [{result}] COMPUTED IN {datetime.timedelta(seconds=time.time() - start)}.")
+        return result
 
 
 def file_size(f_path):
@@ -182,16 +186,16 @@ def headings(message, line=True):
         for data in split:
             message += "\n{:^116}".format(data)
 
-    _format = "It is %a %b %d %Y %H:%M:%S.%f]"
-    date = datetime.datetime.today()
+    time_format = "It is %a %b %d %Y %H:%M:%S.%f]"
+    date_str = datetime.datetime.today()
     if line is True:
         _line = "--------------------------------------------------------------" \
                 "--------------------------------------------------------------"
     else:
         _line = ""
     return "\n{0}\n{2:>116}\n{1:^{3}}\n{0}".format(
-        _line, message[1:] if str(message).startswith("\n") is True else  message,
-        date.strftime(_format), 116)
+        _line, message[1:] if str(message).startswith("\n") is True else message,
+        date_str.strftime(time_format), 116)
 
 
 def zip_dir(file_path, zip_name):
@@ -226,7 +230,7 @@ def is_nt_format(resource):
         return temp.startswith("<") and temp.endswith(">")
 
     except Exception as err:
-        print ("Exception:", err)
+        print("Exception:", err)
         return False
 
 
@@ -291,7 +295,7 @@ def get_uri_local_name(uri, sep="_"):
         return name
 
     else:
-        pattern = '[ \w\.-]'
+        pattern = '[ \\w\\.-]'
         non_alphanumeric_str = re.sub(pattern, '', uri)
         if non_alphanumeric_str == "":
             return uri
@@ -334,8 +338,8 @@ def get_uri_local_name_plus(uri, sep="_"):
 
     else:
 
-        pattern = ".*[\/\#:](.*)$"
-        bad_pattern = "(.*)[\/\#:]$"
+        pattern = ".*[\\/\\#:](.*)$"
+        bad_pattern = "(.*)[\\/\\#:]$"
         local = re.findall(pattern, uri)
         if len(local) > 0 and len(local[0]) > 0:
             return local[0]
@@ -420,7 +424,7 @@ def get_uri_ns_local_name(uri):
         return [None, name]
 
     else:
-        non_alphanumeric_str = re.sub('[ \w]', '', uri)
+        non_alphanumeric_str = re.sub('[ \\w]', '', uri)
         if non_alphanumeric_str == "":
             return uri
         else:
@@ -670,11 +674,13 @@ def bat_load(bat_path):
             #   HOW MANY TRIPLES WHERE ADDED
             output = subprocess.check_output(bat_path, shell=True)
             # print "SUBPROCESS OUTPUT:", output
-            output = re.sub(b'\(Conversion\).*\n', '', output)
+            # output = re.sub(b'\\(Conversion\\).*\n', '', output)
+            output = re.sub('\\(Conversion\\).*\n', '', output)
 
             # THE OUTPUT CONTAINS FULL PATH THAT IS NOT ADVISABLE TO DISPLAY
             # FIND STRINGS THAT EXHIBIT A FILE PATTERN
-            file_path = re.findall(b" .:.*\\.*\..*", output)
+            # file_path = re.findall(b" .:.*\\.*\..*", output)
+            file_path = re.findall(" .:.*\\.*\\..*", output)
             for f in file_path:
 
                 if f.__contains__("\\"):
@@ -697,7 +703,7 @@ def bat_load(bat_path):
             return {"message": "OK", "result": output}
 
     except Exception as err:
-        print ("SUBPROCESS ERROR")
+        print("SUBPROCESS ERROR")
         return {"message": "CHECK THE FILE PATH.\n{}".format(err.__str__()), "result": None}
 
 
@@ -757,6 +763,9 @@ def print_tuple(tuple_list,  comment="", return_print=False, overview=True, tab=
     if tab == 0:
         print("\n\t{}{:.^100}".format(tabs, F" PRINTING A TUPLE OF SIZE {len(tuple_list)} "))
         print("\t{}{:.^100}\n".format(tabs, F" {comment} ")) if comment else print("\t{}{:.^100}\n".format(tabs, F""))
+
+    elif overview is True:
+        print(headings("\n>>> {}\n>>TUPLE SIZE : {}".format(comment, len(tuple_list))))
 
     if return_print is False:
         print(F"{tabs}", " | ".join(x.__str__() for x in tuple_list))
@@ -864,7 +873,8 @@ def print_dict(data_dict, comment="", return_print=False, overview=True, tab=0, 
         print("\t{}{:.^100}\n".format(tabs, F" {comment} ")) if comment else print("\t{}{:.^100}\n".format(tabs, F""))
         if return_print is True:
             builder.write("\n\t{}{:.^100}".format(tabs, F" PRINTING A DICTIONARY OF SIZE {len(data_dict)}\n"))
-            builder.write("\t{}{:.^100}\n".format(tabs, F" {comment} ")) if comment else print("\t{}{:.^100}\n".format(tabs, F""))
+            builder.write(
+                "\t{}{:.^100}\n".format(tabs, F" {comment} ")) if comment else print("\t{}{:.^100}\n".format(tabs, F""))
 
     check = True if isinstance(data_dict, dict) else (True if isinstance(data_dict, collections.defaultdict) else False)
     if check is False:
@@ -926,7 +936,7 @@ def print_dict(data_dict, comment="", return_print=False, overview=True, tab=0, 
                         builder.write("{4}KEY: {1:<{0}} \t\t ITEM (SIZE = {2}): {3}\n".format(
                             max_length, key,
                             len(value) if type(value) is not int and type(value) is not float
-                            and not isinstance(value, type) else 1, str(value), tabs_2 ))
+                            and not isinstance(value, type) else 1, str(value), tabs_2))
 
                 except TypeError:
                     print("{4}KEY: {1:<{0}} \t\t ITEM (SIZE = {2}): {3}".format(
@@ -951,15 +961,20 @@ def print_dict(data_dict, comment="", return_print=False, overview=True, tab=0, 
 
 def print_object(data_structure, comment="", return_print=False, overview=False, tab=0, activated=True):
 
-    if isinstance(data_structure, dict) or isinstance(data_structure, collections.OrderedDict) or \
-            isinstance(data_structure, collections.defaultdict):
+    if isinstance(data_structure, (dict, collections.OrderedDict, collections.defaultdict)):
         print_dict(data_structure, comment, return_print, overview, tab, activated)
 
-    elif isinstance(data_structure, list) or isinstance(data_structure, set) :
+    elif str(type(data_structure)) == "<class 'dict_keys'>":
+        print_list(list(data_structure), comment, return_print, overview, tab, activated)
+
+    elif isinstance(data_structure, (list, set)):
         print_list(data_structure, comment, return_print, overview, tab, activated)
 
     elif isinstance(data_structure, tuple):
         print_tuple(data_structure, comment, return_print, overview, tab, activated)
+
+    else:
+        print(data_structure)
 
 
 ###################################################################
@@ -967,56 +982,20 @@ def print_object(data_structure, comment="", return_print=False, overview=False,
 ###################################################################
 
 
-def pickle_serializer(directory, data_object, name, tab="\t"):
+safe_builtins = {'range', 'complex', 'set', 'frozenset', 'slice'}
 
-    """
-    :param directory:
-    :param data_object:
-    :param name:
-    :param tab:
-    :return:
-    """
 
-    """
-    Protocol version 0
-        is the original “human-readable” protocol and is
-        backwards compatible with earlier versions of Python.
+class RestrictedUnpickler(pickle.Unpickler):
 
-    Protocol version 1
-        is an old binary format which is also compatible with earlier versions of Python.
+    def find_class(self, module, name):
 
-    Protocol version 2
-        was introduced in Python 2.3. It provides much more efficient pickling of new-style classes.
-        Refer to PEP 307 for information about improvements brought by protocol 2.
+        # Only allow safe classes from builtins.
+        if module == "builtins" and name in safe_builtins:
+            return getattr(builtins, name)
 
-    Protocol version 3
-        was added in Python 3.0. It has explicit support for bytes objects and cannot be
-        unpickled by Python 2.x. This is the default protocol, and the recommended protocol
-        when compatibility with other Python 3 versions is required.
-
-    Protocol version 4 was added in Python 3.4. It adds support for very large objects, pickling more
-    kinds of objects, and some data format optimizations. Refer to PEP 3154 for information about
-    improvements brought by protocol 4.
-
-    If fix_imports is true and protocol is less than 3, pickle will try to map the new Python 3 names t
-    """
-
-    print("{}\tSERIALIZING DICTIONARY OF SIZE: {}...".format(tab, len(data_object)))
-    start = time.time()
-    if path.isdir(directory) is False:
-        mkdir(directory)
-
-    file_path = join(directory, name)
-
-    # PROTOCOL TWO IS CHOSEN FOR COMPATIBILITY ISSUE WITH LENTICULAR LENS 1
-    print(f'{tab}\tWRITING PICKLED DATA TO FILE {file_path}')
-    with gzip.open(file_path, 'wb') as writer:
-        pickle.dump(obj=data_object, file=writer, protocol=2, fix_imports=True)
-
-    print("{}\tDONE WRITING THE FILE IN {}".format(tab, datetime.timedelta(seconds=time.time() - start)),
-          sep=" ")
-
-    return file_path
+        # Forbid everything else.
+        raise pickle.UnpicklingError("global '%s.%s' is forbidden" %
+                                     (module, name))
 
 
 # def serialize_dict(directory, dictionary, name, cluster_limit=1000):
@@ -1067,26 +1046,6 @@ def pickle_serializer(directory, data_object, name, tab="\t"):
 #     return file_path
 
 
-safe_builtins = {
-    'range',
-    'complex',
-    'set',
-    'frozenset',
-    'slice'
-}
-
-
-class RestrictedUnpickler(pickle.Unpickler):
-
-    def find_class(self, module, name):
-        # Only allow safe classes from builtins.
-        if module == "builtins" and name in safe_builtins:
-            return getattr(builtins, name)
-        # Forbid everything else.
-        raise pickle.UnpicklingError("global '%s.%s' is forbidden" %
-                                     (module, name))
-
-
 def restricted_loads(data_object):
 
     """Helper function analogous to pickle.loads()."""
@@ -1106,26 +1065,107 @@ def pickle_deserializer(serialised_folder, name, tab="\t"):
         file = (join(serialised_folder, name))
 
         if isfile(file) is False:
-            problem(tab="\t", text=F"THE FILE DOES NOT EXIST \n\t{file}", label="PROBLEM")
+            problem(tab="\t", text=F"PICKLE DESERIALIZER: THE FILE DOES NOT EXIST \n\t{file}", label="PROBLEM")
             return None
 
         if isfile(file)is not True:
-            print(F"\tTHE FILE [{file}] DOES NOT EXITS")
+            print(F"\tPICKLE DESERIALIZER: THE FILE [{file}] DOES NOT EXITS")
             return None
 
-        with gzip.open(file, 'rb') as pickle_data:
-            de_serialised = restricted_loads(pickle_data)
+        name_split = splitext(file)
+        unzip_it = False if name_split[1] is None else (True if name_split[1].lower() == ".gz" else False)
+        problem(label="DESERIALIZER INFO", text=F"FILE PATH: {file}\nTHE UNZIP OPTION IS NOT CHOSEN FOR THIS FILE.") \
+            if unzip_it is False \
+            else problem(
+            label="DESERIALIZER INFO",
+            text=F"FILE PATH: {file}\nTHE DECISION TO UNZIP THE FILE IS SOLELY BASED OF THE FILE'S EXTENSION.")
 
-        print("{}DONE READING THE FILE OF AN OBJECT OF SIZE {} IN {}".format(tab,
-            len(de_serialised), datetime.timedelta(seconds=time.time() - start)))
+        try:
+            with open(file, 'rb') if unzip_it is False else gzip.open(file, 'rb') as pickle_data:
+                de_serialised = restricted_loads(pickle_data)
+
+            print("{}\tDONE READING THE FILE OF AN OBJECT OF SIZE {} IN {}".format(tab,
+                  len(de_serialised), datetime.timedelta(seconds=time.time() - start)))
+
+        except OSError as err:
+
+            if err.__str__().lower().__contains__('not a gzipped file'):
+                problem(text=F"FILE FILE: [{file}] \nINFO: PROBABLY DUE TO A WRONG EXTENSION, THE FILE WAS BEING UNZIPPED."
+                F"\n\t  IT IS NOW BEING CORRECTLY PROCESSED AS A REGULAR UNZIPPED FILE.")
+                with open(file, 'rb') as pickle_data:
+                    de_serialised = restricted_loads(pickle_data)
 
         return de_serialised
+
     except TypeError as err:
         problem(text=F"pickle_deserializer: {err}")
-        raise
+
+
+def pickle_serializer(directory, data_object, name, tab="\t", zip_it=True):
+
+    """
+    :param directory: THE DIRECTORY OF THE FILE TO SERIALISE
+    :param data_object: THE OBJECT TO SERIALISE
+    :param name: THE NAME OF THE FILE TO CREATE WITH ITS EXTENSION
+    :param tab: SERVES AS JUST AS A PADDING
+    :param zip_it: A BOOLEAN ARGUMENT FOR DECIDING TO ZIP THE FILE OF NOT
+    :return:
+    """
+
+    """
+    Protocol version 0
+        is the original “human-readable” protocol and is
+        backwards compatible with earlier versions of Python.
+
+    Protocol version 1
+        is an old binary format which is also compatible with earlier versions of Python.
+
+    Protocol version 2
+        was introduced in Python 2.3. It provides much more efficient pickling of new-style classes.
+        Refer to PEP 307 for information about improvements brought by protocol 2.
+
+    Protocol version 3
+        was added in Python 3.0. It has explicit support for bytes objects and cannot be
+        unpickled by Python 2.x. This is the default protocol, and the recommended protocol
+        when compatibility with other Python 3 versions is required.
+
+    Protocol version 4 was added in Python 3.4. It adds support for very large objects, pickling more
+    kinds of objects, and some data format optimizations. Refer to PEP 3154 for information about
+    improvements brought by protocol 4.
+
+    If fix_imports is true and protocol is less than 3, pickle will try to map the new Python 3 names t
+    """
+
+    start = time.time()
+    if path.isdir(directory) is False:
+        mkdir(directory)
+
+    file_path = join(directory, name)
+
+    # IF ZIP IT IS TRUE, CHANGE THE EXTENSION IF IT IS THE WRONG EXTENSION OR DOES NOT HAVE ONE
+    if zip_it is True:
+        name_split = splitext(file_path)
+        # file_path = file_path if name_split[1].lower() == ".gz" else \
+        #     (file_path.replace(name_split[1], ".gz") if name_split[1] else F"{file_path}.gz")
+        file_path = file_path if name_split[1].lower() == ".gz" else F"{file_path}.gz"
+
+    # MESSAGE
+    output = F"SERIALIZING OBJECT OF TYPE {type(data_object)} AND OF SIZE: {len(data_object)}."
+    problem(label="SERIALIZER INFO",
+            text=F"FILE PATH: {file_path}\nTYPE:{output}\nTHE ZIP OPTION IS NOT CHOSEN FOR THIS FILE.") if zip_it is False \
+        else problem(label="SERIALIZER INFO", text=F"FILE PATH: {file_path}\nTYPE: {output}\nYOU HAVE CHOSEN ZIP THE FILE.")
+
+    # PROTOCOL TWO IS CHOSEN FOR COMPATIBILITY ISSUE WITH LENTICULAR LENS 1
+    with gzip.open(file_path, 'wb') if zip_it is True else open(file_path, 'wb') as writer:
+        pickle.dump(obj=data_object, file=writer, protocol=2, fix_imports=True)
+
+    print(F"{tab}\tDONE WRITING THE FILE {file_path} IN {datetime.timedelta(seconds=time.time() - start)}", sep=" ")
+
+    return file_path
 
 
 def serialize_dict(directory, dictionary, name, cluster_limit=1000):
+
     print("\tSERIALIZING DICTIONARY OF SIZE: {}...".format(len(dictionary)))
     start = time.time()
 
@@ -1135,7 +1175,7 @@ def serialize_dict(directory, dictionary, name, cluster_limit=1000):
         sub_cluster = {}
 
         for key, value in dictionary.items():
-            start_2 = time.time()
+            # start_2 = time.time()
             counting += 1
             sub_cluster[key] = value
 
@@ -1154,6 +1194,7 @@ def serialize_dict(directory, dictionary, name, cluster_limit=1000):
 
 
 def de_serialise_dict(serialised_directory_path, name):
+
     # print "\tREADING FROM SERIALISED FILE..."
     line_count = 0
     reading_start = time.time()
@@ -1170,20 +1211,45 @@ def de_serialise_dict(serialised_directory_path, name):
     return dictionary
 
 
+def dic_serializer(dic_type_obj, directory, name, mb=30):
+
+    # CREATE THE FOLDER IN WHICH THE SERIALIZED FILES WILL LIVE IN BASED ON A THRESHOLD
+    # ITERATE THROUGH THE DICTIONARY
+
+    byte_threshold = 1024 * 1024 * mb
+    byte_threshold = 10
+    temp = dict()
+
+    for counter, key in enumerate(dic_type_obj.keys()):
+
+        temp[key] = dic_type_obj[key]
+        print(get_obj_size(temp, seen=None, converted=False))
+
+        if get_obj_size(dic_type_obj, seen=None, converted=False) >= byte_threshold:
+            pickle_serializer(directory=directory, data_object=dic_type_obj, name=F'{counter}_{name}')
+            temp = dict()
+        # print(counter, key)
+
+
+# data = {'al': 'uva', 'veruska': 'uva', 'jauco': 'hyugens'}
+# dic_serializer(data, '/Users/al/PhD/GA/del', 'test')
+
+
+
 ###################################################################
 """             ABOUT INSERTING NAMED GRAPHS FILES              """
 ###################################################################
 
 
-def insertgraph(dataset_name, f_path, file_count, save=True):
+def insert_graph(dataset_name, f_path, file_count, save=True):
 
     limit = 70000
-    date = datetime.date.isoformat(datetime.date.today()).replace('-', '')
+    date_str = datetime.date.isoformat(datetime.date.today()).replace('-', '')
     f_path = f_path.replace("\\", "/")
     ds = rdflib.Dataset()
     name = os.path.basename(f_path)
 
-    new_dir = "{}/Inserted_{}_On_{}".format(os.path.dirname(f_path), name, date)
+    new_dir = "{}/Inserted_{}_On_{}".format(os.path.dirname(f_path), name, date_str)
 
     try:
         if not os.path.exists(new_dir):
@@ -1204,7 +1270,6 @@ def insertgraph(dataset_name, f_path, file_count, save=True):
     for graph in ds.graph():
         count_lines = 0
 
-        # rdflib.graph.Graph
         if len(graph) > 0:
             name = re.findall("<.*>", str(graph))[0]
             if name.__contains__("file:") is not True:
@@ -1238,7 +1303,7 @@ def insertgraph(dataset_name, f_path, file_count, save=True):
                         query_time = time.time()
                         if save is True:
                             wr = codecs.open("{}/Insert-{}_chunk{}_{}.txt".format(
-                                new_dir, dataset_name, count_chunk, date), "wb")
+                                new_dir, dataset_name, count_chunk, date_str), "wb")
                             wr.write(qrybldr.getvalue())
                             wr.close()
                         qres = Stardog.endpoint(qrybldr.getvalue())
@@ -1264,7 +1329,7 @@ def insertgraph(dataset_name, f_path, file_count, save=True):
                     count_chunk += 1
                     if save is True:
                         wr = codecs.open("{}/Insert-{}_chunk{}_{}.txt".format(
-                            new_dir, dataset_name, count_chunk, date), "wb")
+                            new_dir, dataset_name, count_chunk, date_str), "wb")
                         wr.write(final)
                         wr.close()
                     qres = Stardog.endpoint(final)
@@ -1277,13 +1342,13 @@ def insertgraph(dataset_name, f_path, file_count, save=True):
     print("\tProcess completed in {} {} seconds\n".format(":", str(time.time() - start_time)))
 
 
-def insertgraphs(dataset_name, dir_path):
+def insert_graphs(dataset_name, dir_path):
 
-    _format = "%a %b %d %H:%M:%S %Y"
+    format_ = "%a %b %d %H:%M:%S %Y"
     builder = io.StringIO()
     files = [f for f in listdir(dir_path) if isfile(join(dir_path, f))]
 
-    print("\n\n{:>114}".format(datetime.datetime.today().strftime(_format)))
+    print("\n\n{:>114}".format(datetime.datetime.today().strftime(format_)))
     builder.write("\n--------------------------------------------------------"
                   "----------------------------------------------------------\n")
     builder.write("    Inserting graphs contained in :\n\t\t{}\n".format(dir_path))
@@ -1300,7 +1365,7 @@ def insertgraphs(dataset_name, dir_path):
 
         if isfile(f_path) & (extension.lower() == ".trig"):
             # print path
-            insertgraph(dataset_name, f_path, file_count)
+            insert_graph(dataset_name, f_path, file_count)
             file_count += 1
 
 
@@ -1334,11 +1399,11 @@ def write_to_file(graph_name, directory, metadata=None, correspondences=None, si
         2. FILE NAME SETTINGS
     """
     try:
-        date = datetime.date.isoformat(datetime.date.today()).replace('-', '')
+        date_str = datetime.date.isoformat(datetime.date.today()).replace('-', '')
         dir_name = directory  # write_to_path os.path.dirname(f_path)
-        linkset_file = "{}-Linksets-{}.trig".format(graph_name, date)
-        metadata_file = "{}-Metadata-{}.trig".format(graph_name, date)
-        singleton_metadata_file = "{}-SingletonMetadata-{}.trig".format(graph_name, date)
+        linkset_file = "{}-Linksets-{}.trig".format(graph_name, date_str)
+        metadata_file = "{}-Metadata-{}.trig".format(graph_name, date_str)
+        singleton_metadata_file = "{}-SingletonMetadata-{}.trig".format(graph_name, date_str)
         dir_name = dir_name.replace("\\", "/")
 
         linkset_output = "{}/{}".format(dir_name, linkset_file).replace("//", "/")
@@ -1397,9 +1462,10 @@ def write_to_file(graph_name, directory, metadata=None, correspondences=None, si
 
 
 def write_2_disc(file_directory, file_name, data, extension="txt"):
-    date = datetime.date.isoformat(datetime.date.today()).replace('-', '')
+
+    date_str = datetime.date.isoformat(datetime.date.today()).replace('-', '')
     file_path = join(file_directory, file_name)
-    file_path = "{}_{}.{}".format(file_path, date, extension)
+    file_path = "{}_{}.{}".format(file_path, date_str, extension)
     if file_name is not None and data:
         document = None
         try:
@@ -1427,12 +1493,12 @@ def get_writers(graph_name, directory, expands=False, is_source=True):
 
     #  print graph_name
     """ 2. FILE NAME SETTINGS """
-    date = datetime.date.isoformat(datetime.date.today()).replace('-', '')
+    date_str = datetime.date.isoformat(datetime.date.today()).replace('-', '')
     dir_name = directory  # write_to_path  # os.path.dirname(f_path)
-    batch_file = "{}_batch{}_{}{}".format(graph_name, unique, date, batch_extension())
-    linkset_file = "{}(Linksets){}-{}.trig".format(graph_name, unique, date)
-    metadata_file = "{}{}(Metadata)-{}.sparql".format(graph_name, unique, date)
-    singleton_metadata_file = "{}{}(SingletonMetadata)-{}.trig".format(graph_name, unique, date)
+    batch_file = "{}_batch{}_{}{}".format(graph_name, unique, date_str, batch_extension())
+    linkset_file = "{}(Linksets){}-{}.trig".format(graph_name, unique, date_str)
+    metadata_file = "{}{}(Metadata)-{}.sparql".format(graph_name, unique, date_str)
+    singleton_metadata_file = "{}{}(SingletonMetadata)-{}.trig".format(graph_name, unique, date_str)
     dir_name = dir_name.replace("\\", "/")
     dir_name = dir_name.replace("//", "/")
 
@@ -1493,15 +1559,15 @@ def load_triple_store(graph_uri, directory, data):
     #  print graph_name
     """ 2. FILE NAME SETTINGS """
     graph_name = get_uri_local_name(graph_uri)
-    date = datetime.date.isoformat(datetime.date.today()).replace('-', '')
+    date_str = datetime.date.isoformat(datetime.date.today()).replace('-', '')
     dir_name = directory
     np = normalise_path(dir_name)
     dir_name = os.path.dirname(np) if os.path.isdir(np) is not True else np
     dir_name = dir_name.replace("\\", "/")
 
     # FILE NAME
-    batch_file = "{}_batch_{}{}".format(graph_name, date, batch_extension())
-    insert_file = "{}-{}.trig".format(graph_name, date)
+    batch_file = "{}_batch_{}{}".format(graph_name, date_str, batch_extension())
+    insert_file = "{}-{}.trig".format(graph_name, date_str)
 
     # FILE PATH
     batch_output = "{}/{}".format(dir_name, batch_file)
@@ -1776,8 +1842,7 @@ def create_database(stardog_bin_path, db_bat_path, db_name):
 
     # CREATING THE DATABASE IN STARDOG
     create_db = " \"{0}{2}stardog-admin\" --server {3} db create -o " \
-                "spatial.enabled=true search.enabled=true strict.parsing=false -n {1}".format(
-        stardog_bin_path, db_name, os.path.sep, endpoint)
+                "spatial.enabled=true search.enabled=true strict.parsing=false -n {1}".format(stardog_bin_path, db_name, os.path.sep, endpoint)
 
     print(create_db)
 
@@ -1801,8 +1866,8 @@ def create_database(stardog_bin_path, db_bat_path, db_name):
 def export_database(stardog_bin_path, db_name, save_in):
 
     # MAKE SURE THE DIRECTORY END WITH A SEPARATOR
-    date = datetime.date.isoformat(datetime.date.today()).replace('-', '')
-    file_path = join(save_in, "{}__backup_{}.ttl".format(db_name, date))
+    date_str = datetime.date.isoformat(datetime.date.today()).replace('-', '')
+    file_path = join(save_in, "{}__backup_{}.ttl".format(db_name, date_str))
 
     # MAKE SURE THE BIN PATH ENDS WIT A SEPARATOR
     stardog_bin_path = stardog_bin_path if str(stardog_bin_path).endswith(os.path.sep) \
@@ -1811,10 +1876,10 @@ def export_database(stardog_bin_path, db_name, save_in):
     cmd = "\"{0}stardog\" data export --named-graph ALL --format TRIG {1} {2}".format(
         stardog_bin_path, db_name, file_path)
 
-    batch_path = join(save_in, "{}__backup_{}{}".format(db_name, date, batch_extension()))
+    batch_path = join(save_in, "{}__backup_{}{}".format(db_name, date_str, batch_extension()))
     run_cdm(cmd, batch_path, delete_after=True)
 
-    export_database(Svr.settings[St.stardog_path], "risis", "C:\Productivity\LinkAnalysis\Coverage")
+    export_database(Svr.settings[St.stardog_path], db_name, save_in)
 
 
 def check_db_exists(database):
@@ -1979,7 +2044,7 @@ def to_alphanumeric(input_text, spacing="_"):
     print(input_text)
     # if type(input_text) is not str:
     #     input_text = (str(input_text, "utf-8"))
-    return re.sub('[\W]', spacing, input_text)
+    return re.sub('[\\W]', spacing, input_text)
 
 # print(to_alphanumeric("Встре́ча с медве́дем мо́жет быть о́чень опа́сна. Ру́сские лю́ди лю́бят ходи́ть в лес и собира́ть грибы́ и я́годы. Они́ де́лают э́то с осторо́жностью, так как медве́ди то́же о́чень лю́бят я́годы и мо́гут напа́сть на челове́ка. Медве́дь ест всё: я́годы, ры́бу, мя́со и да́же насеко́мых. Осо́бенно он лю́бит мёд."))
 # print(character_mapping("Встре́ча с медве́дем мо́жет быть о́чень опа́сна. Ру́сские лю́ди лю́бят ходи́ть в лес и собира́ть грибы́ и я́годы. Они́ де́лают э́то с осторо́жностью, так как медве́ди то́же о́чень лю́бят я́годы и мо́гут напа́сть на челове́ка. Медве́дь ест всё: я́годы, ры́бу, мя́со и да́же насеко́мых. Осо́бенно он лю́бит мёд."))
@@ -2020,11 +2085,11 @@ def zip_folder(input_folder_path, output_file_path=None):
 
     # Retrieve the paths of the folder contents.
     contents = os.walk(input_folder_path)
-    zip_file = None
+    zip_f = None
 
     try:
 
-        zip_file = f_zip.ZipFile(output_file_path, 'w', f_zip.ZIP_DEFLATED)
+        zip_f = f_zip.ZipFile(output_file_path, 'w', f_zip.ZIP_DEFLATED)
 
         for root, folders, files in contents:
 
@@ -2032,12 +2097,12 @@ def zip_folder(input_folder_path, output_file_path=None):
             for folder_name in folders:
                 absolute_path = os.path.join(root, folder_name)
                 # print "Adding '%s' to archive." % absolute_path
-                zip_file.write(absolute_path, "{0}{0}{1}{0}{0}{2}".format(os.path.sep, short_name, file_name))
+                zip_f.write(absolute_path, "{0}{0}{1}{0}{0}{2}".format(os.path.sep, short_name, file_name))
 
             for file_name in files:
                 absolute_path = os.path.join(root, file_name)
                 # print "Adding '%s' to archive." % absolute_path
-                zip_file.write(absolute_path, "{0}{0}{1}{0}{0}{2}".format(os.path.sep, short_name, file_name))
+                zip_f.write(absolute_path, "{0}{0}{1}{0}{0}{2}".format(os.path.sep, short_name, file_name))
 
         print("\n\t'%s' created successfully." % output_file_path)
         return output_file_path
@@ -2052,8 +2117,15 @@ def zip_folder(input_folder_path, output_file_path=None):
         print(err.__str__)
         sys.exit(1)
     finally:
-        if zip_file is not None:
-            zip_file.close()
+        if zip_f is not None:
+            zip_f.close()
+
+
+def zip_file(file_path):
+
+    with open(file_path, 'rb') as f_in:
+        with gzip.open(F'{file_path}.gz', 'wb') as f_out:
+            shutil.copyfileobj(f_in, f_out)
 
 
 def get_resource_value(resources, targets):
@@ -2201,8 +2273,8 @@ def confusion_matrix(true_p=0, false_p=0, true_n=0, false_n=0,
     confusion.write("{:>19}|{:^32} |\n".format("", "{} GROUND TRUTHS".format(observations)))
 
     # LINE 2
-    bae_1 = "*** ZERO RULE ***" if code == False else ""
-    bae_2 = "*** BASE LINE ***" if code == False else ""
+    bae_1 = "*** ZERO RULE ***" if code is False else ""
+    bae_2 = "*** BASE LINE ***" if code is False else ""
 
     # if zero_rule is True:
     #     print confusion_zero[0]
@@ -2430,10 +2502,3 @@ def get_key(node_1, node_2):
     strength_key = "key_{}".format(str(hasher((node_1, node_2))).replace("-", "N")) if node_1 < node_2 \
         else "key_{}".format(str(hasher((node_2, node_1))).replace("-", "N"))
     return strength_key
-
-
-# print sample_size(350000000)
-
-# print(convert_bytes(stat('C:\Productivity\ALenticularLens\export.csv')))
-
-

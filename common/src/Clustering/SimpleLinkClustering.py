@@ -1,5 +1,3 @@
-
-
 import gzip
 import re
 import time
@@ -358,16 +356,16 @@ def simple_csv_link_clustering(csv_path, save_in, file_name=None, key=None, acti
         if len(new_clusters) != 0 and len(root) != 0:
 
             # SERIALISATION FILES
-            s_file_1 = "{}-1.txt".format(file_name)
-            s_file_2 = "{}-2.txt".format(file_name)
+            s_file_1 = "{}-1.txt.gz".format(file_name)
+            s_file_2 = "{}-2.txt.gz".format(file_name)
 
             # SERIALISING THE CLUSTER DICTIONARY
             f_stat_1 = Ut.pickle_serializer(
-                directory=save_in, data_object=new_clusters, name=s_file_1)
+                directory=save_in, data_object=new_clusters, name=s_file_1, zip_it=True)
 
             # SERIALISING THE CLUSTER ROOT DICTIONARY
             f_stat_2 = Ut.pickle_serializer(
-                directory=save_in, data_object=root, name=s_file_2)
+                directory=save_in, data_object=root, name=s_file_2, zip_it=True)
 
         # f_stat_1 = round(stat(f_stat_1).st_size / (1024 * 1024 * 1024), 3)
         f_stat_1 = Ut.file_size(f_stat_1)
@@ -412,6 +410,8 @@ def extend_cluster(serialisation_dir, serialized_cluster_name, csv_association_f
     :param condition_30: FOR SPEED, DO NOT BOTHER COMPUTING DATA ON CLUSTERS BIGGER THAN 30 "FALSE"
     :param activated: JUS A BOOLEAN ARGUMENT FOR MAKING SURE THE FUNCTION IS TO RUN
     :return:
+        dictionary  if there is a result
+        False       if [activated is false] [no cycle] or [empty serialised file] or [problem]
     """
 
     if activated is False:
@@ -736,7 +736,7 @@ def extend_cluster(serialisation_dir, serialized_cluster_name, csv_association_f
     # EXIT THE CODE BECAUSE THE FILE NAME HAS A MISSING PATTERN
     if len(serialised_id) == 0:
         Ut.problem(tab="\t", text="MISSING PATTERN [_(PH.*)_] IN THE DESERIALIZED FILE NAME")
-        serialised_id = serialized_cluster_name
+        serialised_id = hasher(reconciled_name) if reconciled_name is not None else None
 
         if serialised_id is None:
             return False
@@ -886,26 +886,26 @@ def extend_cluster(serialisation_dir, serialized_cluster_name, csv_association_f
         related_graph_mane = Ut.get_uri_local_name_plus(f_name)
         extended_file_name = F"{serialized_cluster_name}_ExtendedBy_{related_graph_mane}_{serialised_id}"
 
-        s_file_1 = join(save_in, F"{extended_file_name}-1.txt")
-        s_file_2 = join(save_in, F"{extended_file_name}-2.txt")
-        s_file_3 = join(save_in, F"{extended_file_name}-3.txt")
-        s_file_4 = join(save_in, F"{extended_file_name}-4.txt")
+        s_file_1 = join(save_in, F"{extended_file_name}-1.txt.gz")
+        s_file_2 = join(save_in, F"{extended_file_name}-2.txt.gz")
+        s_file_3 = join(save_in, F"{extended_file_name}-3.txt.gz")
+        s_file_4 = join(save_in, F"{extended_file_name}-4.txt.gz")
 
         data = {'extended_clusters': list(extended_clusters),
                 'list_extended_clusters_cycle': list(list_extended_clusters_cycle),
                 'cycle_paths': cycle_paths}
 
         # LIST OF CLUSTERS THAT EXTEND THE CURRENT CLUSTER
-        pickle_serializer(CLUSTER_SERIALISATION_DIR, data['extended_clusters'], s_file_1)
+        pickle_serializer(CLUSTER_SERIALISATION_DIR, data['extended_clusters'], s_file_1, zip_it=True)
 
         # LIST OF CLUSTERS FOR WITCH A CYCLE EXISTS
-        pickle_serializer(CLUSTER_SERIALISATION_DIR, data['list_extended_clusters_cycle'], s_file_2)
+        pickle_serializer(CLUSTER_SERIALISATION_DIR, data['list_extended_clusters_cycle'], s_file_2, zip_it=True)
 
         # DICTIONARY OF THE CYCLE PATHS
-        pickle_serializer(CLUSTER_SERIALISATION_DIR, cycle_paths, s_file_3)
+        pickle_serializer(CLUSTER_SERIALISATION_DIR, cycle_paths, s_file_3, zip_it=True)
 
         # DICTIONARY OF THE RECONCILED NODES
-        pickle_serializer(CLUSTER_SERIALISATION_DIR, reconciled_nodes, s_file_4)
+        pickle_serializer(CLUSTER_SERIALISATION_DIR, reconciled_nodes, s_file_4, zip_it=True)
 
         # print("\n6. SAVING THE HASH OF EXTENDED CLUSTERS TO THE TRIPLE STORE AS: {}".format(file_name))
         # Qry.endpoint("""INSERT DATA {{
@@ -969,9 +969,13 @@ def extend_cluster(serialisation_dir, serialized_cluster_name, csv_association_f
         # CLUSTERING FHE RECONCILED NODES ...............................
         if not reconciled_name:
             reconciled_name = F"{serialized_cluster_name}_Reconciled_{serialised_id}"
+
         reconciled_clusters_serialised_file = simple_csv_link_clustering(
             csv_path=reconciled_file_path, save_in=serialisation_dir,
-            file_name=reconciled_name, key=F"Reconciled_{serialised_id}", activated=True)['file_name']
+            file_name=reconciled_name, key=F"Reconciled_{serialised_id}", activated=True)
+
+        reconciled_clusters_serialised_file = reconciled_clusters_serialised_file['file_name'] \
+            if reconciled_clusters_serialised_file else None
 
         # THE FILE IS AGAIN REMOVED TO SAVE HARD DISC SPACE
         # *************************************************
@@ -999,7 +1003,7 @@ def extend_cluster(serialisation_dir, serialized_cluster_name, csv_association_f
         'extended_file_name': extended_file_name,
         'reconciled_clusters_serialised_file_name': reconciled_clusters_serialised_file,
         'extended_clusters_count': len(extended_clusters),
-        'cycles_count': len(list_extended_clusters_cycle),
+        'cycles_count': len(list_extended_clusters_cycle)
     }
 
 

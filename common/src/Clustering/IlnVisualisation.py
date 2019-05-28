@@ -1,4 +1,5 @@
 import re
+# import json
 import time
 import gzip
 import datetime
@@ -17,15 +18,17 @@ from os.path import join
 from io import StringIO as Buffer
 from collections import defaultdict
 from src.Clustering.Iln_eQ import sigmoid
-from src.Generic.Utility import pickle_deserializer, to_nt_format, \
+from src.Generic.Utility import pickle_deserializer, to_nt_format, print_heading, completed, \
     get_uri_local_name_plus, undo_nt_format,  print_object, get_key, hasher, hash_number, problem
 
 
 # GET PATH OF THE SERIALISED DIRECTORY
 from src.LLData.CSV_Associations import CSV_ASSOCIATIONS_DIR
 from src.LLData.Serialisation import CLUSTER_SERIALISATION_DIR
+import src.DataAccess.Stardog.Query as Stardog
 
-
+related_distance = 550
+short_distance = 350
 _format = "It is %a %b %d %Y %H:%M:%S"
 date = datetime.datetime.today()
 _line = "--------------------------------------------------------------" \
@@ -94,8 +97,9 @@ def convert_properties(properties):
     return nodes_vis_properties
 
 
-def find_associations(nodes, text):
+def find_associations_regex(nodes, text):
 
+    start = time.time()
     # NODES REPRESENT THE RESOURCES OF THE INVESTIGATED CLUSTER
     associated = []
 
@@ -123,7 +127,41 @@ def find_associations(nodes, text):
             if len(temp) > 0:
                 associated.append(temp)
 
+        print_object(associated)
+
+    completed(start)
+
+    return associated
+
+
+def find_associations(nodes, association_file):
+
+    # NODES REPRESENT THE RESOURCES OF THE INVESTIGATED CLUSTER
+
+    associated = []
+    start = time.time()
+
+    # MAKE SURE THE LIST IS NOT EMPTY
+    if nodes and len(nodes) > 0:
+
+        # OPEN THE ASSOCIATION FILE
+        with gzip.open(association_file, 'rt') as associations:
+
+            for statement in associations:
+
+                # SPLIT THE ASSOCIATION
+                split = statement.strip().split(',')
+
+                # PUT IT IN NT FORMAT PRIOR TO THE CHECK
+                if to_nt_format(split[0]) in nodes or to_nt_format(split[1]) in nodes:
+
+                    # APPEND THE RESULT TO THE LIST
+                    associated.append((split[0], split[1]))
+
         # print_object(associated)
+
+    print(F"\t>>> WE FOUND {len(associated)} ASSOCIATIONS FOR PROVIDED {len(nodes)} NODES in {datetime.timedelta(seconds=time.time() - start)}.")
+    # completed(start)
 
     return associated
 
@@ -153,24 +191,24 @@ def add_vis_evidence(specs, vis_obj, serialised, resources_obj=None, dataset_obj
         print(F"\n{tab}--> 1. FETCHING THE ASSOCIATED NODES ")
         # ***************************************************************
 
-        with gzip.open(join(CSV_ASSOCIATIONS_DIR, specs['associations']), 'rt') as file:
+        association_file = join(CSV_ASSOCIATIONS_DIR, specs['associations'])
 
-            # LOOK FOR THE NODES IN ASSOCIATION
-            associations = find_associations(specs['cluster_data']['nodes'], file.read())
+        # LOOK FOR THE NODES IN ASSOCIATION
+        associations = find_associations(specs['cluster_data']['nodes'], association_file)
 
-            # ADD THE ASSOCIATION NODES TO THE OVERALL NODES TO PLOT
-            for link in associations:
+        # ADD THE ASSOCIATION NODES TO THE OVERALL NODES TO PLOT
+        for link in associations:
 
-                src = to_nt_format(link[0])
-                trg = to_nt_format(link[1])
+            src = to_nt_format(link[0])
+            trg = to_nt_format(link[1])
 
-                if src not in overall_nodes:
-                    paired_nodes.add(src)
+            if src not in overall_nodes:
+                paired_nodes.add(src)
 
-                if trg not in overall_nodes:
-                    paired_nodes.add(trg)
+            if trg not in overall_nodes:
+                paired_nodes.add(trg)
 
-                    # print_object(paired_nodes)
+                # print_object(paired_nodes)
 
         # ***************************************************************
         print(F"\n{tab}--> 2. FETCHING THE ASSOCIATED CLUSTERS ")
@@ -180,10 +218,10 @@ def add_vis_evidence(specs, vis_obj, serialised, resources_obj=None, dataset_obj
         extended = set()
 
         # THE MAPPING OBJECT THAT DOCUMENT THE MAPPING BETWEEN NODE AND CLUSTER THEY BELONG TO
-        root = pickle_deserializer(serialised_folder=CLUSTER_SERIALISATION_DIR, name=F"{serialised}-2.txt")
+        root = pickle_deserializer(serialised_folder=CLUSTER_SERIALISATION_DIR, name=F"{serialised}-2.txt.gz")
 
         # THE DICTIONARY OF THE CLUSTERS
-        clusters = pickle_deserializer(serialised_folder=CLUSTER_SERIALISATION_DIR, name=F"{serialised}-1.txt")
+        clusters = pickle_deserializer(serialised_folder=CLUSTER_SERIALISATION_DIR, name=F"{serialised}-1.txt.gz")
 
         for paired in paired_nodes:
             formatted = to_nt_format(paired)
@@ -216,7 +254,7 @@ def add_vis_evidence(specs, vis_obj, serialised, resources_obj=None, dataset_obj
                 link_dict = {
                     "source": resources_obj[formatted_src],
                     "target": resources_obj[formatted_trg],
-                    "distance": 250, "value": 4,
+                    "distance": short_distance, "value": 4,
                     "color": "purple",
                     "dash": "20,10,5,5,5,10"
                 }
@@ -608,24 +646,24 @@ def plot(specs, visualisation_obj=None, resources_obj=None,
         print(F"\n{tab}--> 1. FETCHING THE ASSOCIATED NODES ")
         # ***************************************************************
 
-        with gzip.open(join(CSV_ASSOCIATIONS_DIR, specs['associations']), 'rt') as file:
+        association_file = join(CSV_ASSOCIATIONS_DIR, specs['associations'])
 
-            # LOOK FOR THE NODES IN ASSOCIATION
-            associations = find_associations(specs['cluster_data']['nodes'], file.read())
+        # LOOK FOR THE NODES IN ASSOCIATION
+        associations = find_associations(specs['cluster_data']['nodes'], association_file)
 
-            # ADD THE ASSOCIATION NODES TO THE OVERALL NODES TO PLOT
-            for link in associations:
+        # ADD THE ASSOCIATION NODES TO THE OVERALL NODES TO PLOT
+        for link in associations:
 
-                src = to_nt_format(link[0])
-                trg = to_nt_format(link[1])
+            src = to_nt_format(link[0])
+            trg = to_nt_format(link[1])
 
-                if src not in overall_nodes:
-                    paired_nodes.add(src)
+            if src not in overall_nodes:
+                paired_nodes.add(src)
 
-                if trg not in overall_nodes:
-                    paired_nodes.add(trg)
+            if trg not in overall_nodes:
+                paired_nodes.add(trg)
 
-            # print_object(paired_nodes)
+        # print_object(paired_nodes)
 
         # ***************************************************************
         print(F"\n{tab}--> 2. FETCHING THE ASSOCIATED CLUSTERS ")
@@ -641,7 +679,9 @@ def plot(specs, visualisation_obj=None, resources_obj=None,
         clusters = pickle_deserializer(serialised_folder=CLUSTER_SERIALISATION_DIR, name=F"{specs['serialised']}-1.txt")
 
         for paired in paired_nodes:
-            extended.add(root[to_nt_format(paired)])
+            formatted = to_nt_format(paired)
+            if formatted in root:
+                extended.add(root[formatted])
 
         print(F"\tTHE CLUSTERS EXTENDS TO {len(extended)} OTHER CLUSTERS")
 
@@ -674,8 +714,8 @@ def plot(specs, visualisation_obj=None, resources_obj=None,
 
     try:
         query = Middleware.node_labels_switcher[data_store](
-            resources=specs["cluster_data"]["nodes"], targets=nodes_vis_properties) if nodes_vis_properties is not None \
-            else None
+            resources=specs["cluster_data"]["nodes"], targets=nodes_vis_properties) \
+            if nodes_vis_properties is not None else None
         # print(query)
 
     except KeyError as err:
@@ -785,7 +825,7 @@ def plot(specs, visualisation_obj=None, resources_obj=None,
             "source": resources[to_nt_format(source)],
             "target": resources[to_nt_format(target)],
             "strength": F"{strength}",
-            "distance": 250 if association is True else 150, "value": 4,
+            "distance": related_distance if association is True else short_distance, "value": 4,
             "color": "purple" if association is True else("black" if strength == 1 else "red"),
             "dash": "20,10,5,5,5,10" if association is True else F"3,{20 * (1 - strength)}"
         }
@@ -798,7 +838,7 @@ def plot(specs, visualisation_obj=None, resources_obj=None,
             link_dict = {
                 "source": resources[to_nt_format(link[0])],
                 "target": resources[to_nt_format(link[1])],
-                "distance": 250, "value": 4,
+                "distance": related_distance, "value": 4,
                 "color": "purple",
                 "dash": "20,10,5,5,5,10"
             }
@@ -808,7 +848,7 @@ def plot(specs, visualisation_obj=None, resources_obj=None,
     # print_object(vis_data)
 
     if visualisation_obj is None:
-        Ut.completed(start)
+        Ut.completed(start, tab="")
 
     return vis_data
 
@@ -996,7 +1036,7 @@ def plot_reconciliation(specs, visualisation_obj=None, activated=False):
     try:
         query = Middleware.node_labels_switcher[data_store](
             resources=specs["cluster_data"]["nodes"], targets=nodes_vis_properties)
-        # print(query)
+
     except KeyError as err:
         query = None
         print(F"\tKEY ERROR: {err}")
@@ -1039,8 +1079,8 @@ def plot_reconciliation(specs, visualisation_obj=None, activated=False):
     # DE-SERIALISING THE RECONCILED CLUSTERS
     root_reconciled = None
     if is_restructured is True:
-        reconciled = pickle_deserializer(CLUSTER_SERIALISATION_DIR, F"{specs['sub_clusters']}-1.txt")
-        root_reconciled = pickle_deserializer(CLUSTER_SERIALISATION_DIR, F"{specs['sub_clusters']}-2.txt")
+        reconciled = pickle_deserializer(CLUSTER_SERIALISATION_DIR, F"{specs['sub_clusters']}-1.txt.gz")
+        root_reconciled = pickle_deserializer(CLUSTER_SERIALISATION_DIR, F"{specs['sub_clusters']}-2.txt.gz")
 
     # NO NEED TO CONTINUE AS NO RESULT WAS FETCHED FROM THE DB SEVER
     if table is not None:
@@ -1128,7 +1168,7 @@ def plot_reconciliation(specs, visualisation_obj=None, activated=False):
             "source": resources[to_nt_format(source)],
             "target": resources[to_nt_format(target)],
             "strength": F"{strength}",
-            "distance": 150, "value": 4,
+            "distance": short_distance, "value": 4,
             "color": "black" if strength == 1 else "red",
             "dash": F"3,{20 * (1 - strength)}"
         }
@@ -1158,25 +1198,15 @@ def plot_reconciliation(specs, visualisation_obj=None, activated=False):
         for temp_id in sub_clusters_id:
             temp = reconciled[temp_id]
             specifications = {
-
                 "data_store": specs['data_store'],
-
                 "cluster_id": id,
-
-                # "sub_clusters": 'Serialized_Cluster_Reconciled_PH1f99c8924c573d6',
                 "associations": specs["associations"],
-
                 "serialised": specs["serialised"],
-
                 "cluster_data": {
-
                     "nodes": temp['nodes'] if temp else [],
-
                     'strengths': temp['strengths'] if temp else {},
-
                     "links": temp["links"] if temp else []
                 },
-
                 "properties": specs['properties']
             }
 
@@ -1226,6 +1256,9 @@ def plot_compact(specs, vis=None, root=None, map_of_labels=None, sub_clusters=No
         problem(text="--> THE FUNCTION [improved_cluster_vis] IS NOT ACTIVATED.")
         return
 
+    the_delta = F"\nWITH A DELTA OF {delta}" if delta is not None else ""
+    print_heading(F"PLOTTING THE ILN IN A COMPACT REPRESENTATION{the_delta}")
+
     cluster = deepcopy(specs["cluster_data"])
     data_store = specs["data_store"]
     # USER SELECTED PROPERTIES
@@ -1262,8 +1295,8 @@ def plot_compact(specs, vis=None, root=None, map_of_labels=None, sub_clusters=No
         return range_list
 
     problem(tab="\t", text=F"MISSING LINKS: {total*(total-1)/2 -  len(strengths)}\n", label=" INFO ")
-    print("\t--> THE CLUSTER IS OF {} NODES AND {}: {}".format(
-        total, total_links, "INVESTIGATED" if investigated is True else "EVIDENCE"))
+    print("\t--> THE CLUSTER [{}] IS OF {} NODES AND {}: {}".format(
+        specs['cluster_id'], total, total_links, "INVESTIGATED" if investigated is True else "EVIDENCE"))
     # print_object(strengths)
 
     # ***********************************
@@ -1303,9 +1336,9 @@ def plot_compact(specs, vis=None, root=None, map_of_labels=None, sub_clusters=No
         # *****************************************************
         strengths = dict(sorted(strengths.items(), key=lambda item_to_sort: item_to_sort[1], reverse=desc))
 
-        # ****************************************
+        # *********************************************
         print("\n\t--> 3. FIND ALL POSSIBLE GROUPS")
-        # ****************************************
+        # *********************************************
         for key, value in strengths.items():
             s = intervals.to_string(intervals.singleton(value))
             if s not in aggregated:
@@ -1334,7 +1367,7 @@ def plot_compact(specs, vis=None, root=None, map_of_labels=None, sub_clusters=No
         grouped_links[bin_key] = set()
 
     # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    # (BOTTLENECK SOLUTION-1)
+    " (BOTTLENECK SOLUTION-1) "
     # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     # ORGANISE THE LINKS IN THE BINS
     for source, target in cluster["links"]:
@@ -1375,7 +1408,7 @@ def plot_compact(specs, vis=None, root=None, map_of_labels=None, sub_clusters=No
         print(F"\t\tBIN {constraint_key:17}")
 
         # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        # (BOTTLENECK PROBLEM-1)
+        " (BOTTLENECK PROBLEM-1) "
         # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         # for source, target in cluster["links"]:
         for source, target in grouped_links[constraint_key]:
@@ -1534,7 +1567,7 @@ def plot_compact(specs, vis=None, root=None, map_of_labels=None, sub_clusters=No
                     grouped_links[key].remove((source, target))
 
                     # EXTRACT CHILDREN OF COMPACT THAT ARE BIGGEST THAN 2
-                    if len(group) > 2:
+                    if len(group) >= 2:
                             compact[group_id].append((source, target, strengths[get_key(source, target)]))
 
     for key, groups in aggregated.items():
@@ -1569,6 +1602,7 @@ def plot_compact(specs, vis=None, root=None, map_of_labels=None, sub_clusters=No
     properties_converted = convert_properties(properties) if properties is not None else None
     step_6 = time.time()
 
+    group_count = 2
     for key, sub_cluster in new_clusters.items():
 
         # ************************************
@@ -1592,7 +1626,8 @@ def plot_compact(specs, vis=None, root=None, map_of_labels=None, sub_clusters=No
             db_label = get_uri_local_name_plus(table[1][1])
             underscore = db_label.split("__")
             db_label = underscore[1] if len(underscore) > 1 else db_label
-            label = F"-- {table[1][3]} ({db_label})"
+            label = F"-- {table[1][3]} ({db_label} {hasher(table[1][0])})"
+
         else:
             # label = F"-- ({resource})"
             # label = F"-- {get_uri_local_name_plus(resource)}"
@@ -1610,6 +1645,7 @@ def plot_compact(specs, vis=None, root=None, map_of_labels=None, sub_clusters=No
             if key in sub_cluster_link_count else 0
 
         if key in group_map:
+
             node = {
                 'nodes': group_size,
                 'strength': group_map[key],
@@ -1619,7 +1655,14 @@ def plot_compact(specs, vis=None, root=None, map_of_labels=None, sub_clusters=No
                 'id': label_map[key],
                 'investigated': str(investigated).lower()
             }
-            node['group'] = 1 if group_size == 1 else int((hash_number(key)) if color is None else int(color))
+
+            if key in compact:
+                node['child'] = get_compact_child(key, compact[key], properties_converted, data_store)
+
+            # node['group'] =  int((hash_number(key)) if color is None else int(color)
+            node['group'] = color if color is not None else (1 if group_size == 1 else int(hash_number(key)) )
+            # node['group'] = 1 if group_size == 1 else int((hash_number(key)) if color is None else int(color))
+            # node['group'] = group_count if color is None else int(color)
 
             # if node['group'] > 1:
             #     print("\t\t --> COMMUNITY COLOR",  node['group'])
@@ -1647,7 +1690,7 @@ def plot_compact(specs, vis=None, root=None, map_of_labels=None, sub_clusters=No
         label_1 = label_map[new_root[link[0]]]
         label_2 = label_map[new_root[link[1]]]
         strength = link[2]
-        distance = 150
+        distance = short_distance
 
         # ORDERING THE LABELS
         if label_1 < label_2:
@@ -1718,7 +1761,122 @@ def plot_compact(specs, vis=None, root=None, map_of_labels=None, sub_clusters=No
     # with open('C:\\Users\Al\Dropbox\@VU\Ve\Golden Agents\Cluster Vis Code\data_new_vis.json', mode='w') as file:
     #     json.dump(vis, file)
 
-    return vis, compact
+    # return vis, compact
+    return vis
+
+
+def get_compact_child(key, child, properties, data_store):
+
+    # THIS FUNCTION COMPLEMENTS PLOT COMPACT AS IT PLOTS
+    # THE COMPACT GROUPS FOUND BY THE PLOT COMPACT FUNCTION
+
+    visualisation_obj = None
+    investigated = True
+
+    vis_data = {
+        "id": key,
+        "confidence": 1,
+        "decision": 1,
+        "metric": "e_Q MESSAGE",
+        "messageConf": "",
+        "nodes": [],
+        "links": []
+    }
+
+    nodes = set()
+
+    for link in child:
+        # GETTING THE MAXIMUM STRENGTH IS MORE STRENGTH IS COMPUTED FOR THE LINK
+        association = False
+        nodes.add(link[0])
+        nodes.add(link[1])
+        link_dict = {
+            "source": link[0],
+            "target": link[1],
+            "strength": link[2],
+            "distance": related_distance if association is True else short_distance, "value": 4,
+            "color": "purple" if association is True else("black" if link[2] == 1 else "red"),
+            "dash": "20,10,5,5,5,10" if association is True else F"3,{20 * (1 - link[2])}"
+        }
+        vis_data["links"].append(link_dict)
+
+    # FETCH THE
+    label_map = dict()
+    resources = list(nodes)
+    # print_object(resource, overview=False)
+    # QUERY FOR FETCHING THE LABEL
+    query = Middleware.node_labels_switcher[data_store](resources=resources, targets=properties)
+
+    # FETCHING THE LABELS
+    table = None
+    if data_store in Middleware.run_query_matrix_switcher and query:
+        result = Middleware.run_query_matrix_switcher[data_store](query)
+        Stardog.display_matrix(result, spacing=130, is_activated=False)
+        table = result[St.result] if isinstance(result, dict) else result
+
+    if properties is not None and table is not None:
+
+        for i in range(1, len(table)):
+            formatted = to_nt_format(table[i][0])
+            db_label = get_uri_local_name_plus(table[i][1])
+            underscore = db_label.split("__")
+            db_label = underscore[1] if len(underscore) > 1 else db_label
+            label = F"-- {table[i][3]} ({db_label}_{hasher(formatted)})"
+
+            if formatted not in label_map:
+                label_map[formatted] = label
+                node_dict = {
+                    'id': label,
+                    "uri": formatted,
+                    "group": hash_number(hasher(db_label)),
+                    "size": "8" if visualisation_obj is None else "5"
+                }
+
+                if investigated is True:
+                    node_dict['investigated'] = str(investigated).lower()
+                    node_dict["size"] = 8
+
+                # print("node--> ", node_dict)
+                vis_data["nodes"].append(node_dict)
+
+            # else:
+            #     print(F"DUPLICATED NODE: {formatted} {label_map[formatted]} !!!!!!!!!!!!!!!!!")
+
+        for link in vis_data["links"]:
+        # print("-->", link['source'],label_map[link['source']][0])
+            link['source'] = label_map[link['source']]
+            link['target'] = label_map[link['target']]
+
+    else:
+
+        # CREATE THE NODE OBJECT FOR VISUALISATION
+        for node in resources:
+            node_dict = {
+                'id': node,
+                "uri": node,
+                "group": hash_number(key),
+                "size": "8" if visualisation_obj is None else "5"
+            }
+
+            if investigated is True:
+                node_dict['investigated'] = str(investigated).lower()
+                node_dict["size"] = 8
+
+            vis_data["nodes"].append(node_dict)
+
+
+    # for link in vis_data["links"]:
+    #     # print("-->", link['source'],label_map[link['source']][0])
+    #     link['source'] = label_map[link['source']]
+    #     link['target'] = label_map[link['target']]
+
+    # host = "http://localhost:63342/LenticularLens/src/LLData/Validation/{}"
+    # with open(join(CLUSTER_VISUALISATION_DIR, "data_compact.json"), mode='w') as compact_file:
+    #     json.dump(vis_data, compact_file)
+    # web.open_new_tab(host.format('Compact_vis.html'))
+    # time.sleep(3)
+
+    return vis_data
 
 
 def plot_compact_child(children):
@@ -1755,7 +1913,7 @@ def plot_compact_child(children):
                 "source": link[0],
                 "target": link[1],
                 "strength": link[2],
-                "distance": 250 if association is True else 150, "value": 4,
+                "distance": related_distance if association is True else short_distance, "value": 4,
                 "color": "purple" if association is True else("black" if link[2] == 1 else "red"),
                 "dash": "20,10,5,5,5,10" if association is True else F"3,{20 * (1 - link[2])}"
             }
@@ -1776,10 +1934,12 @@ def plot_compact_child(children):
 
             vis_data["nodes"].append(node_dict)
 
-        with open(join(CLUSTER_VISUALISATION_DIR, "data_compact.json"), mode='w') as compact_file:
-            json.dump(vis_data, compact_file)
-        web.open_new_tab(host.format('Compact_vis.html'))
-        time.sleep(3)
+        # with open(join(CLUSTER_VISUALISATION_DIR, "data_compact.json"), mode='w') as compact_file:
+        #     json.dump(vis_data, compact_file)
+        # web.open_new_tab(host.format('Compact_vis.html'))
+        # time.sleep(3)
+
+        return vis_data
 
 
 # ****************************************************
@@ -1798,6 +1958,10 @@ def plot_compact_association(specs, reduce_investigated=False, activated=False):
     if activated is False or specs is None:
         problem(text="--> THE FUNCTION [compact_association_vis] IS NOT ACTIVATED.")
         return
+
+    delta = None
+    the_delta = F"\nWITH A DELTA OF {delta}" if delta is not None else ""
+    print_heading(F"PLOTTING THE ILN IN A COMPACT REPRESENTATION WITH EVIDENCE{the_delta}")
 
     total = 0
     color = 0
@@ -1851,22 +2015,22 @@ def plot_compact_association(specs, reduce_investigated=False, activated=False):
     print(F"\n\t--> 2. FETCHING THE ASSOCIATED NODES ")
     # ***************************************************************
 
-    with open(join(CSV_ASSOCIATIONS_DIR, specs['associations']), 'r') as file:
+    association_file = join(CSV_ASSOCIATIONS_DIR, specs['associations'])
 
-        # LOOK FOR THE NODES IN ASSOCIATION
-        associations = find_associations(specs['cluster_data']['nodes'], file.read())
+    # LOOK FOR THE NODES IN ASSOCIATION
+    associations = find_associations(specs['cluster_data']['nodes'], association_file)
 
-        # ADD THE ASSOCIATION NODES TO THE OVERALL NODES TO PLOT
-        for link in associations:
+    # ADD THE ASSOCIATION NODES TO THE OVERALL NODES TO PLOT
+    for link in associations:
 
-            src = to_nt_format(link[0])
-            trg = to_nt_format(link[1])
+        src = to_nt_format(link[0])
+        trg = to_nt_format(link[1])
 
-            if src not in overall_nodes:
-                paired_nodes.add(src)
+        if src not in overall_nodes:
+            paired_nodes.add(src)
 
-            if trg not in overall_nodes:
-                paired_nodes.add(trg)
+        if trg not in overall_nodes:
+            paired_nodes.add(trg)
     # print_object(paired_nodes)
 
     # ***************************************************************
@@ -1969,7 +2133,7 @@ def plot_compact_association(specs, reduce_investigated=False, activated=False):
                 link_dict = {
                     "source": source,
                     "target": target,
-                    "distance": 250,
+                    "distance": related_distance,
                     "value": 1,
                     "color": "purple",
                     "dash": "20,10,5,5,5,10",
@@ -2044,8 +2208,8 @@ def plot_compact_association_rec(specs, reduce_investigated=False, activated=Fal
     sub_clusters_id = set()
 
     # LOADING THE CLUSTERS AND THE MAPPING OF NODES TO CLUSTER ID
-    reconciled = pickle_deserializer(CLUSTER_SERIALISATION_DIR, F"{specs['sub_clusters']}-1.txt")
-    root_reconciled = pickle_deserializer(CLUSTER_SERIALISATION_DIR, F"{specs['sub_clusters']}-2.txt")
+    reconciled = pickle_deserializer(CLUSTER_SERIALISATION_DIR, F"{specs['sub_clusters']}-1.txt.gz")
+    root_reconciled = pickle_deserializer(CLUSTER_SERIALISATION_DIR, F"{specs['sub_clusters']}-2.txt.gz")
 
     # CONVERTING THE NODES TO A SET FOR GENERATING NODE DE-DUPLICATION
     overall_nodes = set()
@@ -2114,22 +2278,22 @@ def plot_compact_association_rec(specs, reduce_investigated=False, activated=Fal
     # ***************************************************************
     print(F"\n\t--> FETCHING THE ASSOCIATED NODES ")
     # ***************************************************************
-    with open(join(CSV_ASSOCIATIONS_DIR, specs['associations']), 'r') as file:
+    association_file = join(CSV_ASSOCIATIONS_DIR, specs['associations'])
 
-        # LOOK FOR THE NODES IN ASSOCIATION
-        associations = find_associations(list(overall_nodes), file.read())
+    # LOOK FOR THE NODES IN ASSOCIATION
+    associations = find_associations(list(overall_nodes), association_file)
 
-        # ADD THE ASSOCIATION NODES TO THE OVERALL NODES TO PLOT
-        for link in associations:
+    # ADD THE ASSOCIATION NODES TO THE OVERALL NODES TO PLOT
+    for link in associations:
 
-            src = to_nt_format(link[0])
-            trg = to_nt_format(link[1])
+        src = to_nt_format(link[0])
+        trg = to_nt_format(link[1])
 
-            if src not in overall_nodes:
-                paired_nodes.add(src)
+        if src not in overall_nodes:
+            paired_nodes.add(src)
 
-            if trg not in overall_nodes:
-                paired_nodes.add(trg)
+        if trg not in overall_nodes:
+            paired_nodes.add(trg)
     # print_object(paired_nodes)
 
     # ***************************************************************
@@ -2140,10 +2304,10 @@ def plot_compact_association_rec(specs, reduce_investigated=False, activated=Fal
     extended = set()
 
     # THE MAPPING OBJECT THAT DOCUMENT THE MAPPING BETWEEN NODE AND CLUSTER THEY BELONG TO
-    root = pickle_deserializer(serialised_folder=CLUSTER_SERIALISATION_DIR, name=F"{specs['sub_clusters']}-2.txt")
+    root = pickle_deserializer(serialised_folder=CLUSTER_SERIALISATION_DIR, name=F"{specs['sub_clusters']}-2.txt.gz")
 
     # THE DICTIONARY OF THE CLUSTERS
-    clusters = pickle_deserializer(serialised_folder=CLUSTER_SERIALISATION_DIR, name=F"{specs['sub_clusters']}-1.txt")
+    clusters = pickle_deserializer(serialised_folder=CLUSTER_SERIALISATION_DIR, name=F"{specs['sub_clusters']}-1.txt.gz")
 
     for paired in paired_nodes:
         formatted = to_nt_format(paired)
@@ -2235,7 +2399,7 @@ def plot_compact_association_rec(specs, reduce_investigated=False, activated=Fal
                     link_dict = {
                         "source": source,
                         "target": target,
-                        "distance": 250,
+                        "distance": related_distance,
                         "value": 1,
                         "color": "purple",
                         "dash": "20,10,5,5,5,10",

@@ -89,12 +89,12 @@ def job_data(job_id):
 def clusters(job_id, clustering_id):
     clusters = {}
     from src.LLData.Serialisation import CLUSTER_SERIALISATION_DIR
-    clusters_data = pickle_deserializer(CLUSTER_SERIALISATION_DIR, f'{clustering_id}-1.txt')
+    clusters_data = pickle_deserializer(CLUSTER_SERIALISATION_DIR, f'{clustering_id}-1.txt.gz')
 
     if request.args.get('association'):
         extended_filename_base = F"{clustering_id}_ExtendedBy_{splitext(request.args.get('association'))[0]}_{clustering_id}"
-        extended_data = pickle_deserializer(CLUSTER_SERIALISATION_DIR, f"{extended_filename_base}-1.txt")
-        cycles_data = pickle_deserializer(CLUSTER_SERIALISATION_DIR, f"{extended_filename_base}-2.txt")
+        extended_data = pickle_deserializer(CLUSTER_SERIALISATION_DIR, f"{extended_filename_base}-1.txt.gz")
+        cycles_data = pickle_deserializer(CLUSTER_SERIALISATION_DIR, f"{extended_filename_base}-2.txt.gz")
     else:
         extended_data = []
         cycles_data = []
@@ -280,7 +280,7 @@ def get_cluster_graph_data(job_id, clustering_id, cluster_id):
     # print(golden_agents_specifications, file=sys.stderr)
     return jsonify({
         'cluster_graph': visualise_1(specs=golden_agents_specifications, activated=True) if get_cluster else None,
-        'cluster_graph_compact': visualise_3(specs=golden_agents_specifications, activated=True)[0] if get_cluster_compact else None,
+        'cluster_graph_compact': visualise_3(specs=golden_agents_specifications, activated=True) if get_cluster_compact else None,
         'reconciliation_graph': visualise_2(specs=golden_agents_specifications, activated=True)[
             1] if get_reconciliation else None,
     })
