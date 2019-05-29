@@ -692,8 +692,8 @@
                             body: JSON.stringify({
                                 'cluster_data': this.cluster_data,
                                 'get_cluster': !Boolean(this.$root.$children[0].association) || type === 'cluster',
-                                'get_reconciliation': Boolean(this.$root.$children[0].association),
-                                'associations': this.$root.$children[0].association,
+                                'get_reconciliation': this.cluster_data.extended === 'yes',
+                                'associations': this.cluster_data.extended === 'yes' ? this.$root.$children[0].association : '',
                             })
                         })
                 .then((response) => response.json())
