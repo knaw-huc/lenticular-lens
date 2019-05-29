@@ -12,6 +12,7 @@ import pickle
 import psycopg2
 from psycopg2 import extras as psycopg2_extras, sql as psycopg2_sql
 import random
+import re
 from src.Generic.Utility import pickle_deserializer
 from src.Clustering.IlnVisualisation import plot_reconciliation as visualise_2, plot as visualise_1, plot_compact as visualise_3
 import subprocess
@@ -92,7 +93,9 @@ def clusters(job_id, clustering_id):
     clusters_data = pickle_deserializer(CLUSTER_SERIALISATION_DIR, f'{clustering_id}-1.txt.gz')
 
     if request.args.get('association'):
-        extended_filename_base = F"{clustering_id}_ExtendedBy_{splitext(request.args.get('association'))[0]}_{clustering_id}"
+        reconciled_id = re.sub("Cluster", "Reconciled", clustering_id)
+        reconciled = f'{reconciled_id}_{hasher(request.args.get("association"))}'
+        extended_filename_base = F"{clustering_id}_ExtendedBy_{splitext(request.args.get('association'))[0]}_{hasher(reconciled)}"
         extended_data = pickle_deserializer(CLUSTER_SERIALISATION_DIR, f"{extended_filename_base}-1.txt.gz")
         cycles_data = pickle_deserializer(CLUSTER_SERIALISATION_DIR, f"{extended_filename_base}-2.txt.gz")
     else:

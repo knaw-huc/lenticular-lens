@@ -1078,11 +1078,11 @@ def link_cluster_deserialization(serialisation_dir, main_file_name):
     if True:
         # DE-SERIALISING THE MAIN DICTIONARY OF CLUSTER
         print("\n\tREADING FROM SERIALISED FILE 1...")
-        clusters = Ut.pickle_deserializer(serialised_folder=serialisation_dir, name=F"{main_file_name}-1.txt")
+        clusters = Ut.pickle_deserializer(serialised_folder=serialisation_dir, name=F"{main_file_name}-1.txt.gz")
 
         # DE-SERIALISING THE ROOT DICTIONARY SUPPORTING THE MAIN DICTIONARY OF CLUSTERS
         print("\tREADING FROM SERIALISED FILE 2...")
-        node2cluster_id = Ut.pickle_deserializer(serialised_folder=serialisation_dir, name=F"{main_file_name}-2.txt")
+        node2cluster_id = Ut.pickle_deserializer(serialised_folder=serialisation_dir, name=F"{main_file_name}-2.txt.gz")
 
         return {'clusters': clusters, 'node2cluster_id': node2cluster_id}
 
