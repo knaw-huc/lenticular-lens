@@ -45,5 +45,10 @@
     "sql_template": "bloothooft_reduct({source}, '{name_type}') = bloothooft_reduct({target}, '{name_type}') AND 1 - (levenshtein({source}, {target})::decimal / greatest(char_length({source}), char_length({target}))) >= {threshold}",
     "similarity": "1 - (levenshtein({source}, {target})::decimal / greatest(char_length({source}), char_length({target})))",
     "index_using": "btree(bloothooft_reduct({target}, '{name_type}'))"
+  },
+  "BLOOTHOOFT_REDUCT_APPROX": {
+    "before_alignment": "SELECT bloothooft_bootstrap();",
+    "sql_template": "1 - (levenshtein(bloothooft_reduct({source}, '{name_type}'), bloothooft_reduct({target}, '{name_type}'))::decimal / greatest(char_length(bloothooft_reduct({source}, '{name_type}')), char_length(bloothooft_reduct({target}, '{name_type}')))) >= {bloothooft_threshold} AND 1 - (levenshtein({source}, {target})::decimal / greatest(char_length({source}), char_length({target}))) >= {threshold}",
+    "similarity": "1 - (levenshtein({source}, {target})::decimal / greatest(char_length({source}), char_length({target})))"
   }
 }
