@@ -673,10 +673,10 @@ def plot(specs, visualisation_obj=None, resources_obj=None,
         extended = set()
 
         # THE MAPPING OBJECT THAT DOCUMENT THE MAPPING BETWEEN NODE AND CLUSTER THEY BELONG TO
-        root = pickle_deserializer(serialised_folder=CLUSTER_SERIALISATION_DIR, name=F"{specs['serialised']}-2.txt")
+        root = pickle_deserializer(serialised_folder=CLUSTER_SERIALISATION_DIR, name=F"{specs['serialised']}-2.txt.gz")
 
         # THE DICTIONARY OF THE CLUSTERS
-        clusters = pickle_deserializer(serialised_folder=CLUSTER_SERIALISATION_DIR, name=F"{specs['serialised']}-1.txt")
+        clusters = pickle_deserializer(serialised_folder=CLUSTER_SERIALISATION_DIR, name=F"{specs['serialised']}-1.txt.gz")
 
         for paired in paired_nodes:
             formatted = to_nt_format(paired)
@@ -835,14 +835,16 @@ def plot(specs, visualisation_obj=None, resources_obj=None,
     # ADDING THE ASSOCIATION LINKS
     if associations is not None:
         for link in associations:
-            link_dict = {
-                "source": resources[to_nt_format(link[0])],
-                "target": resources[to_nt_format(link[1])],
-                "distance": related_distance, "value": 4,
-                "color": "purple",
-                "dash": "20,10,5,5,5,10"
-            }
-            vis_data["links"].append(link_dict)
+            if to_nt_format(link[0]) in resources and to_nt_format(link[1]) in resources:
+
+                link_dict = {
+                    "source": resources[to_nt_format(link[0])],
+                    "target": resources[to_nt_format(link[1])],
+                    "distance": related_distance, "value": 4,
+                    "color": "purple",
+                    "dash": "20,10,5,5,5,10"
+                }
+                vis_data["links"].append(link_dict)
 
     # --> 3. RETURNING THE VISUALISATION OBJECT FOR RENDERING
     # print_object(vis_data)
