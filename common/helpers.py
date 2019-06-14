@@ -3,7 +3,7 @@ from config_db import db_conn, execute_query, run_query
 import datetime
 from hashlib import md5
 from os import listdir
-from os.path import join, isfile
+from os.path import join, isfile, dirname, realpath
 import psycopg2
 from psycopg2 import extras as psycopg2_extras, sql as psycopg2_sql
 from psycopg2.extensions import AsIs
@@ -55,7 +55,7 @@ def is_property_object(value):
 def get_json_from_file(filename):
     import jstyleson
 
-    json_file = open('/app/' + filename, 'r')
+    json_file = open(join(dirname(realpath(__file__)), 'json', filename), 'r')
     json_config = jstyleson.load(json_file)
     json_file.close()
 

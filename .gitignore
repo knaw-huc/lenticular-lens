@@ -1,4 +1,5 @@
-pgdata
+docker
 venv
 node_modules
-.env
+.idea
+.iml

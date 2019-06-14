@@ -7,6 +7,9 @@ import random
 import requests
 import time
 
+graphql_uri = 'https://goldenagents.jauco.nl/v5/graphql'
+job = None
+
 
 def format_query(column_info):
     result = ""
@@ -145,13 +148,11 @@ def initColumns():
     }
 
 
-if __name__ == '__main__':
-    graphql_uri = 'https://goldenagents.jauco.nl/v5/graphql'
+def run():
     rows_per_page = 500
     n1 = 0
 
     while True:
-        job = None
         total_insert = 0
         try:
             with db_conn() as conn:
@@ -312,3 +313,7 @@ if __name__ == '__main__':
             print('Retry %i...' % n1)
 
             continue
+
+
+if __name__ == '__main__':
+    run()

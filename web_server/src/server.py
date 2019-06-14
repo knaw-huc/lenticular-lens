@@ -1,14 +1,10 @@
 from datasets_config import DatasetsConfig
 from config_db import db_conn, run_query
-import datetime
 from flask import Flask, jsonify, request, send_file, abort
-import gzip
 from helpers import get_job_data, hasher, update_job_data
-from clustering import cluster_csv, get_cluster_data, hash_string, linkset_to_csv, cluster_reconciliation_csv, \
-    cluster_and_reconcile
+from clustering import cluster_csv, get_cluster_data, hash_string, cluster_reconciliation_csv
 import json
 from os.path import join, splitext
-import pickle
 import psycopg2
 from psycopg2 import extras as psycopg2_extras, sql as psycopg2_sql
 import random
@@ -17,6 +13,7 @@ from src.Generic.Utility import pickle_deserializer
 from src.Clustering.IlnVisualisation import plot_reconciliation as visualise_2, plot as visualise_1, plot_compact as visualise_3
 import subprocess
 import time
+from src.LLData import RDF_DIR, GENERATED_JSON_DIR
 
 app = Flask(__name__)
 
@@ -57,7 +54,7 @@ def job_update():
 
     if 'resources' in request.json:
         resources_json = json.dumps(request.json['resources'], indent=2)
-        resources_filename = '/common/src/LLData/generated_json/resources_' + hash_string(resources_json) + '.json'
+        resources_filename = join(GENERATED_JSON_DIR, 'resources_' + hash_string(resources_json) + '.json')
         job_data['resources_filename'] = resources_filename
 
         json_file = open(resources_filename, 'w')
@@ -66,7 +63,7 @@ def job_update():
 
     if 'matches' in request.json:
         matches_json = json.dumps(request.json['matches'], indent=2)
-        matches_filename = '/common/src/LLData/generated_json/matches_' + hash_string(matches_json) + '.json'
+        matches_filename = join(GENERATED_JSON_DIR, 'matches_' + hash_string(matches_json) + '.json')
         job_data['mappings_filename'] = matches_filename
 
         json_file = open(matches_filename, 'w')
@@ -126,7 +123,7 @@ def clusters(job_id, clustering_id):
 
 @app.route('/job/<job_id>/result/download')
 def download_rdf(job_id):
-    return send_file('/common/src/LLData/rdf/%s_output.nq.gz' % job_id, as_attachment=True)
+    return send_file(join(RDF_DIR, '%s_output.nq.gz' % job_id), as_attachment=True)
 
 
 @app.route('/job/<job_id>/result/<mapping_name>')
@@ -275,6 +272,10 @@ def get_cluster_graph_data(job_id, clustering_id, cluster_id):
             {"dataset": "ufab7d657a250e3461361c982ce9b38f3816e0c4b__rijksmuseum",
              "entity_type": "edm_Agent",
              "property": "skos_prefLabelList"
+             },
+            {"dataset": "ufab7d657a250e3461361c982ce9b38f3816e0c4b__saa_index_op_kwijtscheldingen_20181211",
+             "entity_type": "saaOnt_Person",
+             "property": "saaOnt_full_name"
              },
         ]
     }

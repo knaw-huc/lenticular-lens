@@ -9,14 +9,15 @@ from psycopg2 import extras as psycopg2_extras, sql as psycopg2_sql
 import subprocess
 from config_db import db_conn
 import os
-from os.path import join
-import pathlib
+from os.path import join, dirname, realpath
 import random
 import re
 import signal
 import time
 from hashlib import md5
+from src.LLData import RDF_DIR
 
+current_job = None
 locale.setlocale(locale.LC_ALL, '')
 
 
@@ -52,13 +53,10 @@ def teardown(signum=0, frame=None):
     exit(signum)
 
 
-if __name__ == '__main__':
-    current_job = None
+def run():
     found_new_requests = False
 
     signal.signal(signal.SIGTERM, teardown)
-
-    pathlib.Path('rdf').mkdir(exist_ok=True)
 
     print('Looking for new job...')
     while True:
@@ -114,9 +112,9 @@ if __name__ == '__main__':
 
                         conn.commit()
 
-                        with subprocess.Popen(['python', '/app/run_json.py', '-r', job['resources_filename'], '-m', job['mappings_filename'], '--job-id', job['job_id'], '--run-mapping', str(job['alignment'])],
-                                              stdout=subprocess.PIPE, stderr=subprocess.PIPE) as converting_process:
-                            with open('/common/src/LLData/rdf/%s_output.nq.gz' % job['job_id'], 'wb') as output_file:
+                        with subprocess.Popen(['python', './run_json.py', '-r', job['resources_filename'], '-m', job['mappings_filename'], '--job-id', job['job_id'], '--run-mapping', str(job['alignment'])],
+                                              cwd=dirname(realpath(__file__)), stdout=subprocess.PIPE, stderr=subprocess.PIPE) as converting_process:
+                            with open(os.path.join(RDF_DIR, '%s_output.nq.gz') % job['job_id'], 'wb') as output_file:
                                 with subprocess.Popen(['gzip'], stdin=converting_process.stdout, stdout=output_file) as gzip_process:
                                     messages_log = ''
                                     for converting_output in converting_process.stderr:
@@ -212,3 +210,7 @@ if __name__ == '__main__':
         except (psycopg2.InterfaceError, psycopg2.OperationalError):
             n1 += 1
             time.sleep((2 ** n1) + (random.randint(0, 1000) / 1000))
+
+
+if __name__ == '__main__':
+    run()
