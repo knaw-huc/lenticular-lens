@@ -2,13 +2,10 @@ from config_db import db_conn, run_query
 from helpers import hash_string
 import json
 from psycopg2 import extras as psycopg2_extras, sql as psycopg2_sql
+from timbuctoo import Timbuctoo
 import psycopg2
 import random
-import requests
 import time
-
-graphql_uri = 'https://goldenagents.jauco.nl/v5/graphql'
-job = None
 
 
 def format_query(column_info):
@@ -36,119 +33,8 @@ def extract_value(value):
         return value["uri"]
 
 
-def fetchGraphQl(query, variables):
-    tn = 0
-    while True:
-        try:
-            response = requests.post(graphql_uri, json={
-                "query": query,
-                "variables": variables
-            }, timeout=60)
-            response.raise_for_status()
-            result = response.json()
-            if "errors" in result and len(result["errors"]) > 0:
-                raise RuntimeError('Graphql query returned an error: ', result["errors"])
-            return result["data"]
-        except requests.RequestException as e:
-            print('Error while trying to get data from Timbuctoo: ' + str(e))
-            tn += 1
-            print('Waiting to retry...')
-            time.sleep((2 ** tn) + (random.randint(0, 1000) / 1000))
-            print('Retry %i...' % tn)
-        except RuntimeError as e:
-            print(e)
-            print('Query was: %s' % query)
-            return False
-
-
-def initColumns():
-    def get_column_info(column_info):
-        result = {"name": column_info["name"], "VALUE": False, "LIST": False, "LINK": False, "URI": False, }
-        if column_info["isValueType"]:
-            result["VALUE"] = True
-        if column_info["isList"]:
-            result["LIST"] = True
-        if len(column_info["referencedCollections"]["items"]) > 0:
-            result["LINK"] = True
-        return result
-
-    introspection_result = fetchGraphQl("""
-        query($id: ID!, $collId: ID!) {
-            dataSetMetadata(dataSetId: $id) {
-                collection(collectionId: $collId) {
-                    collectionListId
-                    properties {
-                        items {
-                            name
-                            isValueType
-                            isList
-                            referencedCollections {
-                                items
-                            }
-                        }
-                    }
-                }
-                collectionList {
-                    items {
-                        collectionId
-                    }
-                }
-            }
-            dataSetMetadataList(promotedOnly: false, publishedOnly: false) {
-                dataSetId
-            }
-        }
-    """, {
-        "id": job['dataset_id'],
-        "collId": job['collection_id']
-    })
-    if introspection_result["dataSetMetadata"] is None:
-        raise ValueError("The dataset name '" + job['dataset_id'] + "' is not available, use one of",
-                         ", ".join([x["dataSetId"] for x in introspection_result["dataSetMetadataList"]]))
-    if introspection_result["dataSetMetadata"]["collection"] is None:
-        raise ValueError("The collection name '" + job['collection_id'] + "' is not available, use one of", ", ".join(
-            [x["collectionId"] for x in introspection_result["dataSetMetadata"]["collectionList"]["items"]]))
-    column_info = {
-        "uri": {
-            "name": "uri",
-            "LIST": False,
-            "LINK": False,
-            "VALUE": False,
-            "URI": True,
-        },
-        "title": {
-            "name": "title",
-            "LIST": False,
-            "LINK": False,
-            "VALUE": True,
-            "URI": False,
-        },
-        "description": {
-            "name": "description",
-            "LIST": False,
-            "LINK": False,
-            "VALUE": True,
-            "URI": False,
-        },
-        "image": {
-            "name": "image",
-            "LIST": False,
-            "LINK": False,
-            "VALUE": True,
-            "URI": False,
-        },
-        **{x["name"].lower(): get_column_info(x) for x in
-           introspection_result["dataSetMetadata"]["collection"]["properties"]["items"]}
-    }
-    column_info = {hash_string(name): data for name, data in column_info.items()}
-    column_info['uri'] = column_info[hash_string('uri')]
-    return {
-        'columns': column_info,
-        'collection_id': introspection_result["dataSetMetadata"]["collection"]["collectionListId"],
-    }
-
-
 def run():
+    job = None
     rows_per_page = 500
     n1 = 0
 
@@ -194,8 +80,6 @@ def run():
                 conn.commit()
                 n1 = 0
 
-                introspection_data = initColumns()
-
                 cursor = job['next_page']
                 while True:
                     query = """
@@ -213,16 +97,16 @@ def run():
                                 }}
                             """.format(
                         dataset=job['dataset_id'],
-                        list_id=introspection_data['collection_id'],
+                        list_id=job['collection_id'] + 'List',
                         count=rows_per_page,
-                        columns="\n".join([introspection_data['columns'][name]["name"] + format_query(introspection_data['columns'][name]) for name in introspection_data['columns']]))
+                        columns="\n".join([job['columns'][name]['name'] + format_query(job['columns'][name]) for name in job['columns']]))
 
-                    query_result = fetchGraphQl(query, {'cursor': cursor})
+                    query_result = Timbuctoo().fetchGraphQl(query, {'cursor': cursor})
                     if not query_result:
                         job = None
                         break
 
-                    query_result = query_result["dataSets"][job['dataset_id']][introspection_data['collection_id']]
+                    query_result = query_result["dataSets"][job['dataset_id']][job['collection_id'] + 'List']
 
                     results = []
                     for item in query_result["items"]:

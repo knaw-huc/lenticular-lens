@@ -9,10 +9,9 @@ class Resource:
         self.__data = resource_data
         self.config = config
 
-        collection = DatasetsConfig().dataset(self.dataset_id).collection(self.collection_id)
-        self.cached_view = collection.view_name
-        self.view_queued = collection.rows_downloaded > -1\
-                           and (self.limit < 0 or self.limit > collection.rows_downloaded)
+        self.collection = DatasetsConfig().dataset(self.dataset_id).collection(self.collection_id)
+        self.view_queued = self.collection.rows_downloaded > -1\
+                           and (self.limit < 0 or self.limit > self.collection.rows_downloaded)
 
     @property
     def additional_properties(self):
@@ -97,11 +96,9 @@ class Resource:
     def matching_fields(self):
         matching_fields = self.additional_properties
         matching_fields_hashes = [matching_field.hash for matching_field in matching_fields]
-        import sys
         for match in self.config.matches:
             match_matching_fields = match.get_matching_fields().get(self.label, {})
             for match_matching_field_label, match_matching_field in match_matching_fields.items():
-                # print(match_matching_field_label, file=sys.stderr)
                 for match_matching_field_property in match_matching_field:
                     if match_matching_field_property.hash not in matching_fields_hashes:
                         matching_fields_hashes.append(match_matching_field_property.hash)
@@ -114,10 +111,13 @@ class Resource:
         matching_fields_sqls = [psycopg2_sql.SQL('{}.uri').format(psycopg2_sql.Identifier(self.label))]
 
         for property_field in self.matching_fields:
-            # for property_field in matching_field_properties:
-            matching_fields_sqls.append(psycopg2_sql.SQL('{matching_field} AS {name}')
-                                        .format(matching_field=property_field.sql,
-                                                name=psycopg2_sql.Identifier(property_field.hash)))
+            resource = self.config.get_resource_by_label(property_field.resource_label)
+            column_info = resource.collection.table_data['columns'][property_field.prop_label]
+
+            matching_fields_sqls.append(psycopg2_sql.SQL('{matching_field} AS {name}').format(
+                matching_field=property_field.sql(column_info['LIST']),
+                name=psycopg2_sql.Identifier(property_field.hash)
+            ))
 
         return psycopg2_sql.SQL(',\n       ').join(matching_fields_sqls)
 

@@ -48,6 +48,10 @@ def get_property_sql(property_array):
     return psycopg2_sql.SQL('.').join(map(psycopg2_sql.Identifier, property_array))
 
 
+def get_extended_property_sql(property_array):
+    return get_property_sql([property_array[1] + '_extended', 'value'])
+
+
 def is_property_object(value):
     return 'property' in value and len(value) == 1 and isinstance(value['property'], list)
 
@@ -175,14 +179,12 @@ class PropertyField:
         self.is_aggregate = False
         self.__data = data
         self.__hash = None
-        self.__sql = None
-        self.__sql_string = None
         self.__transformers = None
 
     @property
     def hash(self):
         if not self.__hash:
-            self.__hash = hash_string(self.sql_string)
+            self.__hash = hash_string(get_string_from_sql(self.sql(False)))
 
         return self.__hash
 
@@ -191,28 +193,16 @@ class PropertyField:
         return self.__data['label']
 
     @property
-    def sql(self):
-        if not self.__sql:
-            if 'property' in self.__data:
-                self.__sql = get_property_sql(get_absolute_property(self.__data['property']))
-            elif isinstance(self.__data['value'], collections.Mapping):
-                sql_function = SqlFunction(self.__data['value'])
-                self.is_aggregate = sql_function.is_aggregate
-                self.__sql = sql_function.sql
-            else:
-                self.__sql = psycopg2_sql.Literal(self.__data['value'])
-
-            for transformer in self.transformers[::-1]:
-                self.__sql = psycopg2_sql.SQL('%s({})' % transformer).format(self.__sql)
-
-        return self.__sql
+    def absolute_property(self):
+        return get_absolute_property(self.__data['property'])
 
     @property
-    def sql_string(self):
-        if not self.__sql_string:
-            self.__sql_string = get_string_from_sql(self.sql)
+    def resource_label(self):
+        return self.absolute_property[0]
 
-        return self.__sql_string
+    @property
+    def prop_label(self):
+        return self.absolute_property[1]
 
     @property
     def transformers(self):
@@ -228,6 +218,22 @@ class PropertyField:
                 self.__transformers = []
 
         return self.__transformers
+
+    def sql(self, is_list):
+        if 'property' in self.__data:
+            sql = get_extended_property_sql(get_absolute_property(self.__data['property']))\
+                if is_list else get_property_sql(get_absolute_property(self.__data['property']))
+        elif isinstance(self.__data['value'], collections.Mapping):
+            sql_function = SqlFunction(self.__data['value'])
+            self.is_aggregate = sql_function.is_aggregate
+            sql = sql_function.sql
+        else:
+            sql = psycopg2_sql.Literal(self.__data['value'])
+
+        for transformer in self.transformers[::-1]:
+            sql = psycopg2_sql.SQL('%s({})' % transformer).format(sql)
+
+        return sql
 
     class TransformerUnknown(ValueError):
         """This means the transformer is not whitelisted"""

@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS timbuctoo_tables (
   table_name text primary key,
   dataset_id text not null,
   collection_id text not null,
+  columns jsonb not null,
   create_time timestamp not null,
   update_start_time timestamp,
   next_page text,

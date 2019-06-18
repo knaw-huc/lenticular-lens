@@ -1,7 +1,7 @@
 from links_to_rdf import convert_link
 import datetime
 from config_db import db_conn
-from helpers import get_absolute_property, get_job_data, get_property_sql, get_unnested_list, hash_string, update_job_data
+from helpers import get_absolute_property, get_property_sql, get_extended_property_sql, get_unnested_list, hash_string
 import jstyleson
 import locale
 from match import Match
@@ -204,39 +204,71 @@ class LinksetsCollection:
     def get_join_sql(self, resource):
         joins = []
 
+        matching_fields = resource.matching_fields
+        self.get_matching_fields_joins_sql(resource, matching_fields, joins)
+
         for relation in resource.related:
-            joins = self.r_get_join_sql(resource.label, relation, joins)
+            self.r_get_join_sql(resource.label, relation, matching_fields, joins)
 
         return sql.Composed(joins)
 
-    def r_get_join_sql(self, parent_resource, relation, joins, left_join=False):
-        left_join = True
+    def get_matching_fields_joins_sql(self, resource, matching_fields, joins):
+        for property_field in matching_fields:
+            prop_resource = self.get_resource_by_label(property_field.resource_label)
+            column_info = prop_resource.collection.table_data['columns'][property_field.prop_label]
+
+            if property_field.resource_label == resource.label and column_info['LIST']:
+                joins.append(sql.SQL("""
+                LEFT JOIN jsonb_array_elements_text({table_name}.{column_name}) 
+                AS {column_name_expanded} ON true""").format(
+                    table_name=sql.Identifier(property_field.resource_label),
+                    column_name=sql.Identifier(property_field.prop_label),
+                    column_name_expanded=sql.Identifier(property_field.prop_label + '_extended'),
+                ))
+
+        return joins
+
+    def r_get_join_sql(self, parent_resource, relation, matching_fields, joins):
         if isinstance(relation, list):
             for sub_relation in relation:
-                joins = self.r_get_join_sql(parent_resource, sub_relation, joins, True)
+                joins = self.r_get_join_sql(parent_resource, sub_relation, matching_fields, joins)
             return joins
 
+        parent = self.get_resource_by_label(parent_resource)
         resource = self.get_resource_by_label(hash_string(relation['resource']))
+        local_column_info = parent.collection.table_data['columns'][hash_string(relation['local_property'][0])]
 
-        left = 'LEFT ' if left_join else ''
+        if local_column_info['LIST']:
+            joins.append(sql.SQL("""
+                LEFT JOIN jsonb_array_elements_text({table_name}.{column_name}) 
+                AS {column_name_expanded} ON true""").format(
+                table_name=sql.Identifier(parent_resource),
+                column_name=sql.Identifier(hash_string(relation['local_property'][0])),
+                column_name_expanded=sql.Identifier(hash_string(relation['local_property'][0]) + '_extended'),
+            ))
+
+        lhs = get_extended_property_sql(get_absolute_property(relation['local_property'], parent_resource)) \
+            if local_column_info['LIST'] \
+            else get_property_sql(get_absolute_property(relation['local_property'], parent_resource))
+
+        rhs = get_property_sql(get_absolute_property(relation['remote_property'], hash_string(relation['resource'])))
 
         extra_filter = resource.filter_sql
         if extra_filter != sql.SQL(''):
             extra_filter = self.replace_sql_variables(extra_filter)
             extra_filter = sql.SQL('\nAND ({resource_filter})').format(resource_filter=extra_filter)
 
-        joins.append(sql.SQL('\n{left}JOIN {resource_view} AS {alias}\nON {lhs} = {rhs}{extra_filter}')
-            .format(
-            left=sql.SQL(left),
-            resource_view=sql.Identifier(resource.cached_view),
+        joins.append(sql.SQL('\nLEFT JOIN {resource_view} AS {alias}\nON {lhs} = {rhs}{extra_filter}').format(
+            resource_view=sql.Identifier(resource.collection.table_name),
             alias=sql.Identifier(hash_string(relation['resource'])),
-            lhs=get_property_sql(get_absolute_property(relation['local_property'], parent_resource)),
-            rhs=get_property_sql(get_absolute_property(relation['remote_property'], hash_string(relation['resource']))),
+            lhs=lhs, rhs=rhs,
             extra_filter=extra_filter,
         ))
 
         for relation in resource.related:
-            joins = self.r_get_join_sql(resource.label, relation, joins)
+            joins = self.r_get_join_sql(resource.label, relation, matching_fields, joins)
+
+        self.get_matching_fields_joins_sql(resource, matching_fields, joins)
 
         return joins
 
@@ -322,15 +354,9 @@ ANALYZE {view_name};
 
         return sql_composed
 
-    def generate_resource_sql_for_join(self, resource):
-        return self.generate_resource_sub_query_sql(resource, matching_fields=sql.SQL('*'), joins=sql.SQL(''))
-
-    def generate_resource_sub_query_sql(self, resource, matching_fields=None, joins=None):
-        if matching_fields is None:
-            matching_fields = resource.matching_fields_sql
-
-        if joins is None:
-            joins = self.get_join_sql(resource)
+    def generate_resource_sub_query_sql(self, resource):
+        matching_fields = resource.matching_fields_sql
+        joins = self.get_join_sql(resource)
 
         pre = sql.SQL('SELECT * FROM (') if resource.limit > -1 else sql.SQL('')
 
@@ -343,7 +369,7 @@ ORDER BY uri{limit}
             .format(
                 pre=pre,
                 matching_fields=matching_fields,
-                table_name=sql.Identifier(resource.cached_view),
+                table_name=sql.Identifier(resource.collection.table_name),
                 alias=sql.Identifier(resource.label),
                 joins=joins,
                 wheres=self.replace_sql_variables(resource.where_sql),
@@ -383,7 +409,7 @@ ORDER BY uri{limit}
 
             if sql_part_string.endswith('__original'):
                 resource_label = re.search(r'.*(?=__original$)', sql_part_string)[0]
-                sql_part = sql.Identifier(self.get_resource_by_label(resource_label).cached_view)
+                sql_part = sql.Identifier(self.get_resource_by_label(resource_label).collection.table_name)
 
             relation_reg_match = re.search(r'(.+)__(.+)__relation__(.+)', sql_part_string)
             if relation_reg_match:
