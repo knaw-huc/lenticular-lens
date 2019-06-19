@@ -158,10 +158,10 @@ def update_job_data(job_id, job_data):
             with db_conn() as conn:
                 with conn.cursor(cursor_factory=psycopg2_extras.DictCursor) as cur:
                     if run_query('SELECT 1 FROM reconciliation_jobs WHERE job_id = %s', (job_id,)):
-                        cur.execute(psycopg2_sql.SQL("UPDATE reconciliation_jobs SET ({}) = ROW %s WHERE job_id = %s")
-                            .format(
-                            psycopg2_sql.SQL(', '.join(job_data.keys()))),
-                            (tuple(job_data.values()), job_id))
+                        query = psycopg2_sql.SQL(
+                            "UPDATE reconciliation_jobs SET ({}) = ROW %s, updated_at = NOW() WHERE job_id = %s"
+                        ).format(psycopg2_sql.SQL(', '.join(job_data.keys())))
+                        cur.execute(query, (tuple(job_data.values()), job_id))
                     else:
                         cur.execute(psycopg2_sql.SQL("INSERT INTO reconciliation_jobs (job_id, %s) VALUES %s"),
                                     (AsIs(', '.join(job_data.keys())), tuple([job_id] + list(job_data.values()))))

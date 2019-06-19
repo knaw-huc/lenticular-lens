@@ -12,13 +12,18 @@
         <tab-content title="Idea" :before-change="validateIdeaTab">
             <div class="row align-items-center justify-content-between">
                 <div class="h2 col-auto">Idea</div>
-                <div v-if="job_data" class="h4 col-auto">Created {{ job_data.created_at }}</div>
+                <div class="mr-3" v-if="job_data">
+                    <span class="badge badge-primary">Created {{ job_data.created_at }}</span>
+                    <span class="badge badge-primary ml-1" v-show="job_data.created_at !== job_data.updated_at">
+                        Updated {{ job_data.updated_at }}
+                    </span>
+                </div>
             </div>
             <div v-if="idea_form === 'new' ||  job_id" class="border p-4 mt-4 bg-light">
                 <div class="form-group">
                     <label class="h3" for="idea">What's your idea?</label>
                     <input type="text" class="form-control" id="idea" v-model="inputs.job_title"
-                           v-bind:class="{'is-invalid': errors.includes('idea')}">
+                           v-bind:class="{'is-invalid': errors.includes('idea')}" :disabled="is_updating">
                     <div class="invalid-feedback" v-show="errors.includes('idea')">
                         Please indicate a name for your idea
                     </div>
@@ -27,7 +32,8 @@
                 <div class="form-group pt-3">
                     <label class="h3" for="description">Describe your idea</label>
                     <textarea class="form-control" id="description" v-model="inputs.job_description"
-                              v-bind:class="{'is-invalid': errors.includes('description')}"></textarea>
+                              v-bind:class="{'is-invalid': errors.includes('description')}"
+                              :disabled="is_updating"></textarea>
                     <div class="invalid-feedback" v-show="errors.includes('description')">
                         Please indicate a description for your idea
                     </div>
@@ -35,7 +41,9 @@
 
                 <div class="form-group row justify-content-end pt-3 mb-0">
                     <div class="col-auto">
-                        <b-button @click="saveIdea" variant="info">{{ job_id ? 'Update' : 'Create' }}</b-button>
+                        <b-button @click="saveIdea" variant="info">
+                            {{ job_id ? (is_updating ? 'Updating' : 'Update') : 'Create' }}
+                        </b-button>
                     </div>
                 </div>
             </div>
@@ -416,8 +424,8 @@
                 limit_all: -1,
                 matches: [],
                 matches_count: 0,
+                is_updating: false,
                 planned_refresh_job_data: false,
-                refresh_job_data: false,
                 steps: [
                     'idea',
                     'collections',
@@ -648,6 +656,7 @@
                     });
             },
             getJobData(callback) {
+                this.is_updating = false;
                 this.planned_refresh_job_data = false;
 
                 if (this.job_id !== '') {
@@ -699,8 +708,6 @@
                                     this.planned_refresh_job_data = true;
                                     setTimeout(this.getJobData, 5000);
                                 }
-                            } else {
-                                this.refresh_job_data = false;
                             }
 
                             if (callback) {
@@ -987,6 +994,8 @@
                 this.updateJob(data);
             },
             updateJob(job_data) {
+                this.is_updating = true;
+
                 fetch("/job/update/",
                     {
                         headers: {
@@ -1000,8 +1009,8 @@
                     .then((response) => response.json())
                     .then((data) => {
                         this.getJobData();
-                    }
-                );
+                    })
+                    .catch(() => this.is_updating = false);
             },
         },
         mounted() {

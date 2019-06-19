@@ -63,7 +63,7 @@
 /******/
 /******/ 	var hotApplyOnUpdate = true;
 /******/ 	// eslint-disable-next-line no-unused-vars
-/******/ 	var hotCurrentHash = "c44639264f4b6bee417d";
+/******/ 	var hotCurrentHash = "2ee181ebd5c5707a0451";
 /******/ 	var hotRequestTimeout = 10000;
 /******/ 	var hotCurrentModuleData = {};
 /******/ 	var hotCurrentChildModule;
@@ -32541,7 +32541,6 @@ __webpack_require__.r(__webpack_exports__);
             )
                 .then((response) => response.json())
                 .then((data) => {
-                    this.$set(this.app, 'refresh_job_data', true);
                     if (data.result === 'exists' && confirm('This Alignment job already exists.\nDo you want to overwrite it with the current configuration?')) {
                         this.runAlignment(true);
                     }
@@ -34788,6 +34787,14 @@ __webpack_require__.r(__webpack_exports__);
 //
 //
 //
+//
+//
+//
+//
+//
+//
+//
+//
 
 
 
@@ -34832,8 +34839,8 @@ __webpack_require__.r(__webpack_exports__);
             limit_all: -1,
             matches: [],
             matches_count: 0,
+            is_updating: false,
             planned_refresh_job_data: false,
-            refresh_job_data: false,
             steps: [
                 'idea',
                 'collections',
@@ -35064,6 +35071,7 @@ __webpack_require__.r(__webpack_exports__);
                 });
         },
         getJobData(callback) {
+            this.is_updating = false;
             this.planned_refresh_job_data = false;
 
             if (this.job_id !== '') {
@@ -35115,8 +35123,6 @@ __webpack_require__.r(__webpack_exports__);
                                 this.planned_refresh_job_data = true;
                                 setTimeout(this.getJobData, 5000);
                             }
-                        } else {
-                            this.refresh_job_data = false;
                         }
 
                         if (callback) {
@@ -35403,8 +35409,7 @@ __webpack_require__.r(__webpack_exports__);
             this.updateJob(data);
         },
         updateJob(job_data) {
-            console.log('UPDATE!');
-            console.log(job_data);
+            this.is_updating = true;
 
             fetch("/job/update/",
                 {
@@ -35419,8 +35424,8 @@ __webpack_require__.r(__webpack_exports__);
                 .then((response) => response.json())
                 .then((data) => {
                     this.getJobData();
-                }
-            );
+                })
+                .catch(() => this.is_updating = false);
         },
     },
     mounted() {
@@ -40577,8 +40582,34 @@ var render = function() {
                   [
                     _c("div", { staticClass: "h2 col-auto" }, [_vm._v("Idea")]),
                     _vm.job_data
-                      ? _c("div", { staticClass: "h4 col-auto" }, [
-                          _vm._v("Created " + _vm._s(_vm.job_data.created_at))
+                      ? _c("div", { staticClass: "mr-3" }, [
+                          _c("span", { staticClass: "badge badge-primary" }, [
+                            _vm._v("Created " + _vm._s(_vm.job_data.created_at))
+                          ]),
+                          _c(
+                            "span",
+                            {
+                              directives: [
+                                {
+                                  name: "show",
+                                  rawName: "v-show",
+                                  value:
+                                    _vm.job_data.created_at !==
+                                    _vm.job_data.updated_at,
+                                  expression:
+                                    "job_data.created_at !== job_data.updated_at"
+                                }
+                              ],
+                              staticClass: "badge badge-primary ml-1"
+                            },
+                            [
+                              _vm._v(
+                                "\n                        Updated " +
+                                  _vm._s(_vm.job_data.updated_at) +
+                                  "\n                    "
+                              )
+                            ]
+                          )
                         ])
                       : _vm._e()
                   ]
@@ -40602,7 +40633,11 @@ var render = function() {
                           ],
                           staticClass: "form-control",
                           class: { "is-invalid": _vm.errors.includes("idea") },
-                          attrs: { type: "text", id: "idea" },
+                          attrs: {
+                            type: "text",
+                            id: "idea",
+                            disabled: _vm.is_updating
+                          },
                           domProps: { value: _vm.inputs.job_title },
                           on: {
                             input: function($event) {
@@ -40656,7 +40691,10 @@ var render = function() {
                           class: {
                             "is-invalid": _vm.errors.includes("description")
                           },
-                          attrs: { id: "description" },
+                          attrs: {
+                            id: "description",
+                            disabled: _vm.is_updating
+                          },
                           domProps: { value: _vm.inputs.job_description },
                           on: {
                             input: function($event) {
@@ -40710,7 +40748,15 @@ var render = function() {
                                 },
                                 [
                                   _vm._v(
-                                    _vm._s(_vm.job_id ? "Update" : "Create")
+                                    "\n                            " +
+                                      _vm._s(
+                                        _vm.job_id
+                                          ? _vm.is_updating
+                                            ? "Updating"
+                                            : "Update"
+                                          : "Create"
+                                      ) +
+                                      "\n                        "
                                   )
                                 ]
                               )

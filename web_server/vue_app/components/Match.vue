@@ -322,7 +322,6 @@
                 )
                     .then((response) => response.json())
                     .then((data) => {
-                        this.$set(this.app, 'refresh_job_data', true);
                         if (data.result === 'exists' && confirm('This Alignment job already exists.\nDo you want to overwrite it with the current configuration?')) {
                             this.runAlignment(true);
                         }
