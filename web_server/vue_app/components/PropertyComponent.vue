@@ -22,10 +22,10 @@
                 </template>
                 <div v-else-if="Array.isArray(resources) && !singular" class="row">
                     <template v-if="!singular">
-                        <div class="col-auto border border-info p-1 rounded-pill pl-2 pr-2">
+                        <div class="col-auto border border-info p-1 rounded-pill pl-2 pr-2 bg-white">
                             {{ $root.$children[0].datasets[$root.$children[0].getResourceById(value[0], resources).dataset_id].title }}
                         </div>
-                        <div class="col-auto border border-info p-1 rounded-pill ml-2 mr-2 pl-2 pr-2">
+                        <div class="col-auto border border-info p-1 rounded-pill ml-2 mr-2 pl-2 pr-2 bg-white">
                             {{ $root.$children[0].getResourceById(value[0], resources).collection_id }}
                         </div>
                         <div class="col-auto ml-0 pl-0">

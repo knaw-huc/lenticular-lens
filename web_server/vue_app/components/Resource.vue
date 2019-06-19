@@ -265,7 +265,7 @@
                     ],
                 };
 
-                this.$set(condition_info.filter_object.conditions, condition_info.index, filter_group)
+                this.$set(condition_info.filter_object.conditions, condition_info.index, filter_group);
             },
         },
         mounted() {

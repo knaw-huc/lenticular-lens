@@ -210,42 +210,22 @@
 
                 <div class="col-auto">
                     <div class="form-group">
-                        <button-add @click="addCondition" title="Add a Matching Method"/>
+                        <button-add @click="addRootCondition" title="Add a Matching Method"/>
                     </div>
                 </div>
             </div>
 
-            <div class="row pl-5">
-                <div class="col">
-                    <div class="mb-3 p-3">
-                        <div class="row justify-content-between">
-                            <div class="col-auto">
-                                <div class="row">
-                                    <label class="h4 col-auto align-self-center">Logical Operator</label>
-                                    <div class="col-auto form-group">
-                                        <v-select v-model="match.conditions.type">
-                                            <option value="AND">All conditions must be met (AND)</option>
-                                            <option value="OR">At least one of the conditions must be met (OR)</option>
-                                        </v-select>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="row pl-5">
-                <div class="col">
-                    <match-condition
-                            v-for="(condition, index) in match.conditions.items"
-                            :condition="condition"
-                            :match_id="match.id"
-                            :resources="match"
-                            @remove="match.conditions.items.splice(index, 1)"
-                    ></match-condition>
-                </div>
-            </div>
+            <matching-method-group-component
+                :matching_method_group="match"
+                :sources="match.sources"
+                :targets="match.targets"
+                :is_root="true"
+                :uid="'match_' + match.id  + '_group_0'"
+                :index="0"
+                @promote-matching-method="promoteMatchingMethod($event)"
+                @demote-matching-method-group="demoteGroup($event)"
+                ref="matchingMethodGroupComponent"
+            ></matching-method-group-component>
         </div>
     </b-collapse>
 </div>
@@ -253,12 +233,12 @@
 
 <script>
     import MatchResource from './MatchResource'
-    import MatchCondition from './MatchCondition'
+    import MatchingMethodGroup from './MatchingMethodGroup'
 
     export default {
         components: {
             'match-resource-component': MatchResource,
-            'match-condition': MatchCondition,
+            'matching-method-group-component': MatchingMethodGroup
         },
         data() {
             return {
@@ -267,26 +247,39 @@
         },
         props: ['match', 'matches'],
         methods: {
-            addCondition() {
-                function getEmptyResources(from_resources) {
-                    let empty_resources = {};
+            addRootCondition() {
+                this.$refs['matchingMethodGroupComponent'].addCondition();
+            },
+            demoteGroup(group_info) {
+                let condition = group_info.group.conditions[group_info.index].conditions[0];
+                let condition_copy = JSON.parse(JSON.stringify(condition));
 
-                    from_resources.forEach(from_resource => {
-                        empty_resources[from_resource] = [{'property': [from_resource, '']}];
-                    });
+                this.$set(group_info.group.conditions, group_info.index, condition_copy);
+            },
+            promoteMatchingMethod(matching_method_info) {
+                let condition = matching_method_info.group.conditions[matching_method_info.index];
+                let condition_copy = JSON.parse(JSON.stringify(condition));
 
-                    return empty_resources
-                }
-
-                let condition = {
-                    'id': this.match.conditions.items.length,
-                    'method': '',
-                    'method_index': '',
-                    'sources': getEmptyResources(this.match.sources),
-                    'targets': getEmptyResources(this.match.targets),
+                let matchingMethodGroup = {
+                    'type': 'AND',
+                    'conditions': [
+                        condition_copy,
+                        {
+                            'method_name': '',
+                            'method_value': '',
+                            'sources': this.match.sources.reduce((acc, from_resource) => {
+                                acc[from_resource] = [{'property': [from_resource, '']}];
+                                return acc;
+                            }, {}),
+                            'targets': this.match.targets.reduce((acc, from_resource) => {
+                                acc[from_resource] = [{'property': [from_resource, '']}];
+                                return acc;
+                            }, {}),
+                        },
+                    ],
                 };
 
-                this.match.conditions.items.push(condition);
+                this.$set(matching_method_info.group.conditions, matching_method_info.index, matchingMethodGroup);
             },
             addMatchResource(resources_key, event) {
                 if (event) {
@@ -296,12 +289,18 @@
                 this.match[resources_key].push('');
             },
             deleteMatchResource(resources_key, resource_index) {
+                const updateConditions = (group) => {
+                    group.conditions.forEach(condition => {
+                        this.$delete(condition[resources_key], resource_id);
+                        if (condition.conditions) {
+                            updateConditions(condition);
+                        }
+                    });
+                };
+
                 let resource_id = this.match[resources_key][resource_index];
 
-                this.match.conditions.items.forEach(condition => {
-                    this.$delete(condition[resources_key], resource_id);
-                });
-
+                updateConditions(this.match);
                 this.$delete(this.match[resources_key], resource_index);
 
                 if (this.match[resources_key].length < 1) {
@@ -334,16 +333,22 @@
                 this.$refs[ref].$el.parentNode.scrollIntoView({'behavior':'smooth', 'block':'start'});
             },
             updateMatchResource(resources_key, index, value) {
-                this.$set(this.match[resources_key], index, value);
+                const updateConditions = (group) => {
+                    group.conditions.forEach(condition => {
+                        this.$set(condition[resources_key], value, [{'property': [value, '']}]);
+                        if (condition.conditions) {
+                            updateConditions(condition);
+                        }
+                    });
+                };
 
-                this.match.conditions.items.forEach(condition => {
-                    this.$set(condition[resources_key], value, [{'property': [value, '']}]);
-                });
+                this.$set(this.match[resources_key], index, value);
+                updateConditions(this.match);
             },
         },
         mounted() {
-            if (this.match.conditions.items.length < 1) {
-                this.addCondition();
+            if (this.match.conditions.length < 1) {
+                this.addRootCondition();
             }
 
             if (this.match.sources.length < 1) {

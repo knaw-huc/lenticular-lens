@@ -12,7 +12,7 @@ class Match:
     def before_alignment(self):
         sqls = []
 
-        for matching_function in self.conditions.conditions_list:
+        for matching_function in self.conditions.matching_functions:
             if matching_function.before_alignment:
                 sqls.append(psycopg_sql.SQL(matching_function.before_alignment))
 
@@ -21,7 +21,7 @@ class Match:
     @property
     def conditions(self):
         if not self.__conditions:
-            self.__conditions = Conditions(self.__data['conditions'])
+            self.__conditions = Conditions(self.__data['conditions'], self.__data['type'])
         return self.__conditions
 
     @property
@@ -45,21 +45,21 @@ class Match:
             if 'before_index' in template and template['before_index']:
                 index_sqls.append(psycopg_sql.SQL(template['before_index']))
 
-        for condition in self.conditions.conditions_list:
-            if 'template' not in condition.index_template:
+        for matching_function in self.conditions.matching_functions:
+            if 'template' not in matching_function.index_template:
                 continue
 
-            resources = condition.targets if len(condition.targets) > 0 else condition.sources
+            resources = matching_function.targets if len(matching_function.targets) > 0 else matching_function.sources
             for resource_name, resource in resources.items():
                 for property_field in resource:
-                    resource_field_name = condition.index_template['field_name'][2::]\
-                        if condition.index_template['field_name'].startswith('__')\
+                    resource_field_name = matching_function.index_template['field_name'][2::]\
+                        if matching_function.index_template['field_name'].startswith('__')\
                         else property_field.hash
 
                     template =\
-                        condition.format_template(condition.index_template['template'], target='{target}')\
-                        if condition.parameters else\
-                        condition.index_template['template']
+                        matching_function.format_template(matching_function.index_template['template'], target='{target}')\
+                        if matching_function.parameters else\
+                        matching_function.index_template['template']
 
                     template_sql = psycopg_sql.SQL(template).format(
                         target=psycopg_sql.Identifier(resource_field_name))
@@ -73,9 +73,9 @@ class Match:
     def matches_dependencies(self):
         dependencies = []
 
-        for condition in self.conditions.conditions_list:
-            if condition.function_name == 'IS_IN_SET':
-                dependencies += condition.parameters
+        for matching_function in self.conditions.matching_functions:
+            if matching_function.function_name == 'IS_IN_SET':
+                dependencies += matching_function.parameters
 
         return dependencies
 
@@ -103,27 +103,27 @@ class Match:
     def similarity_fields_sql(self):
         fields = []
 
-        for condition in self.conditions.conditions_list:
-            if condition.similarity_sql:
+        for matching_function in self.conditions.matching_functions:
+            if matching_function.similarity_sql:
                 # Add source and target values
-                field_name = psycopg_sql.Identifier(condition.field_name)
+                field_name = psycopg_sql.Identifier(matching_function.field_name)
                 fields.append(psycopg_sql.SQL('source.{field_name} AS {source_field_name}').format(
                     field_name=field_name,
-                    source_field_name=psycopg_sql.Identifier(f'source_{condition.field_name}'),
+                    source_field_name=psycopg_sql.Identifier(f'source_{matching_function.field_name}'),
                 ))
                 fields.append(psycopg_sql.SQL('target.{field_name} AS {target_field_name}').format(
                     field_name=field_name,
-                    target_field_name=psycopg_sql.Identifier(f'target_{condition.field_name}'),
+                    target_field_name=psycopg_sql.Identifier(f'target_{matching_function.field_name}'),
                 ))
 
                 # Add similarity field
                 fields.append(psycopg_sql.SQL('{field} AS {field_name}')
                                  .format(
-                                    field=condition.similarity_sql.format(field_name=field_name),
-                                    field_name=psycopg_sql.Identifier(condition.field_name + '_similarity')
+                                    field=matching_function.similarity_sql.format(field_name=field_name),
+                                    field_name=psycopg_sql.Identifier(matching_function.field_name + '_similarity')
                 ))
 
-                cluster_field = condition.similarity_sql.format(field_name=field_name)
+                cluster_field = matching_function.similarity_sql.format(field_name=field_name)
 
         # This is a temporary way to select the similarity of the last matching method for the clustering
         fields.append(psycopg_sql.SQL('{} AS __cluster_similarity').format(cluster_field))
@@ -188,15 +188,15 @@ class Match:
         # Regroup properties by resource instead of by method
         # resources_properties = {hash_string(resource_name): {} for resource_name in getattr(self, 'sources') + getattr(self, 'targets')}
         resources_properties = {}
-        for condition in self.conditions.conditions_list:
+        for matching_function in self.conditions.matching_functions:
             for resources_key in resources_keys:
-                for resource_label, resource_properties in getattr(condition, resources_key).items():
+                for resource_label, resource_properties in getattr(matching_function, resources_key).items():
                     resource_label = hash_string(resource_label)
                     if resource_label not in resources_properties:
                         resources_properties[resource_label] = {}
 
-                    resources_properties[resource_label][condition.field_name] = \
-                        resources_properties[resource_label].get(condition.field_name, []) + resource_properties
+                    resources_properties[resource_label][matching_function.field_name] = \
+                        resources_properties[resource_label].get(matching_function.field_name, []) + resource_properties
 
         # print(resources_properties, file=sys.stderr)
         return resources_properties

@@ -1,38 +1,38 @@
 <template>
-    <div class="border mb-3 p-3" @mouseenter="hovering = true" @mouseleave="hovering = false">
+    <div class="border border-dark p-3 mb-3">
         <div class="row justify-content-between">
             <div class="col-auto">
                 <div class="row">
                     <label class="h4 col-auto align-self-center">Method</label>
                     <div class="col-auto form-group">
-                        <v-select v-model="condition.method_index" @input="handleMethodIndexChange">
+                        <v-select v-model="condition.method_name" @input="handleMethodIndexChange">
                             <option disabled selected value="">Select a method</option>
-                            <option v-for="(method, index) in matching_methods" :value="index">{{ method.label }}</option>
+                            <option v-for="(method, name) in matching_methods" :value="name">{{ method.label }}</option>
                         </v-select>
                     </div>
                 </div>
             </div>
 
-            <div v-if="condition.method_index > 0 && typeof condition.method === 'object'" class="col-4">
-                <div v-if="condition.method[method_object.name] === Object(condition.method[method_object.name])" class="row">
-                    <div v-for="(item, index) in condition.method[method_object.name]" class="col">
+            <div v-if="typeof condition.method_value === 'object'" class="col-4">
+                <div v-if="condition.method_value === Object(condition.method_value)" class="row">
+                    <div v-for="(item, index) in condition.method_value" class="col">
                         <div class="form-group">
                             <label>
-                                <template v-if="Object.prototype.toString.call(condition.method[method_object.name]) === '[object Object]'">
-                                    {{ searchObjectInArray(method_object.value.items, 'key', index).label }}
+                                <template v-if="Object.prototype.toString.call(condition.method_value) === '[object Object]'">
+                                    {{ searchObjectInArray(method_value_template.items, 'key', index).label }}
                                 </template>
                                 <template v-else>Value {{ index + 1 }}</template>
 
-                                <input v-if="typeof item === 'number' && (!method_object.value.items || !searchObjectInArray(method_object.value.items, 'key', index).choices)" class="form-control" type="number" step="any" v-model.number="condition.method[method_object.name][index]">
+                                <input v-if="typeof item === 'number' && (!method_value_template.items || !searchObjectInArray(method_value_template.items, 'key', index).choices)" class="form-control" type="number" step="any" v-model.number="condition.method_value[index]">
 
-                                <select v-if="item.type === 'matching_label'" class="form-control" v-model="condition.method[method_object.name][index].value">
+                                <select v-if="item.type === 'matching_label'" class="form-control" v-model="condition.method_value[index].value">
                                     <option disabled selected value="">Select a Mapping</option>
                                     <option v-for="match in $root.$children[0].matches" :value="match.id">{{ match.label }}</option>
                                 </select>
 
-                                <select v-if="method_object.value.items && searchObjectInArray(method_object.value.items, 'key', index).choices" class="form-control" v-model="condition.method[method_object.name][index]">
+                                <select v-if="method_value_template.items && searchObjectInArray(method_value_template.items, 'key', index).choices" class="form-control" v-model="condition.method_value[index]">
                                     <option disabled selected value="">Select an option</option>
-                                    <option v-for="(choice_value, choice_label) in searchObjectInArray(method_object.value.items, 'key', index).choices" :value="choice_value">{{ choice_label }}</option>
+                                    <option v-for="(choice_value, choice_label) in searchObjectInArray(method_value_template.items, 'key', index).choices" :value="choice_value">{{ choice_label }}</option>
                                 </select>
                             </label>
                         </div>
@@ -40,8 +40,16 @@
                 </div>
             </div>
 
-            <div class="form-group col-auto">
-                <button-delete v-on:click="$emit('remove')" scale="1.7" :class="showOnHover" title="Delete this Method"/>
+            <div class="col-auto">
+                <div class="row justify-content-end">
+                    <div class="form-group col-auto">
+                        <button-delete @click="$emit('remove')" title="Delete this Method" class="pt-1 pr-0"/>
+                    </div>
+
+                    <div class="form-group col-auto">
+                        <button-add v-on:click="$emit('add-matching-method')" title="Add Method and Create Group"/>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -105,11 +113,8 @@
 <script>
     export default {
         computed: {
-            method_object() {
-                return this.matching_methods[this.condition.method_index].object;
-            },
-            showOnHover() {
-                return this.hovering ? '' : ' invisible';
+            method_value_template() {
+                return this.matching_methods[this.condition.method_name].value;
             },
             unusedResources() {
                 let resource_keys = ['sources', 'targets'];
@@ -126,191 +131,154 @@
         },
         data() {
             return {
-                hovering: false,
-                'matching_methods': [
-                    {
+                'matching_methods': {
+                    '=': {
                         'label': 'Exact Match',
-                        'object': '=',
+                        'value': ''
                     },
-                    {
+                    'LL_SOUNDEX': {
                         'label': 'Similar Soundex',
-                        'object': {
-                            'name': 'LL_SOUNDEX',
-                            'value': {
-                                'type': {},
-                                'items': [
-                                    {
-                                        'key': 'threshold',
-                                        'label': 'Similarity threshold',
-                                        'type': 0.7,
-                                        'minValue': 0,
-                                        'maxValue': 1,
-                                    },
-                                ]
-                            },
-                        }
-                    },
-                    {
-                        'label': 'Same Bloothooft Reduction',
-                        'object': {
-                            'name': 'BLOOTHOOFT_REDUCT',
-                            'value': {
-                                'type': {},
-                                'items': [
-                                    {
-                                        'key': 'name_type',
-                                        'label': 'Type of Name',
-                                        'type': '',
-                                        'choices': {
-                                            'First name': 'first_name',
-                                            'Family name': 'family name',
-                                        },
-                                    },
-                                    {
-                                        'key': 'threshold',
-                                        'label': 'Similarity threshold',
-                                        'type': 0.7,
-                                        'minValue': 0,
-                                        'maxValue': 1,
-                                    },
-                                ]
-                            },
-                        }
-                    },
-                    {
-                        'label': 'Similar Bloothooft Reduction',
-                        'object': {
-                            'name': 'BLOOTHOOFT_REDUCT_APPROX',
-                            'value': {
-                                'type': {},
-                                'items': [
-                                    {
-                                        'key': 'name_type',
-                                        'label': 'Type of Name',
-                                        'type': '',
-                                        'choices': {
-                                            'First name': 'first_name',
-                                            'Family name': 'family name',
-                                        },
-                                    },
-                                    {
-                                        'key': 'threshold',
-                                        'label': 'Similarity threshold',
-                                        'type': 0.7,
-                                        'minValue': 0,
-                                        'maxValue': 1,
-                                    },
-                                ]
-                            },
-                        }
-                    },
-                    {
-                        'label': 'Trigram distance',
-                        'object': {
-                            'name': 'TRIGRAM_DISTANCE',
-                            'value': {
-                                'type': [],
-                                'listItems': {
-                                    'type': 0.30,
+                        'value': {
+                            'items': [
+                                {
+                                    'key': 'threshold',
+                                    'label': 'Similarity threshold',
+                                    'type': 0.7,
                                     'minValue': 0,
                                     'maxValue': 1,
                                 },
-                            },
-                        },
+                            ]
+                        }
                     },
-                    {
+                    'BLOOTHOOFT_REDUCT': {
+                        'label': 'Same Bloothooft Reduction',
+                        'value': {
+                            'items': [
+                                {
+                                    'key': 'name_type',
+                                    'label': 'Type of Name',
+                                    'type': '',
+                                    'choices': {
+                                        'First name': 'first_name',
+                                        'Family name': 'family name',
+                                    },
+                                },
+                                {
+                                    'key': 'threshold',
+                                    'label': 'Similarity threshold',
+                                    'type': 0.7,
+                                    'minValue': 0,
+                                    'maxValue': 1,
+                                },
+                            ]
+                        }
+                    },
+                    'BLOOTHOOFT_REDUCT_APPROX': {
+                        'label': 'Similar Bloothooft Reduction',
+                        'value': {
+                            'items': [
+                                {
+                                    'key': 'name_type',
+                                    'label': 'Type of Name',
+                                    'type': '',
+                                    'choices': {
+                                        'First name': 'first_name',
+                                        'Family name': 'family name',
+                                    },
+                                },
+                                {
+                                    'key': 'threshold',
+                                    'label': 'Similarity threshold',
+                                    'type': 0.7,
+                                    'minValue': 0,
+                                    'maxValue': 1,
+                                },
+                            ]
+                        }
+                    },
+                    'TRIGRAM_DISTANCE': {
+                        'label': 'Trigram distance',
+                        'value': {
+                            'listItems': {
+                                'type': 0.30,
+                                'minValue': 0,
+                                'maxValue': 1,
+                            },
+                        }
+                    },
+                    'LEVENSHTEIN': {
                         'label': 'Levenshtein distance',
-                        'object': {
-                            'name': 'LEVENSHTEIN',
-                            'value': {
-                                'type': [],
-                                'listItems': {
-                                    'type': 1,
+                        'value': {
+                            'listItems': {
+                                'type': 1,
+                                'minValue': 0,
+                            },
+                        }
+                    },
+                    'TIME_DELTA': {
+                        'label': 'Time Delta',
+                        'value': {
+                            'items':[
+                                {
+                                    'key': 'days',
+                                    'label': '',
+                                    'type': 0,
                                     'minValue': 0,
                                 },
-                            },
-                        },
-                    },
-                    {
-                        'label': 'Time Delta',
-                        'object': {
-                            'name': 'TIME_DELTA',
-                            'value': {
-                                'type': {},
-                                'items':[
-                                    {
-                                        'key': 'days',
-                                        'label': '',
-                                        'type': 0,
-                                        'minValue': 0,
-                                    },
-                                    {
-                                        'key': 'multiplier',
-                                        'label': '',
-                                        'type': '',
-                                        'choices': {
-                                            'Years': 365,
-                                            'Months': 30,
-                                            'Days': 1,
-                                        },
-                                    },
-                                ],
-                            }
-                        }
-                    },
-                    {
-                        'label': 'Same Year/Month',
-                        'object': {
-                            'name': 'SAME_YEAR_MONTH',
-                            'value': {
-                                'type': {},
-                                'items': [
-                                    {
-                                        'key': 'date_part',
-                                        'label': 'Same',
-                                        'type': '',
-                                        'choices': {
-                                            'Year': 'year',
-                                            'Month': 'month',
-                                            'Year and Month': 'year_month',
-                                        },
+                                {
+                                    'key': 'multiplier',
+                                    'label': '',
+                                    'type': '',
+                                    'choices': {
+                                        'Years': 365,
+                                        'Months': 30,
+                                        'Days': 1,
                                     }
-                                ]
-                            }
+                                }
+                            ]
                         }
                     },
-                    {
+                    'SAME_YEAR_MONTH': {
+                        'label': 'Same Year/Month',
+                        'value': {
+                            'items': [
+                                {
+                                    'key': 'date_part',
+                                    'label': 'Same',
+                                    'type': '',
+                                    'choices': {
+                                        'Year': 'year',
+                                        'Month': 'month',
+                                        'Year and Month': 'year_month',
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    'DISTANCE_IS_BETWEEN': {
                         'label': 'Distance is between',
-                        'object': {
-                            'name': 'DISTANCE_IS_BETWEEN',
-                            'value': {
-                                'type': [],
-                                'listItems': {
-                                    'type': 0,
-                                    'maxItems': 2,
-                                    'minItems': 2,
-                                },
+                        'value': {
+                            'listItems': {
+                                'type': 0,
+                                'maxItems': 2,
+                                'minItems': 2,
                             }
                         }
                     },
-                    {
+                    'IS_IN_SET': {
                         'label': 'Is a Match in Set:',
-                        'object': {
-                            'name': 'IS_IN_SET',
-                            'value': {
-                                'type': [],
-                                'listItems': {
-                                    'type': {
-                                        'type': 'matching_label',
-                                    },
-                                    'maxItems': 1,
-                                    'minItems': 1,
+                        'value': {
+                            'listItems': {
+                                'type': {
+                                    'type': 'matching_label',
                                 },
-                            },
-                        },
-                    },
-                ],
-                'transformers': ['ecartico_full_name', 'to_date_immutable'],
+                                'maxItems': 1,
+                                'minItems': 1,
+                            }
+                        }
+                    }
+                },
+                'transformers': ['ecartico_full_name', 'to_date_immutable']
             }
         },
         methods: {
@@ -335,20 +303,20 @@
                 this.condition.matching_fields.push(matching_field);
             },
             handleMethodIndexChange() {
-                if (typeof this.method_object === 'string') {
-                    this.condition.method = this.method_object;
-                } else {
-                    this.condition.method = {};
-                    this.condition.method[this.method_object.name] = JSON.parse(JSON.stringify(this.method_object.value.type));
-                    if (Array.isArray(this.condition.method[this.method_object.name])) {
-                        for (let i = 0; i < (this.method_object.value.listItems.minItems || 1); i++) {
-                            this.condition.method[this.method_object.name].push(this.method_object.value.listItems.type);
-                        }
-                    } else {
-                        this.method_object.value.items.forEach(value_item => {
-                            this.condition.method[this.method_object.name][value_item.key] = value_item.type;
-                        });
+                if (typeof this.method_value_template === 'string') {
+                    this.condition.method_value = this.method_value_template;
+                }
+                else if (this.method_value_template.hasOwnProperty('listItems')) {
+                    this.condition.method_value = [];
+                    for (let i = 0; i < (this.method_value_template.listItems.minItems || 1); i++) {
+                        this.condition.method_value.push(this.method_value_template.listItems.type);
                     }
+                }
+                else {
+                    this.condition.method_value = {};
+                    this.method_value_template.items.forEach(value_item => {
+                        this.condition.method_value[value_item.key] = value_item.type;
+                    });
                 }
             },
             resetProperty(properties, resource_index, property_index) {
@@ -373,6 +341,6 @@
                 return result;
             },
         },
-        props: ['condition', 'match_id', 'resources'],
+        props: ['condition'],
     }
 </script>

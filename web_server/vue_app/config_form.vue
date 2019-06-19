@@ -507,10 +507,8 @@
                     'label': 'Alignment ' + (this.matches.length + 1),
                     'sources': [],
                     'targets': [],
-                    'conditions': {
-                        'type': 'AND',
-                        'items': [],
-                    },
+                    'type': 'AND',
+                    'conditions': [],
                 };
                 this.matches.push(match);
             },
@@ -712,12 +710,6 @@
                         .catch(() => {
                             this.job_data = null;
                         });
-                }
-            },
-            getMatchById(match_id) {
-                for (let i = 0; i < this.matches.length; i++) {
-                    if (this.matches[i].id == match_id)
-                        return this.matches[i];
                 }
             },
             getResourceById(resource_id, resources = this.resources) {
@@ -922,40 +914,7 @@
                         });
                     });
 
-                    match_copy.conditions.items.forEach(condition => {
-                        delete condition['id'];
-                        delete condition['method_index'];
-
-                        // For method parameter type "matching_label", replace match IDs with labels
-                        if (typeof condition['method'] === 'object') {
-                            Object.keys(condition['method']).forEach(method_name => {
-                                let method_parameters = condition['method'][method_name];
-                                let new_parameters;
-
-                                if (Array.isArray(method_parameters)) {
-                                    new_parameters = [];
-                                    method_parameters.forEach(parameter => {
-                                        if (typeof parameter === 'object' && parameter.type === "matching_label") {
-                                            new_parameters.push(this.getMatchById(parameter.value).label);
-                                        } else {
-                                            new_parameters.push(parameter);
-                                        }
-                                    });
-                                } else {
-                                    new_parameters = {};
-                                    Object.keys(method_parameters).forEach(parameter_key => {
-                                        let parameter = method_parameters[parameter_key];
-                                        if (typeof parameter === 'object' && parameter.type === "matching_label") {
-                                            new_parameters[parameter_key] = this.getMatchById(parameter.value);
-                                        } else {
-                                            new_parameters[parameter_key] = parameter;
-                                        }
-                                    });
-                                }
-                                condition['method'][method_name] = new_parameters;
-                            });
-                        }
-
+                    get_recursive_conditions(match_copy.conditions).forEach(condition => {
                         ['sources', 'targets'].forEach(resources_key => {
                             Object.keys(condition[resources_key]).forEach(resource_id => {
                                 condition[resources_key][resource_id].forEach((property, property_index) => {

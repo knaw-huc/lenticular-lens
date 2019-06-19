@@ -5,48 +5,48 @@ import re
 
 
 class Conditions:
-    def __init__(self, data):
+    def __init__(self, data, type):
         self.__data = data
+        self.__type = type
         self.__conditions_list = None
-
-        self.conditions_list
 
     @property
     def conditions_list(self):
         if not self.__conditions_list:
-            self.__conditions_list = self.r_conditions_list(self.__data)
+            self.__conditions_list = []
+            for idx, item in enumerate(self.__data):
+                if 'conditions' in item and 'type' in item:
+                    self.__conditions_list.append(Conditions(item['conditions'], item['type']))
+                else:
+                    self.__conditions_list.append(self.MatchingFunction(item))
 
         return self.__conditions_list
 
-    def r_conditions_list(self, condition):
-        if 'type' in condition:
-            items = []
-            for index, item in enumerate(condition['items']):
-                condition['items'][index] = self.r_conditions_list(item)
-                items.append(condition['items'][index])
-
-            return items
-
-        return self.MatchingFunction(condition)
-
     @property
     def conditions_sql(self):
-        return self.r_conditions_sql(self.__data)
+        filter_sqls = []
+        for condition in self.__conditions_list:
+            if isinstance(condition, self.MatchingFunction):
+                filter_sqls.append(condition.sql.format(field_name=psycopg2_sql.Identifier(condition.field_name)))
+            else:
+                filter_sqls.append(condition.conditions_sql)
 
-    def r_conditions_sql(self, condition):
-        if not isinstance(condition, self.MatchingFunction) and 'type' in condition and condition['type'] in ['AND', 'OR']:
-
-            filter_sqls = []
-            for condition_item in condition['items']:
-                filter_sqls.append(self.r_conditions_sql(condition_item))
-
-            return psycopg2_sql.SQL('({})').format(psycopg2_sql.SQL(' %s ' % condition['type']).join(filter_sqls))
-
-        return condition.sql.format(field_name=psycopg2_sql.Identifier(condition.field_name))
+        return psycopg2_sql.SQL('({})').format(psycopg2_sql.SQL(' %s ' % self.__type).join(filter_sqls))
 
     @property
     def index_templates(self):
-        return [condition.index_template for condition in self.conditions_list]
+        return [matching_function.index_template for matching_function in self.matching_functions]
+
+    @property
+    def matching_functions(self):
+        matching_functions = []
+        for condition in self.conditions_list:
+            if isinstance(condition, self.MatchingFunction):
+                matching_functions.append(condition)
+            else:
+                matching_functions += condition.matching_functions
+
+        return matching_functions
 
     class MatchingFunction:
         def __init__(self, function_obj):
@@ -57,13 +57,8 @@ class Conditions:
 
             self.field_name = hash_string(json.dumps(function_obj))
 
-            if isinstance(function_obj['method'], str):
-                self.function_name = function_obj['method']
-                self.parameters = ()
-            else:
-                for function_name, parameters in function_obj['method'].items():
-                    self.function_name = function_name
-                    self.parameters = parameters
+            self.function_name = function_obj['method_name']
+            self.parameters = function_obj['method_value'] if function_obj['method_value'] != '' else ()
 
             matching_functions = get_json_from_file('matching_functions.json')
             if self.function_name in matching_functions:

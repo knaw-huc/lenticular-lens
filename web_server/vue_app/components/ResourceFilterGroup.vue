@@ -96,16 +96,6 @@
                 };
                 this.filter_object.conditions.push(condition);
             },
-            addFilterGroup(event) {
-                if (event) {
-                    event.target.blur();
-                }
-                let condition = {
-                    'type': 'AND',
-                    'conditions': [],
-                };
-                this.filter_object.conditions.push(condition);
-            },
             removeCondition(condition_index) {
                 this.filter_object.conditions.splice(condition_index, 1);
 
