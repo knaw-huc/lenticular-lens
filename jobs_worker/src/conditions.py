@@ -58,7 +58,7 @@ class Conditions:
             self.field_name = hash_string(json.dumps(function_obj))
 
             self.function_name = function_obj['method_name']
-            self.parameters = function_obj['method_value'] if function_obj['method_value'] != '' else ()
+            self.parameters = function_obj['method_value']
 
             matching_functions = get_json_from_file('matching_functions.json')
             if self.function_name in matching_functions:

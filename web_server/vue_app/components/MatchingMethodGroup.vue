@@ -14,6 +14,12 @@
 
       <div v-if="matching_method_group.conditions.length < 1" class="col">
         No matching methods
+
+        <div class="invalid-feedback d-block">
+          <template v-if="errors.includes('conditions')">
+            Please provide at least one matching method
+          </template>
+        </div>
       </div>
 
       <div v-if="!is_root" class="form-group col-auto">
@@ -36,6 +42,7 @@
           @remove="removeCondition(condition_index)"
           @promote-matching-method="$emit('promote-matching-method', $event)"
           @demote-matching-method-group="$emit('demote-matching-method-group', $event)"
+          ref="matchingMethodGroupComponents"
       />
     </b-collapse>
   </div>
@@ -46,15 +53,18 @@
             :condition="matching_method_group"
             @remove="$emit('remove')"
             @add-matching-method="$emit('promote-matching-method', {'group': $parent.$parent.matching_method_group, 'index': index})"
+            ref="matchConditionComponent"
         ></match-condition>
       </div>
     </div>
   </div>
 </template>
 <script>
-    import MatchCondition from './MatchCondition'
+    import MatchCondition from './MatchCondition';
+    import ValidationMixin from '../mixins/ValidationMixin';
 
     export default {
+        mixins: [ValidationMixin],
         components: {
             'match-condition': MatchCondition
         },
@@ -64,10 +74,29 @@
             },
         },
         methods: {
+            validateMatchingGroup() {
+                if (this.matching_method_group.conditions && this.matching_method_group.conditions.length > 0) {
+                    const valid = !this.$refs.matchingMethodGroupComponents
+                        .map(matchingMethodGroupComponent => matchingMethodGroupComponent.validateMatchingGroup())
+                        .includes(false);
+
+                    const isShown = this.$refs[this.uid].show;
+                    if (!valid && !isShown)
+                        this.$root.$emit('bv::toggle::collapse', this.uid);
+
+                    return valid;
+                }
+
+                if (!this.matching_method_group.conditions)
+                    return this.$refs.matchConditionComponent.validateMatchCondition();
+
+                return this.validateField('conditions', this.matching_method_group.conditions.length > 0);
+            },
+
             addCondition() {
                 let condition = {
                     'method_name': '',
-                    'method_value': '',
+                    'method_value': {},
                     'sources': this.sources.reduce((acc, from_resource) => {
                         acc[from_resource] = [{'property': [from_resource, '']}];
                         return acc;

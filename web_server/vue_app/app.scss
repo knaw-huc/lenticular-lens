@@ -82,6 +82,10 @@ div#app::before {
     background-position: 0 25%;
     background-size: cover;
     margin-top: 20px;
+
+    button:not(:last-child) {
+      margin-right: 10px;
+    }
   }
 }
 

@@ -80,7 +80,8 @@
 
                     return valid;
                 }
-                else if (!this.filter_object.conditions)
+
+                if (!this.filter_object.conditions)
                     return this.$refs.filterConditionComponent.validateFilterCondition();
 
                 return true;

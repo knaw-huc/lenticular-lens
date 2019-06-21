@@ -104,7 +104,14 @@
                             resources_key="sources"
                             @input="updateMatchResource('sources', index, $event)"
                             @remove="deleteMatchResource('sources', index)"
+                            ref="sourceResourceComponents"
                     ></match-resource-component>
+
+                    <div class="invalid-feedback d-block">
+                        <template v-if="errors.includes('sources')">
+                            Please provide at least one source
+                        </template>
+                    </div>
                 </div>
             </div>
         </div>
@@ -156,11 +163,17 @@
                             resources_key="targets"
                             @input="updateMatchResource('targets', index, $event)"
                             @remove="deleteMatchResource('targets', index)"
+                            ref="targetResourceComponents"
                     ></match-resource-component>
+
+                    <div class="invalid-feedback d-block">
+                        <template v-if="errors.includes('targets')">
+                            Please provide at least one target
+                        </template>
+                    </div>
                 </div>
             </div>
         </div>
-
 
         <div class="bg-white border p-3 rounded mb-4">
             <div class="row justify-content-between">
@@ -234,8 +247,10 @@
 <script>
     import MatchResource from './MatchResource'
     import MatchingMethodGroup from './MatchingMethodGroup'
+    import ValidationMixin from '../mixins/ValidationMixin';
 
     export default {
+        mixins: [ValidationMixin],
         components: {
             'match-resource-component': MatchResource,
             'matching-method-group-component': MatchingMethodGroup
@@ -247,6 +262,27 @@
         },
         props: ['match', 'matches'],
         methods: {
+            validateMatch() {
+                const sourcesValid = this.validateField('sources', this.match.sources.length > 0)
+                    && !this.$refs.sourceResourceComponents
+                        .map(sourceResourceComponent => sourceResourceComponent.validateResource())
+                        .includes(false);
+                const targetsValid = this.validateField('targets', this.match.targets.length > 0)
+                    && !this.$refs.targetResourceComponents
+                        .map(targetResourceComponent => targetResourceComponent.validateResource())
+                        .includes(false);
+
+                let matchingMethodGroupValid = true;
+                if (this.$refs.matchingMethodGroupComponent)
+                    matchingMethodGroupValid = this.$refs.matchingMethodGroupComponent.validateMatchingGroup();
+
+                const valid = sourcesValid && targetsValid && matchingMethodGroupValid;
+                const isShown = this.$refs[`match_${this.match.id}`].show;
+                if (!valid && !isShown)
+                    this.$root.$emit('bv::toggle::collapse', `match_${this.match.id}`);
+
+                return valid;
+            },
             addRootCondition() {
                 this.$refs['matchingMethodGroupComponent'].addCondition();
             },
@@ -266,7 +302,7 @@
                         condition_copy,
                         {
                             'method_name': '',
-                            'method_value': '',
+                            'method_value': {},
                             'sources': this.match.sources.reduce((acc, from_resource) => {
                                 acc[from_resource] = [{'property': [from_resource, '']}];
                                 return acc;

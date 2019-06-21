@@ -102,7 +102,7 @@
         </div>
         </tab-content>
 
-        <tab-content title="Alignments">
+        <tab-content title="Alignments" :before-change="validateAlignmentsTab">
         <div id="matches" class="mt-5">
             <div class="row justify-content-between">
                 <div class="col-auto">
@@ -122,8 +122,13 @@
                     :key="match.id"
                     @remove="matches.splice(index, 1)"
                     @update:label="match.label = $event"
+                    ref="matchComponents"
             ></match-component>
         </div>
+
+        <b-alert variant="danger" class="mt-4" :show="tab_error !== ''">
+            {{ tab_error }}
+        </b-alert>
         </tab-content>
 
         <tab-content title="Link Validation">
@@ -337,15 +342,28 @@
             </template>
         </tab-content>
 
-        <template v-if="(props.activeTabIndex === 0  && !job_id) || props.activeTabIndex === 2" slot="next" slot-scope="props">
-            <template v-if="props.activeTabIndex === 2">
+        <template v-if="(props.activeTabIndex === 0  && !job_id) || [1,2].includes(props.activeTabIndex)"
+                  slot="next" slot-scope="props">
+            <template v-if="props.activeTabIndex === 0 && !job_id">
                 <wizard-button
-                        v-if="job_data"
-                        :style="props.fillButtonStyle"
-                        :disabled="props.loading">
-                    Results
+                    :style="props.fillButtonStyle"
+                    :disabled="props.loading || idea_form === 'existing'"
+                    @click.native.prevent.stop="idea_form='existing'"
+                >
+                    Existing Idea
                 </wizard-button>
                 &nbsp;
+                <wizard-button
+                    v-if="has_changes"
+                    :style="props.fillButtonStyle"
+                    :disabled="props.loading || idea_form === 'new'"
+                    @click.native.prevent.stop="idea_form='new'"
+                >
+                    New Idea
+                </wizard-button>
+            </template>
+
+            <template v-if="[1,2].includes(props.activeTabIndex)">
                 <wizard-button
                         v-if="has_changes"
                         :style="props.fillButtonStyle"
@@ -353,27 +371,15 @@
                         @click.native.stop="submitForm">
                     Save
                  </wizard-button>
-            </template>
 
-            <template v-if="props.activeTabIndex === 0 && !job_id">
                 <wizard-button
-                        :style="props.fillButtonStyle"
-                        :disabled="props.loading || idea_form === 'existing'"
-                        @click.native.prevent.stop="idea_form='existing'"
-                >
-                    Existing Idea
+                    :style="props.fillButtonStyle"
+                    :disabled="props.loading">
+                    Save and next
                 </wizard-button>
-                &nbsp;
-                <wizard-button
-                        v-if="has_changes"
-                        :style="props.fillButtonStyle"
-                        :disabled="props.loading || idea_form === 'new'"
-                        @click.native.prevent.stop="idea_form='new'"
-                >
-                    New Idea
-                 </wizard-button>
             </template>
         </template>
+
         <template slot="finish" slot-scope="props" style="display: none">&#8203;</template>
     </form-wizard>
     </form>
@@ -459,7 +465,24 @@
                 if (results.includes(false))
                     return this.isTabValid(false, 'One or more resources contain errors!');
 
-                return this.isTabValid(this.resources.length > 0, 'Please add at least one resource!');
+                const isValid = this.isTabValid(this.resources.length > 0, 'Please add at least one resource!');
+                if (isValid)
+                    this.submitForm();
+
+                return isValid;
+            },
+
+            validateAlignmentsTab() {
+                const results = this.$refs.matchComponents.map(matchComponent => matchComponent.validateMatch());
+
+                if (results.includes(false))
+                    return this.isTabValid(false, 'One or more alignments contain errors!');
+
+                const isValid = this.isTabValid(this.matches.length > 0, 'Please add at least one alignment!');
+                if (isValid)
+                    this.submitForm();
+
+                return isValid;
             },
 
             activateStep(step_name, jump=false) {
