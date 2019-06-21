@@ -63,7 +63,7 @@
 /******/
 /******/ 	var hotApplyOnUpdate = true;
 /******/ 	// eslint-disable-next-line no-unused-vars
-/******/ 	var hotCurrentHash = "1e80e87fdb2010edf22b";
+/******/ 	var hotCurrentHash = "36fa8ff3441d23b7ec38";
 /******/ 	var hotRequestTimeout = 10000;
 /******/ 	var hotCurrentModuleData = {};
 /******/ 	var hotCurrentChildModule;
@@ -33515,7 +33515,7 @@ __webpack_require__.r(__webpack_exports__);
         addCondition() {
             let condition = {
                 'method_name': '',
-                'method_value': '',
+                'method_value': {},
                 'sources': this.sources.reduce((acc, from_resource) => {
                     acc[from_resource] = [{'property': [from_resource, '']}];
                     return acc;
@@ -34990,7 +34990,6 @@ __webpack_require__.r(__webpack_exports__);
             job_data: null,
             resources: [],
             resources_count: 0,
-            limit_all: -1,
             matches: [],
             matches_count: 0,
             is_updating: false,
@@ -35064,13 +35063,6 @@ __webpack_require__.r(__webpack_exports__);
                 this.$refs['formWizard'].changeTab(this.$refs['formWizard'].activeTabIndex, step_index);
             }
         },
-        addFilterCondition(resource) {
-            let condition = {
-                'type': '',
-                'property': '',
-            };
-            resource.filter.conditions.push(condition);
-        },
         addResource(event) {
             if (event) {
                 event.target.blur();
@@ -35106,11 +35098,6 @@ __webpack_require__.r(__webpack_exports__);
             };
             this.matches.push(match);
         },
-        applyLimitAll() {
-            this.resources.forEach(resource => {
-                this.$set(resource, 'limit', this.limit_all);
-            });
-        },
         clearForm() {
             this.resources = [];
             this.matches = [];
@@ -35119,7 +35106,6 @@ __webpack_require__.r(__webpack_exports__);
             this.association = '';
             this.cluster_id_selected = null;
             this.clustering_id = null;
-            this.limit_all = -1;
         },
         copyToClipboard(el) {
             let disabled = el.hasAttribute('disabled');

@@ -427,7 +427,6 @@
                 job_data: null,
                 resources: [],
                 resources_count: 0,
-                limit_all: -1,
                 matches: [],
                 matches_count: 0,
                 is_updating: false,
@@ -501,13 +500,6 @@
                     this.$refs['formWizard'].changeTab(this.$refs['formWizard'].activeTabIndex, step_index);
                 }
             },
-            addFilterCondition(resource) {
-                let condition = {
-                    'type': '',
-                    'property': '',
-                };
-                resource.filter.conditions.push(condition);
-            },
             addResource(event) {
                 if (event) {
                     event.target.blur();
@@ -543,11 +535,6 @@
                 };
                 this.matches.push(match);
             },
-            applyLimitAll() {
-                this.resources.forEach(resource => {
-                    this.$set(resource, 'limit', this.limit_all);
-                });
-            },
             clearForm() {
                 this.resources = [];
                 this.matches = [];
@@ -556,7 +543,6 @@
                 this.association = '';
                 this.cluster_id_selected = null;
                 this.clustering_id = null;
-                this.limit_all = -1;
             },
             copyToClipboard(el) {
                 let disabled = el.hasAttribute('disabled');
