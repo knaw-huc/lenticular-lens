@@ -63,7 +63,7 @@
 /******/
 /******/ 	var hotApplyOnUpdate = true;
 /******/ 	// eslint-disable-next-line no-unused-vars
-/******/ 	var hotCurrentHash = "36fa8ff3441d23b7ec38";
+/******/ 	var hotCurrentHash = "940ce614f1a78ea5d5e3";
 /******/ 	var hotRequestTimeout = 10000;
 /******/ 	var hotCurrentModuleData = {};
 /******/ 	var hotCurrentChildModule;
@@ -35489,7 +35489,9 @@ __webpack_require__.r(__webpack_exports__);
             matches_copy.forEach(match_copy => {
                 ['sources', 'targets'].forEach(resources_key => {
                     match_copy[resources_key].forEach((resource_id, resource_index) => {
-                        match_copy[resources_key][resource_index] = this.getResourceById(resource_id).label;
+                        if (resource_id == parseInt(resource_id)) {
+                            match_copy[resources_key][resource_index] = this.getResourceById(resource_id).label;
+                        }
                     });
                 });
 

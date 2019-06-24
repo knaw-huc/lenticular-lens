@@ -926,7 +926,9 @@
                 matches_copy.forEach(match_copy => {
                     ['sources', 'targets'].forEach(resources_key => {
                         match_copy[resources_key].forEach((resource_id, resource_index) => {
-                            match_copy[resources_key][resource_index] = this.getResourceById(resource_id).label;
+                            if (resource_id == parseInt(resource_id)) {
+                                match_copy[resources_key][resource_index] = this.getResourceById(resource_id).label;
+                            }
                         });
                     });
 
