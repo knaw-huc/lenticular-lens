@@ -368,7 +368,7 @@
                         v-if="has_changes"
                         :style="props.fillButtonStyle"
                         :disabled="props.loading"
-                        @click.native.stop="submitForm">
+                        @click.native.stop="validateAndSave(props.activeTabIndex)">
                     Save
                  </wizard-button>
 
@@ -482,6 +482,17 @@
                     this.submitForm();
 
                 return isValid;
+            },
+
+            validateAndSave(activeTabIndex) {
+                switch (activeTabIndex) {
+                    case 1:
+                        return this.validateCollectionsTab();
+                    case 2:
+                        return this.validateAlignmentsTab();
+                    default:
+                        return false;
+                }
             },
 
             activateStep(step_name, jump=false) {
