@@ -61,9 +61,9 @@
                     </span>
 
                     <label class="h3 col-auto" for="job_id_input">{{ job_id ? '' : 'Existing ' }}Job ID</label>
-                    <input type="text" class="form-control col-md-3 col-auto" ref="job_id_input" id="job_id_input" :disabled="Boolean(job_id)" v-model="inputs.job_id">
+                    <input type="text" class="col-md-3 col-auto" ref="job_id_input" id="job_id_input" :disabled="Boolean(job_id)" v-model="inputs.job_id">
 
-                    <div v-if="!job_id" class="form-group col-auto">
+                    <div v-if="!job_id" class="col-auto">
                         <b-button @click="setJobId(inputs.job_id)" variant="info">Load</b-button>
                     </div>
                     <div v-else class="col-auto">

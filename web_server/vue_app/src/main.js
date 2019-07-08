@@ -1,10 +1,11 @@
-import './app.scss'
+import './assets/app.scss'
 
 import Vue from 'vue'
+
 import BootstrapVue from 'bootstrap-vue'
 Vue.use(BootstrapVue);
 
-import App from './config_form.vue'
+import App from './App.vue'
 import ResultsComponent from './components/Results'
 import ClusterVisualization from './components/ClusterVisualization'
 import EditLabel from './components/EditLabel'
