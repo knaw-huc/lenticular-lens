@@ -1,64 +1,56 @@
 <template>
 <div class="border p-4 mt-4 bg-light">
-    <div class="row justify-content-between">
+    <div class="row align-items-top justify-content-between">
         <div class="col-auto" title="Expand / Collapse">
             <octicon name="chevron-down" scale="3" v-b-toggle="'match_' + match.id"></octicon>
         </div>
 
-        <div class="col-9">
+        <div class="col-auto">
             <div class="row">
-                <div class="col-6">
-                    <div class="row">
-                        <edit-label-component v-model="match.label"/>
-                    </div>
-                    <div class="row">
-                        <div class="col form-group form-check mb-1 pl-0">
-                            <b-form-checkbox
-                                    :id="'match_' + match.id + '_is_association'"
-                                    :disabled="!!app.job_data.results.alignments[match.id]"
-                                    v-model.boolean="match.is_association"
-                                    title="Check this box if this Alignment is intended for creating associations"
-                            >
-                                Association
-                            </b-form-checkbox>
-                        </div>
-                    </div>
+                <edit-label-component v-model="match.label"/>
+            </div>
+            <div class="form-row">
+                <div class="col form-check mb-1 pl-0">
+                    <b-form-checkbox
+                        :id="'match_' + match.id + '_is_association'"
+                        :disabled="!!app.job_data.results.alignments[match.id]"
+                        v-model.boolean="match.is_association"
+                        title="Check this box if this Alignment is intended for creating associations"
+                    >
+                        Association
+                    </b-form-checkbox>
                 </div>
+            </div>
+        </div>
 
-                <div class="col-6">
-                    <div v-if="app.job_data.results.alignments[match.id]">
-                        <div>
-                            <strong>Request received at: </strong>{{ app.job_data.results.alignments[match.id].requested_at }}
-                        </div>
-                        <div v-if="app.job_data.results.alignments[match.id].processing_at">
-                            <strong>Processing started at: </strong>{{ app.job_data.results.alignments[match.id].processing_at }}
-                        </div>
-                        <div v-if="app.job_data.results.alignments[match.id].finished_at">
-                            <strong>Processing finished at: </strong>{{ app.job_data.results.alignments[match.id].finished_at }}
-                        </div>
-                        <div>
-                            <strong>Status: </strong><pre class="d-inline">{{ app.job_data.results.alignments[match.id].status }}</pre>
-                        </div>
-                        <div v-if="app.job_data.results.alignments[match.id].status === 'Finished'">
-                            <strong>Links found:</strong> {{ app.job_data.results.alignments[match.id].links_count || 0 }}
-                        </div>
-                    </div>
+        <div class="col">
+            <div v-if="app.job_data.results.alignments[match.id]">
+                <div>
+                    <strong>Request received at: </strong>{{ app.job_data.results.alignments[match.id].requested_at }}
+                </div>
+                <div v-if="app.job_data.results.alignments[match.id].processing_at">
+                    <strong>Processing started at: </strong>{{ app.job_data.results.alignments[match.id].processing_at }}
+                </div>
+                <div v-if="app.job_data.results.alignments[match.id].finished_at">
+                    <strong>Processing finished at: </strong>{{ app.job_data.results.alignments[match.id].finished_at }}
+                </div>
+                <div>
+                    <strong>Status: </strong><pre class="d-inline">{{ app.job_data.results.alignments[match.id].status }}</pre>
+                </div>
+                <div v-if="app.job_data.results.alignments[match.id].status === 'Finished'">
+                    <strong>Links found:</strong> {{ app.job_data.results.alignments[match.id].links_count || 0 }}
                 </div>
             </div>
         </div>
 
         <div class="col-auto">
-            <div class="row">
-                <div class="col-auto pt-1">
-                    <b-button variant="info" @click="runAlignment">Run Alignment</b-button>
-                </div>
+            <b-button variant="info" @click="runAlignment">Run Alignment</b-button>
+        </div>
 
-                <div class="form-group col-1 text-right">
-                    <button-delete @click="$emit('remove')" :scale="2"
-                                   :disabled="!!app.job_data.results.alignments[match.id]"
-                                   title="Delete this Alignment"/>
-                </div>
-            </div>
+        <div class="col-auto">
+            <button-delete @click="$emit('remove')" :scale="2"
+                           :disabled="!!app.job_data.results.alignments[match.id]"
+                           title="Delete this Alignment"/>
         </div>
     </div>
 
@@ -66,7 +58,7 @@
                 accordion="matches-accordion" @shown="scrollTo('match_' + match.id)">
         <fieldset :disabled="!!app.job_data.results.alignments[match.id]">
             <div class="bg-white border p-3 justify-content-around rounded mb-4">
-                <div class="row justify-content-between">
+                <div class="row align-items-center justify-content-between mb-2">
                     <div class="col-auto">
                         <div class="row">
                             <div class="col-auto pr-0">
@@ -88,7 +80,7 @@
                         </div>
                     </div>
 
-                    <div class="form-group col-auto">
+                    <div class="col-auto">
                         <button-add @click="addMatchResource('sources', $event)" title="Add a Collection as a Source"/>
                     </div>
                 </div>
@@ -116,7 +108,7 @@
             </div>
 
             <div class="bg-white border p-3 justify-content-around rounded mb-4">
-                <div class="row justify-content-between">
+                <div class="row align-items-center justify-content-between mb-2">
                     <div class="col-auto">
                         <div class="row">
                             <div class="col-auto pr-0">
@@ -146,7 +138,7 @@
                         </div>
                     </div>
 
-                    <div class="form-group col-auto">
+                    <div class="col-auto">
                         <button-add @click="addMatchResource('targets', $event)" title="Add a Collection as a Target"/>
                     </div>
                 </div>
@@ -174,7 +166,7 @@
             </div>
 
             <div class="bg-white border p-3 rounded mb-4">
-                <div class="row justify-content-between">
+                <div class="row align-items-center justify-content-between mb-2">
                     <div class="col-auto">
                         <div class="row">
                             <div class="col-auto pr-0">
@@ -220,9 +212,7 @@
                     </div>
 
                     <div class="col-auto">
-                        <div class="form-group">
-                            <button-add @click="addRootCondition" title="Add a Matching Method"/>
-                        </div>
+                        <button-add @click="addRootCondition" title="Add a Matching Method"/>
                     </div>
                 </div>
 

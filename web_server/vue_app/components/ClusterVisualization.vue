@@ -1,7 +1,7 @@
 <template>
     <div>
         <div class="border p-4 mt-4 bg-white">
-            <div class="row">
+            <div class="row align-items-center">
                 <div class="col-auto">
                     <octicon name="chevron-down" scale="3" v-b-toggle.cluster_plot_row_1></octicon>
                 </div>
@@ -86,11 +86,12 @@
                     id="cluster_plot_row_1"
                     ref="vis_collapse_1"
             >
-                <svg class="plot" id="graph_cluster_1"></svg>
+                <svg class="plot mt-3" id="graph_cluster_1"></svg>
             </b-collapse>
         </div>
+
         <div class="border p-4 mt-4 bg-white">
-            <div class="row">
+            <div class="row align-items-center">
                 <div class="col-auto">
                     <octicon name="chevron-down" scale="3" v-b-toggle.cluster_plot_row_2></octicon>
                 </div>
@@ -192,12 +193,12 @@
                     id="cluster_plot_row_2"
                     ref="vis_collapse_1"
             >
-                <svg class="plot" id="graph_cluster_2"></svg>
+                <svg class="plot mt-3" id="graph_cluster_2"></svg>
             </b-collapse>
         </div>
 
         <div v-if="association" class="border p-4 mt-4 bg-white">
-            <div class="row">
+            <div class="row align-items-center">
                 <div class="col-auto">
                     <octicon name="chevron-down" scale="3" v-b-toggle.cluster_plot_row_3></octicon>
                 </div>
@@ -240,20 +241,18 @@
                         </div>
                     </div>
                 </div>
+
+                <div class="col-auto" v-b-toggle.cluster_plot_row_3>
+                    <a :href="getGraphLink()" target="_blank" class="btn btn-info">
+                        Open in new tab
+                    </a>
+                </div>
             </div>
             <b-collapse
                     :visible="Boolean(association)"
                     id="cluster_plot_row_3"
             >
-                <svg class="plot" id="graph_cluster_3"></svg>
-
-                <div class="col pt-4">
-                    <div class="row justify-content-end">
-                        <div class="col-auto">
-                            <a :href="getGraphLink()" target="_blank" class="btn btn-info">Open in new tab</a>
-                        </div>
-                    </div>
-                </div>
+                <svg class="plot mt-3" id="graph_cluster_3"></svg>
             </b-collapse>
         </div>
 

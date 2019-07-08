@@ -8,17 +8,17 @@
         shape="square"
         ref="formWizard"
     >
-
         <tab-content title="Idea" :before-change="validateIdeaTab">
             <div class="row align-items-center justify-content-between">
-                <div class="h2 col-auto">Idea</div>
-                <div class="mr-3" v-if="job_data">
-                    <span class="badge badge-primary">Created {{ job_data.created_at }}</span>
-                    <span class="badge badge-primary ml-1" v-show="job_data.created_at !== job_data.updated_at">
-                        Updated {{ job_data.updated_at }}
-                    </span>
+                <div class="col-auto">
+                    <h2>Idea</h2>
+                </div>
+
+                <div class="col-auto" v-if="job_data">
+                    <span class="badge badge-info">Created {{ job_data.created_at }}</span>
                 </div>
             </div>
+
             <div v-if="idea_form === 'new' ||  job_id" class="border p-4 mt-4 bg-light">
                 <div class="form-group">
                     <label class="h3" for="idea">What's your idea?</label>
@@ -39,17 +39,27 @@
                     </div>
                 </div>
 
-                <div class="form-group row justify-content-end pt-3 mb-0">
+                <div class="form-group row justify-content-end align-items-center pt-3 mb-0">
+                    <div class="col-auto" v-if="job_data">
+                        <span class="badge badge-info" v-show="job_data.created_at !== job_data.updated_at">
+                            Updated {{ job_data.updated_at }}
+                        </span>
+                    </div>
+
                     <div class="col-auto">
                         <b-button @click="saveIdea" variant="info">
-                            {{ job_id ? (is_updating ? 'Updating' : 'Update') : 'Create' }}
+                            {{ job_id ? 'Update' : 'Create' }}
                         </b-button>
                     </div>
                 </div>
             </div>
 
             <div v-if="idea_form === 'existing' || job_id" class="bg-light border mt-4 pl-4 pr-4 pt-4">
-                <div class="form-group row justify-content-end">
+                <div class="form-group row justify-content-end align-items-center">
+                    <span class="badge badge-info" ref="clipboard_copy_message" hidden>
+                        Job ID copied to clipboard
+                    </span>
+
                     <label class="h3 col-auto" for="job_id_input">{{ job_id ? '' : 'Existing ' }}Job ID</label>
                     <input type="text" class="form-control col-md-3 col-auto" ref="job_id_input" id="job_id_input" :disabled="Boolean(job_id)" v-model="inputs.job_id">
 
@@ -60,11 +70,6 @@
                         <b-button @click="copyToClipboard($refs['job_id_input'])"><octicon name="clippy" class="align-text-top"></octicon></b-button>
                     </div>
                 </div>
-                <div class="row justify-content-end mb-0" ref="clipboard_copy_message" hidden>
-                    <div class="col-auto text-success">
-                        Job ID copied to clipboard.
-                    </div>
-                </div>
             </div>
 
             <b-alert variant="danger" class="mt-4" :show="tab_error !== ''">
@@ -73,17 +78,16 @@
         </tab-content>
 
         <tab-content title="Collections" :before-change="validateCollectionsTab">
-        <div id="resources">
-            <div class="row justify-content-between">
+            <div class="row align-items-center justify-content-between">
                 <div class="col-auto">
                     <h2>Collections</h2>
                 </div>
+
                 <div class="col-auto">
-                    <div class="form-group mb-0 pr-2 pt-3">
-                        <button-add @click="addResource" title="Add a Collection"/>
-                    </div>
+                    <button-add @click="addResource" title="Add a Collection"/>
                 </div>
             </div>
+
             <resource-component
                     :initial_label="'Collection ' + resource.id"
                     :resource="resource"
@@ -99,19 +103,16 @@
             <b-alert variant="danger" class="mt-4" :show="tab_error !== ''">
                 {{ tab_error }}
             </b-alert>
-        </div>
         </tab-content>
 
         <tab-content title="Alignments" :before-change="validateAlignmentsTab">
-        <div id="matches">
-            <div class="row justify-content-between">
+            <div class="row align-items-center justify-content-between">
                 <div class="col-auto">
                     <h2>Alignment Specifications</h2>
                 </div>
+
                 <div class="col-auto">
-                    <div class="form-group mb-0 pr-2 pt-3">
-                        <button-add @click="addMatch" title="Add an Alignment"/>
-                    </div>
+                    <button-add @click="addMatch" title="Add an Alignment"/>
                 </div>
             </div>
 
@@ -124,37 +125,42 @@
                     @update:label="match.label = $event"
                     ref="matchComponents"
             ></match-component>
-        </div>
 
-        <b-alert variant="danger" class="mt-4" :show="tab_error !== ''">
-            {{ tab_error }}
-        </b-alert>
+            <b-alert variant="danger" class="mt-4" :show="tab_error !== ''">
+                {{ tab_error }}
+            </b-alert>
         </tab-content>
 
         <tab-content title="Link Validation">
-        <div v-if="job_data">
-            <div>
-                Request received at: {{ job_data.requested_at }}
-            </div>
-            <div>
-                Status: <pre>{{ job_data.status }}</pre>
-            </div>
-            <div v-if="job_data.processing_at">
-                Processing started at: {{ job_data.processing_at }}
-            </div>
-            <div v-if="job_data.finished_at">
-                Processing finished at: {{ job_data.finished_at }}
-                <div v-for="match in matches">
-                    <a :href="'/job/' + job_id + '/result/' + match.label" target="_blank">Results for {{ match.label }}</a>
+            <div v-if="job_data">
+                <div>
+                    Request received at: {{ job_data.requested_at }}
                 </div>
                 <div>
-                    <a :href="'/job/' + job_id + '/result/download'" download>Download RDF</a>
+                    Status: <pre>{{ job_data.status }}</pre>
+                </div>
+                <div v-if="job_data.processing_at">
+                    Processing started at: {{ job_data.processing_at }}
+                </div>
+                <div v-if="job_data.finished_at">
+                    Processing finished at: {{ job_data.finished_at }}
+                    <div v-for="match in matches">
+                        <a :href="'/job/' + job_id + '/result/' + match.label" target="_blank">Results for {{ match.label }}</a>
+                    </div>
+                    <div>
+                        <a :href="'/job/' + job_id + '/result/download'" download>Download RDF</a>
+                    </div>
                 </div>
             </div>
-        </div>
         </tab-content>
 
         <tab-content title="Clusters">
+            <div class="row align-items-center justify-content-between">
+                <div class="col-auto">
+                    <h2>Clusters</h2>
+                </div>
+            </div>
+
             <cluster-component
                 :match="match"
                 v-for="match in matches"

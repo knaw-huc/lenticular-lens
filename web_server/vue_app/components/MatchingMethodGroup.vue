@@ -1,11 +1,11 @@
 <template>
   <div v-if="matching_method_group.conditions" :class="'shadow p-3 border mb-3 ' + style_class">
-    <div class="row">
+    <div class="row align-items-center">
       <div class="col-auto">
         <octicon name="chevron-down" scale="2" v-b-toggle="uid"></octicon>
       </div>
 
-      <div v-if="matching_method_group.conditions.length > 1" class="form-group col">
+      <div v-if="matching_method_group.conditions.length > 1" class="col">
         <v-select v-model="matching_method_group.type">
           <option value="AND">All conditions must be met (AND)</option>
           <option value="OR">At least one of the conditions must be met (OR)</option>
@@ -22,12 +22,16 @@
         </div>
       </div>
 
-      <div v-if="!is_root" class="form-group col-auto">
-        <button-delete @click="$emit('remove')" title="Delete this Group" class="pt-1 pr-0"/>
-      </div>
+      <div class="col-auto">
+        <div class="row">
+          <div v-if="!is_root" class="col-auto">
+            <button-delete @click="$emit('remove')" title="Delete this Group" class="pt-1 pr-0"/>
+          </div>
 
-      <div v-if="!is_root" class="form-group col-auto">
-        <button-add v-on:click="addCondition" title="Add Matching Method Group"/>
+          <div v-if="!is_root" class="col-auto">
+            <button-add v-on:click="addCondition" title="Add Matching Method Group"/>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -46,18 +50,14 @@
       />
     </b-collapse>
   </div>
-  <div v-else-if="!matching_method_group.conditions">
-    <div class="row pl-5">
-      <div class="col">
-        <match-condition
-            :condition="matching_method_group"
-            @remove="$emit('remove')"
-            @add-matching-method="$emit('promote-matching-method', {'group': $parent.$parent.matching_method_group, 'index': index})"
-            ref="matchConditionComponent"
-        ></match-condition>
-      </div>
-    </div>
-  </div>
+
+  <match-condition
+      v-else-if="!matching_method_group.conditions"
+      :condition="matching_method_group"
+      @remove="$emit('remove')"
+      @add-matching-method="$emit('promote-matching-method', {'group': $parent.$parent.matching_method_group, 'index': index})"
+      ref="matchConditionComponent"
+  ></match-condition>
 </template>
 <script>
     import MatchCondition from './MatchCondition';
@@ -70,7 +70,13 @@
         },
         computed: {
             style_class() {
-                return this.is_root || this.$parent.$parent.style_class === 'bg-primary-light border-primary' ? 'bg-info-light border-info' : 'bg-primary-light border-primary'
+                let styleClass = this.is_root ? '' : 'mt-3 ';
+                if (this.is_root || this.$parent.$parent.style_class.includes('bg-primary-light'))
+                    styleClass += 'bg-info-light border-info';
+                else
+                    styleClass += 'bg-primary-light border-primary';
+
+                return styleClass;
             },
         },
         methods: {

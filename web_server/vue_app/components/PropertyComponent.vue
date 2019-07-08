@@ -1,30 +1,32 @@
 <template>
     <div class="col-auto">
-        <div class="row">
+        <div class="row align-items-center">
             <div v-if="showReferencedPropertyButton" class="col-auto p-1">
                 <octicon name="arrow-right" />
             </div>
 
-            <div v-if="selectReferencedCollection || showResourceInfo || showReferencedPropertyButton" class="form-group col-auto">
-                <v-select v-if="selectReferencedCollection" :value="value[0]" @input="updateInput($event, 0)"
-                          v-bind:class="{'is-invalid': errors.includes('value')}">
-                    <template v-if="Array.isArray(resources)">
-                        <option v-for="collection in resources" :key="collection.id" :value="collection.id">{{ collection.label }}
-                        </option>
-                    </template>
-                    <template v-else>
-                        <option value="" disabled selected>Choose a referenced collection</option>
-                        <option value="__value__">Value (do not follow reference)</option>
-                        <option v-for="collection in Object.keys(resources)" :key="collection" :value="collection">{{ collection }}
-                        </option>
-                    </template>
-                </v-select>
+            <div v-if="selectReferencedCollection || showResourceInfo || showReferencedPropertyButton" class="col-auto">
+                <div v-if="selectReferencedCollection" class="row align-items-center">
+                    <v-select :value="value[0]" @input="updateInput($event, 0)" class="my-1"
+                              v-bind:class="{'is-invalid': errors.includes('value')}">
+                        <template v-if="Array.isArray(resources)">
+                            <option v-for="collection in resources" :key="collection.id" :value="collection.id">{{ collection.label }}
+                            </option>
+                        </template>
+                        <template v-else>
+                            <option value="" disabled selected>Choose a referenced collection</option>
+                            <option value="__value__">Value (do not follow reference)</option>
+                            <option v-for="collection in Object.keys(resources)" :key="collection" :value="collection">{{ collection }}
+                            </option>
+                        </template>
+                    </v-select>
+                </div>
 
-                <div v-else-if="showResourceInfo" class="row">
-                    <div class="col-auto border border-info p-1 rounded-pill pl-2 pr-2 bg-white">
+                <div v-else-if="showResourceInfo" class="row align-items-center">
+                    <div class="col-auto border border-info p-1 rounded-pill my-1 pl-2 pr-2 bg-white">
                         {{ $root.$children[0].datasets[$root.$children[0].getResourceById(value[0], resources).dataset_id].title }}
                     </div>
-                    <div class="col-auto border border-info p-1 rounded-pill ml-2 mr-2 pl-2 pr-2 bg-white">
+                    <div class="col-auto border border-info p-1 rounded-pill my-1 ml-2 mr-2 pl-2 pr-2 bg-white">
                         {{ $root.$children[0].getResourceById(value[0], resources).collection_id }}
                     </div>
 
@@ -37,8 +39,8 @@
                     </div>
                 </div>
 
-                <div v-else-if="showReferencedPropertyButton" class="row">
-                    <button type="button" class="btn-info btn col-auto mt-1 pb-0 pt-0 rounded-pill" @click="$emit('reset', 0)">
+                <div v-else-if="showReferencedPropertyButton" class="row align-items-center">
+                    <button type="button" class="btn-info btn col-auto my-1 pb-0 pt-0 rounded-pill" @click="$emit('reset', 0)">
                         {{ value[0] }}
                     </button>
                 </div>
@@ -48,16 +50,16 @@
                 <div v-if="!Array.isArray(resources)" class="col-auto p-1">
                     <octicon name="arrow-right" />
                 </div>
-                <div class="form-group col-auto">
-                    <div class="row">
+                <div class="col-auto">
+                    <div class="row align-items-center">
                         <template v-if="!value[1]">
-                            <v-select class="form-control col-auto" :value="value[1]" @input="updateInput($event, 1)"
+                            <v-select class="col-auto my-1" :value="value[1]" @input="updateInput($event, 1)"
                                       v-bind:class="{'is-invalid': errors.includes('value')}">
                                 <option value="" selected disabled>Choose a property</option>
                                 <option v-for="property_opt in Object.keys(properties)" :value="property_opt">{{ property_opt }}</option>
                             </v-select>
                         </template>
-                        <button v-else type="button" class=" mt-1 col-auto btn-info btn pb-0 pt-0 rounded-pill" @click="$emit('reset', 1)">
+                        <button v-else type="button" class="my-1 col-auto btn-info btn pb-0 pt-0 rounded-pill" @click="$emit('reset', 1)">
                             {{ value[1] }}
                         </button>
                     </div>

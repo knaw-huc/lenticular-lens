@@ -1,6 +1,6 @@
 <template>
-    <div class="bg-white row">
-        <div v-if="!match_resource" class="form-group col-auto pr-0" @mouseenter="hovering = true" @mouseleave="hovering = false">
+    <div class="bg-white row align-items-center">
+        <div v-if="!match_resource" class="col-auto pr-0" @mouseenter="hovering = true" @mouseleave="hovering = false">
             <v-select
                     @input="$emit('input', $event); hovering = false"
                     :value="match_resource"
@@ -19,7 +19,7 @@
             {{ match_resource.label }}
         </div>
 
-        <div class="form-group col-auto pl-0" @mouseenter="hovering = true" @mouseleave="hovering = false">
+        <div class="col-auto pl-0" @mouseenter="hovering = true" @mouseleave="hovering = false">
             <button-delete @click="$emit('remove')" :scale="1.4" :class="'pt-1' + showOnHover"/>
         </div>
     </div>

@@ -1,11 +1,11 @@
 <template>
     <div v-if="filter_object.conditions" :class="'shadow p-3 border mb-3 ' + style_class">
-        <div class="row">
+        <div class="row align-items-center">
             <div class="col-auto">
                 <octicon name="chevron-down" scale="2" v-b-toggle="uid"></octicon>
             </div>
 
-            <div v-if="filter_object.conditions.length > 1" class="form-group col">
+            <div v-if="filter_object.conditions.length > 1" class="col">
                 <v-select v-model="filter_object.type">
                     <option value="AND">All conditions must be met (AND)</option>
                     <option value="OR">At least one of the conditions must be met (OR)</option>
@@ -16,42 +16,45 @@
                 No filter
             </div>
 
-            <div v-if="!is_root" class="form-group col-auto">
-                <button-delete @click="$emit('remove')" title="Delete this Group" class="pt-1 pr-0"/>
-            </div>
+            <div class="col-auto">
+                <div class="row">
+                    <div v-if="!is_root" class="col-auto">
+                        <button-delete @click="$emit('remove')" title="Delete this Group" class="pt-1 pr-0"/>
+                    </div>
 
-            <div v-if="!is_root" class="form-group col-auto">
-                <button-add v-on:click="addFilterCondition" title="Add Filter Condition"/>
+                    <div v-if="!is_root" class="col-auto">
+                        <button-add v-on:click="addFilterCondition" title="Add Filter Condition"/>
+                    </div>
+                </div>
             </div>
         </div>
 
         <b-collapse visible :id="uid" :ref="uid">
-            <template v-if="filter_object.type">
-                <resource-filter-group-component
-                        v-for="(condition, condition_index) in filter_object.conditions"
-                        :filter_object="condition"
-                        :index="condition_index"
-                        :uid="uid + '_' + condition_index"
-                        :datasets="datasets"
-                        :resource="resource"
-                        :resources="resources"
-                        @remove="removeCondition(condition_index)"
-                        @promote-condition="$emit('promote-condition', $event)"
-                        @demote-filter-group="$emit('demote-filter-group', $event)"
-                        ref="filterGroupComponents"
-                />
-            </template>
+            <resource-filter-group-component
+                v-if="filter_object.type"
+                v-for="(condition, condition_index) in filter_object.conditions"
+                :filter_object="condition"
+                :index="condition_index"
+                :uid="uid + '_' + condition_index"
+                :datasets="datasets"
+                :resource="resource"
+                :resources="resources"
+                @remove="removeCondition(condition_index)"
+                @promote-condition="$emit('promote-condition', $event)"
+                @demote-filter-group="$emit('demote-filter-group', $event)"
+                ref="filterGroupComponents"
+            />
         </b-collapse>
     </div>
-    <div v-else-if="!filter_object.conditions">
-        <filter-condition-component
-                :condition="filter_object"
-                :index="index"
-                @remove="$emit('remove')"
-                @add-condition="$emit('promote-condition', {'filter_object': $parent.$parent.filter_object, 'index': index})"
-                ref="filterConditionComponent"
-        />
-    </div>
+
+    <filter-condition-component
+        v-else-if="!filter_object.conditions"
+        :condition="filter_object"
+        :index="index"
+        @remove="$emit('remove')"
+        @add-condition="$emit('promote-condition', {'filter_object': $parent.$parent.filter_object, 'index': index})"
+        ref="filterConditionComponent"
+    />
 </template>
 <script>
     import ResourceFilterCondition from './ResourceFilterCondition';
@@ -64,7 +67,13 @@
         },
         computed: {
             style_class() {
-                return this.is_root || this.$parent.$parent.style_class === 'bg-primary-light border-primary' ? 'bg-info-light border-info' : 'bg-primary-light border-primary'
+                let styleClass = this.is_root ? '' : 'mt-3 ';
+                if (this.is_root || this.$parent.$parent.style_class.includes('bg-primary-light'))
+                    styleClass += 'bg-info-light border-info';
+                else
+                    styleClass += 'bg-primary-light border-primary';
+
+                return styleClass;
             },
         },
         methods: {

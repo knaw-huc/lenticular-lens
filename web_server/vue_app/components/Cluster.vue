@@ -1,15 +1,15 @@
 <template>
   <div class="border p-4 mt-4 bg-light">
-    <div class="row justify-content-between">
+    <div class="row align-items-center justify-content-between">
       <div class="col-auto">
         <octicon name="chevron-down" scale="3" v-b-toggle="'clustering_clusters_match_' + match.id"></octicon>
       </div>
 
-      <div class="col align-self-center" v-b-toggle="'clustering_clusters_match_' + match.id">
+      <div class="col" v-b-toggle="'clustering_clusters_match_' + match.id">
         <div class="h2">{{ match.label }}</div>
       </div>
 
-      <div v-if="getResultForMatch(match.id).clusterings.length > 0" class="col-auto align-self-center">
+      <div v-if="getResultForMatch(match.id).clusterings.length > 0" class="col-auto">
         <div class="h3 text-success">Clustered</div>
       </div>
 
@@ -24,7 +24,7 @@
         </button>
       </div>
 
-      <div v-if="app.job_data" class="col-auto align-self-center form-group">
+      <div v-if="app.job_data" class="col-auto">
         <select class="form-control" v-model="association" :id="'match_' + match.id + '_association'">
           <option value="">No association</option>
           <option v-for="association_file_name in app.job_data.association_files" :value="association_file_name">{{
@@ -34,7 +34,7 @@
       </div>
     </div>
 
-    <div class="row" v-if="getResultForMatch(match.id).clusterings.length > 0">
+    <div class="row mt-3" v-if="getResultForMatch(match.id).clusterings.length > 0">
       <div class="col-5">
         <div class="row">
           <div class="col-6">
@@ -86,11 +86,15 @@
     <b-collapse
         @show="getClusters(getResultForMatch(match.id).clusterings[0].clustering_id)"
         :id="'clustering_clusters_match_' + match.id"
-        class="pt-4"
+        class="pt-3"
         accordion="clusters-matches-accordion"
     >
-      <div class="border p-4 mb-4 bg-info-light">
-        <div class="row" v-for="(property, idx) in this.properties">
+      <div class="shadow p-3 border mb-3 bg-info-light border-info">
+        <div class="row">
+          <div class="h4 col-auto">Properties</div>
+        </div>
+
+        <div class="row ml-4" v-for="(property, idx) in this.properties">
           <property-component
               :property="property"
               :singular="true"

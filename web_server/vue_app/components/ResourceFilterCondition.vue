@@ -1,12 +1,11 @@
 <template>
-<div class="border border-dark p-3 mb-3">
-    <div class="row justify-content-between">
-        <div class="col-10">
-            <div class="row">
-                <div class="col-auto form-group mb-0">
-                    <label>Property:</label>
-                </div>
-            </div>
+<div class="border border-dark p-3 mt-3">
+    <div class="row align-items-top justify-content-between mb-2">
+        <div class="col-auto">
+            <label>Property:</label>
+        </div>
+
+        <div class="col">
             <property-component
                     :property="condition.property"
                     :singular="true"
@@ -14,21 +13,22 @@
                     ref="propertyComponent"
             />
         </div>
+
         <div class="col-auto">
-            <div class="row justify-content-end">
-                <div class="form-group col-auto">
+            <div class="row">
+                <div class="col-auto">
                     <button-delete @click="$emit('remove')" title="Delete this Filter Condition" class="pt-1 pr-0"/>
                 </div>
 
-                <div class="form-group col-auto">
+                <div class="col-auto">
                     <button-add v-on:click="$emit('add-condition')" title="Add Filter Condition and Create Group"/>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="row">
-        <div class="form-group col-3">
+    <div class="form-row align-items-center">
+        <div class="col-3">
             <v-select v-model="condition.type" v-bind:class="{'is-invalid': errors.includes('condition')}">
                 <option value="" disabled selected>Choose a filter type</option>
                 <option value="=">Equal to</option>
@@ -40,19 +40,19 @@
             </v-select>
         </div>
 
-        <div v-if="['=', '!=', 'date_is_within', 'ilike'].indexOf(condition.type) > -1" class="form-group col-3">
+        <div v-if="['=', '!=', 'date_is_within', 'ilike'].indexOf(condition.type) > -1" class="col-3">
             <input class="form-control" type="text" v-model="condition.value" placeholder="Enter a value"
                    v-bind:class="{'is-invalid': errors.includes('value')}">
         </div>
 
-        <div v-if="condition.type == 'appearances'" class="form-group col-2">
+        <div v-if="condition.type == 'appearances'" class="col-2">
             <v-select v-model="condition.operator">
                 <option value="<=" selected>Max.</option>
                 <option value=">=" selected>Min.</option>
                 <option value="=" selected>Exactly</option>
             </v-select>
         </div>
-        <div v-if="condition.type == 'appearances'" class="form-group col-1">
+        <div v-if="condition.type == 'appearances'" class="col-1">
             <input class="form-control" type="number" min="0" step="1" v-model.number="condition.value"
                    v-bind:class="{'is-invalid': errors.includes('value')}">
         </div>

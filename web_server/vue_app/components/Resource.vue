@@ -1,6 +1,6 @@
 <template>
 <div class="border p-4 mt-4 bg-light">
-    <div class="row justify-content-between">
+    <div class="row align-items-center justify-content-between mb-2">
         <div class="col-auto">
             <octicon name="chevron-down" scale="3" v-b-toggle="'resource_' + resource.id"></octicon>
         </div>
@@ -9,7 +9,7 @@
             <edit-label-component v-model="resource.label" :required="true"/>
         </div>
 
-        <div class="form-group col-1">
+        <div class="col-auto">
             <button-delete v-on:click="$emit('remove')"
                            :disabled="isUsedInAlignmentResults()" title="Delete Collection"/>
         </div>
@@ -44,7 +44,7 @@
             </div>
 
             <template v-if="resource.collection_id != ''">
-                <div class="pb-3 pt-5 row">
+                <div class="pb-3 pt-4 row">
                     <div class="h3 col-auto">Filter</div>
                     <div class="col-auto pl-0">
                         <button-add @click="addRootFilterCondition" title="Add Filter Condition"/>

@@ -1,10 +1,11 @@
 <template>
-    <div class="border border-dark p-3 mb-3">
-        <div class="row justify-content-between">
+    <div class="border border-dark p-3 mt-3">
+        <div class="row align-items-top justify-content-between mb-2">
             <div class="col-auto">
                 <div class="row">
-                    <label class="h4 col-auto align-self-center">Method</label>
-                    <div class="col-auto form-group">
+                    <label class="h4 col-auto">Method</label>
+
+                    <div class="col-auto">
                         <v-select v-model="condition.method_name" @input="handleMethodIndexChange"
                                   v-bind:class="{'is-invalid': errors.includes('method_name')}">
                             <option disabled selected value="">Select a method</option>
@@ -57,12 +58,12 @@
             </div>
 
             <div class="col-auto">
-                <div class="row justify-content-end">
-                    <div class="form-group col-auto">
+                <div class="row">
+                    <div class="col-auto">
                         <button-delete @click="$emit('remove')" title="Delete this Method" class="pt-1 pr-0"/>
                     </div>
 
-                    <div class="form-group col-auto">
+                    <div class="col-auto">
                         <button-add v-on:click="$emit('add-matching-method')" title="Add Method and Create Group"/>
                     </div>
                 </div>
@@ -94,10 +95,10 @@
                                     ref="propertyComponents"
                             />
 
-                            <div class="row">
-                                <div class="col-auto h5 pt-1">Transformers</div>
+                            <div class="row align-items-center">
+                                <div class="col-auto h5">Transformers</div>
 
-                                <div class="form-group col-auto p-0">
+                                <div class="col-auto">
                                     <button-add
                                             @click="$root.$children[0].getOrCreate(resource, 'transformers', []).push('')"
                                             scale="0.7"
@@ -105,8 +106,8 @@
                                     />
                                 </div>
                                 <div v-for="(transformer, index) in resource.transformers" class="col-auto">
-                                    <div class="row">
-                                        <div class="form-group col-auto pr-0">
+                                    <div class="row align-items-center">
+                                        <div class="col-auto pr-0">
                                             <v-select v-model="resource.transformers[index]"
                                                       v-bind:class="{'is-invalid': errors.includes(`${resources_key}_transformers`)}">
                                                 <option value="" selected disabled>Select a function</option>
@@ -118,7 +119,7 @@
                                             </div>
                                         </div>
 
-                                        <div class="form-group col-auto pl-0">
+                                        <div class="col-auto pl-0">
                                             <button-delete @click="resource.transformers.splice(index, 1)" scale="1.3" class="pt-1"/>
                                         </div>
                                     </div>
