@@ -7,6 +7,8 @@
                 :resources="getResourcesForIndex(index)"
                 :properties="index === 0 ? dataset[resource.collection_id] : dataset[property[index]]"
                 :singular="singular"
+                :singular-resource-info="singularResourceInfo"
+                :follow-referenced-collection="followReferencedCollection"
                 @input="updateProperty($event, index)"
                 @reset="$emit('resetProperty', index + $event)"
                 @delete="$emit('delete')"
@@ -48,7 +50,10 @@
                 let collection_id = this.property.length > 2 ? this.property.slice(-2)[0] : this.resource.collection_id;
 
                 if (this.property.slice(-1)[0] && Object.keys(this.$root.$children[0].getOrCreate(this.dataset[collection_id][this.property.slice(-1)[0]], 'referencedCollections', [])).length > 0) {
-                    this.property.push('', '');
+                    if (!this.followReferencedCollection)
+                        this.property.push('__value__', '');
+                    else
+                        this.property.push('', '');
                 }
             },
         },
@@ -57,6 +62,14 @@
             singular: {
                 type: Boolean,
                 default: false,
+            },
+            singularResourceInfo: {
+                type: Boolean,
+                default: false,
+            },
+            followReferencedCollection: {
+                type: Boolean,
+                default: true
             },
         },
     }

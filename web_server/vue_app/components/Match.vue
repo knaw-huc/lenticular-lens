@@ -62,7 +62,8 @@
         </div>
     </div>
 
-    <b-collapse :id="'match_' + match.id" :ref="'match_' + match.id" accordion="matches-accordion" @shown="scrollTo('match_' + match.id)">
+    <b-collapse :id="'match_' + match.id" :ref="'match_' + match.id" class="pt-4"
+                accordion="matches-accordion" @shown="scrollTo('match_' + match.id)">
         <fieldset :disabled="!!app.job_data.results.alignments[match.id]">
             <div class="bg-white border p-3 justify-content-around rounded mb-4">
                 <div class="row justify-content-between">

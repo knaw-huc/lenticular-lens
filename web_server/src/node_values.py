@@ -15,18 +15,27 @@ def get_node_values(uris, query_data):
 
     for graph_set in query_data:
         for datatype_set in graph_set['data']:
-            table_name = get_table_name(graph_set['graph'], datatype_set['entity_type'])
-            if table_name:
+            table_info = get_table_info(graph_set['graph'], datatype_set['entity_type'])
+            if table_info:
                 for property_name in datatype_set['properties']:
-                    sql = psycopg2_sql.SQL('''
-                    SELECT uri AS resource, {graph_name} AS dataset, {property_literal} AS property, {property_name} AS value
+                    column_name = get_column_name(property_name)
+                    template = '''
+                    SELECT uri AS resource, {graph_name} AS dataset, {property_literal} AS property, 
+                    jsonb_array_elements_text({property_name}) AS value
                     FROM {table_name}
                     WHERE uri IN %(uris)s
-                    ''').format(
+                    ''' if table_info[1][column_name]['LIST'] else '''
+                    SELECT uri AS resource, {graph_name} AS dataset, {property_literal} AS property, 
+                    {property_name} AS value
+                    FROM {table_name}
+                    WHERE uri IN %(uris)s
+                    '''
+
+                    sql = psycopg2_sql.SQL(template).format(
                         graph_name=psycopg2_sql.Literal(graph_set['graph']),
                         property_literal=psycopg2_sql.Literal(property_name),
-                        property_name=psycopg2_sql.Identifier(get_column_name(property_name)),
-                        table_name=psycopg2_sql.Identifier(table_name),
+                        property_name=psycopg2_sql.Identifier(column_name),
+                        table_name=psycopg2_sql.Identifier(table_info[0]),
                     )
 
                     sqls.append(sql)
@@ -40,13 +49,13 @@ def get_node_values(uris, query_data):
     }
 
 
-def get_table_name(dataset_id, collection_id):
+def get_table_info(dataset_id, collection_id):
     result = run_query(
-        'SELECT table_name FROM timbuctoo_tables WHERE dataset_id = %s AND collection_id = %s',
+        'SELECT table_name, columns FROM timbuctoo_tables WHERE dataset_id = %s AND collection_id = %s',
         (dataset_id, collection_id)
     )
 
-    return result[0] + '_expanded' if result else result
+    return result if result else result
 
 
 def get_column_name(property_name):

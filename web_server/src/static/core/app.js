@@ -63,7 +63,7 @@
 /******/
 /******/ 	var hotApplyOnUpdate = true;
 /******/ 	// eslint-disable-next-line no-unused-vars
-/******/ 	var hotCurrentHash = "e369baf6e9e6e0d769da";
+/******/ 	var hotCurrentHash = "2beaedac9c43664d8f8c";
 /******/ 	var hotRequestTimeout = 10000;
 /******/ 	var hotCurrentModuleData = {};
 /******/ 	var hotCurrentChildModule;
@@ -825,6 +825,93 @@ if(true) {
 
 /***/ }),
 
+/***/ "./components/Cluster.vue":
+/*!********************************!*\
+  !*** ./components/Cluster.vue ***!
+  \********************************/
+/*! exports provided: default */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var _Cluster_vue_vue_type_template_id_9e494522___WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./Cluster.vue?vue&type=template&id=9e494522& */ "./components/Cluster.vue?vue&type=template&id=9e494522&");
+/* harmony import */ var _Cluster_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./Cluster.vue?vue&type=script&lang=js& */ "./components/Cluster.vue?vue&type=script&lang=js&");
+/* empty/unused harmony star reexport *//* harmony import */ var _node_modules_vue_loader_lib_runtime_componentNormalizer_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../node_modules/vue-loader/lib/runtime/componentNormalizer.js */ "./node_modules/vue-loader/lib/runtime/componentNormalizer.js");
+
+
+
+
+
+/* normalize component */
+
+var component = Object(_node_modules_vue_loader_lib_runtime_componentNormalizer_js__WEBPACK_IMPORTED_MODULE_2__["default"])(
+  _Cluster_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_1__["default"],
+  _Cluster_vue_vue_type_template_id_9e494522___WEBPACK_IMPORTED_MODULE_0__["render"],
+  _Cluster_vue_vue_type_template_id_9e494522___WEBPACK_IMPORTED_MODULE_0__["staticRenderFns"],
+  false,
+  null,
+  null,
+  null
+  
+)
+
+/* hot reload */
+if (true) {
+  var api = __webpack_require__(/*! ./node_modules/vue-hot-reload-api/dist/index.js */ "./node_modules/vue-hot-reload-api/dist/index.js")
+  api.install(__webpack_require__(/*! vue */ "./node_modules/vue/dist/vue.runtime.esm.js"))
+  if (api.compatible) {
+    module.hot.accept()
+    if (!module.hot.data) {
+      api.createRecord('9e494522', component.options)
+    } else {
+      api.reload('9e494522', component.options)
+    }
+    module.hot.accept(/*! ./Cluster.vue?vue&type=template&id=9e494522& */ "./components/Cluster.vue?vue&type=template&id=9e494522&", function(__WEBPACK_OUTDATED_DEPENDENCIES__) { /* harmony import */ _Cluster_vue_vue_type_template_id_9e494522___WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./Cluster.vue?vue&type=template&id=9e494522& */ "./components/Cluster.vue?vue&type=template&id=9e494522&");
+(function () {
+      api.rerender('9e494522', {
+        render: _Cluster_vue_vue_type_template_id_9e494522___WEBPACK_IMPORTED_MODULE_0__["render"],
+        staticRenderFns: _Cluster_vue_vue_type_template_id_9e494522___WEBPACK_IMPORTED_MODULE_0__["staticRenderFns"]
+      })
+    })(__WEBPACK_OUTDATED_DEPENDENCIES__); })
+  }
+}
+component.options.__file = "components/Cluster.vue"
+/* harmony default export */ __webpack_exports__["default"] = (component.exports);
+
+/***/ }),
+
+/***/ "./components/Cluster.vue?vue&type=script&lang=js&":
+/*!*********************************************************!*\
+  !*** ./components/Cluster.vue?vue&type=script&lang=js& ***!
+  \*********************************************************/
+/*! exports provided: default */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var _node_modules_cache_loader_dist_cjs_js_ref_0_0_node_modules_vue_loader_lib_index_js_vue_loader_options_Cluster_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! -!../node_modules/cache-loader/dist/cjs.js??ref--0-0!../node_modules/vue-loader/lib??vue-loader-options!./Cluster.vue?vue&type=script&lang=js& */ "./node_modules/cache-loader/dist/cjs.js?!./node_modules/vue-loader/lib/index.js?!./components/Cluster.vue?vue&type=script&lang=js&");
+/* empty/unused harmony star reexport */ /* harmony default export */ __webpack_exports__["default"] = (_node_modules_cache_loader_dist_cjs_js_ref_0_0_node_modules_vue_loader_lib_index_js_vue_loader_options_Cluster_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_0__["default"]); 
+
+/***/ }),
+
+/***/ "./components/Cluster.vue?vue&type=template&id=9e494522&":
+/*!***************************************************************!*\
+  !*** ./components/Cluster.vue?vue&type=template&id=9e494522& ***!
+  \***************************************************************/
+/*! exports provided: render, staticRenderFns */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var _cache_loader_cacheDirectory_node_modules_cache_vue_loader_cacheIdentifier_428460bc_vue_loader_template_node_modules_vue_loader_lib_loaders_templateLoader_js_vue_loader_options_node_modules_cache_loader_dist_cjs_js_ref_0_0_node_modules_vue_loader_lib_index_js_vue_loader_options_Cluster_vue_vue_type_template_id_9e494522___WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! -!cache-loader?{"cacheDirectory":"node_modules/.cache/vue-loader","cacheIdentifier":"428460bc-vue-loader-template"}!../node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!../node_modules/cache-loader/dist/cjs.js??ref--0-0!../node_modules/vue-loader/lib??vue-loader-options!./Cluster.vue?vue&type=template&id=9e494522& */ "./node_modules/cache-loader/dist/cjs.js?{\"cacheDirectory\":\"node_modules/.cache/vue-loader\",\"cacheIdentifier\":\"428460bc-vue-loader-template\"}!./node_modules/vue-loader/lib/loaders/templateLoader.js?!./node_modules/cache-loader/dist/cjs.js?!./node_modules/vue-loader/lib/index.js?!./components/Cluster.vue?vue&type=template&id=9e494522&");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "render", function() { return _cache_loader_cacheDirectory_node_modules_cache_vue_loader_cacheIdentifier_428460bc_vue_loader_template_node_modules_vue_loader_lib_loaders_templateLoader_js_vue_loader_options_node_modules_cache_loader_dist_cjs_js_ref_0_0_node_modules_vue_loader_lib_index_js_vue_loader_options_Cluster_vue_vue_type_template_id_9e494522___WEBPACK_IMPORTED_MODULE_0__["render"]; });
+
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "staticRenderFns", function() { return _cache_loader_cacheDirectory_node_modules_cache_vue_loader_cacheIdentifier_428460bc_vue_loader_template_node_modules_vue_loader_lib_loaders_templateLoader_js_vue_loader_options_node_modules_cache_loader_dist_cjs_js_ref_0_0_node_modules_vue_loader_lib_index_js_vue_loader_options_Cluster_vue_vue_type_template_id_9e494522___WEBPACK_IMPORTED_MODULE_0__["staticRenderFns"]; });
+
+
+
+/***/ }),
+
 /***/ "./components/ClusterTableRow.vue":
 /*!****************************************!*\
   !*** ./components/ClusterTableRow.vue ***!
@@ -1378,180 +1465,6 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "render", function() { return _cache_loader_cacheDirectory_node_modules_cache_vue_loader_cacheIdentifier_428460bc_vue_loader_template_node_modules_vue_loader_lib_loaders_templateLoader_js_vue_loader_options_node_modules_cache_loader_dist_cjs_js_ref_0_0_node_modules_vue_loader_lib_index_js_vue_loader_options_MatchResource_vue_vue_type_template_id_6c440bb0___WEBPACK_IMPORTED_MODULE_0__["render"]; });
 
 /* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "staticRenderFns", function() { return _cache_loader_cacheDirectory_node_modules_cache_vue_loader_cacheIdentifier_428460bc_vue_loader_template_node_modules_vue_loader_lib_loaders_templateLoader_js_vue_loader_options_node_modules_cache_loader_dist_cjs_js_ref_0_0_node_modules_vue_loader_lib_index_js_vue_loader_options_MatchResource_vue_vue_type_template_id_6c440bb0___WEBPACK_IMPORTED_MODULE_0__["staticRenderFns"]; });
-
-
-
-/***/ }),
-
-/***/ "./components/MatchingFieldBoolean.vue":
-/*!*********************************************!*\
-  !*** ./components/MatchingFieldBoolean.vue ***!
-  \*********************************************/
-/*! exports provided: default */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony import */ var _MatchingFieldBoolean_vue_vue_type_template_id_10309e74___WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./MatchingFieldBoolean.vue?vue&type=template&id=10309e74& */ "./components/MatchingFieldBoolean.vue?vue&type=template&id=10309e74&");
-/* harmony import */ var _MatchingFieldBoolean_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./MatchingFieldBoolean.vue?vue&type=script&lang=js& */ "./components/MatchingFieldBoolean.vue?vue&type=script&lang=js&");
-/* empty/unused harmony star reexport *//* harmony import */ var _node_modules_vue_loader_lib_runtime_componentNormalizer_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../node_modules/vue-loader/lib/runtime/componentNormalizer.js */ "./node_modules/vue-loader/lib/runtime/componentNormalizer.js");
-
-
-
-
-
-/* normalize component */
-
-var component = Object(_node_modules_vue_loader_lib_runtime_componentNormalizer_js__WEBPACK_IMPORTED_MODULE_2__["default"])(
-  _MatchingFieldBoolean_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_1__["default"],
-  _MatchingFieldBoolean_vue_vue_type_template_id_10309e74___WEBPACK_IMPORTED_MODULE_0__["render"],
-  _MatchingFieldBoolean_vue_vue_type_template_id_10309e74___WEBPACK_IMPORTED_MODULE_0__["staticRenderFns"],
-  false,
-  null,
-  null,
-  null
-  
-)
-
-/* hot reload */
-if (true) {
-  var api = __webpack_require__(/*! ./node_modules/vue-hot-reload-api/dist/index.js */ "./node_modules/vue-hot-reload-api/dist/index.js")
-  api.install(__webpack_require__(/*! vue */ "./node_modules/vue/dist/vue.runtime.esm.js"))
-  if (api.compatible) {
-    module.hot.accept()
-    if (!module.hot.data) {
-      api.createRecord('10309e74', component.options)
-    } else {
-      api.reload('10309e74', component.options)
-    }
-    module.hot.accept(/*! ./MatchingFieldBoolean.vue?vue&type=template&id=10309e74& */ "./components/MatchingFieldBoolean.vue?vue&type=template&id=10309e74&", function(__WEBPACK_OUTDATED_DEPENDENCIES__) { /* harmony import */ _MatchingFieldBoolean_vue_vue_type_template_id_10309e74___WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./MatchingFieldBoolean.vue?vue&type=template&id=10309e74& */ "./components/MatchingFieldBoolean.vue?vue&type=template&id=10309e74&");
-(function () {
-      api.rerender('10309e74', {
-        render: _MatchingFieldBoolean_vue_vue_type_template_id_10309e74___WEBPACK_IMPORTED_MODULE_0__["render"],
-        staticRenderFns: _MatchingFieldBoolean_vue_vue_type_template_id_10309e74___WEBPACK_IMPORTED_MODULE_0__["staticRenderFns"]
-      })
-    })(__WEBPACK_OUTDATED_DEPENDENCIES__); })
-  }
-}
-component.options.__file = "components/MatchingFieldBoolean.vue"
-/* harmony default export */ __webpack_exports__["default"] = (component.exports);
-
-/***/ }),
-
-/***/ "./components/MatchingFieldBoolean.vue?vue&type=script&lang=js&":
-/*!**********************************************************************!*\
-  !*** ./components/MatchingFieldBoolean.vue?vue&type=script&lang=js& ***!
-  \**********************************************************************/
-/*! exports provided: default */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony import */ var _node_modules_cache_loader_dist_cjs_js_ref_0_0_node_modules_vue_loader_lib_index_js_vue_loader_options_MatchingFieldBoolean_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! -!../node_modules/cache-loader/dist/cjs.js??ref--0-0!../node_modules/vue-loader/lib??vue-loader-options!./MatchingFieldBoolean.vue?vue&type=script&lang=js& */ "./node_modules/cache-loader/dist/cjs.js?!./node_modules/vue-loader/lib/index.js?!./components/MatchingFieldBoolean.vue?vue&type=script&lang=js&");
-/* empty/unused harmony star reexport */ /* harmony default export */ __webpack_exports__["default"] = (_node_modules_cache_loader_dist_cjs_js_ref_0_0_node_modules_vue_loader_lib_index_js_vue_loader_options_MatchingFieldBoolean_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_0__["default"]); 
-
-/***/ }),
-
-/***/ "./components/MatchingFieldBoolean.vue?vue&type=template&id=10309e74&":
-/*!****************************************************************************!*\
-  !*** ./components/MatchingFieldBoolean.vue?vue&type=template&id=10309e74& ***!
-  \****************************************************************************/
-/*! exports provided: render, staticRenderFns */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony import */ var _cache_loader_cacheDirectory_node_modules_cache_vue_loader_cacheIdentifier_428460bc_vue_loader_template_node_modules_vue_loader_lib_loaders_templateLoader_js_vue_loader_options_node_modules_cache_loader_dist_cjs_js_ref_0_0_node_modules_vue_loader_lib_index_js_vue_loader_options_MatchingFieldBoolean_vue_vue_type_template_id_10309e74___WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! -!cache-loader?{"cacheDirectory":"node_modules/.cache/vue-loader","cacheIdentifier":"428460bc-vue-loader-template"}!../node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!../node_modules/cache-loader/dist/cjs.js??ref--0-0!../node_modules/vue-loader/lib??vue-loader-options!./MatchingFieldBoolean.vue?vue&type=template&id=10309e74& */ "./node_modules/cache-loader/dist/cjs.js?{\"cacheDirectory\":\"node_modules/.cache/vue-loader\",\"cacheIdentifier\":\"428460bc-vue-loader-template\"}!./node_modules/vue-loader/lib/loaders/templateLoader.js?!./node_modules/cache-loader/dist/cjs.js?!./node_modules/vue-loader/lib/index.js?!./components/MatchingFieldBoolean.vue?vue&type=template&id=10309e74&");
-/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "render", function() { return _cache_loader_cacheDirectory_node_modules_cache_vue_loader_cacheIdentifier_428460bc_vue_loader_template_node_modules_vue_loader_lib_loaders_templateLoader_js_vue_loader_options_node_modules_cache_loader_dist_cjs_js_ref_0_0_node_modules_vue_loader_lib_index_js_vue_loader_options_MatchingFieldBoolean_vue_vue_type_template_id_10309e74___WEBPACK_IMPORTED_MODULE_0__["render"]; });
-
-/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "staticRenderFns", function() { return _cache_loader_cacheDirectory_node_modules_cache_vue_loader_cacheIdentifier_428460bc_vue_loader_template_node_modules_vue_loader_lib_loaders_templateLoader_js_vue_loader_options_node_modules_cache_loader_dist_cjs_js_ref_0_0_node_modules_vue_loader_lib_index_js_vue_loader_options_MatchingFieldBoolean_vue_vue_type_template_id_10309e74___WEBPACK_IMPORTED_MODULE_0__["staticRenderFns"]; });
-
-
-
-/***/ }),
-
-/***/ "./components/MatchingFieldValue.vue":
-/*!*******************************************!*\
-  !*** ./components/MatchingFieldValue.vue ***!
-  \*******************************************/
-/*! exports provided: default */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony import */ var _MatchingFieldValue_vue_vue_type_template_id_2250d30f___WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./MatchingFieldValue.vue?vue&type=template&id=2250d30f& */ "./components/MatchingFieldValue.vue?vue&type=template&id=2250d30f&");
-/* harmony import */ var _MatchingFieldValue_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./MatchingFieldValue.vue?vue&type=script&lang=js& */ "./components/MatchingFieldValue.vue?vue&type=script&lang=js&");
-/* empty/unused harmony star reexport *//* harmony import */ var _node_modules_vue_loader_lib_runtime_componentNormalizer_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../node_modules/vue-loader/lib/runtime/componentNormalizer.js */ "./node_modules/vue-loader/lib/runtime/componentNormalizer.js");
-
-
-
-
-
-/* normalize component */
-
-var component = Object(_node_modules_vue_loader_lib_runtime_componentNormalizer_js__WEBPACK_IMPORTED_MODULE_2__["default"])(
-  _MatchingFieldValue_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_1__["default"],
-  _MatchingFieldValue_vue_vue_type_template_id_2250d30f___WEBPACK_IMPORTED_MODULE_0__["render"],
-  _MatchingFieldValue_vue_vue_type_template_id_2250d30f___WEBPACK_IMPORTED_MODULE_0__["staticRenderFns"],
-  false,
-  null,
-  null,
-  null
-  
-)
-
-/* hot reload */
-if (true) {
-  var api = __webpack_require__(/*! ./node_modules/vue-hot-reload-api/dist/index.js */ "./node_modules/vue-hot-reload-api/dist/index.js")
-  api.install(__webpack_require__(/*! vue */ "./node_modules/vue/dist/vue.runtime.esm.js"))
-  if (api.compatible) {
-    module.hot.accept()
-    if (!module.hot.data) {
-      api.createRecord('2250d30f', component.options)
-    } else {
-      api.reload('2250d30f', component.options)
-    }
-    module.hot.accept(/*! ./MatchingFieldValue.vue?vue&type=template&id=2250d30f& */ "./components/MatchingFieldValue.vue?vue&type=template&id=2250d30f&", function(__WEBPACK_OUTDATED_DEPENDENCIES__) { /* harmony import */ _MatchingFieldValue_vue_vue_type_template_id_2250d30f___WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./MatchingFieldValue.vue?vue&type=template&id=2250d30f& */ "./components/MatchingFieldValue.vue?vue&type=template&id=2250d30f&");
-(function () {
-      api.rerender('2250d30f', {
-        render: _MatchingFieldValue_vue_vue_type_template_id_2250d30f___WEBPACK_IMPORTED_MODULE_0__["render"],
-        staticRenderFns: _MatchingFieldValue_vue_vue_type_template_id_2250d30f___WEBPACK_IMPORTED_MODULE_0__["staticRenderFns"]
-      })
-    })(__WEBPACK_OUTDATED_DEPENDENCIES__); })
-  }
-}
-component.options.__file = "components/MatchingFieldValue.vue"
-/* harmony default export */ __webpack_exports__["default"] = (component.exports);
-
-/***/ }),
-
-/***/ "./components/MatchingFieldValue.vue?vue&type=script&lang=js&":
-/*!********************************************************************!*\
-  !*** ./components/MatchingFieldValue.vue?vue&type=script&lang=js& ***!
-  \********************************************************************/
-/*! exports provided: default */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony import */ var _node_modules_cache_loader_dist_cjs_js_ref_0_0_node_modules_vue_loader_lib_index_js_vue_loader_options_MatchingFieldValue_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! -!../node_modules/cache-loader/dist/cjs.js??ref--0-0!../node_modules/vue-loader/lib??vue-loader-options!./MatchingFieldValue.vue?vue&type=script&lang=js& */ "./node_modules/cache-loader/dist/cjs.js?!./node_modules/vue-loader/lib/index.js?!./components/MatchingFieldValue.vue?vue&type=script&lang=js&");
-/* empty/unused harmony star reexport */ /* harmony default export */ __webpack_exports__["default"] = (_node_modules_cache_loader_dist_cjs_js_ref_0_0_node_modules_vue_loader_lib_index_js_vue_loader_options_MatchingFieldValue_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_0__["default"]); 
-
-/***/ }),
-
-/***/ "./components/MatchingFieldValue.vue?vue&type=template&id=2250d30f&":
-/*!**************************************************************************!*\
-  !*** ./components/MatchingFieldValue.vue?vue&type=template&id=2250d30f& ***!
-  \**************************************************************************/
-/*! exports provided: render, staticRenderFns */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony import */ var _cache_loader_cacheDirectory_node_modules_cache_vue_loader_cacheIdentifier_428460bc_vue_loader_template_node_modules_vue_loader_lib_loaders_templateLoader_js_vue_loader_options_node_modules_cache_loader_dist_cjs_js_ref_0_0_node_modules_vue_loader_lib_index_js_vue_loader_options_MatchingFieldValue_vue_vue_type_template_id_2250d30f___WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! -!cache-loader?{"cacheDirectory":"node_modules/.cache/vue-loader","cacheIdentifier":"428460bc-vue-loader-template"}!../node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!../node_modules/cache-loader/dist/cjs.js??ref--0-0!../node_modules/vue-loader/lib??vue-loader-options!./MatchingFieldValue.vue?vue&type=template&id=2250d30f& */ "./node_modules/cache-loader/dist/cjs.js?{\"cacheDirectory\":\"node_modules/.cache/vue-loader\",\"cacheIdentifier\":\"428460bc-vue-loader-template\"}!./node_modules/vue-loader/lib/loaders/templateLoader.js?!./node_modules/cache-loader/dist/cjs.js?!./node_modules/vue-loader/lib/index.js?!./components/MatchingFieldValue.vue?vue&type=template&id=2250d30f&");
-/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "render", function() { return _cache_loader_cacheDirectory_node_modules_cache_vue_loader_cacheIdentifier_428460bc_vue_loader_template_node_modules_vue_loader_lib_loaders_templateLoader_js_vue_loader_options_node_modules_cache_loader_dist_cjs_js_ref_0_0_node_modules_vue_loader_lib_index_js_vue_loader_options_MatchingFieldValue_vue_vue_type_template_id_2250d30f___WEBPACK_IMPORTED_MODULE_0__["render"]; });
-
-/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "staticRenderFns", function() { return _cache_loader_cacheDirectory_node_modules_cache_vue_loader_cacheIdentifier_428460bc_vue_loader_template_node_modules_vue_loader_lib_loaders_templateLoader_js_vue_loader_options_node_modules_cache_loader_dist_cjs_js_ref_0_0_node_modules_vue_loader_lib_index_js_vue_loader_options_MatchingFieldValue_vue_vue_type_template_id_2250d30f___WEBPACK_IMPORTED_MODULE_0__["staticRenderFns"]; });
 
 
 
@@ -2625,13 +2538,12 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _components_Property__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./components/Property */ "./components/Property.vue");
 /* harmony import */ var vue_octicon_components_Octicon_vue__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! vue-octicon/components/Octicon.vue */ "./node_modules/vue-octicon/components/Octicon.vue");
 /* harmony import */ var vue_octicon_icons__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! vue-octicon/icons */ "./node_modules/vue-octicon/icons/index.js");
-/* harmony import */ var _components_MatchingFieldValue__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ./components/MatchingFieldValue */ "./components/MatchingFieldValue.vue");
-/* harmony import */ var md5__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! md5 */ "./node_modules/md5/md5.js");
-/* harmony import */ var md5__WEBPACK_IMPORTED_MODULE_15___default = /*#__PURE__*/__webpack_require__.n(md5__WEBPACK_IMPORTED_MODULE_15__);
-/* harmony import */ var vue_form_wizard__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! vue-form-wizard */ "./node_modules/vue-form-wizard/dist/vue-form-wizard.js");
-/* harmony import */ var vue_form_wizard__WEBPACK_IMPORTED_MODULE_16___default = /*#__PURE__*/__webpack_require__.n(vue_form_wizard__WEBPACK_IMPORTED_MODULE_16__);
-/* harmony import */ var vue_form_wizard_dist_vue_form_wizard_min_css__WEBPACK_IMPORTED_MODULE_17__ = __webpack_require__(/*! vue-form-wizard/dist/vue-form-wizard.min.css */ "./node_modules/vue-form-wizard/dist/vue-form-wizard.min.css");
-/* harmony import */ var vue_form_wizard_dist_vue_form_wizard_min_css__WEBPACK_IMPORTED_MODULE_17___default = /*#__PURE__*/__webpack_require__.n(vue_form_wizard_dist_vue_form_wizard_min_css__WEBPACK_IMPORTED_MODULE_17__);
+/* harmony import */ var md5__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! md5 */ "./node_modules/md5/md5.js");
+/* harmony import */ var md5__WEBPACK_IMPORTED_MODULE_14___default = /*#__PURE__*/__webpack_require__.n(md5__WEBPACK_IMPORTED_MODULE_14__);
+/* harmony import */ var vue_form_wizard__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! vue-form-wizard */ "./node_modules/vue-form-wizard/dist/vue-form-wizard.js");
+/* harmony import */ var vue_form_wizard__WEBPACK_IMPORTED_MODULE_15___default = /*#__PURE__*/__webpack_require__.n(vue_form_wizard__WEBPACK_IMPORTED_MODULE_15__);
+/* harmony import */ var vue_form_wizard_dist_vue_form_wizard_min_css__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! vue-form-wizard/dist/vue-form-wizard.min.css */ "./node_modules/vue-form-wizard/dist/vue-form-wizard.min.css");
+/* harmony import */ var vue_form_wizard_dist_vue_form_wizard_min_css__WEBPACK_IMPORTED_MODULE_16___default = /*#__PURE__*/__webpack_require__.n(vue_form_wizard_dist_vue_form_wizard_min_css__WEBPACK_IMPORTED_MODULE_16__);
 
 
 
@@ -2657,20 +2569,16 @@ vue__WEBPACK_IMPORTED_MODULE_1__["default"].component('property-component', _com
 
 
 
-
-
 vue__WEBPACK_IMPORTED_MODULE_1__["default"].component('octicon', vue_octicon_components_Octicon_vue__WEBPACK_IMPORTED_MODULE_12__["default"]);
 
 
 vue__WEBPACK_IMPORTED_MODULE_1__["default"].prototype.$utilities = {
-  md5: md5__WEBPACK_IMPORTED_MODULE_15___default.a,
+  md5: md5__WEBPACK_IMPORTED_MODULE_14___default.a,
 };
 
 
 
-vue__WEBPACK_IMPORTED_MODULE_1__["default"].use(vue_form_wizard__WEBPACK_IMPORTED_MODULE_16___default.a);
-
-vue__WEBPACK_IMPORTED_MODULE_1__["default"].component('matching-field-value-component', _components_MatchingFieldValue__WEBPACK_IMPORTED_MODULE_14__["default"]);
+vue__WEBPACK_IMPORTED_MODULE_1__["default"].use(vue_form_wizard__WEBPACK_IMPORTED_MODULE_15___default.a);
 
 vue__WEBPACK_IMPORTED_MODULE_1__["default"].filter('capitalize', function (value) {
   if (!value) return '';
@@ -30902,6 +30810,264 @@ __webpack_require__(/*! ./_iter-define */ "./node_modules/bootstrap-vue/node_mod
 
 /***/ }),
 
+/***/ "./node_modules/cache-loader/dist/cjs.js?!./node_modules/vue-loader/lib/index.js?!./components/Cluster.vue?vue&type=script&lang=js&":
+/*!*************************************************************************************************************************************************************!*\
+  !*** ./node_modules/cache-loader/dist/cjs.js??ref--0-0!./node_modules/vue-loader/lib??vue-loader-options!./components/Cluster.vue?vue&type=script&lang=js& ***!
+  \*************************************************************************************************************************************************************/
+/*! exports provided: default */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var _ClusterTableRow__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./ClusterTableRow */ "./components/ClusterTableRow.vue");
+/* harmony import */ var _ClusterVisualization__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./ClusterVisualization */ "./components/ClusterVisualization.vue");
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+
+
+
+
+/* harmony default export */ __webpack_exports__["default"] = ({
+    name: "ClusterComponent",
+    components: {
+        ClusterTableRowComponent: _ClusterTableRow__WEBPACK_IMPORTED_MODULE_0__["default"],
+        ClusterVisualizationComponent: _ClusterVisualization__WEBPACK_IMPORTED_MODULE_1__["default"],
+    },
+    data() {
+        return {
+            app: this.$root.$children[0],
+            properties: [],
+            association: '',
+            cluster_id_selected: null,
+            clustering_id: null,
+            clusters: [],
+        }
+    },
+    props: ['match'],
+    computed: {
+        hasProperties() {
+            return !this.properties.map(res => res[1] !== '').includes(false);
+        },
+    },
+    methods: {
+        getClusters(clustering_id) {
+            this.clustering_id = clustering_id;
+
+            fetch('/job/' + this.job_id + '/clusters/' + clustering_id + '?association=' + this.association)
+                .then((response) => response.json())
+                .then((data) => {
+                    this.clusters = data;
+                });
+        },
+        getResultForMatch(match_id) {
+            let clusterings = [];
+
+            if (this.app.job_data) {
+                this.app.job_data.results.clusterings.forEach(clustering => {
+                    if (clustering.alignment === match_id) {
+                        clusterings.push(clustering);
+                    }
+                });
+            }
+
+            return {
+                'clusterings': clusterings,
+            }
+        },
+        createClustering(mapping_id, event) {
+            if (event) {
+                let btn = event.target;
+                btn.setAttribute('disabled', 'disabled');
+            }
+            const clustered = this.getResultForMatch(mapping_id).clusterings.length > 0;
+
+            fetch('/job/' + this.app.job_id + '/create_clustering/',
+                {
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                    },
+                    method: "POST",
+                    body: JSON.stringify({
+                        'alignment': mapping_id,
+                        'association_file': clustered ? this.association : '',
+                        'clustered': clustered,
+                    })
+                })
+                .then((response) => response.json())
+                .then((data) => {
+                    if (!clustered && this.association) {
+                        this.app.getJobData(() => {
+                            this.createClustering(mapping_id);
+                        });
+                    }
+                    else {
+                        this.app.getJobData();
+                    }
+                });
+        },
+        resetProperty(idx, property, property_index) {
+            let new_property = property.slice(0, property_index);
+            new_property.push('');
+            if (new_property.length % 2 > 0) {
+                new_property.push('');
+            }
+            this.$set(this.properties, idx, new_property);
+        },
+    },
+    mounted() {
+        const resources = [...this.match.sources];
+        this.match.targets.forEach(res => {
+            if (!resources.includes(res))
+                resources.push(res)
+        });
+        this.properties = resources.map(res => [res, '']);
+    },
+});
+
+
+/***/ }),
+
 /***/ "./node_modules/cache-loader/dist/cjs.js?!./node_modules/vue-loader/lib/index.js?!./components/ClusterTableRow.vue?vue&type=script&lang=js&":
 /*!*********************************************************************************************************************************************************************!*\
   !*** ./node_modules/cache-loader/dist/cjs.js??ref--0-0!./node_modules/vue-loader/lib??vue-loader-options!./components/ClusterTableRow.vue?vue&type=script&lang=js& ***!
@@ -30921,15 +31087,8 @@ __webpack_require__.r(__webpack_exports__);
 //
 //
 //
-//
-//
 
 /* harmony default export */ __webpack_exports__["default"] = ({
-    computed: {
-        selected() {
-            return this.cluster_id === this.$root.$children[0].cluster_id_selected;
-        },
-    },
     data() {
         return {
             ext_colors: {
@@ -30943,6 +31102,7 @@ __webpack_require__.r(__webpack_exports__);
     props: {
         cluster_data: Object,
         cluster_id: String,
+        selected: Boolean,
     },
 });
 
@@ -30958,20 +31118,7 @@ __webpack_require__.r(__webpack_exports__);
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
-/* harmony import */ var d3__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! d3 */ "./node_modules/d3/index.js");
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
+/* harmony import */ var _utils_visualization__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../utils/visualization */ "./utils/visualization.js");
 //
 //
 //
@@ -31250,398 +31397,40 @@ __webpack_require__.r(__webpack_exports__);
 
 /* harmony default export */ __webpack_exports__["default"] = ({
     methods: {
-        centerVisualization(id) {
-            const plot_col = document.getElementById(id);
-                if (plot_col) {
-                    plot_col.scrollLeft = plot_col.scrollWidth - plot_col.clientWidth;
-                    plot_col.scrollTop = (plot_col.scrollHeight - plot_col.clientHeight) / 2;
-                }
+        getGraphLink() {
+            const rootChild = this.$root.$children[0];
+            return `/job/${rootChild.job_id}/cluster/${rootChild.job_data.results.clusterings[0].clustering_id}/${rootChild.cluster_id_selected}`;
         },
         draw(graph_parent, svg_name) {
-            const app = this;
-            let svg = d3__WEBPACK_IMPORTED_MODULE_0__["select"](svg_name);
-
-            var pi = Math.PI;
-            var radius2 = 20;
-            var radius = 200;
-            var node_factor = 7;
-
-            ////// NEW CODE
-            var should_drag = false;
-            var selected_node, clicked_node, graph_child;
-            var color = d3__WEBPACK_IMPORTED_MODULE_0__["scaleOrdinal"](d3__WEBPACK_IMPORTED_MODULE_0__["schemeCategory10"]);
-            var clicks = 0
-
-            // var svg = d3.select(".parent")
-            var svg_child = d3__WEBPACK_IMPORTED_MODULE_0__["select"]("svg#graph_cluster_4")
-            var simulation_parent = simulator(svg)
-            var simulation_child
-
-            ////// NEW CODE FOR SHOWING TOOLTIP ON MOUSEOVER
-            var tooltip = d3__WEBPACK_IMPORTED_MODULE_0__["select"]("body")
-                .append("div")
-                .attr("class", "tooltip")
-                .style("opacity", 0);
-
-            // d3.json("data_compact.json", function(error, json_graph) {
-            //     if (error) throw error;
-            //     graph_parent = json_graph
-                update(svg, graph_parent, simulation_parent);     ////// NEW CODE
-            // });
-
-
-            // FUNCTION FOR SETTING THE SIZE OF COMPACT NODES
-            function factor(x) { return Math.log2(x + 1) * 16 }
-
-
-            // FUNCTION FOR CALCULATING THE ARC REPRESENTING THE MISSING LINKS IN A COMPACT NODE
-            function arc(r)
-            {
-                return d3__WEBPACK_IMPORTED_MODULE_0__["arc"]()
-                    .innerRadius(0)
-                    .outerRadius(function(d) {
-                        if (d.nodes) return factor(d.nodes) * 0.7
-                        if (d.size) return 0
-                    })
-                    .startAngle(0) //converting from degs to radians
-                    .endAngle(function(d) {
-                        if (d.missing_links) return -d.missing_links*pi*2
-                        else return 0
-                    });
-            }
-
-
-            ////// NEW CODE - MOVED AROUND
-            function update(svg_input, json_graph, rest_simulation)
-            {
-                // AT START, CLEAN THE ELEMENTS OF THE GRAPH, IF ANY
-                svg_input.selectAll("g").remove();  ////// NEW CODE
-
-                var link = null, node = null;
-                var width = svg_input.attr("width"),
-                    height = svg_input.attr("height");
-
-                link = svg_input.append("g")
-                    .attr("class", "links")
-                    .selectAll("line")
-                    .data(json_graph.links)
-                    .enter().append("line")
-                    .on("click", function() { rejectLink() })
-                    .style("stroke-width", function(d) { return Math.sqrt(d.value)+1; })
-                    .style("stroke", function(d) {
-                        if (d.strength < 1) return "red";
-                        else if (d.color) return d.color;
-                        else return "black";
-                    })
-                    .style("stroke-dasharray", function(d) {
-                        if (d.dash) return d.dash;
-                        else {
-                            var space = String(20 * (1-d.strenght));
-                            return ("3," + space ) }
-                    })
-                    //// NEW CODE TO DISPLAY THE STRENGTH OF A LINK
-                    .on('mouseover.tooltip', function(d) {
-                        tooltip.transition()
-                               .duration(300)
-                               .style("opacity", .8);
-                        tooltip.html("Strength: " + d.strength)
-                               .style("left", (d3__WEBPACK_IMPORTED_MODULE_0__["event"].pageX) + "px")
-                               .style("top", (d3__WEBPACK_IMPORTED_MODULE_0__["event"].pageY + 10) + "px");
-                    })
-                    .on("mouseout.tooltip", function() {
-                        tooltip.transition()
-                               .duration(100)
-                               .style("opacity", 0);
-                    });
-
-                link.exit().remove();  ////// NEW CODE
-
-                // ADD THE NODES TO THE GRAPH ACCORDING TO THE GIVEN GRAPH
-                node = svg_input.append("g")
-                    .attr("class", "nodes")
-                    .selectAll("g")
-                    .data(json_graph.nodes)
-                    .enter().append("g")
-
-                ////// NEW CODE - OUTER CIRCLE
-                node.append("circle")
-                    .attr("r", function(d) {
-                        // IF IT IS A COMPACT PLOT AND IT IS NOT INVESTIGATED,
-                        // THEN RETURN RADIUS ZERO SINCE NO OUTER CIRCLE IS NEEDED
-                        if ((d.investigated)&&(String(d.investigated) == 'false')) return 0
-                        // OTHERIWSE, IF IT IS A COMPACT PLOT AND IT IS INVESTIGATED,
-                        // THEN USERS THE FACTOR FUNCTION PLUS TO TWO
-                        if (d.nodes) return factor(d.nodes) + 2;
-                        // OTHERIWSE, IF IT IS NOT COMPACT PLOT AND IT IS INVESTIGATED (SIZE > 5)
-                        if (d.size > 5) return d.size*1.2;
-                        return 0;
-                    })
-                    .attr("fill", "white")
-                    .style("stroke", function(d){
-                        // IF THE NODE HAS BEEN SET AS SELECTED (IN DOUBLE CLICK)
-                        // SET THE STROKE TO RED, OTHERWISE, USE BLACK
-                        if ((selected_node) && (d === selected_node)) return "red"
-                        else if ((clicked_node) && (d === clicked_node)) return "red"
-                        return "black"
-                    })
-                    .style("stroke-width", 4)
-
-                node.append("circle")
-                    .attr("r", function(d) {
-                        // IF IT IS A NODE IN A COMPACT PLOT, USE THE FACTOR FUNCTION TO DETERMINE THE SIZE
-                        if (d.nodes) return factor(d.nodes)
-                        // OTHERWISE USE THE SIZE THAT IS GIVEN
-                        if (d.size) return d.size;
-                        // OTHERWISE USE 5
-                        else return 5;
-                    })
-                    .attr("fill", function(d) {
-                        // IF THE NODE HAS BEEN SET AS SELECTED (IN DOUBLE CLICK)
-                        // SET IT TO RED, OTHERWISE, USE THE GROUP TO CHOOSE A COLOR
-                        if ((selected_node) && (d === selected_node)) return "red"; ////// NEW CODE
-                        else return color(d.group);
-                    })
-                    .on("dblclick", node_dblclick)
-                    // .on("contextmenu", node_mousedown)
-                    .style("stroke", function(d) {
-                        // ADD A WHITE STROKE FOR THE INNER CIRCLE OF NODES IN AN INVESTIGATED CLUSTER
-                        if ((d.investigated)&&(String(d.investigated) == 'true')) return "white"
-                        // OTHERWISE, IF IT IS A COMPACT PLOT, MAKE IT BLACK
-                        else if (d.nodes) return "black"
-                        // OTHERWISE, IF IT IS NOT A COMPACT PLOT, THE NOES ORIGINALLY DID NOT HAVE THE PROPERTY 'INVESTIGATED'
-                        // THEN WE USE THE SIZE OF THE NODES, WHICH WOULD BE BIGGER THAN SIZE 5 (OF THE ASSOCIATED CLUSTER)
-                        // SO, ADD A WHITE STROKE FOR THE INNER CIRCLE OF NODES IN AN INVESTIGATED CLUSTER (SIZE > 5)
-                        else if (d.size > 5) return "white"
-                        // OTHERWISE, MAKE IT BLACK
-                        else return "black"
-                     })
-                    .style("stroke-width", 2)
-                    .call(d3__WEBPACK_IMPORTED_MODULE_0__["drag"]()
-                        .on("start", dragstarted)
-                        .on("drag", dragged)
-                        .on("end", dragended));
-
-                // ADDING THE WHITE ARC INSIDE THE COMPACT NODE REPRESENTING THE MISSING LINKS
-                node.append("path")
-                    .attr("d",  arc(radius2) )
-                    .attr("fill", "white");
-
-                // TEXT DISPLAYING INSIDE THE COMPACT NODE THE NUMBER OF NODES WITHIN IT
-                node.append("text")
-                    .text(function(d) { return d.id; })
-                    .attr('x', function(d) {
-                        if (d.nodes) return factor(d.nodes) * 0.9 + 8
-                        if (d.size) return (d.size * 0.9 + 8) })      ////// NEW CODE
-                    .attr('y', 3);
-
-                // TEXT DISPLAYING INSIDE THE COMPACT NODE THE NUMBER OF NODES WITHIN IT
-                // COMPACT NODE SIZE TEXT AND POSITION
-                node.append("svg:text")
-                    .attr("dx", function(d){
-                        if ((d.nodes) && (d.nodes > 2))
-                        {
-                            // return - 8
-                            // var label = "N:" + d.node
-                            // var radius = factor(d.nodes)
-                            return - factor(d.nodes) / 3
-                        }
-                        // FOR SIZE < 2
-                        // PULLS BACK THE NODE INNER TEXT FROM GOING TO THE RIGHT
-                        else return - 10
-                    })
-                    .attr('dy', 3)
-                    .text(function(d){ if (d.nodes) return "N:" + d.nodes
-                    })
-                    .style("font-weight","bold");
-
-
-                // TEXT DISPLAYING INSIDE THE NODE THE TOTAL OF LINKS
-                // AND THE LINKS MISSING WITHIN A COMPACT NODE
-                // COMPACT TOTAL LINK COUNT AND POSITION
-                node.append("svg:text")
-                    .attr("dx", function(d){
-                        if ((d.nodes) && (d.nodes>2))
-                        {
-                            var label
-                            var total = (d.nodes * (d.nodes - 1) / 2)
-                            // var center = d3.select(this).attr("cx")
-                            if (d.missing_links > 0)
-                              label = "L:" + Math.round(total*(1 - d.missing_links)) + "/" + total
-                            else  label = "L:" + total
-                            // return - (label.length/2) * 7
-                            return - factor(d.nodes) / 3
-                        }})
-                    .attr('dy', 15)
-                    .text(function(d){
-                        if ((d.nodes) && (d.nodes > 2)) {
-                            var total = (d.nodes*(d.nodes - 1)/2)
-                            if (d.missing_links > 0)
-                                return "L:" + Math.round(total*(1 - d.missing_links)) + "/" + total
-                            else return "L:" + total
-                        }
-                   })
-
-                // TEXT DISPLAYING THE STRENGTH OF COMPACT NODES BELLOW THE NODE
-                node.append("svg:text")
-                      .attr("dx", -8)
-                      .attr('dy', function (d) {
-                          if (d.nodes) return factor(d.nodes)+13 })
-                      .text( function(d){
-                          if ((d.strength)&&((d.nodes)&&(d.nodes>1)) )
-                              if (Number.parseFloat(String(d.strength)))
-                                  return "S:" + Math.round(d.strength*1000)/1000
-                              else return "S:" + d.strength
-                      })
-                      .style("font-weight","bold");
-
-                // METADATA OF THE NODE TO BE DISPLAYED ON MOUSE OVER
-                node.append("title")
-                    .text(function(d) { return d.id; });
-
-                node.exit().remove(); ////// NEW CODE
-
-                rest_simulation.nodes(json_graph.nodes).on("tick", ticked);
-                rest_simulation.force("link").links(json_graph.links);
-
-                function ticked()
-                {
-                    link.attr("x1", function(d) { return d.source.x; })
-                        .attr("y1", function(d) { return d.source.y; })
-                        .attr("x2", function(d) { return d.target.x; })
-                        .attr("y2", function(d) { return d.target.y; });
-
-                    node.attr("cx", function(d) { return d.x = Math.max(10, Math.min(width - 200, d.x)); })
-                        .attr("cy", function(d) { return d.y = Math.max(10, Math.min(height - 10, d.y)); })
-                        .attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; })
-                }
-
-            }
-
-            // CHILD'S NON COMPACT PLOT
-            function new_plot(child_graph)
-            {
-                graph_child = child_graph
-                svg_child.selectAll("*").remove()
-                simulation_child = simulator(svg_child)
-                update(svg_child, child_graph, simulation_child);   ////// NEW CODE
-                app.$refs['visualization_popup'].show();
-            }
-
-            // D3 GRAPH FORCE SIMULATOR
-            function simulator(svg_input)
-            {
-                var width_sim = svg_input.attr("width"),
-                    height_sim = svg_input.attr("height");
-
-                var simulation_input = d3__WEBPACK_IMPORTED_MODULE_0__["forceSimulation"]()
-                    .force("link", d3__WEBPACK_IMPORTED_MODULE_0__["forceLink"]().id(function(d) { return d.id; })
-                    .distance(
-                        function(d) {
-                            if (d.dist_factor)
-                                return factor(d.dist_factor[0]) + factor(d.dist_factor[1]) + d.distance * 0.8
-                            else return d.distance;
-                        })
-                    )
-                    .force("charge", d3__WEBPACK_IMPORTED_MODULE_0__["forceManyBody"]())
-                    .force("center", d3__WEBPACK_IMPORTED_MODULE_0__["forceCenter"](width_sim / 2, height_sim / 2));
-
-                return simulation_input
-            }
-
-            // ON MOUSE DOWN FUNCTION
-            function node_dblclick(d)
-            {
-                //d.fixed = true;
-                    selected_node = d;
-    if (d.child) {
-
-        // for compact with child, expand
-        //selected_node = d;
-                    update(svg, graph_parent, simulation_parent)
-                    new_plot(d.child)
-                }
-                else if (d.nodes) // for compact without child, just highlight
-                {
-        //selected_node = d;
-                    update(svg, graph_parent, simulation_parent)
-                }
-
-    else if (graph_child)
-        // it is the child of compact
-        update(svg_child, graph_child, simulation_child)
-
-    else
-        // not compact
-        update(svg, graph_parent, simulation_parent)
-            }
-
-            function node_mousedown(d)
-            {
-                d3__WEBPACK_IMPORTED_MODULE_0__["event"].preventDefault();
-                clicked_node = d;
-    //alert('Test')
-
-    if (d.nodes)
-        // it is the parent (compact)
-        update(svg, graph_parent, simulation_parent)
-
-    else if (graph_child)
-        // it is the child of compact
-        update(svg_child, graph_child, simulation_child)
-
-    else
-        // not compact
-        update(svg, graph_parent, simulation_parent)
-            }
-
-
-            function dragstarted(d)
-            {
-                if (!d3__WEBPACK_IMPORTED_MODULE_0__["event"].active)
-                  if (d.nodes) simulation_parent.alphaTarget(0.2).restart(graph_parent)
-      else if (graph_child) simulation_child.alphaTarget(0.2).restart(graph_child)
-      else simulation_parent.alphaTarget(0.2).restart(graph_parent)
-
-                d.fx = d.x;
-                d.fy = d.y;
-            }
-
-            function dragged(d)
-            {
-                d.fx = d3__WEBPACK_IMPORTED_MODULE_0__["event"].x;
-                d.fy = d3__WEBPACK_IMPORTED_MODULE_0__["event"].y;
-            }
-
-            function dragended(d)
-            {
-                if (!d3__WEBPACK_IMPORTED_MODULE_0__["event"].active)
-                    if (d.nodes) simulation_parent.alphaTarget(0);
-                    else if (simulation_child) simulation_child.alphaTarget(0);
-
-                // d.fx = null;
-                // d.fy = null;
-            }
+            Object(_utils_visualization__WEBPACK_IMPORTED_MODULE_0__["draw"])(this.$refs['visualization_popup'], graph_parent, svg_name, "svg#graph_cluster_4");
         },
         getGraphData(type) {
-            if (this.$root.$children[0].$refs['formWizard'].activeTabIndex !== this.$root.$children[0].steps.indexOf(this.parent_tab))
+            if (this.parent_tab && this.$root.$children[0].$refs['formWizard'].activeTabIndex !== this.$root.$children[0].steps.indexOf(this.parent_tab))
                 return;
 
             let vm = this;
 
-            d3__WEBPACK_IMPORTED_MODULE_0__["select"]('svg#graph_cluster_1').selectAll("*").remove();
-            d3__WEBPACK_IMPORTED_MODULE_0__["select"]('svg#graph_cluster_2').selectAll("*").remove();
-            if (type !== 'cluster') {
-                d3__WEBPACK_IMPORTED_MODULE_0__["select"]('svg#graph_cluster_3').selectAll("*").remove();
-            }
-            if (this.$root.$children[0].association) {
+            Object(_utils_visualization__WEBPACK_IMPORTED_MODULE_0__["clear"])('graph_cluster_1');
+            Object(_utils_visualization__WEBPACK_IMPORTED_MODULE_0__["clear"])('graph_cluster_2');
+            Object(_utils_visualization__WEBPACK_IMPORTED_MODULE_0__["clear"])('graph_cluster_3');
+
+            if (this.association) {
                 this.$refs.vis_collapse_1.show = false;
             }
 
             setTimeout(function () {
                 vm.scrollTo('vis_collapse_1');
             }, 100);
-        // document.getElementById('graph_cluster_1').parentNode.setAttribute('hidden', 'hidden');
-        // document.getElementById('graph_cluster_3').parentNode.setAttribute('hidden', 'hidden');
+
+            const properties = this.properties.map(prop => {
+                const resource = this.$root.$children[0].getResourceById(prop[0]);
+                return {
+                    dataset: resource.dataset_id,
+                    entity_type: resource.collection_id,
+                    property: prop[1],
+                };
+            });
+
             fetch(
                 '/job/' + this.$root.$children[0].job_id + '/cluster/' + this.clustering_id + '/' + this.cluster_id + '/graph',
                 {
@@ -31652,36 +31441,22 @@ __webpack_require__.r(__webpack_exports__);
                         method: "POST",
                         body: JSON.stringify({
                             'cluster_data': this.cluster_data,
-                            'get_cluster': !Boolean(this.$root.$children[0].association) || type === 'cluster',
+                            'properties': properties,
+                            'get_cluster': !Boolean(this.association) || type === 'cluster',
                             'get_reconciliation': this.cluster_data.extended === 'yes',
-                            'associations': this.cluster_data.extended === 'yes' ? this.$root.$children[0].association : '',
+                            'associations': this.cluster_data.extended === 'yes' ? this.association : '',
                         })
                     })
             .then((response) => response.json())
             .then((data) => {
                 if (data.cluster_graph) {
-                    // document.getElementById('graph_cluster_1').parentNode.removeAttribute('hidden');
                     this.draw(data.cluster_graph, "svg#graph_cluster_1");
                 }
                 if (data.cluster_graph_compact) {
                     this.draw(data.cluster_graph_compact, "svg#graph_cluster_2");
                 }
                 if (data.reconciliation_graph) {
-                    // document.getElementById('graph_cluster_3').parentNode.removeAttribute('hidden');
                     this.draw(data.reconciliation_graph, "svg#graph_cluster_3");
-                }
-                let plot_col_1 = document.getElementById('cluster_plot_col_1');
-                plot_col_1.scrollLeft = plot_col_1.scrollWidth - plot_col_1.clientWidth;
-                plot_col_1.scrollTop = (plot_col_1.scrollHeight - plot_col_1.clientHeight) / 2;
-                let plot_col_2 = document.getElementById('cluster_plot_col_2');
-                if (plot_col_2) {
-                    plot_col_2.scrollLeft = plot_col_2.scrollWidth - plot_col_2.clientWidth;
-                    plot_col_2.scrollTop = (plot_col_2.scrollHeight - plot_col_2.clientHeight) / 2;
-                }
-                let plot_col_3 = document.getElementById('cluster_plot_col_3');
-                if (plot_col_3) {
-                    plot_col_3.scrollLeft = plot_col_3.scrollWidth - plot_col_3.clientWidth;
-                    plot_col_3.scrollTop = (plot_col_3.scrollHeight - plot_col_3.clientHeight) / 2;
                 }
             });
         },
@@ -31695,10 +31470,12 @@ __webpack_require__.r(__webpack_exports__);
         }
     },
     props: {
+        properties: Array,
         cluster_data: Object,
         cluster_id: String,
         clustering_id: String,
         parent_tab: String,
+        association: String,
     },
     name: "ClusterVisualizationComponent",
     watch: {
@@ -31772,6 +31549,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _MatchResource__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./MatchResource */ "./components/MatchResource.vue");
 /* harmony import */ var _MatchingMethodGroup__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./MatchingMethodGroup */ "./components/MatchingMethodGroup.vue");
 /* harmony import */ var _mixins_ValidationMixin__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../mixins/ValidationMixin */ "./mixins/ValidationMixin.js");
+//
 //
 //
 //
@@ -32535,8 +32313,7 @@ __webpack_require__.r(__webpack_exports__);
 
                     this.condition[resources_key][resource_id].forEach(values => {
                         if (values.hasOwnProperty('transformers') && !this.validateField(
-                            `${resources_key}_transformers`,
-                            (values.transformers.length > 0) && !values.transformers.includes('')))
+                            `${resources_key}_transformers`, !values.transformers.includes('')))
                             sourcesTargetsValid = false;
                     });
                 });
@@ -32660,301 +32437,6 @@ __webpack_require__.r(__webpack_exports__);
         validateResource() {
             return this.validateField('resource', this.match_resource && this.match_resource !== '');
         }
-    },
-});
-
-
-/***/ }),
-
-/***/ "./node_modules/cache-loader/dist/cjs.js?!./node_modules/vue-loader/lib/index.js?!./components/MatchingFieldBoolean.vue?vue&type=script&lang=js&":
-/*!**************************************************************************************************************************************************************************!*\
-  !*** ./node_modules/cache-loader/dist/cjs.js??ref--0-0!./node_modules/vue-loader/lib??vue-loader-options!./components/MatchingFieldBoolean.vue?vue&type=script&lang=js& ***!
-  \**************************************************************************************************************************************************************************/
-/*! exports provided: default */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-
-/* harmony default export */ __webpack_exports__["default"] = ({
-    mounted() {
-        let empty_matching_field_value = {
-            'property': [this.resource_id, ''],
-            'transformers': [],
-            'value_type': '',
-        };
-
-        Object.keys(this.$parent.sql_value_functions).forEach(value_function_name => {
-            if (typeof this.matching_field_value[value_function_name] === 'undefined') {
-                if (this.$parent.sql_value_functions[value_function_name].array_items) {
-                    this.$set(this.matching_field_value, value_function_name, []);
-                    this.$parent.addValueItem(value_function_name);
-                    this.$parent.addValueItem(value_function_name);
-                } else {
-                    this.$set(this.matching_field_value, value_function_name, JSON.parse(JSON.stringify(empty_matching_field_value)));
-                }
-            }
-
-            let sql_function_fields = this.$parent.sql_value_functions[value_function_name].fields;
-
-            Object.keys(sql_function_fields).forEach(field_name => {
-                if (typeof this.matching_field_value[value_function_name][field_name] === 'undefined') {
-                    this.$set(this.matching_field_value[value_function_name], field_name, JSON.parse(JSON.stringify(empty_matching_field_value)));
-                }
-                if (sql_function_fields[field_name] == 'boolean') {
-                    Object.keys(this.sql_boolean_functions).forEach(boolean_function_name => {
-                        if (typeof this.matching_field_value[value_function_name][field_name][boolean_function_name] === 'undefined') {
-                            this.$set(this.matching_field_value[value_function_name][field_name], boolean_function_name, JSON.parse(JSON.stringify(empty_matching_field_value)));
-                        }
-                    });
-                }
-            });
-        });
-
-        this.$set(this.matching_field_value, 'value_type', 'function');
-    },
-    name: 'matching-field-boolean-component',
-    props: ['resources', 'matching_field_value', 'resource_id', 'unique_id', 'function_name', 'field_name', 'sql_boolean_functions'],
-});
-
-
-/***/ }),
-
-/***/ "./node_modules/cache-loader/dist/cjs.js?!./node_modules/vue-loader/lib/index.js?!./components/MatchingFieldValue.vue?vue&type=script&lang=js&":
-/*!************************************************************************************************************************************************************************!*\
-  !*** ./node_modules/cache-loader/dist/cjs.js??ref--0-0!./node_modules/vue-loader/lib??vue-loader-options!./components/MatchingFieldValue.vue?vue&type=script&lang=js& ***!
-  \************************************************************************************************************************************************************************/
-/*! exports provided: default */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony import */ var _MatchingFieldBoolean__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./MatchingFieldBoolean */ "./components/MatchingFieldBoolean.vue");
-/* harmony import */ var _PropertyComponent__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./PropertyComponent */ "./components/PropertyComponent.vue");
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-
-
-
-
-/* harmony default export */ __webpack_exports__["default"] = ({
-    components: {PropertyComponent: _PropertyComponent__WEBPACK_IMPORTED_MODULE_1__["default"], MatchingFieldBooleanComponent: _MatchingFieldBoolean__WEBPACK_IMPORTED_MODULE_0__["default"]},
-    computed: {
-        function_name() {
-            return this.matching_field_value.function_name;
-        },
-        properties() {
-            let resource = this.get_resource_by_id(this.matching_field_value.property[0]);
-            return this.$root.$children[0].datasets[resource.dataset_id]['collections'][resource.collection_id];
-        },
-    },
-    data() {
-        return {
-            'empty_matching_field_value': {
-                'property': [this.resource_id, ''],
-                'transformers': [],
-                'value_type': '',
-                'function_name': '',
-            },
-            'sql_boolean_functions': {
-                '': {
-                    'label': '',
-                    'fields': [],
-                },
-                'IS_NOT_NULL': {
-                    'label': 'Is not null',
-                    'fields': {
-                        '': 'value',
-                    },
-                },
-                'IS_URI': {
-                    'label': 'Is URI (starts with \'http\')',
-                    'fields': {
-                        '': 'value',
-                    },
-                },
-            },
-            'sql_value_functions': {
-                '': {
-                    'label': '',
-                    'fields': [],
-                },
-                'IF': {
-                    'label': 'IF',
-                    'fields': {
-                        'condition': 'boolean',
-                        'THEN': 'value',
-                        'ELSE': 'value',
-                    },
-                },
-                'MIN_VALUE': {
-                    'label': 'Lowest value in list',
-                    'array_items': 'value',
-                    'fields': [],
-                },
-            },
-            'sub_function_name': '',
-        }
-    },
-    methods: {
-        addValueItem(function_name, event) {
-            if (!function_name) {
-                function_name = this.matching_field_value.function_name;
-            }
-
-            if (event) {
-                event.target.blur();
-            }
-
-            let value_item = {
-                'property': [this.resource_id, ''],
-                'transformers': [],
-                'value_type': '',
-                'function_name': '',
-            };
-
-            this.matching_field_value[function_name].push(value_item);
-        },
-        get_resource_by_id(resource_id) {
-            for (let i = 0; i < this.resources.length; i++) {
-                if (this.resources[i].id == resource_id)
-                    return this.resources[i];
-            }
-        },
-    },
-    mounted() {
-        let empty_matching_field_value = {
-            'property': [this.resource_id, ''],
-            'transformers': [],
-            'value_type': '',
-            'function_name': '',
-        };
-
-        Object.keys(this.sql_value_functions).forEach(value_function_name => {
-            if (typeof this.matching_field_value[value_function_name] === 'undefined') {
-                if (this.sql_value_functions[value_function_name].array_items) {
-                    this.$set(this.matching_field_value, value_function_name, []);
-                    this.addValueItem(value_function_name);
-                    this.addValueItem(value_function_name);
-                } else {
-                    this.$set(this.matching_field_value, value_function_name, JSON.parse(JSON.stringify(empty_matching_field_value)));
-                }
-            }
-
-            let sql_function_fields = this.sql_value_functions[value_function_name].fields;
-
-            Object.keys(sql_function_fields).forEach(field_name => {
-                if (typeof this.matching_field_value[value_function_name][field_name] === 'undefined') {
-                    this.$set(this.matching_field_value[value_function_name], field_name, JSON.parse(JSON.stringify(empty_matching_field_value)));
-                }
-                if (sql_function_fields[field_name] == 'boolean') {
-                    Object.keys(this.sql_boolean_functions).forEach(boolean_function_name => {
-                        if (typeof this.matching_field_value[value_function_name][field_name][boolean_function_name] === 'undefined') {
-                            this.$set(this.matching_field_value[value_function_name][field_name], boolean_function_name, JSON.parse(JSON.stringify(empty_matching_field_value)));
-                        }
-                    });
-                }
-            });
-        });
-    },
-    name: 'matching-field-value-component',
-    props: {
-        matching_field_value: {},
-        resources: {},
-        'resource_id': '',
-        'unique_id': '',
     },
 });
 
@@ -33134,6 +32616,8 @@ __webpack_require__.r(__webpack_exports__);
 //
 //
 //
+//
+//
 
 
 /* harmony default export */ __webpack_exports__["default"] = ({
@@ -33166,7 +32650,10 @@ __webpack_require__.r(__webpack_exports__);
             let collection_id = this.property.length > 2 ? this.property.slice(-2)[0] : this.resource.collection_id;
 
             if (this.property.slice(-1)[0] && Object.keys(this.$root.$children[0].getOrCreate(this.dataset[collection_id][this.property.slice(-1)[0]], 'referencedCollections', [])).length > 0) {
-                this.property.push('', '');
+                if (!this.followReferencedCollection)
+                    this.property.push('__value__', '');
+                else
+                    this.property.push('', '');
             }
         },
     },
@@ -33175,6 +32662,14 @@ __webpack_require__.r(__webpack_exports__);
         singular: {
             type: Boolean,
             default: false,
+        },
+        singularResourceInfo: {
+            type: Boolean,
+            default: false,
+        },
+        followReferencedCollection: {
+            type: Boolean,
+            default: true
         },
     },
 });
@@ -33259,11 +32754,25 @@ __webpack_require__.r(__webpack_exports__);
 //
 //
 //
+//
 
 
 
 /* harmony default export */ __webpack_exports__["default"] = ({
     mixins: [_mixins_ValidationMixin__WEBPACK_IMPORTED_MODULE_0__["default"]],
+    computed: {
+        selectReferencedCollection() {
+            return !this.value[0];
+        },
+
+        showResourceInfo() {
+            return Array.isArray(this.resources) && (!this.singular || this.singularResourceInfo);
+        },
+
+        showReferencedPropertyButton() {
+            return !Array.isArray(this.resources) && (this.followReferencedCollection || this.value[0] !== '__value__');
+        }
+    },
     methods: {
         validatePropertyComponent() {
             return this.validateField('value', (this.value[0] === '__value__') ||
@@ -33281,6 +32790,14 @@ __webpack_require__.r(__webpack_exports__);
         singular: {
             type: Boolean,
             default: false,
+        },
+        singularResourceInfo: {
+            type: Boolean,
+            default: false,
+        },
+        followReferencedCollection: {
+            type: Boolean,
+            default: true
         },
         value: Array,
     },
@@ -34137,9 +33654,8 @@ __webpack_require__.r(__webpack_exports__);
 __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _components_Resource__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./components/Resource */ "./components/Resource.vue");
 /* harmony import */ var _components_Match__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./components/Match */ "./components/Match.vue");
-/* harmony import */ var _components_ClusterVisualization__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./components/ClusterVisualization */ "./components/ClusterVisualization.vue");
-/* harmony import */ var _components_ClusterTableRow__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./components/ClusterTableRow */ "./components/ClusterTableRow.vue");
-/* harmony import */ var _mixins_ValidationMixin__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./mixins/ValidationMixin */ "./mixins/ValidationMixin.js");
+/* harmony import */ var _components_Cluster__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./components/Cluster */ "./components/Cluster.vue");
+/* harmony import */ var _mixins_ValidationMixin__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./mixins/ValidationMixin */ "./mixins/ValidationMixin.js");
 //
 //
 //
@@ -34350,185 +33866,6 @@ __webpack_require__.r(__webpack_exports__);
 //
 //
 //
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-
 
 
 
@@ -34537,12 +33874,11 @@ __webpack_require__.r(__webpack_exports__);
 
 /* harmony default export */ __webpack_exports__["default"] = ({
     name: 'app',
-    mixins: [_mixins_ValidationMixin__WEBPACK_IMPORTED_MODULE_4__["default"]],
+    mixins: [_mixins_ValidationMixin__WEBPACK_IMPORTED_MODULE_3__["default"]],
     components: {
-        ClusterTableRowComponent: _components_ClusterTableRow__WEBPACK_IMPORTED_MODULE_3__["default"],
-        ClusterVisualizationComponent: _components_ClusterVisualization__WEBPACK_IMPORTED_MODULE_2__["default"],
         'resource-component': _components_Resource__WEBPACK_IMPORTED_MODULE_0__["default"],
         'match-component': _components_Match__WEBPACK_IMPORTED_MODULE_1__["default"],
+        'cluster-component': _components_Cluster__WEBPACK_IMPORTED_MODULE_2__["default"],
     },
     computed: {
         has_changes() {
@@ -34553,10 +33889,6 @@ __webpack_require__.r(__webpack_exports__);
     },
     data() {
         return {
-            association: '',
-            cluster_id_selected: null,
-            clustering_id: null,
-            clusters: [],
             datasets: [],
             idea_form: '',
             inputs: {
@@ -34693,9 +34025,6 @@ __webpack_require__.r(__webpack_exports__);
             this.matches = [];
             this.resources_count = 0;
             this.matches_count = 0;
-            this.association = '';
-            this.cluster_id_selected = null;
-            this.clustering_id = null;
         },
         copyToClipboard(el) {
             let disabled = el.hasAttribute('disabled');
@@ -34722,37 +34051,6 @@ __webpack_require__.r(__webpack_exports__);
                 this.$refs['clipboard_copy_message'].setAttribute('hidden', 'hidden');
             }, 2000)
         },
-        createClustering(mapping_id, event) {
-            if (event) {
-                let btn = event.target;
-                btn.setAttribute('disabled', 'disabled');
-            }
-            const clustered = this.getResultForMatch(mapping_id).clusterings.length > 0;
-
-            fetch('/job/' + this.job_id + '/create_clustering/',
-                {
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json',
-                    },
-                    method: "POST",
-                    body: JSON.stringify({
-                        'alignment': mapping_id,
-                        'association_file': clustered ? this.association : '',
-                        'clustered': clustered,
-                    })
-                })
-                .then((response) => response.json())
-                .then((data) => {
-                    if (!clustered && this.association) {
-                        this.getJobData(() => {
-                            this.createClustering(mapping_id);
-                        });
-                    } else {
-                        this.getJobData();
-                    }
-                });
-        },
         createJob() {
             fetch("/job/create/",
                 {
@@ -34769,15 +34067,6 @@ __webpack_require__.r(__webpack_exports__);
                     this.setJobId(data.job_id);
                 }
             );
-        },
-        getClusters(clustering_id) {
-            this.clustering_id = clustering_id;
-
-            fetch('/job/' + this.job_id + '/clusters/' + clustering_id + '?association=' + this.association)
-                .then((response) => response.json())
-                .then((data) => {
-                    this.clusters = data;
-                });
         },
         getDatasets() {
             let vue = this;
@@ -34887,21 +34176,7 @@ __webpack_require__.r(__webpack_exports__);
                     return resources[i];
             }
         },
-        getResultForMatch(match_id) {
-            let clusterings = [];
 
-            if (this.job_data) {
-                this.job_data.results.clusterings.forEach(clustering => {
-                    if (clustering.alignment === match_id) {
-                        clusterings.push(clustering);
-                    }
-                });
-            }
-
-            return {
-                'clusterings': clusterings,
-            }
-        },
         getOrCreate(subject, key, default_value) {
             if (typeof subject[key] === 'undefined') {
                 this.$set(subject, key, default_value);
@@ -35353,6 +34628,376 @@ let icons = {}
 
 /***/ }),
 
+/***/ "./node_modules/cache-loader/dist/cjs.js?{\"cacheDirectory\":\"node_modules/.cache/vue-loader\",\"cacheIdentifier\":\"428460bc-vue-loader-template\"}!./node_modules/vue-loader/lib/loaders/templateLoader.js?!./node_modules/cache-loader/dist/cjs.js?!./node_modules/vue-loader/lib/index.js?!./components/Cluster.vue?vue&type=template&id=9e494522&":
+/*!********************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** ./node_modules/cache-loader/dist/cjs.js?{"cacheDirectory":"node_modules/.cache/vue-loader","cacheIdentifier":"428460bc-vue-loader-template"}!./node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!./node_modules/cache-loader/dist/cjs.js??ref--0-0!./node_modules/vue-loader/lib??vue-loader-options!./components/Cluster.vue?vue&type=template&id=9e494522& ***!
+  \********************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
+/*! exports provided: render, staticRenderFns */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "render", function() { return render; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "staticRenderFns", function() { return staticRenderFns; });
+var render = function() {
+  var _vm = this
+  var _h = _vm.$createElement
+  var _c = _vm._self._c || _h
+  return _c(
+    "div",
+    { staticClass: "border p-4 mt-4 bg-light" },
+    [
+      _c("div", { staticClass: "row justify-content-between" }, [
+        _c(
+          "div",
+          { staticClass: "col-auto" },
+          [
+            _c("octicon", {
+              directives: [
+                {
+                  name: "b-toggle",
+                  rawName: "v-b-toggle",
+                  value: "clustering_clusters_match_" + _vm.match.id,
+                  expression: "'clustering_clusters_match_' + match.id"
+                }
+              ],
+              attrs: { name: "chevron-down", scale: "3" }
+            })
+          ],
+          1
+        ),
+        _c(
+          "div",
+          {
+            directives: [
+              {
+                name: "b-toggle",
+                rawName: "v-b-toggle",
+                value: "clustering_clusters_match_" + _vm.match.id,
+                expression: "'clustering_clusters_match_' + match.id"
+              }
+            ],
+            staticClass: "col align-self-center"
+          },
+          [_c("div", { staticClass: "h2" }, [_vm._v(_vm._s(_vm.match.label))])]
+        ),
+        _vm.getResultForMatch(_vm.match.id).clusterings.length > 0
+          ? _c("div", { staticClass: "col-auto align-self-center" }, [
+              _c("div", { staticClass: "h3 text-success" }, [
+                _vm._v("Clustered")
+              ])
+            ])
+          : _vm._e(),
+        _c("div", { staticClass: "col-auto" }, [
+          _vm.getResultForMatch(_vm.match.id).clusterings.length > 0
+            ? _c(
+                "button",
+                {
+                  staticClass: "btn btn-info",
+                  attrs: {
+                    type: "button",
+                    disabled: _vm.association === "",
+                    title:
+                      _vm.association === ""
+                        ? "Choose an association first"
+                        : ""
+                  },
+                  on: {
+                    click: function($event) {
+                      return _vm.createClustering(_vm.match.id, $event)
+                    }
+                  }
+                },
+                [_vm._v("Reconcile\n      ")]
+              )
+            : _vm._e(),
+          _vm.getResultForMatch(_vm.match.id).clusterings.length === 0
+            ? _c(
+                "button",
+                {
+                  staticClass: "btn btn-info",
+                  attrs: { type: "button" },
+                  on: {
+                    click: function($event) {
+                      return _vm.createClustering(_vm.match.id, $event)
+                    }
+                  }
+                },
+                [
+                  _vm._v("Cluster\n        "),
+                  _vm.association !== "" ? [_vm._v(" & Reconcile")] : _vm._e()
+                ],
+                2
+              )
+            : _vm._e()
+        ]),
+        _vm.app.job_data
+          ? _c(
+              "div",
+              { staticClass: "col-auto align-self-center form-group" },
+              [
+                _c(
+                  "select",
+                  {
+                    directives: [
+                      {
+                        name: "model",
+                        rawName: "v-model",
+                        value: _vm.association,
+                        expression: "association"
+                      }
+                    ],
+                    staticClass: "form-control",
+                    attrs: { id: "match_" + _vm.match.id + "_association" },
+                    on: {
+                      change: function($event) {
+                        var $$selectedVal = Array.prototype.filter
+                          .call($event.target.options, function(o) {
+                            return o.selected
+                          })
+                          .map(function(o) {
+                            var val = "_value" in o ? o._value : o.value
+                            return val
+                          })
+                        _vm.association = $event.target.multiple
+                          ? $$selectedVal
+                          : $$selectedVal[0]
+                      }
+                    }
+                  },
+                  [
+                    _c("option", { attrs: { value: "" } }, [
+                      _vm._v("No association")
+                    ]),
+                    _vm._l(_vm.app.job_data.association_files, function(
+                      association_file_name
+                    ) {
+                      return _c(
+                        "option",
+                        { domProps: { value: association_file_name } },
+                        [_vm._v(_vm._s(association_file_name) + "\n        ")]
+                      )
+                    })
+                  ],
+                  2
+                )
+              ]
+            )
+          : _vm._e()
+      ]),
+      _vm.getResultForMatch(_vm.match.id).clusterings.length > 0
+        ? _c("div", { staticClass: "row" }, [
+            _c("div", { staticClass: "col-5" }, [
+              _c("div", { staticClass: "row" }, [
+                _c("div", { staticClass: "col-6" }, [
+                  _vm._v("\n          Clusters:\n        ")
+                ]),
+                _c("div", { staticClass: "col-6" }, [
+                  _vm._v(
+                    "\n          " +
+                      _vm._s(
+                        _vm.getResultForMatch(_vm.match.id).clusterings[0]
+                          .clusters_count
+                      ) +
+                      "\n        "
+                  )
+                ])
+              ]),
+              _c("div", { staticClass: "row" }, [
+                _c("div", { staticClass: "col-6" }, [
+                  _vm._v("\n          Extended Clusters:\n        ")
+                ]),
+                _c("div", { staticClass: "col-6" }, [
+                  _vm._v(
+                    "\n          " +
+                      _vm._s(
+                        _vm.getResultForMatch(_vm.match.id).clusterings[0]
+                          .extended_count
+                      ) +
+                      "\n        "
+                  )
+                ])
+              ]),
+              _c("div", { staticClass: "row" }, [
+                _c("div", { staticClass: "col-6" }, [
+                  _vm._v("\n          Clusters with Cycles:\n        ")
+                ]),
+                _c("div", { staticClass: "col-6" }, [
+                  _vm._v(
+                    "\n          " +
+                      _vm._s(
+                        _vm.getResultForMatch(_vm.match.id).clusterings[0]
+                          .cycles_count
+                      ) +
+                      "\n        "
+                  )
+                ])
+              ])
+            ]),
+            _c("div", { staticClass: "col-5" }, [
+              _c("div", { staticClass: "row" }, [
+                _c("div", { staticClass: "col-6" }, [
+                  _vm._v("\n          Clusters not Extended:\n        ")
+                ]),
+                _c("div", { staticClass: "col-6" }, [
+                  _vm._v(
+                    "\n          " +
+                      _vm._s(
+                        _vm.getResultForMatch(_vm.match.id).clusterings[0]
+                          .clusters_count -
+                          _vm.getResultForMatch(_vm.match.id).clusterings[0]
+                            .extended_count
+                      ) +
+                      "\n        "
+                  )
+                ])
+              ]),
+              _c("div", { staticClass: "row" }, [
+                _c("div", { staticClass: "col-6" }, [
+                  _vm._v("\n          Clusters without Cycles:\n        ")
+                ]),
+                _c("div", { staticClass: "col-6" }, [
+                  _vm._v(
+                    "\n          " +
+                      _vm._s(
+                        _vm.getResultForMatch(_vm.match.id).clusterings[0]
+                          .clusters_count -
+                          _vm.getResultForMatch(_vm.match.id).clusterings[0]
+                            .cycles_count
+                      ) +
+                      "\n        "
+                  )
+                ])
+              ])
+            ])
+          ])
+        : _vm._e(),
+      _c(
+        "b-collapse",
+        {
+          staticClass: "pt-4",
+          attrs: {
+            id: "clustering_clusters_match_" + _vm.match.id,
+            accordion: "clusters-matches-accordion"
+          },
+          on: {
+            show: function($event) {
+              _vm.getClusters(
+                _vm.getResultForMatch(_vm.match.id).clusterings[0].clustering_id
+              )
+            }
+          }
+        },
+        [
+          _c(
+            "div",
+            { staticClass: "border p-4 mb-4 bg-info-light" },
+            _vm._l(this.properties, function(property, idx) {
+              return _c(
+                "div",
+                { staticClass: "row" },
+                [
+                  _c("property-component", {
+                    attrs: {
+                      property: property,
+                      singular: true,
+                      "singular-resource-info": true,
+                      "follow-referenced-collection": false
+                    },
+                    on: {
+                      resetProperty: function($event) {
+                        return _vm.resetProperty(idx, property, $event)
+                      }
+                    }
+                  })
+                ],
+                1
+              )
+            }),
+            0
+          ),
+          _c(
+            "div",
+            {
+              staticStyle: {
+                height: "20em",
+                width: "100%",
+                scroll: "both",
+                overflow: "auto"
+              },
+              attrs: { id: "clustering_dataset_linking_stats_cluster_results" }
+            },
+            [
+              _c(
+                "table",
+                {
+                  staticClass: "table table-striped",
+                  staticStyle: {
+                    height: "20em",
+                    scroll: "both",
+                    overflow: "auto"
+                  },
+                  attrs: { id: "clustering_resultTable" }
+                },
+                [
+                  _c("thead", [
+                    _c("tr", [
+                      _c("th", [_vm._v("Ext")]),
+                      _c("th", [_vm._v("Rec")]),
+                      _c("th", [_vm._v("ID")]),
+                      _c("th", [_vm._v("count")]),
+                      _c("th", [_vm._v("size")])
+                    ])
+                  ]),
+                  _c(
+                    "tbody",
+                    _vm._l(_vm.clusters, function(cluster_data, cluster_id) {
+                      return _c("cluster-table-row-component", {
+                        key: "clustering_cluster_" + cluster_id,
+                        attrs: {
+                          cluster_id: cluster_id,
+                          cluster_data: cluster_data,
+                          selected: _vm.cluster_id_selected === cluster_id
+                        },
+                        on: {
+                          "select:cluster_id": function($event) {
+                            _vm.cluster_id_selected = $event
+                          }
+                        }
+                      })
+                    }),
+                    1
+                  )
+                ]
+              )
+            ]
+          ),
+          _vm.cluster_id_selected && _vm.hasProperties
+            ? _c("cluster-visualization-component", {
+                attrs: {
+                  parent_tab: "clusters",
+                  clustering_id: _vm.clustering_id,
+                  cluster_id: _vm.cluster_id_selected,
+                  cluster_data: _vm.clusters[_vm.cluster_id_selected],
+                  properties: _vm.properties,
+                  association: _vm.association
+                }
+              })
+            : _vm._e()
+        ],
+        1
+      )
+    ],
+    1
+  )
+}
+var staticRenderFns = []
+render._withStripped = true
+
+
+
+/***/ }),
+
 /***/ "./node_modules/cache-loader/dist/cjs.js?{\"cacheDirectory\":\"node_modules/.cache/vue-loader\",\"cacheIdentifier\":\"428460bc-vue-loader-template\"}!./node_modules/vue-loader/lib/loaders/templateLoader.js?!./node_modules/cache-loader/dist/cjs.js?!./node_modules/vue-loader/lib/index.js?!./components/ClusterTableRow.vue?vue&type=template&id=57853fbb&":
 /*!****************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************!*\
   !*** ./node_modules/cache-loader/dist/cjs.js?{"cacheDirectory":"node_modules/.cache/vue-loader","cacheIdentifier":"428460bc-vue-loader-template"}!./node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!./node_modules/cache-loader/dist/cjs.js??ref--0-0!./node_modules/vue-loader/lib??vue-loader-options!./components/ClusterTableRow.vue?vue&type=template&id=57853fbb& ***!
@@ -35402,9 +35047,7 @@ var render = function() {
       ),
       _c("td", [_vm._v(" " + _vm._s(_vm.cluster_id) + " ")]),
       _c("td", [_vm._v(" " + _vm._s(_vm.cluster_data.index) + " ")]),
-      _c("td", [_vm._v(" " + _vm._s(_vm.cluster_data.nodes.length) + " ")]),
-      _c("td", [_vm._v(" " + _vm._s(["full_name"].join(" | ")) + " ")]),
-      _c("td", [_vm._v(" " + _vm._s("name") + " ")])
+      _c("td", [_vm._v(" " + _vm._s(_vm.cluster_data.nodes.length) + " ")])
     ]
   )
 }
@@ -35435,7 +35078,7 @@ var render = function() {
     [
       _c(
         "div",
-        { staticClass: "border p-4 mt-4 bg-light" },
+        { staticClass: "border p-4 mt-4 bg-white" },
         [
           _c("div", { staticClass: "row" }, [
             _c(
@@ -35590,24 +35233,24 @@ var render = function() {
                 ])
               ]
             ),
-            _vm.$root.$children[0].association
-              ? _c(
-                  "div",
+            _c(
+              "div",
+              {
+                directives: [
                   {
-                    directives: [
-                      {
-                        name: "b-toggle",
-                        rawName: "v-b-toggle.cluster_plot_row_1",
-                        modifiers: { cluster_plot_row_1: true }
-                      }
-                    ],
-                    staticClass: "col-auto"
-                  },
-                  [
-                    _c(
+                    name: "b-toggle",
+                    rawName: "v-b-toggle.cluster_plot_row_1",
+                    modifiers: { cluster_plot_row_1: true }
+                  }
+                ],
+                staticClass: "col-auto"
+              },
+              [
+                _vm.association
+                  ? _c(
                       "button",
                       {
-                        staticClass: "btn btn-info",
+                        staticClass: "btn btn-info mr-4",
                         attrs: { type: "button" },
                         on: {
                           click: function($event) {
@@ -35615,71 +35258,42 @@ var render = function() {
                           }
                         }
                       },
-                      [_vm._v("Load Original Clusters")]
+                      [
+                        _vm._v(
+                          "\n                    Load Original Clusters\n                "
+                        )
+                      ]
+                    )
+                  : _vm._e(),
+                _c(
+                  "a",
+                  {
+                    staticClass: "btn btn-info",
+                    attrs: { href: _vm.getGraphLink(), target: "_blank" }
+                  },
+                  [
+                    _vm._v(
+                      "\n                    Open in new tab\n                "
                     )
                   ]
                 )
-              : _vm._e()
+              ]
+            )
           ]),
           _c(
             "b-collapse",
             {
               ref: "vis_collapse_1",
-              staticClass: "row mb-3",
               attrs: {
-                visible: !Boolean(_vm.$root.$children[0].association),
+                visible: !Boolean(_vm.association),
                 id: "cluster_plot_row_1"
               }
             },
             [
-              _c(
-                "div",
-                {
-                  staticClass: "col-md-12",
-                  staticStyle: {
-                    height: "40em",
-                    width: "100%",
-                    scroll: "both",
-                    overflow: "auto"
-                  },
-                  attrs: { id: "cluster_plot_col_1" }
-                },
-                [
-                  _c("svg", {
-                    staticClass: "plot",
-                    staticStyle: { "background-color": "#FFFFE0" },
-                    attrs: {
-                      id: "graph_cluster_1",
-                      width: "2000",
-                      height: "800"
-                    }
-                  })
-                ]
-              ),
-              _c("div", { staticClass: "col pt-4" }, [
-                _c("div", { staticClass: "row justify-content-end" }, [
-                  _c("div", { staticClass: "col-auto" }, [
-                    _c(
-                      "a",
-                      {
-                        staticClass: "btn btn-info",
-                        attrs: {
-                          href:
-                            "/job/" +
-                            _vm.$root.$children[0].job_id +
-                            "/cluster/" +
-                            _vm.$root.$children[0].job_data.results
-                              .clusterings[0].clustering_id +
-                            "/" +
-                            _vm.$root.$children[0].cluster_id_selected,
-                          target: "_blank"
-                        }
-                      },
-                      [_vm._v("Open in new tab")]
-                    )
-                  ])
-                ])
-              ])
+              _c("svg", {
+                staticClass: "plot",
+                attrs: { id: "graph_cluster_1" }
+              })
             ]
           )
         ],
@@ -35687,7 +35301,7 @@ var render = function() {
       ),
       _c(
         "div",
-        { staticClass: "border p-4 mt-4 bg-light" },
+        { staticClass: "border p-4 mt-4 bg-white" },
         [
           _c("div", { staticClass: "row" }, [
             _c(
@@ -35760,7 +35374,7 @@ var render = function() {
                             ]),
                             _c("p", { staticClass: "h5 pt-4 pl-5" }, [
                               _vm._v(
-                                "\n                                    The subgroups are then interconnected using an aggregated link represented by the highest strength. \n                                    Using such approach sub-groups and their interconnections are now clearly visible.\n                                "
+                                "\n                                    The subgroups are then interconnected using an aggregated link represented by the highest strength.\n                                    Using such approach sub-groups and their interconnections are now clearly visible.\n                                "
                               )
                             ]),
                             _c("p", { staticClass: "h5 pt-4 pl-5" }, [
@@ -35898,24 +35512,24 @@ var render = function() {
                 ])
               ]
             ),
-            _vm.$root.$children[0].association
-              ? _c(
-                  "div",
+            _c(
+              "div",
+              {
+                directives: [
                   {
-                    directives: [
-                      {
-                        name: "b-toggle",
-                        rawName: "v-b-toggle.cluster_plot_row_2",
-                        modifiers: { cluster_plot_row_2: true }
-                      }
-                    ],
-                    staticClass: "col-auto"
-                  },
-                  [
-                    _c(
+                    name: "b-toggle",
+                    rawName: "v-b-toggle.cluster_plot_row_2",
+                    modifiers: { cluster_plot_row_2: true }
+                  }
+                ],
+                staticClass: "col-auto"
+              },
+              [
+                _vm.association
+                  ? _c(
                       "button",
                       {
-                        staticClass: "btn btn-info",
+                        staticClass: "btn btn-info mr-4",
                         attrs: { type: "button" },
                         on: {
                           click: function($event) {
@@ -35923,80 +35537,51 @@ var render = function() {
                           }
                         }
                       },
-                      [_vm._v("Load Original Compact Clusters")]
+                      [
+                        _vm._v(
+                          "\n                    Load Original Compact Clusters\n                "
+                        )
+                      ]
+                    )
+                  : _vm._e(),
+                _c(
+                  "a",
+                  {
+                    staticClass: "btn btn-info",
+                    attrs: { href: _vm.getGraphLink(), target: "_blank" }
+                  },
+                  [
+                    _vm._v(
+                      "\n                    Open in new tab\n                "
                     )
                   ]
                 )
-              : _vm._e()
+              ]
+            )
           ]),
           _c(
             "b-collapse",
             {
               ref: "vis_collapse_1",
-              staticClass: "row mb-3",
               attrs: {
-                visible: !Boolean(_vm.$root.$children[0].association),
+                visible: !Boolean(_vm.association),
                 id: "cluster_plot_row_2"
               }
             },
             [
-              _c(
-                "div",
-                {
-                  staticClass: "col-md-12",
-                  staticStyle: {
-                    height: "40em",
-                    width: "100%",
-                    scroll: "both",
-                    overflow: "auto"
-                  },
-                  attrs: { id: "cluster_plot_col_2" }
-                },
-                [
-                  _c("svg", {
-                    staticClass: "plot",
-                    staticStyle: { "background-color": "#FFFFE0" },
-                    attrs: {
-                      id: "graph_cluster_2",
-                      width: "2000",
-                      height: "800"
-                    }
-                  })
-                ]
-              ),
-              _c("div", { staticClass: "col pt-4" }, [
-                _c("div", { staticClass: "row justify-content-end" }, [
-                  _c("div", { staticClass: "col-auto" }, [
-                    _c(
-                      "a",
-                      {
-                        staticClass: "btn btn-info",
-                        attrs: {
-                          href:
-                            "/job/" +
-                            _vm.$root.$children[0].job_id +
-                            "/cluster/" +
-                            _vm.$root.$children[0].job_data.results
-                              .clusterings[0].clustering_id +
-                            "/" +
-                            _vm.$root.$children[0].cluster_id_selected,
-                          target: "_blank"
-                        }
-                      },
-                      [_vm._v("Open in new tab")]
-                    )
-                  ])
-                ])
-              ])
+              _c("svg", {
+                staticClass: "plot",
+                attrs: { id: "graph_cluster_2" }
+              })
             ]
           )
         ],
         1
       ),
-      _vm.$root.$children[0].association
+      _vm.association
         ? _c(
             "div",
-            { staticClass: "border p-4 mt-4 bg-light" },
+            { staticClass: "border p-4 mt-4 bg-white" },
             [
               _c("div", { staticClass: "row" }, [
                 _c(
@@ -36127,37 +35712,16 @@ var render = function() {
               _c(
                 "b-collapse",
                 {
-                  staticClass: "row mb-3",
                   attrs: {
-                    visible: Boolean(_vm.$root.$children[0].association),
+                    visible: Boolean(_vm.association),
                     id: "cluster_plot_row_3"
                   }
                 },
                 [
-                  _c(
-                    "div",
-                    {
-                      staticClass: "col-md-12",
-                      staticStyle: {
-                        height: "40em",
-                        width: "100%",
-                        scroll: "both",
-                        overflow: "auto"
-                      },
-                      attrs: { id: "cluster_plot_col_3" }
-                    },
-                    [
-                      _c("svg", {
-                        staticClass: "plot",
-                        staticStyle: { "background-color": "#FFFFE0" },
-                        attrs: {
-                          id: "graph_cluster_3",
-                          width: "2000",
-                          height: "800"
-                        }
-                      })
-                    ]
-                  ),
+                  _c("svg", {
+                    staticClass: "plot",
+                    attrs: { id: "graph_cluster_3" }
+                  }),
                   _c("div", { staticClass: "col pt-4" }, [
                     _c("div", { staticClass: "row justify-content-end" }, [
                       _c("div", { staticClass: "col-auto" }, [
@@ -36166,14 +35730,7 @@ var render = function() {
                           {
                             staticClass: "btn btn-info",
                             attrs: {
-                              href:
-                                "/job/" +
-                                _vm.$root.$children[0].job_id +
-                                "/cluster/" +
-                                _vm.$root.$children[0].job_data.results
-                                  .clusterings[0].clustering_id +
-                                "/" +
-                                _vm.$root.$children[0].cluster_id_selected,
+                              href: _vm.getGraphLink(),
                               target: "_blank"
                             }
                           },
@@ -36197,36 +35754,11 @@ var render = function() {
             title: "CLUSTER DETAIL",
             size: "xl",
             "hide-footer": "",
-            "return-focus": _vm.$root.$children[0].$el
-          },
-          on: {
-            shown: function($event) {
-              return _vm.centerVisualization("cluster_plot_col_4")
-            }
+            "return-focus": _vm.$root.$children[0].$el,
+            static: true
           }
         },
-        [
-          _c(
-            "div",
-            {
-              staticClass: "col-md-12",
-              staticStyle: {
-                height: "40em",
-                width: "100%",
-                scroll: "both",
-                overflow: "auto"
-              },
-              attrs: { id: "cluster_plot_col_4" }
-            },
-            [
-              _c("svg", {
-                staticClass: "plot",
-                staticStyle: { "background-color": "#FFFFE0" },
-                attrs: { id: "graph_cluster_4", width: "1060", height: "800" }
-              })
-            ]
-          )
-        ]
+        [_c("svg", { staticClass: "plot", attrs: { id: "graph_cluster_4" } })]
       )
     ],
     1
@@ -36521,6 +36053,7 @@ var render = function() {
         "b-collapse",
         {
           ref: "match_" + _vm.match.id,
+          staticClass: "pt-4",
           attrs: {
             id: "match_" + _vm.match.id,
             accordion: "matches-accordion"
@@ -37770,403 +37303,6 @@ render._withStripped = true
 
 /***/ }),
 
-/***/ "./node_modules/cache-loader/dist/cjs.js?{\"cacheDirectory\":\"node_modules/.cache/vue-loader\",\"cacheIdentifier\":\"428460bc-vue-loader-template\"}!./node_modules/vue-loader/lib/loaders/templateLoader.js?!./node_modules/cache-loader/dist/cjs.js?!./node_modules/vue-loader/lib/index.js?!./components/MatchingFieldBoolean.vue?vue&type=template&id=10309e74&":
-/*!*********************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************!*\
-  !*** ./node_modules/cache-loader/dist/cjs.js?{"cacheDirectory":"node_modules/.cache/vue-loader","cacheIdentifier":"428460bc-vue-loader-template"}!./node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!./node_modules/cache-loader/dist/cjs.js??ref--0-0!./node_modules/vue-loader/lib??vue-loader-options!./components/MatchingFieldBoolean.vue?vue&type=template&id=10309e74& ***!
-  \*********************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
-/*! exports provided: render, staticRenderFns */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "render", function() { return render; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "staticRenderFns", function() { return staticRenderFns; });
-var render = function() {
-  var _vm = this
-  var _h = _vm.$createElement
-  var _c = _vm._self._c || _h
-  return _c("div", { staticClass: "p-3 border-left" }, [
-    _c("div", { staticClass: "form-group col-3" }, [
-      _c(
-        "select",
-        {
-          directives: [
-            {
-              name: "model",
-              rawName: "v-model",
-              value: _vm.matching_field_value.function_name,
-              expression: "matching_field_value.function_name"
-            }
-          ],
-          staticClass: "form-control",
-          on: {
-            change: function($event) {
-              var $$selectedVal = Array.prototype.filter
-                .call($event.target.options, function(o) {
-                  return o.selected
-                })
-                .map(function(o) {
-                  var val = "_value" in o ? o._value : o.value
-                  return val
-                })
-              _vm.$set(
-                _vm.matching_field_value,
-                "function_name",
-                $event.target.multiple ? $$selectedVal : $$selectedVal[0]
-              )
-            }
-          }
-        },
-        [
-          _c("option", { attrs: { value: "", selected: "", disabled: "" } }, [
-            _vm._v("Select a function")
-          ]),
-          _vm._l(_vm.sql_boolean_functions, function(
-            function_info,
-            sql_function_name
-          ) {
-            return sql_function_name != ""
-              ? _c("option", { domProps: { value: sql_function_name } }, [
-                  _vm._v(_vm._s(function_info.label) + "\n            ")
-                ])
-              : _vm._e()
-          })
-        ],
-        2
-      )
-    ]),
-    _vm.matching_field_value.function_name != ""
-      ? _c(
-          "div",
-          _vm._l(
-            _vm.sql_boolean_functions[_vm.matching_field_value.function_name]
-              .fields,
-            function(sub_field_type, sub_field_name) {
-              return sub_field_type == "value"
-                ? _c("matching-field-value-component", {
-                    key:
-                      _vm.unique_id +
-                      "_field_" +
-                      sub_field_name +
-                      "_" +
-                      _vm.matching_field_value.function_name,
-                    attrs: {
-                      resources: _vm.resources,
-                      matching_field_value:
-                        _vm.matching_field_value[
-                          _vm.matching_field_value.function_name
-                        ],
-                      resource_id: _vm.resource_id,
-                      unique_id:
-                        _vm.unique_id +
-                        "_field_" +
-                        sub_field_name +
-                        "_" +
-                        _vm.matching_field_value.function_name
-                    }
-                  })
-                : _vm._e()
-            }
-          ),
-          1
-        )
-      : _vm._e()
-  ])
-}
-var staticRenderFns = []
-render._withStripped = true
-
-
-
-/***/ }),
-
-/***/ "./node_modules/cache-loader/dist/cjs.js?{\"cacheDirectory\":\"node_modules/.cache/vue-loader\",\"cacheIdentifier\":\"428460bc-vue-loader-template\"}!./node_modules/vue-loader/lib/loaders/templateLoader.js?!./node_modules/cache-loader/dist/cjs.js?!./node_modules/vue-loader/lib/index.js?!./components/MatchingFieldValue.vue?vue&type=template&id=2250d30f&":
-/*!*******************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************!*\
-  !*** ./node_modules/cache-loader/dist/cjs.js?{"cacheDirectory":"node_modules/.cache/vue-loader","cacheIdentifier":"428460bc-vue-loader-template"}!./node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!./node_modules/cache-loader/dist/cjs.js??ref--0-0!./node_modules/vue-loader/lib??vue-loader-options!./components/MatchingFieldValue.vue?vue&type=template&id=2250d30f& ***!
-  \*******************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
-/*! exports provided: render, staticRenderFns */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "render", function() { return render; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "staticRenderFns", function() { return staticRenderFns; });
-var render = function() {
-  var _vm = this
-  var _h = _vm.$createElement
-  var _c = _vm._self._c || _h
-  return _c(
-    "div",
-    { staticClass: "p-3 border-left" },
-    [
-      _c("div", { staticClass: "form-check form-check-inline" }, [
-        _c("input", {
-          directives: [
-            {
-              name: "model",
-              rawName: "v-model",
-              value: _vm.matching_field_value.value_type,
-              expression: "matching_field_value.value_type"
-            }
-          ],
-          staticClass: "form-check-input",
-          attrs: {
-            type: "radio",
-            id: _vm.unique_id + "_value_type_property",
-            name: _vm.unique_id + "_value_type",
-            value: "property"
-          },
-          domProps: {
-            checked: _vm._q(_vm.matching_field_value.value_type, "property")
-          },
-          on: {
-            change: function($event) {
-              return _vm.$set(
-                _vm.matching_field_value,
-                "value_type",
-                "property"
-              )
-            }
-          }
-        }),
-        _c(
-          "label",
-          {
-            staticClass: "form-check-label",
-            attrs: { for: _vm.unique_id + "_value_type_property" }
-          },
-          [_vm._v("Property")]
-        )
-      ]),
-      _c("div", { staticClass: "form-check form-check-inline" }, [
-        _c("input", {
-          directives: [
-            {
-              name: "model",
-              rawName: "v-model",
-              value: _vm.matching_field_value.value_type,
-              expression: "matching_field_value.value_type"
-            }
-          ],
-          staticClass: "form-check-input",
-          attrs: {
-            type: "radio",
-            id: _vm.unique_id + "_value_type_function",
-            name: _vm.unique_id + "_value_type",
-            value: "function"
-          },
-          domProps: {
-            checked: _vm._q(_vm.matching_field_value.value_type, "function")
-          },
-          on: {
-            change: function($event) {
-              return _vm.$set(
-                _vm.matching_field_value,
-                "value_type",
-                "function"
-              )
-            }
-          }
-        }),
-        _c(
-          "label",
-          {
-            staticClass: "form-check-label",
-            attrs: { for: _vm.unique_id + "_value_type_function" }
-          },
-          [_vm._v("Calculated value")]
-        )
-      ]),
-      _c(
-        "div",
-        { staticClass: "row" },
-        [
-          _vm.matching_field_value.value_type == ""
-            ? _c("div", { staticClass: "col-3" })
-            : _vm._e(),
-          _vm.matching_field_value.value_type == "property"
-            ? _c("property-component", {
-                attrs: {
-                  resources: _vm.$root.$children[0].datasets,
-                  value_index: 0
-                },
-                model: {
-                  value: _vm.matching_field_value.property,
-                  callback: function($$v) {
-                    _vm.$set(_vm.matching_field_value, "property", $$v)
-                  },
-                  expression: "matching_field_value.property"
-                }
-              })
-            : _vm._e(),
-          _vm.matching_field_value.value_type == "function"
-            ? _c("div", { staticClass: "form-group col-3" }, [
-                _c(
-                  "select",
-                  {
-                    directives: [
-                      {
-                        name: "model",
-                        rawName: "v-model",
-                        value: _vm.matching_field_value.function_name,
-                        expression: "matching_field_value.function_name"
-                      }
-                    ],
-                    staticClass: "form-control",
-                    on: {
-                      change: function($event) {
-                        var $$selectedVal = Array.prototype.filter
-                          .call($event.target.options, function(o) {
-                            return o.selected
-                          })
-                          .map(function(o) {
-                            var val = "_value" in o ? o._value : o.value
-                            return val
-                          })
-                        _vm.$set(
-                          _vm.matching_field_value,
-                          "function_name",
-                          $event.target.multiple
-                            ? $$selectedVal
-                            : $$selectedVal[0]
-                        )
-                      }
-                    }
-                  },
-                  [
-                    _c(
-                      "option",
-                      { attrs: { value: "", selected: "", disabled: "" } },
-                      [_vm._v("Select a function")]
-                    ),
-                    _vm._l(_vm.sql_value_functions, function(
-                      function_info,
-                      function_name
-                    ) {
-                      return function_name != ""
-                        ? _c("option", { domProps: { value: function_name } }, [
-                            _vm._v(_vm._s(function_info.label))
-                          ])
-                        : _vm._e()
-                    })
-                  ],
-                  2
-                )
-              ])
-            : _vm._e()
-        ],
-        1
-      ),
-      _vm._l(_vm.sql_value_functions[_vm.function_name].fields, function(
-        field_type,
-        field_name
-      ) {
-        return _vm.function_name != ""
-          ? _c(
-              "div",
-              [
-                _c("label", [_vm._v(_vm._s(field_name))]),
-                field_type == "boolean"
-                  ? _c("matching-field-boolean-component", {
-                      key:
-                        _vm.unique_id +
-                        "_" +
-                        _vm.function_name +
-                        "_" +
-                        field_name,
-                      attrs: {
-                        resources: _vm.resources,
-                        sql_boolean_functions: _vm.sql_boolean_functions,
-                        function_name: _vm.function_name,
-                        field_name: field_name,
-                        matching_field_value:
-                          _vm.matching_field_value[_vm.function_name][
-                            field_name
-                          ],
-                        resource_id: _vm.resource_id,
-                        unique_id:
-                          _vm.unique_id +
-                          "_" +
-                          _vm.function_name +
-                          "_" +
-                          field_name
-                      }
-                    })
-                  : _vm._e(),
-                field_type == "value"
-                  ? _c("matching-field-value-component", {
-                      key: _vm.unique_id + "_field_" + field_name,
-                      attrs: {
-                        resources: _vm.resources,
-                        matching_field_value:
-                          _vm.matching_field_value[_vm.function_name][
-                            field_name
-                          ],
-                        resource_id: _vm.resource_id,
-                        unique_id: _vm.unique_id + "_field_" + field_name
-                      }
-                    })
-                  : _vm._e()
-              ],
-              1
-            )
-          : _vm._e()
-      }),
-      Array.isArray(_vm.matching_field_value[_vm.function_name])
-        ? _c(
-            "div",
-            _vm._l(_vm.matching_field_value[_vm.function_name], function(
-              value_item,
-              index
-            ) {
-              return _c("matching-field-value-component", {
-                key: _vm.unique_id + "_value_item_" + index,
-                attrs: {
-                  resources: _vm.resources,
-                  matching_field_value: value_item,
-                  resource_id: _vm.resource_id,
-                  unique_id: _vm.unique_id + "_value_item_" + index,
-                  removable: true
-                },
-                on: {
-                  remove: function($event) {
-                    return _vm.matching_field_value[_vm.function_name].splice(
-                      index,
-                      1
-                    )
-                  }
-                }
-              })
-            }),
-            1
-          )
-        : _vm._e(),
-      _vm.sql_value_functions[_vm.function_name].array_items
-        ? _c(
-            "button",
-            {
-              staticClass: "btn btn-primary w-25",
-              attrs: { type: "button" },
-              on: {
-                click: function($event) {
-                  return _vm.addValueItem()
-                }
-              }
-            },
-            [_vm._v("+ Add Value")]
-          )
-        : _vm._e()
-    ],
-    2
-  )
-}
-var staticRenderFns = []
-render._withStripped = true
-
-
-
-/***/ }),
-
 /***/ "./node_modules/cache-loader/dist/cjs.js?{\"cacheDirectory\":\"node_modules/.cache/vue-loader\",\"cacheIdentifier\":\"428460bc-vue-loader-template\"}!./node_modules/vue-loader/lib/loaders/templateLoader.js?!./node_modules/cache-loader/dist/cjs.js?!./node_modules/vue-loader/lib/index.js?!./components/MatchingMethodGroup.vue?vue&type=template&id=18637b54&":
 /*!********************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************!*\
   !*** ./node_modules/cache-loader/dist/cjs.js?{"cacheDirectory":"node_modules/.cache/vue-loader","cacheIdentifier":"428460bc-vue-loader-template"}!./node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!./node_modules/cache-loader/dist/cjs.js??ref--0-0!./node_modules/vue-loader/lib??vue-loader-options!./components/MatchingMethodGroup.vue?vue&type=template&id=18637b54& ***!
@@ -38389,7 +37525,9 @@ var render = function() {
                 index === 0
                   ? _vm.dataset[_vm.resource.collection_id]
                   : _vm.dataset[_vm.property[index]],
-              singular: _vm.singular
+              singular: _vm.singular,
+              "singular-resource-info": _vm.singularResourceInfo,
+              "follow-referenced-collection": _vm.followReferencedCollection
             },
             on: {
               input: function($event) {
@@ -38438,7 +37576,7 @@ var render = function() {
       "div",
       { staticClass: "row" },
       [
-        !Array.isArray(_vm.resources) && _vm.value[0]
+        _vm.showReferencedPropertyButton
           ? _c(
               "div",
               { staticClass: "col-auto p-1" },
@@ -38446,165 +37584,154 @@ var render = function() {
               1
             )
           : _vm._e(),
-        !_vm.value[0] ||
-        (Array.isArray(_vm.resources) && !_vm.singular) ||
-        (_vm.value[0] && !Array.isArray(_vm.resources))
+        _vm.selectReferencedCollection ||
+        _vm.showResourceInfo ||
+        _vm.showReferencedPropertyButton
           ? _c(
               "div",
               { staticClass: "form-group col-auto" },
               [
-                !_vm.value[0]
-                  ? [
-                      _c(
-                        "v-select",
-                        {
-                          class: { "is-invalid": _vm.errors.includes("value") },
-                          attrs: { value: _vm.value[0] },
-                          on: {
-                            input: function($event) {
-                              return _vm.updateInput($event, 0)
-                            }
+                _vm.selectReferencedCollection
+                  ? _c(
+                      "v-select",
+                      {
+                        class: { "is-invalid": _vm.errors.includes("value") },
+                        attrs: { value: _vm.value[0] },
+                        on: {
+                          input: function($event) {
+                            return _vm.updateInput($event, 0)
                           }
-                        },
-                        [
-                          Array.isArray(_vm.resources)
-                            ? _vm._l(_vm.resources, function(collection) {
+                        }
+                      },
+                      [
+                        Array.isArray(_vm.resources)
+                          ? _vm._l(_vm.resources, function(collection) {
+                              return _c(
+                                "option",
+                                {
+                                  key: collection.id,
+                                  domProps: { value: collection.id }
+                                },
+                                [
+                                  _vm._v(
+                                    _vm._s(collection.label) +
+                                      "\n                    "
+                                  )
+                                ]
+                              )
+                            })
+                          : [
+                              _c(
+                                "option",
+                                {
+                                  attrs: {
+                                    value: "",
+                                    disabled: "",
+                                    selected: ""
+                                  }
+                                },
+                                [_vm._v("Choose a referenced collection")]
+                              ),
+                              _c("option", { attrs: { value: "__value__" } }, [
+                                _vm._v("Value (do not follow reference)")
+                              ]),
+                              _vm._l(Object.keys(_vm.resources), function(
+                                collection
+                              ) {
                                 return _c(
                                   "option",
                                   {
-                                    key: collection.id,
-                                    domProps: { value: collection.id }
+                                    key: collection,
+                                    domProps: { value: collection }
                                   },
                                   [
                                     _vm._v(
-                                      _vm._s(collection.label) +
-                                        "\n                        "
+                                      _vm._s(collection) +
+                                        "\n                    "
                                     )
                                   ]
                                 )
                               })
-                            : [
-                                _c(
-                                  "option",
-                                  {
-                                    attrs: {
-                                      value: "",
-                                      disabled: "",
-                                      selected: ""
-                                    }
-                                  },
-                                  [_vm._v("Choose a referenced collection")]
-                                ),
-                                _c(
-                                  "option",
-                                  { attrs: { value: "__value__" } },
-                                  [_vm._v("Value (do not follow reference)")]
-                                ),
-                                _vm._l(Object.keys(_vm.resources), function(
-                                  collection
-                                ) {
-                                  return _c(
-                                    "option",
-                                    {
-                                      key: collection,
-                                      domProps: { value: collection }
-                                    },
-                                    [
-                                      _vm._v(
-                                        _vm._s(collection) +
-                                          "\n                        "
-                                      )
-                                    ]
-                                  )
-                                })
-                              ]
-                        ],
-                        2
-                      )
-                    ]
-                  : Array.isArray(_vm.resources) && !_vm.singular
-                  ? _c(
-                      "div",
-                      { staticClass: "row" },
-                      [
-                        !_vm.singular
-                          ? [
-                              _c(
-                                "div",
-                                {
-                                  staticClass:
-                                    "col-auto border border-info p-1 rounded-pill pl-2 pr-2 bg-white"
-                                },
-                                [
-                                  _vm._v(
-                                    "\n                        " +
-                                      _vm._s(
-                                        _vm.$root.$children[0].datasets[
-                                          _vm.$root.$children[0].getResourceById(
-                                            _vm.value[0],
-                                            _vm.resources
-                                          ).dataset_id
-                                        ].title
-                                      ) +
-                                      "\n                    "
-                                  )
-                                ]
-                              ),
-                              _c(
-                                "div",
-                                {
-                                  staticClass:
-                                    "col-auto border border-info p-1 rounded-pill ml-2 mr-2 pl-2 pr-2 bg-white"
-                                },
-                                [
-                                  _vm._v(
-                                    "\n                        " +
-                                      _vm._s(
-                                        _vm.$root.$children[0].getResourceById(
-                                          _vm.value[0],
-                                          _vm.resources
-                                        ).collection_id
-                                      ) +
-                                      "\n                    "
-                                  )
-                                ]
-                              ),
-                              _c(
-                                "div",
-                                { staticClass: "col-auto ml-0 pl-0" },
-                                [
-                                  _c("button-add", {
-                                    attrs: {
-                                      scale: 0.8,
-                                      title:
-                                        "Add another property for this Collection"
-                                    },
-                                    on: {
-                                      click: function($event) {
-                                        return _vm.$emit("clone")
-                                      }
-                                    }
-                                  }),
-                                  _c("button-delete", {
-                                    attrs: {
-                                      scale: "1.3",
-                                      title: "Remove this property"
-                                    },
-                                    on: {
-                                      click: function($event) {
-                                        return _vm.$emit("delete")
-                                      }
-                                    }
-                                  })
-                                ],
-                                1
-                              )
                             ]
-                          : _vm._e()
                       ],
                       2
                     )
-                  : !Array.isArray(_vm.resources)
+                  : _vm.showResourceInfo
+                  ? _c("div", { staticClass: "row" }, [
+                      _c(
+                        "div",
+                        {
+                          staticClass:
+                            "col-auto border border-info p-1 rounded-pill pl-2 pr-2 bg-white"
+                        },
+                        [
+                          _vm._v(
+                            "\n                    " +
+                              _vm._s(
+                                _vm.$root.$children[0].datasets[
+                                  _vm.$root.$children[0].getResourceById(
+                                    _vm.value[0],
+                                    _vm.resources
+                                  ).dataset_id
+                                ].title
+                              ) +
+                              "\n                "
+                          )
+                        ]
+                      ),
+                      _c(
+                        "div",
+                        {
+                          staticClass:
+                            "col-auto border border-info p-1 rounded-pill ml-2 mr-2 pl-2 pr-2 bg-white"
+                        },
+                        [
+                          _vm._v(
+                            "\n                    " +
+                              _vm._s(
+                                _vm.$root.$children[0].getResourceById(
+                                  _vm.value[0],
+                                  _vm.resources
+                                ).collection_id
+                              ) +
+                              "\n                "
+                          )
+                        ]
+                      ),
+                      !_vm.singular
+                        ? _c(
+                            "div",
+                            { staticClass: "col-auto ml-0 pl-0" },
+                            [
+                              _c("button-add", {
+                                attrs: {
+                                  scale: 0.8,
+                                  title:
+                                    "Add another property for this Collection"
+                                },
+                                on: {
+                                  click: function($event) {
+                                    return _vm.$emit("clone")
+                                  }
+                                }
+                              }),
+                              _c("button-delete", {
+                                attrs: {
+                                  scale: "1.3",
+                                  title: "Remove this property"
+                                },
+                                on: {
+                                  click: function($event) {
+                                    return _vm.$emit("delete")
+                                  }
+                                }
+                              })
+                            ],
+                            1
+                          )
+                        : _vm._e()
+                    ])
+                  : _vm.showReferencedPropertyButton
                   ? _c("div", { staticClass: "row" }, [
                       _c(
                         "button",
@@ -38629,7 +37756,7 @@ var render = function() {
                     ])
                   : _vm._e()
               ],
-              2
+              1
             )
           : _vm._e(),
         _vm.value[0] && _vm.value[0] !== "__value__"
@@ -40942,7 +40069,7 @@ var render = function() {
               [
                 _c(
                   "div",
-                  { staticClass: "mt-5", attrs: { id: "matches" } },
+                  { attrs: { id: "matches" } },
                   [
                     _c("div", { staticClass: "row justify-content-between" }, [
                       _c("div", { staticClass: "col-auto" }, [
@@ -41069,636 +40196,15 @@ var render = function() {
             _c(
               "tab-content",
               { attrs: { title: "Clusters" } },
-              [
-                _vm._l(_vm.matches, function(match) {
-                  return !match.is_association
-                    ? _c(
-                        "div",
-                        { staticClass: "border p-4 mt-4 bg-light" },
-                        [
-                          _c(
-                            "div",
-                            { staticClass: "row justify-content-between" },
-                            [
-                              _c(
-                                "div",
-                                { staticClass: "col-auto" },
-                                [
-                                  _c("octicon", {
-                                    directives: [
-                                      {
-                                        name: "b-toggle",
-                                        rawName: "v-b-toggle",
-                                        value:
-                                          "clustering_clusters_match_" +
-                                          match.id,
-                                        expression:
-                                          "'clustering_clusters_match_' + match.id"
-                                      }
-                                    ],
-                                    attrs: { name: "chevron-down", scale: "3" }
-                                  })
-                                ],
-                                1
-                              ),
-                              _c(
-                                "div",
-                                {
-                                  directives: [
-                                    {
-                                      name: "b-toggle",
-                                      rawName: "v-b-toggle",
-                                      value:
-                                        "clustering_clusters_match_" + match.id,
-                                      expression:
-                                        "'clustering_clusters_match_' + match.id"
-                                    }
-                                  ],
-                                  staticClass: "col align-self-center"
-                                },
-                                [
-                                  _c("div", { staticClass: "h2" }, [
-                                    _vm._v(_vm._s(match.label))
-                                  ])
-                                ]
-                              ),
-                              _vm.getResultForMatch(match.id).clusterings
-                                .length > 0
-                                ? _c(
-                                    "div",
-                                    {
-                                      staticClass: "col-auto align-self-center"
-                                    },
-                                    [
-                                      _c(
-                                        "div",
-                                        { staticClass: "h3 text-success" },
-                                        [_vm._v("Clustered")]
-                                      )
-                                    ]
-                                  )
-                                : _vm._e(),
-                              _c("div", { staticClass: "col-auto" }, [
-                                _vm.getResultForMatch(match.id).clusterings
-                                  .length > 0
-                                  ? _c(
-                                      "button",
-                                      {
-                                        staticClass: "btn btn-info",
-                                        attrs: {
-                                          type: "button",
-                                          disabled: _vm.association === "",
-                                          title:
-                                            _vm.association === ""
-                                              ? "Choose an association first"
-                                              : ""
-                                        },
-                                        on: {
-                                          click: function($event) {
-                                            return _vm.createClustering(
-                                              match.id,
-                                              $event
-                                            )
-                                          }
-                                        }
-                                      },
-                                      [_vm._v("Reconcile")]
-                                    )
-                                  : _vm._e(),
-                                _vm.getResultForMatch(match.id).clusterings
-                                  .length === 0
-                                  ? _c(
-                                      "button",
-                                      {
-                                        staticClass: "btn btn-info",
-                                        attrs: { type: "button" },
-                                        on: {
-                                          click: function($event) {
-                                            return _vm.createClustering(
-                                              match.id,
-                                              $event
-                                            )
-                                          }
-                                        }
-                                      },
-                                      [
-                                        _vm._v("Cluster"),
-                                        _vm.association !== ""
-                                          ? [_vm._v(" & Reconcile")]
-                                          : _vm._e()
-                                      ],
-                                      2
-                                    )
-                                  : _vm._e()
-                              ]),
-                              _vm.job_data
-                                ? _c(
-                                    "div",
-                                    {
-                                      staticClass:
-                                        "col-auto align-self-center form-group"
-                                    },
-                                    [
-                                      _c(
-                                        "select",
-                                        {
-                                          directives: [
-                                            {
-                                              name: "model",
-                                              rawName: "v-model",
-                                              value: _vm.association,
-                                              expression: "association"
-                                            }
-                                          ],
-                                          staticClass: "form-control",
-                                          attrs: {
-                                            id:
-                                              "match_" +
-                                              match.id +
-                                              "_association"
-                                          },
-                                          on: {
-                                            change: function($event) {
-                                              var $$selectedVal = Array.prototype.filter
-                                                .call(
-                                                  $event.target.options,
-                                                  function(o) {
-                                                    return o.selected
-                                                  }
-                                                )
-                                                .map(function(o) {
-                                                  var val =
-                                                    "_value" in o
-                                                      ? o._value
-                                                      : o.value
-                                                  return val
-                                                })
-                                              _vm.association = $event.target
-                                                .multiple
-                                                ? $$selectedVal
-                                                : $$selectedVal[0]
-                                            }
-                                          }
-                                        },
-                                        [
-                                          _c(
-                                            "option",
-                                            { attrs: { value: "" } },
-                                            [_vm._v("No association")]
-                                          ),
-                                          _vm._l(
-                                            _vm.job_data.association_files,
-                                            function(association_file_name) {
-                                              return _c(
-                                                "option",
-                                                {
-                                                  domProps: {
-                                                    value: association_file_name
-                                                  }
-                                                },
-                                                [
-                                                  _vm._v(
-                                                    _vm._s(
-                                                      association_file_name
-                                                    )
-                                                  )
-                                                ]
-                                              )
-                                            }
-                                          )
-                                        ],
-                                        2
-                                      )
-                                    ]
-                                  )
-                                : _vm._e()
-                            ]
-                          ),
-                          _vm.getResultForMatch(match.id).clusterings.length > 0
-                            ? _c("div", { staticClass: "row" }, [
-                                _c("div", { staticClass: "col-5" }, [
-                                  _c("div", { staticClass: "row" }, [
-                                    _c("div", { staticClass: "col-6" }, [
-                                      _vm._v(
-                                        "\n                                Clusters:\n                            "
-                                      )
-                                    ]),
-                                    _c("div", { staticClass: "col-6" }, [
-                                      _vm._v(
-                                        "\n                                " +
-                                          _vm._s(
-                                            _vm.getResultForMatch(match.id)
-                                              .clusterings[0].clusters_count
-                                          ) +
-                                          "\n                            "
-                                      )
-                                    ])
-                                  ]),
-                                  _c("div", { staticClass: "row" }, [
-                                    _c("div", { staticClass: "col-6" }, [
-                                      _vm._v(
-                                        "\n                                Extended Clusters:\n                            "
-                                      )
-                                    ]),
-                                    _c("div", { staticClass: "col-6" }, [
-                                      _vm._v(
-                                        "\n                                " +
-                                          _vm._s(
-                                            _vm.getResultForMatch(match.id)
-                                              .clusterings[0].extended_count
-                                          ) +
-                                          "\n                            "
-                                      )
-                                    ])
-                                  ]),
-                                  _c("div", { staticClass: "row" }, [
-                                    _c("div", { staticClass: "col-6" }, [
-                                      _vm._v(
-                                        "\n                                Clusters with Cycles:\n                            "
-                                      )
-                                    ]),
-                                    _c("div", { staticClass: "col-6" }, [
-                                      _vm._v(
-                                        "\n                                " +
-                                          _vm._s(
-                                            _vm.getResultForMatch(match.id)
-                                              .clusterings[0].cycles_count
-                                          ) +
-                                          "\n                            "
-                                      )
-                                    ])
-                                  ])
-                                ]),
-                                _c("div", { staticClass: "col-5" }, [
-                                  _c("div", { staticClass: "row" }, [
-                                    _c("div", { staticClass: "col-6" }, [
-                                      _vm._v(
-                                        "\n                                Clusters not Extended:\n                            "
-                                      )
-                                    ]),
-                                    _c("div", { staticClass: "col-6" }, [
-                                      _vm._v(
-                                        "\n                                " +
-                                          _vm._s(
-                                            _vm.getResultForMatch(match.id)
-                                              .clusterings[0].clusters_count -
-                                              _vm.getResultForMatch(match.id)
-                                                .clusterings[0].extended_count
-                                          ) +
-                                          "\n                            "
-                                      )
-                                    ])
-                                  ]),
-                                  _c("div", { staticClass: "row" }, [
-                                    _c("div", { staticClass: "col-6" }, [
-                                      _vm._v(
-                                        "\n                                Clusters without Cycles:\n                            "
-                                      )
-                                    ]),
-                                    _c("div", { staticClass: "col-6" }, [
-                                      _vm._v(
-                                        "\n                                " +
-                                          _vm._s(
-                                            _vm.getResultForMatch(match.id)
-                                              .clusterings[0].clusters_count -
-                                              _vm.getResultForMatch(match.id)
-                                                .clusterings[0].cycles_count
-                                          ) +
-                                          "\n                            "
-                                      )
-                                    ])
-                                  ])
-                                ])
-                              ])
-                            : _vm._e(),
-                          _c(
-                            "b-collapse",
-                            {
-                              staticClass: "row border-bottom mb-5",
-                              attrs: {
-                                id: "clustering_clusters_match_" + match.id,
-                                accordion: "clusters-matches-accordion"
-                              },
-                              on: {
-                                show: function($event) {
-                                  _vm.getClusters(
-                                    _vm.getResultForMatch(match.id)
-                                      .clusterings[0].clustering_id
-                                  )
-                                }
-                              }
-                            },
-                            [
-                              _c("div", { staticClass: "col-md-12" }, [
-                                _c(
-                                  "div",
-                                  {
-                                    staticStyle: {
-                                      height: "20em",
-                                      width: "100%",
-                                      scroll: "both",
-                                      overflow: "auto"
-                                    },
-                                    attrs: {
-                                      id:
-                                        "clustering_dataset_linking_stats_cluster_results"
-                                    }
-                                  },
-                                  [
-                                    _c(
-                                      "table",
-                                      {
-                                        staticClass: "table table-striped",
-                                        staticStyle: {
-                                          height: "20em",
-                                          scroll: "both",
-                                          overflow: "auto"
-                                        },
-                                        attrs: { id: "clustering_resultTable" }
-                                      },
-                                      [
-                                        _c("thead", [
-                                          _c("tr", [
-                                            _c("th", [_vm._v("Ext")]),
-                                            _c("th", [_vm._v("Rec")]),
-                                            _c("th", [_vm._v("ID")]),
-                                            _c("th", [_vm._v("count")]),
-                                            _c("th", [_vm._v("size")]),
-                                            _c("th", [_vm._v("prop")]),
-                                            _c("th", [_vm._v("sample")])
-                                          ])
-                                        ]),
-                                        _c(
-                                          "tbody",
-                                          _vm._l(_vm.clusters, function(
-                                            cluster_data,
-                                            cluster_id
-                                          ) {
-                                            return _c(
-                                              "cluster-table-row-component",
-                                              {
-                                                key:
-                                                  "clustering_cluster_" +
-                                                  cluster_id,
-                                                attrs: {
-                                                  cluster_id: cluster_id,
-                                                  cluster_data: cluster_data
-                                                },
-                                                on: {
-                                                  "select:cluster_id": function(
-                                                    $event
-                                                  ) {
-                                                    _vm.cluster_id_selected = $event
-                                                  }
-                                                }
-                                              }
-                                            )
-                                          }),
-                                          1
-                                        )
-                                      ]
-                                    )
-                                  ]
-                                )
-                              ])
-                            ]
-                          )
-                        ],
-                        1
-                      )
-                    : _vm._e()
-                }),
-                _vm.cluster_id_selected
-                  ? [
-                      _c("cluster-visualization-component", {
-                        attrs: {
-                          parent_tab: "clusters",
-                          clustering_id: _vm.clustering_id,
-                          cluster_id: _vm.cluster_id_selected,
-                          cluster_data: _vm.clusters[_vm.cluster_id_selected]
-                        }
-                      })
-                    ]
-                  : _vm._e()
-              ],
-              2
+              _vm._l(_vm.matches, function(match) {
+                return _c("cluster-component", {
+                  key: match.id,
+                  attrs: { match: match }
+                })
+              }),
+              1
             ),
-            _c(
-              "tab-content",
-              { attrs: { title: "Cluster Validation" } },
-              [
-                _vm.job_data
-                  ? [
-                      _c(
-                        "div",
-                        { staticClass: "border mb-5 p-3" },
-                        _vm._l(_vm.matches, function(match) {
-                          return !match.is_association
-                            ? _c(
-                                "div",
-                                { staticClass: "border p-4 mt-4 bg-light" },
-                                [
-                                  _c(
-                                    "div",
-                                    {
-                                      staticClass: "row justify-content-between"
-                                    },
-                                    [
-                                      _c(
-                                        "div",
-                                        { staticClass: "col-auto" },
-                                        [
-                                          _c("octicon", {
-                                            directives: [
-                                              {
-                                                name: "b-toggle",
-                                                rawName: "v-b-toggle",
-                                                value:
-                                                  "clusters_match_" + match.id,
-                                                expression:
-                                                  "'clusters_match_' + match.id"
-                                              }
-                                            ],
-                                            attrs: {
-                                              name: "chevron-down",
-                                              scale: "3"
-                                            }
-                                          })
-                                        ],
-                                        1
-                                      ),
-                                      _c(
-                                        "div",
-                                        {
-                                          directives: [
-                                            {
-                                              name: "b-toggle",
-                                              rawName: "v-b-toggle",
-                                              value:
-                                                "clusters_match_" + match.id,
-                                              expression:
-                                                "'clusters_match_' + match.id"
-                                            }
-                                          ],
-                                          staticClass: "col align-self-center"
-                                        },
-                                        [
-                                          _c("div", { staticClass: "h2" }, [
-                                            _vm._v(_vm._s(match.label))
-                                          ])
-                                        ]
-                                      ),
-                                      _c(
-                                        "div",
-                                        {
-                                          directives: [
-                                            {
-                                              name: "b-toggle",
-                                              rawName: "v-b-toggle",
-                                              value:
-                                                "clusters_match_" + match.id,
-                                              expression:
-                                                "'clusters_match_' + match.id"
-                                            }
-                                          ],
-                                          staticClass:
-                                            "col-auto align-self-center"
-                                        },
-                                        [
-                                          _vm.getResultForMatch(match.id)
-                                            .clusterings.length > 0
-                                            ? _c(
-                                                "div",
-                                                {
-                                                  staticClass: "h3 text-success"
-                                                },
-                                                [_vm._v("Clustered")]
-                                              )
-                                            : _c(
-                                                "div",
-                                                {
-                                                  staticClass: "h3 text-danger"
-                                                },
-                                                [_vm._v("Not clustered")]
-                                              )
-                                        ]
-                                      )
-                                    ]
-                                  ),
-                                  _c(
-                                    "b-collapse",
-                                    {
-                                      staticClass: "row border-bottom mb-5",
-                                      attrs: {
-                                        id: "clusters_match_" + match.id,
-                                        accordion: "clusters-matches-accordion"
-                                      },
-                                      on: {
-                                        show: function($event) {
-                                          _vm.getClusters(
-                                            _vm.getResultForMatch(match.id)
-                                              .clusterings[0].clustering_id
-                                          )
-                                        }
-                                      }
-                                    },
-                                    [
-                                      _c("div", { staticClass: "col-md-12" }, [
-                                        _c(
-                                          "div",
-                                          {
-                                            staticStyle: {
-                                              height: "20em",
-                                              width: "100%",
-                                              scroll: "both",
-                                              overflow: "auto"
-                                            },
-                                            attrs: {
-                                              id:
-                                                "dataset_linking_stats_cluster_results"
-                                            }
-                                          },
-                                          [
-                                            _c(
-                                              "table",
-                                              {
-                                                staticClass:
-                                                  "table table-striped",
-                                                staticStyle: {
-                                                  height: "20em",
-                                                  scroll: "both",
-                                                  overflow: "auto"
-                                                },
-                                                attrs: { id: "resultTable" }
-                                              },
-                                              [
-                                                _c("thead", [
-                                                  _c("tr", [
-                                                    _c("th", [_vm._v("Ext")]),
-                                                    _c("th", [_vm._v("ID")]),
-                                                    _c("th", [_vm._v("count")]),
-                                                    _c("th", [_vm._v("size")]),
-                                                    _c("th", [_vm._v("prop")]),
-                                                    _c("th", [_vm._v("sample")])
-                                                  ])
-                                                ]),
-                                                _c(
-                                                  "tbody",
-                                                  _vm._l(_vm.clusters, function(
-                                                    cluster_data,
-                                                    cluster_id
-                                                  ) {
-                                                    return _c(
-                                                      "cluster-table-row-component",
-                                                      {
-                                                        attrs: {
-                                                          cluster_id: cluster_id,
-                                                          cluster_data: cluster_data
-                                                        },
-                                                        on: {
-                                                          "select:cluster_id": function(
-                                                            $event
-                                                          ) {
-                                                            _vm.cluster_id_selected = $event
-                                                          }
-                                                        }
-                                                      }
-                                                    )
-                                                  }),
-                                                  1
-                                                )
-                                              ]
-                                            )
-                                          ]
-                                        )
-                                      ])
-                                    ]
-                                  )
-                                ],
-                                1
-                              )
-                            : _vm._e()
-                        }),
-                        0
-                      ),
-                      _vm.cluster_id_selected
-                        ? [
-                            _c("cluster-visualization-component", {
-                              attrs: {
-                                parent_tab: "cluster_validation",
-                                clustering_id: _vm.clustering_id,
-                                cluster_id: _vm.cluster_id_selected,
-                                cluster_data:
-                                  _vm.clusters[_vm.cluster_id_selected]
-                              }
-                            })
-                          ]
-                        : _vm._e()
-                    ]
-                  : _vm._e()
-              ],
-              2
-            )
+            _c("tab-content", { attrs: { title: "Cluster Validation" } })
           ],
           1
         )
@@ -41961,7 +40467,7 @@ exports = module.exports = __webpack_require__(/*! ../node_modules/css-loader/li
 
 
 // module
-exports.push([module.i, "\n.links line[data-v-a3e37fb6] {\n  stroke: #999;\n  stroke-opacity: 0.6;\n}\n.nodes circle[data-v-a3e37fb6] {\n  stroke: #fff;\n  stroke-width: 1.5px;\n}\ntext[data-v-a3e37fb6] {\n  font-family: sans-serif;\n  font-size: 10px;\n}\n.background[data-v-a3e37fb6]{\n  background-color: lightyellow;\n}\n", ""]);
+exports.push([module.i, "\n.plot[data-v-a3e37fb6] {\n    width: 100%;\n    height: 800px;\n    background-color: #FFFFE0;\n}\n.links line[data-v-a3e37fb6] {\n  stroke: #999;\n  stroke-opacity: 0.6;\n}\n.nodes circle[data-v-a3e37fb6] {\n  stroke: #fff;\n  stroke-width: 1.5px;\n}\ntext[data-v-a3e37fb6] {\n  font-family: sans-serif;\n  font-size: 10px;\n}\n", ""]);
 
 // exports
 
@@ -85082,6 +83588,413 @@ try {
 
 module.exports = g;
 
+
+/***/ }),
+
+/***/ "./utils/visualization.js":
+/*!********************************!*\
+  !*** ./utils/visualization.js ***!
+  \********************************/
+/*! exports provided: draw, clear */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "draw", function() { return draw; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "clear", function() { return clear; });
+/* harmony import */ var d3__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! d3 */ "./node_modules/d3/index.js");
+
+
+function draw(popup, graph_parent, svg_name, svg_name_child) {
+    let svg = d3__WEBPACK_IMPORTED_MODULE_0__["select"](svg_name);
+
+    var pi = Math.PI;
+    var radius2 = 20;
+    var radius = 200;
+    var node_factor = 7;
+
+    ////// NEW CODE
+    var should_drag = false;
+    var selected_node, clicked_node, graph_child;
+    var color = d3__WEBPACK_IMPORTED_MODULE_0__["scaleOrdinal"](d3__WEBPACK_IMPORTED_MODULE_0__["schemeCategory10"]);
+    var clicks = 0
+
+    // var svg = d3.select(".parent")
+    var svg_child = d3__WEBPACK_IMPORTED_MODULE_0__["select"](svg_name_child)
+    var simulation_parent = simulator(svg)
+    var simulation_child
+
+    ////// NEW CODE FOR SHOWING TOOLTIP ON MOUSEOVER
+    var tooltip = d3__WEBPACK_IMPORTED_MODULE_0__["select"]("body")
+        .append("div")
+        .attr("class", "tooltip")
+        .style("opacity", 0);
+
+    // d3.json("data_compact.json", function(error, json_graph) {
+    //     if (error) throw error;
+    //     graph_parent = json_graph
+    update(svg, graph_parent, simulation_parent);     ////// NEW CODE
+    // });
+
+
+    // FUNCTION FOR SETTING THE SIZE OF COMPACT NODES
+    function factor(x) {
+        return Math.log2(x + 1) * 16
+    }
+
+
+    // FUNCTION FOR CALCULATING THE ARC REPRESENTING THE MISSING LINKS IN A COMPACT NODE
+    function arc(r) {
+        return d3__WEBPACK_IMPORTED_MODULE_0__["arc"]()
+            .innerRadius(0)
+            .outerRadius(function (d) {
+                if (d.nodes) return factor(d.nodes) * 0.7
+                if (d.size) return 0
+            })
+            .startAngle(0) //converting from degs to radians
+            .endAngle(function (d) {
+                if (d.missing_links) return -d.missing_links * pi * 2
+                else return 0
+            });
+    }
+
+
+    ////// NEW CODE - MOVED AROUND
+    function update(svg_input, json_graph, rest_simulation) {
+        // AT START, CLEAN THE ELEMENTS OF THE GRAPH, IF ANY
+        svg_input.selectAll("g").remove();  ////// NEW CODE
+
+        var link = null, node = null;
+        var rect = svg_input.node().getBoundingClientRect();
+
+        link = svg_input.append("g")
+            .attr("class", "links")
+            .selectAll("line")
+            .data(json_graph.links)
+            .enter().append("line")
+            .on("click", function () {
+                rejectLink()
+            })
+            .style("stroke-width", function (d) {
+                return Math.sqrt(d.value) + 1;
+            })
+            .style("stroke", function (d) {
+                if (d.strength < 1) return "red";
+                else if (d.color) return d.color;
+                else return "black";
+            })
+            .style("stroke-dasharray", function (d) {
+                if (d.dash) return d.dash;
+                else {
+                    var space = String(20 * (1 - d.strenght));
+                    return ("3," + space)
+                }
+            })
+            //// NEW CODE TO DISPLAY THE STRENGTH OF A LINK
+            .on('mouseover.tooltip', function (d) {
+                tooltip.transition()
+                    .duration(300)
+                    .style("opacity", .8);
+                tooltip.html("Strength: " + d.strength)
+                    .style("left", (d3__WEBPACK_IMPORTED_MODULE_0__["event"].pageX) + "px")
+                    .style("top", (d3__WEBPACK_IMPORTED_MODULE_0__["event"].pageY + 10) + "px");
+            })
+            .on("mouseout.tooltip", function () {
+                tooltip.transition()
+                    .duration(100)
+                    .style("opacity", 0);
+            });
+
+        link.exit().remove();  ////// NEW CODE
+
+        // ADD THE NODES TO THE GRAPH ACCORDING TO THE GIVEN GRAPH
+        node = svg_input.append("g")
+            .attr("class", "nodes")
+            .selectAll("g")
+            .data(json_graph.nodes)
+            .enter().append("g")
+
+        ////// NEW CODE - OUTER CIRCLE
+        node.append("circle")
+            .attr("r", function (d) {
+                // IF IT IS A COMPACT PLOT AND IT IS NOT INVESTIGATED,
+                // THEN RETURN RADIUS ZERO SINCE NO OUTER CIRCLE IS NEEDED
+                if ((d.investigated) && (String(d.investigated) == 'false')) return 0
+                // OTHERIWSE, IF IT IS A COMPACT PLOT AND IT IS INVESTIGATED,
+                // THEN USERS THE FACTOR FUNCTION PLUS TO TWO
+                if (d.nodes) return factor(d.nodes) + 2;
+                // OTHERIWSE, IF IT IS NOT COMPACT PLOT AND IT IS INVESTIGATED (SIZE > 5)
+                if (d.size > 5) return d.size * 1.2;
+                return 0;
+            })
+            .attr("fill", "white")
+            .style("stroke", function (d) {
+                // IF THE NODE HAS BEEN SET AS SELECTED (IN DOUBLE CLICK)
+                // SET THE STROKE TO RED, OTHERWISE, USE BLACK
+                if ((selected_node) && (d === selected_node)) return "red"
+                else if ((clicked_node) && (d === clicked_node)) return "red"
+                return "black"
+            })
+            .style("stroke-width", 4)
+
+        node.append("circle")
+            .attr("r", function (d) {
+                // IF IT IS A NODE IN A COMPACT PLOT, USE THE FACTOR FUNCTION TO DETERMINE THE SIZE
+                if (d.nodes) return factor(d.nodes)
+                // OTHERWISE USE THE SIZE THAT IS GIVEN
+                if (d.size) return d.size;
+                // OTHERWISE USE 5
+                else return 5;
+            })
+            .attr("fill", function (d) {
+                // IF THE NODE HAS BEEN SET AS SELECTED (IN DOUBLE CLICK)
+                // SET IT TO RED, OTHERWISE, USE THE GROUP TO CHOOSE A COLOR
+                if ((selected_node) && (d === selected_node)) return "red"; ////// NEW CODE
+                else return color(d.group);
+            })
+            .on("dblclick", node_dblclick)
+            // .on("contextmenu", node_mousedown)
+            .style("stroke", function (d) {
+                // ADD A WHITE STROKE FOR THE INNER CIRCLE OF NODES IN AN INVESTIGATED CLUSTER
+                if ((d.investigated) && (String(d.investigated) == 'true')) return "white"
+                // OTHERWISE, IF IT IS A COMPACT PLOT, MAKE IT BLACK
+                else if (d.nodes) return "black"
+                // OTHERWISE, IF IT IS NOT A COMPACT PLOT, THE NOES ORIGINALLY DID NOT HAVE THE PROPERTY 'INVESTIGATED'
+                // THEN WE USE THE SIZE OF THE NODES, WHICH WOULD BE BIGGER THAN SIZE 5 (OF THE ASSOCIATED CLUSTER)
+                // SO, ADD A WHITE STROKE FOR THE INNER CIRCLE OF NODES IN AN INVESTIGATED CLUSTER (SIZE > 5)
+                else if (d.size > 5) return "white"
+                // OTHERWISE, MAKE IT BLACK
+                else return "black"
+            })
+            .style("stroke-width", 2)
+            .call(d3__WEBPACK_IMPORTED_MODULE_0__["drag"]()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        // ADDING THE WHITE ARC INSIDE THE COMPACT NODE REPRESENTING THE MISSING LINKS
+        node.append("path")
+            .attr("d", arc(radius2))
+            .attr("fill", "white");
+
+        // TEXT DISPLAYING INSIDE THE COMPACT NODE THE NUMBER OF NODES WITHIN IT
+        node.append("text")
+            .text(function (d) {
+                return d.id;
+            })
+            .attr('x', function (d) {
+                if (d.nodes) return factor(d.nodes) * 0.9 + 8
+                if (d.size) return (d.size * 0.9 + 8)
+            })      ////// NEW CODE
+            .attr('y', 3);
+
+        // TEXT DISPLAYING INSIDE THE COMPACT NODE THE NUMBER OF NODES WITHIN IT
+        // COMPACT NODE SIZE TEXT AND POSITION
+        node.append("svg:text")
+            .attr("dx", function (d) {
+                if ((d.nodes) && (d.nodes > 2)) {
+                    // return - 8
+                    // var label = "N:" + d.node
+                    // var radius = factor(d.nodes)
+                    return -factor(d.nodes) / 3
+                }
+                // FOR SIZE < 2
+                // PULLS BACK THE NODE INNER TEXT FROM GOING TO THE RIGHT
+                else return -10
+            })
+            .attr('dy', 3)
+            .text(function (d) {
+                if (d.nodes) return "N:" + d.nodes
+            })
+            .style("font-weight", "bold");
+
+
+        // TEXT DISPLAYING INSIDE THE NODE THE TOTAL OF LINKS
+        // AND THE LINKS MISSING WITHIN A COMPACT NODE
+        // COMPACT TOTAL LINK COUNT AND POSITION
+        node.append("svg:text")
+            .attr("dx", function (d) {
+                if ((d.nodes) && (d.nodes > 2)) {
+                    var label
+                    var total = (d.nodes * (d.nodes - 1) / 2)
+                    // var center = d3.select(this).attr("cx")
+                    if (d.missing_links > 0)
+                        label = "L:" + Math.round(total * (1 - d.missing_links)) + "/" + total
+                    else label = "L:" + total
+                    // return - (label.length/2) * 7
+                    return -factor(d.nodes) / 3
+                }
+            })
+            .attr('dy', 15)
+            .text(function (d) {
+                if ((d.nodes) && (d.nodes > 2)) {
+                    var total = (d.nodes * (d.nodes - 1) / 2)
+                    if (d.missing_links > 0)
+                        return "L:" + Math.round(total * (1 - d.missing_links)) + "/" + total
+                    else return "L:" + total
+                }
+            })
+
+        // TEXT DISPLAYING THE STRENGTH OF COMPACT NODES BELLOW THE NODE
+        node.append("svg:text")
+            .attr("dx", -8)
+            .attr('dy', function (d) {
+                if (d.nodes) return factor(d.nodes) + 13
+            })
+            .text(function (d) {
+                if ((d.strength) && ((d.nodes) && (d.nodes > 1)))
+                    if (Number.parseFloat(String(d.strength)))
+                        return "S:" + Math.round(d.strength * 1000) / 1000
+                    else return "S:" + d.strength
+            })
+            .style("font-weight", "bold");
+
+        // METADATA OF THE NODE TO BE DISPLAYED ON MOUSE OVER
+        node.append("title")
+            .text(function (d) {
+                return d.id;
+            });
+
+        node.exit().remove(); ////// NEW CODE
+
+        rest_simulation.nodes(json_graph.nodes).on("tick", ticked);
+        rest_simulation.force("link").links(json_graph.links);
+
+        function ticked() {
+            link.attr("x1", function (d) {
+                return d.source.x;
+            })
+                .attr("y1", function (d) {
+                    return d.source.y;
+                })
+                .attr("x2", function (d) {
+                    return d.target.x;
+                })
+                .attr("y2", function (d) {
+                    return d.target.y;
+                });
+
+            node.attr("cx", function (d) {
+                return d.x = Math.max(10, Math.min(rect.width - 200, d.x));
+            })
+                .attr("cy", function (d) {
+                    return d.y = Math.max(10, Math.min(rect.height - 10, d.y));
+                })
+                .attr("transform", function (d) {
+                    return "translate(" + d.x + "," + d.y + ")";
+                })
+        }
+
+    }
+
+    // CHILD'S NON COMPACT PLOT
+    function new_plot(child_graph) {
+        graph_child = child_graph;
+        clear(svg_child);
+
+        popup.$on('shown', () => {
+            simulation_child = simulator(svg_child);
+            update(svg_child, child_graph, simulation_child);
+        });
+
+        popup.show();
+    }
+
+    // D3 GRAPH FORCE SIMULATOR
+    function simulator(svg_input) {
+        var rect = svg_input.node().getBoundingClientRect();
+
+        var simulation_input = d3__WEBPACK_IMPORTED_MODULE_0__["forceSimulation"]()
+            .force("link", d3__WEBPACK_IMPORTED_MODULE_0__["forceLink"]().id(function (d) {
+                    return d.id;
+                })
+                    .distance(
+                        function (d) {
+                            if (d.dist_factor)
+                                return factor(d.dist_factor[0]) + factor(d.dist_factor[1]) + d.distance * 0.8
+                            else return d.distance;
+                        })
+            )
+            .force("charge", d3__WEBPACK_IMPORTED_MODULE_0__["forceManyBody"]())
+            .force("center", d3__WEBPACK_IMPORTED_MODULE_0__["forceCenter"](rect.width / 2, rect.height / 2));
+
+        return simulation_input
+    }
+
+    // ON MOUSE DOWN FUNCTION
+    function node_dblclick(d) {
+        //d.fixed = true;
+        selected_node = d;
+        if (d.child) {
+
+            // for compact with child, expand
+            //selected_node = d;
+            update(svg, graph_parent, simulation_parent)
+            new_plot(d.child)
+        }
+        else if (d.nodes) // for compact without child, just highlight
+        {
+            //selected_node = d;
+            update(svg, graph_parent, simulation_parent)
+        }
+
+        else if (graph_child)
+        // it is the child of compact
+            update(svg_child, graph_child, simulation_child)
+
+        else
+        // not compact
+            update(svg, graph_parent, simulation_parent)
+    }
+
+    function node_mousedown(d) {
+        d3__WEBPACK_IMPORTED_MODULE_0__["event"].preventDefault();
+        clicked_node = d;
+        //alert('Test')
+
+        if (d.nodes)
+        // it is the parent (compact)
+            update(svg, graph_parent, simulation_parent)
+
+        else if (graph_child)
+        // it is the child of compact
+            update(svg_child, graph_child, simulation_child)
+
+        else
+        // not compact
+            update(svg, graph_parent, simulation_parent)
+    }
+
+
+    function dragstarted(d) {
+        if (!d3__WEBPACK_IMPORTED_MODULE_0__["event"].active)
+            if (d.nodes) simulation_parent.alphaTarget(0.2).restart(graph_parent)
+            else if (graph_child) simulation_child.alphaTarget(0.2).restart(graph_child)
+            else simulation_parent.alphaTarget(0.2).restart(graph_parent)
+
+        d.fx = d.x;
+        d.fy = d.y;
+    }
+
+    function dragged(d) {
+        d.fx = d3__WEBPACK_IMPORTED_MODULE_0__["event"].x;
+        d.fy = d3__WEBPACK_IMPORTED_MODULE_0__["event"].y;
+    }
+
+    function dragended(d) {
+        if (!d3__WEBPACK_IMPORTED_MODULE_0__["event"].active)
+            if (d.nodes) simulation_parent.alphaTarget(0);
+            else if (simulation_child) simulation_child.alphaTarget(0);
+
+        // d.fx = null;
+        // d.fy = null;
+    }
+}
+
+function clear(svg) {
+    svg = (typeof svg === 'string') ? d3__WEBPACK_IMPORTED_MODULE_0__["select"](svg) : svg;
+    svg.selectAll("*").remove();
+}
 
 /***/ })
 

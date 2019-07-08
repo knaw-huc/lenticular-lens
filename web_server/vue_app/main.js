@@ -23,8 +23,6 @@ Vue.component('property-component', Property);
 import Octicon from 'vue-octicon/components/Octicon.vue'
 import 'vue-octicon/icons'
 
-import MatchingFieldValueComponent from "./components/MatchingFieldValue"
-
 Vue.component('octicon', Octicon);
 
 import md5 from 'md5'
@@ -35,8 +33,6 @@ Vue.prototype.$utilities = {
 import VueFormWizard from 'vue-form-wizard'
 import 'vue-form-wizard/dist/vue-form-wizard.min.css'
 Vue.use(VueFormWizard);
-
-Vue.component('matching-field-value-component', MatchingFieldValueComponent);
 
 Vue.filter('capitalize', function (value) {
   if (!value) return '';

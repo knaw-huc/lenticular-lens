@@ -225,13 +225,14 @@ def get_cluster_graph_data(job_id, clustering_id, cluster_id):
     cluster_data = request.json['cluster_data'] if 'cluster_data' in request.json else get_cluster_data(clustering_id,
                                                                                                         cluster_id)
     associations = request.json['associations'] if 'associations' in request.json else None
+    properties = request.json['properties'] if 'properties' in request.json else None
     mapping_label = run_query("SELECT alignment FROM clusterings WHERE clustering_id = %s", (clustering_id,))[0]
     sub_clusters = f'Reconciled_{hasher(job_id)}_{mapping_label}_{hasher(associations)}'
     get_cluster = request.json.get('get_cluster', True)
     get_cluster_compact = request.json.get('get_cluster_compact', True)
     get_reconciliation = request.json.get('get_reconciliation', True) if associations else False
 
-    golden_agents_specifications = {
+    specifications = {
         "data_store": "POSTGRESQL",
         "sub_clusters": sub_clusters,
         "associations": associations,
@@ -242,50 +243,13 @@ def get_cluster_graph_data(job_id, clustering_id, cluster_id):
             'strengths': cluster_data['strengths'],
             "links": cluster_data["links"]
         },
-        "properties": [
-            # MARRIAGE_PERSON
-            {"dataset": "ufab7d657a250e3461361c982ce9b38f3816e0c4b__saa_index_op_ondertrouwregister",
-             "entity_type": "saaOnt_Person",
-             "property": "saaOnt_full_nameList"
-             },
-            # BAPTISM_PERSON
-            {"dataset": "ufab7d657a250e3461361c982ce9b38f3816e0c4b__saa_index_op_doopregister",
-             "entity_type": "saaOnt_Person",
-             "property": "saaOnt_full_name"
-             },
-            {"dataset": "ufab7d657a250e3461361c982ce9b38f3816e0c4b__ecartico",
-             "entity_type": "foaf_Person",
-             "property": "foaf_name"
-             },
-            {"dataset": "ufab7d657a250e3461361c982ce9b38f3816e0c4b__ecartico",
-             "entity_type": "schema_Person",
-             "property": "foaf_name"
-             },
-            {"dataset": "ufab7d657a250e3461361c982ce9b38f3816e0c4b__onstage_20190220",
-             "entity_type": "schema_Person",
-             "property": "schema_name"
-             },
-            {"dataset": "ufab7d657a250e3461361c982ce9b38f3816e0c4b__saa_index_op_begraafregisters",
-             "entity_type": "saaOnt_Person",
-             "property": "saaOnt_full_name"
-             },
-            {"dataset": "ufab7d657a250e3461361c982ce9b38f3816e0c4b__rijksmuseum",
-             "entity_type": "edm_Agent",
-             "property": "skos_prefLabelList"
-             },
-            {"dataset": "ufab7d657a250e3461361c982ce9b38f3816e0c4b__saa_index_op_kwijtscheldingen_20181211",
-             "entity_type": "saaOnt_Person",
-             "property": "saaOnt_full_name"
-             },
-        ]
+        "properties": properties,
     }
 
-    # import sys
-    # print(golden_agents_specifications, file=sys.stderr)
     return jsonify({
-        'cluster_graph': visualise_1(specs=golden_agents_specifications, activated=True) if get_cluster else None,
-        'cluster_graph_compact': visualise_3(specs=golden_agents_specifications, activated=True) if get_cluster_compact else None,
-        'reconciliation_graph': visualise_2(specs=golden_agents_specifications, activated=True)[
+        'cluster_graph': visualise_1(specs=specifications, activated=True) if get_cluster else None,
+        'cluster_graph_compact': visualise_3(specs=specifications, activated=True) if get_cluster_compact else None,
+        'reconciliation_graph': visualise_2(specs=specifications, activated=True)[
             1] if get_reconciliation else None,
     })
 

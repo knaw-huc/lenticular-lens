@@ -5,18 +5,11 @@
         <td> {{ cluster_id }} </td>
         <td> {{ cluster_data.index }} </td>
         <td> {{ cluster_data.nodes.length }} </td>
-        <td> {{ ['full_name'].join(' | ') }} </td>
-        <td> {{ 'name' }} </td>
     </tr>
 </template>
 
 <script>
     export default {
-        computed: {
-            selected() {
-                return this.cluster_id === this.$root.$children[0].cluster_id_selected;
-            },
-        },
         data() {
             return {
                 ext_colors: {
@@ -30,6 +23,7 @@
         props: {
             cluster_data: Object,
             cluster_id: String,
+            selected: Boolean,
         },
     }
 </script>

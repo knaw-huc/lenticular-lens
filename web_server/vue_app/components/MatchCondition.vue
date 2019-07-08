@@ -349,8 +349,7 @@
 
                         this.condition[resources_key][resource_id].forEach(values => {
                             if (values.hasOwnProperty('transformers') && !this.validateField(
-                                `${resources_key}_transformers`,
-                                (values.transformers.length > 0) && !values.transformers.includes('')))
+                                `${resources_key}_transformers`, !values.transformers.includes('')))
                                 sourcesTargetsValid = false;
                         });
                     });

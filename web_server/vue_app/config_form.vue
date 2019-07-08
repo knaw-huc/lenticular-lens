@@ -103,7 +103,7 @@
         </tab-content>
 
         <tab-content title="Alignments" :before-change="validateAlignmentsTab">
-        <div id="matches" class="mt-5">
+        <div id="matches">
             <div class="row justify-content-between">
                 <div class="col-auto">
                     <h2>Alignment Specifications</h2>
@@ -155,192 +155,14 @@
         </tab-content>
 
         <tab-content title="Clusters">
-            <div class="border p-4 mt-4 bg-light"
-                 v-for="match in matches"
-                 v-if="!match.is_association"
-            >
-                <div class="row justify-content-between">
-                    <div class="col-auto">
-                        <octicon name="chevron-down" scale="3" v-b-toggle="'clustering_clusters_match_' + match.id"></octicon>
-                    </div>
-
-                    <div class="col align-self-center" v-b-toggle="'clustering_clusters_match_' + match.id">
-                        <div class="h2">{{ match.label }}</div>
-                    </div>
-
-                    <div v-if="getResultForMatch(match.id).clusterings.length > 0" class="col-auto align-self-center">
-                        <div class="h3 text-success">Clustered</div>
-                    </div>
-
-                    <div class="col-auto">
-                        <button v-if="getResultForMatch(match.id).clusterings.length > 0" type="button" class="btn btn-info" @click="createClustering(match.id, $event)" :disabled="association === ''" :title="association === '' ? 'Choose an association first' : ''">Reconcile</button>
-                        <button v-if="getResultForMatch(match.id).clusterings.length === 0" type="button" class="btn btn-info" @click="createClustering(match.id, $event)">Cluster<template v-if="association !== ''"> &amp; Reconcile</template></button>
-                    </div>
-
-                    <div v-if="job_data" class="col-auto align-self-center form-group">
-                        <select class="form-control" v-model="association" :id="'match_' + match.id + '_association'">
-                            <option value="">No association</option>
-                            <option v-for="association_file_name in job_data.association_files" :value="association_file_name">{{ association_file_name }}</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="row" v-if="getResultForMatch(match.id).clusterings.length > 0">
-                    <div class="col-5">
-                        <div class="row">
-                            <div class="col-6">
-                                Clusters:
-                            </div>
-                            <div class="col-6">
-                                {{ getResultForMatch(match.id).clusterings[0].clusters_count }}
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-6">
-                                Extended Clusters:
-                            </div>
-                            <div class="col-6">
-                                {{ getResultForMatch(match.id).clusterings[0].extended_count }}
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-6">
-                                Clusters with Cycles:
-                            </div>
-                            <div class="col-6">
-                                {{ getResultForMatch(match.id).clusterings[0].cycles_count }}
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-5">
-                        <div class="row">
-                            <div class="col-6">
-                                Clusters not Extended:
-                            </div>
-                            <div class="col-6">
-                                {{ getResultForMatch(match.id).clusterings[0].clusters_count - getResultForMatch(match.id).clusterings[0].extended_count }}
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-6">
-                                Clusters without Cycles:
-                            </div>
-                            <div class="col-6">
-                                {{ getResultForMatch(match.id).clusterings[0].clusters_count - getResultForMatch(match.id).clusterings[0].cycles_count }}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <b-collapse
-                        @show="getClusters(getResultForMatch(match.id).clusterings[0].clustering_id)"
-                        class="row border-bottom mb-5"
-                        :id="'clustering_clusters_match_' + match.id"
-                        accordion="clusters-matches-accordion"
-                >
-                    <div class="col-md-12">
-                        <div id="clustering_dataset_linking_stats_cluster_results" style="height: 20em; width:100%; scroll: both; overflow: auto;">
-                            <table class="table table-striped" id="clustering_resultTable" style="height: 20em; scroll: both; overflow: auto;">
-                                <thead>
-                                    <tr>
-                                        <th>Ext</th>
-                                        <th>Rec</th>
-                                        <th>ID</th>
-                                        <th>count</th>
-                                        <th>size</th>
-                                        <th>prop</th>
-                                        <th>sample</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <cluster-table-row-component
-                                            v-for="(cluster_data, cluster_id) in clusters"
-                                            :key="'clustering_cluster_' + cluster_id"
-                                            :cluster_id="cluster_id"
-                                            :cluster_data="cluster_data"
-                                            @select:cluster_id="cluster_id_selected = $event"
-                                    />
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </b-collapse>
-            </div>
-            <template v-if="cluster_id_selected">
-                <cluster-visualization-component
-                        parent_tab="clusters"
-                        :clustering_id="clustering_id"
-                        :cluster_id="cluster_id_selected"
-                        :cluster_data="clusters[cluster_id_selected]"
-                />
-            </template>
+            <cluster-component
+                :match="match"
+                v-for="match in matches"
+                :key="match.id"
+            ></cluster-component>
         </tab-content>
 
-        <tab-content title="Cluster Validation">
-            <template v-if="job_data">
-                <div class="border mb-5 p-3">
-                    <div class="border p-4 mt-4 bg-light"
-                         v-for="match in matches"
-                         v-if="!match.is_association"
-                    >
-                        <div class="row justify-content-between">
-                            <div class="col-auto">
-                                <octicon name="chevron-down" scale="3" v-b-toggle="'clusters_match_' + match.id"></octicon>
-                            </div>
-
-                            <div class="col align-self-center" v-b-toggle="'clusters_match_' + match.id">
-                                <div class="h2">{{ match.label }}</div>
-                            </div>
-
-                            <div class="col-auto align-self-center" v-b-toggle="'clusters_match_' + match.id">
-                                <div v-if="getResultForMatch(match.id).clusterings.length > 0" class="h3 text-success">Clustered</div>
-                                <div v-else class="h3 text-danger">Not clustered</div>
-                            </div>
-                        </div>
-                        <b-collapse
-                                @show="getClusters(getResultForMatch(match.id).clusterings[0].clustering_id)"
-                                class="row border-bottom mb-5"
-                                :id="'clusters_match_' + match.id"
-                                accordion="clusters-matches-accordion"
-                        >
-                            <div class="col-md-12">
-                                <div id="dataset_linking_stats_cluster_results" style="height: 20em; width:100%; scroll: both; overflow: auto;">
-                                    <table class="table table-striped" id="resultTable" style="height: 20em; scroll: both; overflow: auto;">
-                                        <thead>
-                                            <tr>
-                                                <th>Ext</th>
-                                                <th>ID</th>
-                                                <th>count</th>
-                                                <th>size</th>
-                                                <th>prop</th>
-                                                <th>sample</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <cluster-table-row-component
-                                                    v-for="(cluster_data, cluster_id) in clusters"
-                                                    :cluster_id="cluster_id"
-                                                    :cluster_data="cluster_data"
-                                                    @select:cluster_id="cluster_id_selected = $event"
-                                            />
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </b-collapse>
-                    </div>
-                </div>
-
-                <template v-if="cluster_id_selected">
-                    <cluster-visualization-component
-                            parent_tab="cluster_validation"
-                            :clustering_id="clustering_id"
-                            :cluster_id="cluster_id_selected"
-                            :cluster_data="clusters[cluster_id_selected]"
-                    />
-                </template>
-            </template>
-        </tab-content>
+        <tab-content title="Cluster Validation"></tab-content>
 
         <template v-if="(props.activeTabIndex === 0  && !job_id) || [1,2].includes(props.activeTabIndex)"
                   slot="next" slot-scope="props">
@@ -389,18 +211,16 @@
 <script>
     import Resource from './components/Resource'
     import Match from './components/Match'
-    import ClusterVisualizationComponent from "./components/ClusterVisualization";
-    import ClusterTableRowComponent from "./components/ClusterTableRow";
+    import Cluster from './components/Cluster'
     import ValidationMixin from "./mixins/ValidationMixin";
 
     export default {
         name: 'app',
         mixins: [ValidationMixin],
         components: {
-            ClusterTableRowComponent,
-            ClusterVisualizationComponent,
             'resource-component': Resource,
             'match-component': Match,
+            'cluster-component': Cluster,
         },
         computed: {
             has_changes() {
@@ -411,10 +231,6 @@
         },
         data() {
             return {
-                association: '',
-                cluster_id_selected: null,
-                clustering_id: null,
-                clusters: [],
                 datasets: [],
                 idea_form: '',
                 inputs: {
@@ -551,9 +367,6 @@
                 this.matches = [];
                 this.resources_count = 0;
                 this.matches_count = 0;
-                this.association = '';
-                this.cluster_id_selected = null;
-                this.clustering_id = null;
             },
             copyToClipboard(el) {
                 let disabled = el.hasAttribute('disabled');
@@ -580,37 +393,6 @@
                     this.$refs['clipboard_copy_message'].setAttribute('hidden', 'hidden');
                 }, 2000)
             },
-            createClustering(mapping_id, event) {
-                if (event) {
-                    let btn = event.target;
-                    btn.setAttribute('disabled', 'disabled');
-                }
-                const clustered = this.getResultForMatch(mapping_id).clusterings.length > 0;
-
-                fetch('/job/' + this.job_id + '/create_clustering/',
-                    {
-                        headers: {
-                            'Accept': 'application/json',
-                            'Content-Type': 'application/json',
-                        },
-                        method: "POST",
-                        body: JSON.stringify({
-                            'alignment': mapping_id,
-                            'association_file': clustered ? this.association : '',
-                            'clustered': clustered,
-                        })
-                    })
-                    .then((response) => response.json())
-                    .then((data) => {
-                        if (!clustered && this.association) {
-                            this.getJobData(() => {
-                                this.createClustering(mapping_id);
-                            });
-                        } else {
-                            this.getJobData();
-                        }
-                    });
-            },
             createJob() {
                 fetch("/job/create/",
                     {
@@ -627,15 +409,6 @@
                         this.setJobId(data.job_id);
                     }
                 );
-            },
-            getClusters(clustering_id) {
-                this.clustering_id = clustering_id;
-
-                fetch('/job/' + this.job_id + '/clusters/' + clustering_id + '?association=' + this.association)
-                    .then((response) => response.json())
-                    .then((data) => {
-                        this.clusters = data;
-                    });
             },
             getDatasets() {
                 let vue = this;
@@ -745,21 +518,7 @@
                         return resources[i];
                 }
             },
-            getResultForMatch(match_id) {
-                let clusterings = [];
 
-                if (this.job_data) {
-                    this.job_data.results.clusterings.forEach(clustering => {
-                        if (clustering.alignment === match_id) {
-                            clusterings.push(clustering);
-                        }
-                    });
-                }
-
-                return {
-                    'clusterings': clusterings,
-                }
-            },
             getOrCreate(subject, key, default_value) {
                 if (typeof subject[key] === 'undefined') {
                     this.$set(subject, key, default_value);

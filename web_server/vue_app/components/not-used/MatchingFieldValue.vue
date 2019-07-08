@@ -70,7 +70,7 @@
 
 <script>
     import MatchingFieldBooleanComponent from "./MatchingFieldBoolean";
-    import PropertyComponent from "./PropertyComponent";
+    import PropertyComponent from "../PropertyComponent";
 
     export default {
         components: {PropertyComponent, MatchingFieldBooleanComponent},
