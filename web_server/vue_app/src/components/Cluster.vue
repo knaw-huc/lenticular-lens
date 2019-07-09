@@ -27,8 +27,8 @@
       <div v-if="app.job_data" class="col-auto">
         <select class="form-control" v-model="association" :id="'match_' + match.id + '_association'">
           <option value="">No association</option>
-          <option v-for="association_file_name in app.job_data.association_files" :value="association_file_name">{{
-            association_file_name }}
+          <option v-for="association_file_name in app.job_data.association_files" :value="association_file_name">
+            {{ association_file_name }}
           </option>
         </select>
       </div>
@@ -85,6 +85,7 @@
 
     <b-collapse
         @show="getClusters(getResultForMatch(match.id).clusterings[0].clustering_id)"
+        v-model="showData"
         :id="'clustering_clusters_match_' + match.id"
         class="pt-3"
         accordion="clusters-matches-accordion"
@@ -105,34 +106,15 @@
         </div>
       </div>
 
-      <div id="clustering_dataset_linking_stats_cluster_results"
-           style="height: 20em; width:100%; scroll: both; overflow: auto;">
-        <table class="table table-striped" id="clustering_resultTable"
-               style="height: 20em; scroll: both; overflow: auto;">
-          <thead>
-          <tr>
-            <th>Ext</th>
-            <th>Rec</th>
-            <th>ID</th>
-            <th>count</th>
-            <th>size</th>
-          </tr>
-          </thead>
-          <tbody>
-          <cluster-table-row-component
-              v-for="(cluster_data, cluster_id) in clusters"
-              :key="'clustering_cluster_' + cluster_id"
-              :cluster_id="cluster_id"
-              :cluster_data="cluster_data"
-              :selected="cluster_id_selected === cluster_id"
-              @select:cluster_id="cluster_id_selected = $event"
-          />
-          </tbody>
-        </table>
-      </div>
+      <cluster-table-component
+          v-if="showData"
+          :clusters="clusters"
+          :cluster_id_selected="cluster_id_selected"
+          @select:cluster_id="cluster_id_selected = $event"
+      />
 
       <cluster-visualization-component
-          v-if="cluster_id_selected && hasProperties"
+          v-if="showData && cluster_id_selected && hasProperties"
           parent_tab="clusters"
           :clustering_id="clustering_id"
           :cluster_id="cluster_id_selected"
@@ -145,13 +127,13 @@
 </template>
 
 <script>
-    import ClusterTableRowComponent from "./ClusterTableRow";
+    import ClusterTableComponent from "./ClusterTable";
     import ClusterVisualizationComponent from "./ClusterVisualization";
 
     export default {
         name: "ClusterComponent",
         components: {
-            ClusterTableRowComponent,
+            ClusterTableComponent,
             ClusterVisualizationComponent,
         },
         data() {
@@ -160,6 +142,7 @@
                 properties: [],
                 association: '',
                 cluster_id_selected: null,
+                showData: false,
                 clustering_id: null,
                 clusters: [],
             }
