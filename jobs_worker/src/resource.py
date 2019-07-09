@@ -76,7 +76,10 @@ class Resource:
             filter_sqls = map(self.r_get_filter_sql, filter_obj['conditions'])
             return psycopg2_sql.SQL('({})').format(psycopg2_sql.SQL('\n %s ' % filter_obj['type']).join(filter_sqls))
 
-        return FilterFunction(filter_obj, self.label).sql
+        prop = hash_string(filter_obj['property'][1])
+        column_info = self.collection.table_data['columns'][prop]
+
+        return FilterFunction(filter_obj, self.label, column_info['LIST']).sql
 
     @property
     def group_by_sql(self):

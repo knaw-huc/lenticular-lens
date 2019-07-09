@@ -1,9 +1,9 @@
-from helpers import get_json_from_file, get_absolute_property, get_property_sql
+from helpers import get_json_from_file, get_absolute_property, get_property_sql, get_extended_property_sql
 from psycopg2 import sql as psycopg2_sql
 
 
 class FilterFunction:
-    def __init__(self, function_obj, parent_label):
+    def __init__(self, function_obj, parent_label, is_list):
         self.function_name = function_obj['type']
 
         filter_functions = get_json_from_file('filter_functions.json')
@@ -34,7 +34,8 @@ class FilterFunction:
                 parent_label + '__' + absolute_property[0] + '__relation__local_property__1'
             )
 
-        self.parameters['property'] = get_property_sql(absolute_property)
+        self.parameters['property'] = get_extended_property_sql(absolute_property) \
+            if is_list else get_property_sql(absolute_property)
         self.parameters['property__0'] = get_property_sql([absolute_property[0]])
         self.parameters['property__1'] = get_property_sql([absolute_property[1]])
         self.parameters['property__0__original_view'] = psycopg2_sql.Identifier(absolute_property[0] + '__original')

@@ -213,11 +213,16 @@ class LinksetsCollection:
         return sql.Composed(joins)
 
     def get_matching_fields_joins_sql(self, resource, matching_fields, joins):
+        property_join_added = []
+
         for property_field in matching_fields:
             prop_resource = self.get_resource_by_label(property_field.resource_label)
             column_info = prop_resource.collection.table_data['columns'][property_field.prop_label]
 
-            if property_field.resource_label == resource.label and column_info['LIST']:
+            if property_field.resource_label == resource.label and column_info['LIST'] \
+                    and property_field.absolute_property not in property_join_added:
+                property_join_added.append(property_field.absolute_property)
+
                 joins.append(sql.SQL("""
                 LEFT JOIN jsonb_array_elements_text({table_name}.{column_name}) 
                 AS {column_name_expanded} ON true""").format(
@@ -292,9 +297,41 @@ class LinksetsCollection:
         return True
 
     def generate_match_sql(self, match):
-        # fields_sql = match.similarity_fields_sql
-        # if fields_sql == sql.SQL(''):
-        #     return fields_sql
+    #         match_sql = sql.SQL("""
+    # DROP SEQUENCE IF EXISTS {sequence_name} CASCADE;
+    # CREATE SEQUENCE {sequence_name} MINVALUE 0 START 0;
+    #
+    # DROP MATERIALIZED VIEW IF EXISTS source CASCADE;
+    # CREATE MATERIALIZED VIEW source AS {source};
+    # ANALYZE source;
+    # CREATE INDEX ON source (uri);
+    #
+    # DROP MATERIALIZED VIEW IF EXISTS target CASCADE;
+    # CREATE MATERIALIZED VIEW target AS {target};
+    # ANALYZE target;
+    # CREATE INDEX ON target (uri);
+    #
+    # DROP MATERIALIZED VIEW IF EXISTS {view_name} CASCADE;
+    # CREATE MATERIALIZED VIEW {view_name} AS
+    # SELECT source.uri AS source_uri,
+    #        target.uri AS target_uri,
+    #        {fields}
+    # FROM source
+    # JOIN target
+    # ON (source.collection != target.collection OR source.uri > target.uri) AND nextval({sequence_name}) != 0
+    # AND ({conditions});
+    #
+    # SELECT * FROM {view_name};
+    # """).format(
+    #             fields=match.similarity_fields_sql,
+    #             source=match.source_sql,
+    #             target=match.target_sql,
+    #             view_name=sql.Identifier(match.name),
+    #             sequence_name=sql.Identifier(match.name + '_count'),
+    #             conditions=match.conditions_sql,
+    #         )
+    #
+    #         match_sql = match.index_sql + match_sql
 
         match_sql = sql.SQL("""
 SELECT source.uri AS source_uri,
