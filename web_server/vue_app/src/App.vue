@@ -1,256 +1,154 @@
 <template>
-<div class="container" id="app">
-    <form @submit.prevent="submitForm" action="" method="post">
+  <div class="container" id="app">
     <form-wizard
         title="Lenticular Lenses II"
         subtitle="Reconcile data for Golden Agents"
         color="#efc501"
         shape="square"
-        ref="formWizard"
-    >
-        <tab-content title="Idea" :before-change="validateIdeaTab">
-            <div class="row align-items-center justify-content-between">
-                <div class="col-auto">
-                    <h2>Idea</h2>
-                </div>
-
-                <div class="col-auto" v-if="job_data">
-                    <span class="badge badge-info">Created {{ job_data.created_at }}</span>
-                </div>
+        ref="formWizard">
+      <tab-content title="Idea" :before-change="validateIdeaTab">
+        <tab-content-structure title="Idea" :tab_error="tab_error">
+          <template v-slot:header>
+            <div class="col-auto" v-if="$root.job">
+              <span class="badge badge-info">Created {{ $root.job.created_at }}</span>
             </div>
+          </template>
 
-            <div v-if="idea_form === 'new' ||  job_id" class="border p-4 mt-4 bg-light">
-                <div class="form-group">
-                    <label class="h3" for="idea">What's your idea?</label>
-                    <input type="text" class="form-control" id="idea" v-model="inputs.job_title"
-                           v-bind:class="{'is-invalid': errors.includes('idea')}" :disabled="is_updating">
-                    <div class="invalid-feedback" v-show="errors.includes('idea')">
-                        Please indicate a name for your idea
-                    </div>
-                </div>
+          <idea
+              :job_id="job_id"
+              :job_title="job_title"
+              :job_description="job_description"
+              :idea_form="idea_form"
+              :is_updating="is_updating"
+              @load="setJobId($event)"
+              @create="createJob($event)"
+              @update="updateJob($event)"
+          ></idea>
+        </tab-content-structure>
+      </tab-content>
 
-                <div class="form-group pt-3">
-                    <label class="h3" for="description">Describe your idea</label>
-                    <textarea class="form-control" id="description" v-model="inputs.job_description"
-                              v-bind:class="{'is-invalid': errors.includes('description')}"
-                              :disabled="is_updating"></textarea>
-                    <div class="invalid-feedback" v-show="errors.includes('description')">
-                        Please indicate a description for your idea
-                    </div>
-                </div>
-
-                <div class="form-group row justify-content-end align-items-center pt-3 mb-0">
-                    <div class="col-auto" v-if="job_data">
-                        <span class="badge badge-info" v-show="job_data.created_at !== job_data.updated_at">
-                            Updated {{ job_data.updated_at }}
-                        </span>
-                    </div>
-
-                    <div class="col-auto">
-                        <b-button @click="saveIdea" variant="info">
-                            {{ job_id ? 'Update' : 'Create' }}
-                        </b-button>
-                    </div>
-                </div>
+      <tab-content title="Collections" :before-change="validateCollectionsTab">
+        <tab-content-structure title="Collections" :tab_error="tab_error">
+          <template v-slot:header>
+            <div class="col-auto">
+              <button-add @click="addResource" title="Add a Collection"/>
             </div>
+          </template>
 
-            <div v-if="idea_form === 'existing' || job_id" class="bg-light border mt-4 pl-4 pr-4 pt-4">
-                <div class="form-group row justify-content-end align-items-center">
-                    <span class="badge badge-info" ref="clipboard_copy_message" hidden>
-                        Job ID copied to clipboard
-                    </span>
+          <resource
+              v-for="(resource, index) in $root.resources"
+              :key="resource.id"
+              :resource="resource"
+              v-on:remove="$root.resources.splice(index, 1)"
+              ref="resourceComponents"
+          ></resource>
+        </tab-content-structure>
+      </tab-content>
 
-                    <label class="h3 col-auto" for="job_id_input">{{ job_id ? '' : 'Existing ' }}Job ID</label>
-                    <input type="text" class="col-md-3 col-auto" ref="job_id_input" id="job_id_input" :disabled="Boolean(job_id)" v-model="inputs.job_id">
-
-                    <div v-if="!job_id" class="col-auto">
-                        <b-button @click="setJobId(inputs.job_id)" variant="info">Load</b-button>
-                    </div>
-                    <div v-else class="col-auto">
-                        <b-button @click="copyToClipboard($refs['job_id_input'])"><octicon name="clippy" class="align-text-top"></octicon></b-button>
-                    </div>
-                </div>
+      <tab-content title="Alignments" :before-change="validateAlignmentsTab">
+        <tab-content-structure title="Alignment Specifications" :tab_error="tab_error">
+          <template v-slot:header>
+            <div class="col-auto">
+              <button-add @click="addMatch" title="Add an Alignment"/>
             </div>
+          </template>
 
-            <b-alert variant="danger" class="mt-4" :show="tab_error !== ''">
-                {{ tab_error }}
-            </b-alert>
-        </tab-content>
+          <match
+              v-for="(match, index) in $root.matches"
+              :match="match"
+              :key="match.id"
+              @submit="$root.submit()"
+              @remove="$root.matches.splice(index, 1)"
+              @update:label="match.label = $event"
+              ref="matchComponents"
+          ></match>
+        </tab-content-structure>
+      </tab-content>
 
-        <tab-content title="Collections" :before-change="validateCollectionsTab">
-            <div class="row align-items-center justify-content-between">
-                <div class="col-auto">
-                    <h2>Collections</h2>
-                </div>
+      <tab-content title="Link Validation"></tab-content>
 
-                <div class="col-auto">
-                    <button-add @click="addResource" title="Add a Collection"/>
-                </div>
-            </div>
+      <tab-content title="Clusters">
+        <tab-content-structure title="Clusters" :tab_error="tab_error">
+          <cluster
+              v-for="match in $root.matches"
+              :match="match"
+              :key="match.id"
+          ></cluster>
+        </tab-content-structure>
+      </tab-content>
 
-            <resource-component
-                    :initial_label="'Collection ' + resource.id"
-                    :resource="resource"
-                    :datasets="datasets"
-                    :resources="resources"
-                    v-for="(resource, index) in resources"
-                    :key="resource.id"
-                    v-on:remove="resources.splice(index, 1)"
-                    @update:label="resource.label = $event"
-                    ref="resourceComponents"
-            ></resource-component>
+      <tab-content title="Cluster Validation"></tab-content>
 
-            <b-alert variant="danger" class="mt-4" :show="tab_error !== ''">
-                {{ tab_error }}
-            </b-alert>
-        </tab-content>
-
-        <tab-content title="Alignments" :before-change="validateAlignmentsTab">
-            <div class="row align-items-center justify-content-between">
-                <div class="col-auto">
-                    <h2>Alignment Specifications</h2>
-                </div>
-
-                <div class="col-auto">
-                    <button-add @click="addMatch" title="Add an Alignment"/>
-                </div>
-            </div>
-
-            <match-component
-                    :match="match"
-                    :matches="matches"
-                    v-for="(match, index) in matches"
-                    :key="match.id"
-                    @remove="matches.splice(index, 1)"
-                    @update:label="match.label = $event"
-                    ref="matchComponents"
-            ></match-component>
-
-            <b-alert variant="danger" class="mt-4" :show="tab_error !== ''">
-                {{ tab_error }}
-            </b-alert>
-        </tab-content>
-
-        <tab-content title="Link Validation">
-            <div v-if="job_data">
-                <div>
-                    Request received at: {{ job_data.requested_at }}
-                </div>
-                <div>
-                    Status: <pre>{{ job_data.status }}</pre>
-                </div>
-                <div v-if="job_data.processing_at">
-                    Processing started at: {{ job_data.processing_at }}
-                </div>
-                <div v-if="job_data.finished_at">
-                    Processing finished at: {{ job_data.finished_at }}
-                    <div v-for="match in matches">
-                        <a :href="'/job/' + job_id + '/result/' + match.label" target="_blank">Results for {{ match.label }}</a>
-                    </div>
-                    <div>
-                        <a :href="'/job/' + job_id + '/result/download'" download>Download RDF</a>
-                    </div>
-                </div>
-            </div>
-        </tab-content>
-
-        <tab-content title="Clusters">
-            <div class="row align-items-center justify-content-between">
-                <div class="col-auto">
-                    <h2>Clusters</h2>
-                </div>
-            </div>
-
-            <cluster-component
-                :match="match"
-                v-for="match in matches"
-                :key="match.id"
-            ></cluster-component>
-        </tab-content>
-
-        <tab-content title="Cluster Validation"></tab-content>
-
-        <template v-if="(props.activeTabIndex === 0  && !job_id) || [1,2].includes(props.activeTabIndex)"
-                  slot="next" slot-scope="props">
-            <template v-if="props.activeTabIndex === 0 && !job_id">
-                <wizard-button
-                    :style="props.fillButtonStyle"
-                    :disabled="props.loading || idea_form === 'existing'"
-                    @click.native.prevent.stop="idea_form='existing'"
-                >
-                    Existing Idea
-                </wizard-button>
-                &nbsp;
-                <wizard-button
-                    v-if="has_changes"
-                    :style="props.fillButtonStyle"
-                    :disabled="props.loading || idea_form === 'new'"
-                    @click.native.prevent.stop="idea_form='new'"
-                >
-                    New Idea
-                </wizard-button>
-            </template>
-
-            <template v-if="[1,2].includes(props.activeTabIndex)">
-                <wizard-button
-                        v-if="has_changes"
-                        :style="props.fillButtonStyle"
-                        :disabled="props.loading"
-                        @click.native.stop="validateAndSave(props.activeTabIndex)">
-                    Save
-                 </wizard-button>
-
-                <wizard-button
-                    :style="props.fillButtonStyle"
-                    :disabled="props.loading">
-                    Save and next
-                </wizard-button>
-            </template>
+      <template v-if="(props.activeTabIndex === 0  && !job_id) || [1,2].includes(props.activeTabIndex)"
+                slot="next" slot-scope="props">
+        <template v-if="props.activeTabIndex === 0 && !job_id">
+          <wizard-button
+              :style="props.fillButtonStyle"
+              :disabled="props.loading || idea_form === 'existing'"
+              @click.native.prevent.stop="idea_form='existing'"
+          >
+            Existing Idea
+          </wizard-button>
+          &nbsp;
+          <wizard-button
+              v-if="hasChanges"
+              :style="props.fillButtonStyle"
+              :disabled="props.loading || idea_form === 'new'"
+              @click.native.prevent.stop="idea_form='new'"
+          >
+            New Idea
+          </wizard-button>
         </template>
 
-        <template slot="finish" slot-scope="props" style="display: none">&#8203;</template>
+        <template v-if="[1,2].includes(props.activeTabIndex)">
+          <wizard-button
+              v-if="hasChanges"
+              :style="props.fillButtonStyle"
+              :disabled="props.loading"
+              @click.native.stop="validateAndSave(props.activeTabIndex)">
+            Save
+          </wizard-button>
+
+          <wizard-button
+              :style="props.fillButtonStyle"
+              :disabled="props.loading">
+            Save and next
+          </wizard-button>
+        </template>
+      </template>
+
+      <template slot="finish" slot-scope="props" style="display: none">&#8203;</template>
     </form-wizard>
-    </form>
-</div>
+  </div>
 </template>
 
 <script>
-    import Resource from './components/Resource'
-    import Match from './components/Match'
-    import Cluster from './components/Cluster'
+    import Idea from './components/Idea';
+    import Resource from './components/Resource';
+    import Match from './components/Match';
+    import Cluster from './components/Cluster';
+    import TabContentStructure from './components/TabContentStructure';
+
     import ValidationMixin from "./mixins/ValidationMixin";
 
     export default {
-        name: 'app',
+        name: 'App',
         mixins: [ValidationMixin],
         components: {
-            'resource-component': Resource,
-            'match-component': Match,
-            'cluster-component': Cluster,
-        },
-        computed: {
-            has_changes() {
-                return !Boolean(this.job_data)
-                    || JSON.stringify(this.resources) !== JSON.stringify(this.job_data['resources_form_data'])
-                    || JSON.stringify(this.matches) !== JSON.stringify(this.job_data['mappings_form_data'])
-            },
+            TabContentStructure,
+            Idea,
+            Resource,
+            Match,
+            Cluster,
         },
         data() {
             return {
-                datasets: [],
-                idea_form: '',
-                inputs: {
-                    job_id: '',
-                    job_title: '',
-                    job_description: '',
-                },
                 tab_error: '',
+                idea_form: '',
+                id_to_load: '',
                 job_id: '',
-                job_data: null,
-                resources: [],
-                resources_count: 0,
-                matches: [],
-                matches_count: 0,
+                job_title: '',
+                job_description: '',
                 is_updating: false,
                 planned_refresh_job_data: false,
                 steps: [
@@ -263,20 +161,21 @@
                 ],
             }
         },
+        computed: {
+            hasChanges() {
+                return !Boolean(this.$root.job)
+                    || JSON.stringify(this.$root.resources) !== JSON.stringify(this.$root.job['resources_form_data'])
+                    || JSON.stringify(this.$root.matches) !== JSON.stringify(this.$root.job['mappings_form_data'])
+            },
+        },
         methods: {
             isTabValid(isValid, message) {
                 this.tab_error = isValid ? '' : message;
                 return !!isValid;
             },
 
-            validateIdea() {
-                const ideaValid = this.validateField('idea', this.inputs.job_title);
-                const descriptionValid = this.validateField('description', this.inputs.job_description);
-                return ideaValid && descriptionValid;
-            },
-
             validateIdeaTab() {
-                return this.isTabValid(this.job_data, 'Please update or create your idea first!');
+                return this.isTabValid(this.$root.job, 'Please update or create your idea first!');
             },
 
             validateCollectionsTab() {
@@ -286,9 +185,9 @@
                 if (results.includes(false))
                     return this.isTabValid(false, 'One or more resources contain errors!');
 
-                const isValid = this.isTabValid(this.resources.length > 0, 'Please add at least one resource!');
+                const isValid = this.isTabValid(this.$root.resources.length > 0, 'Please add at least one resource!');
                 if (isValid)
-                    this.submitForm();
+                    this.$root.submit();
 
                 return isValid;
             },
@@ -299,9 +198,9 @@
                 if (results.includes(false))
                     return this.isTabValid(false, 'One or more alignments contain errors!');
 
-                const isValid = this.isTabValid(this.matches.length > 0, 'Please add at least one alignment!');
+                const isValid = this.isTabValid(this.$root.matches.length > 0, 'Please add at least one alignment!');
                 if (isValid)
-                    this.submitForm();
+                    this.$root.submit();
 
                 return isValid;
             },
@@ -317,491 +216,107 @@
                 }
             },
 
-            activateStep(step_name, jump=false) {
+            activateStep(step_name, jump = false) {
                 let step_index = this.steps.indexOf(step_name);
 
                 if (step_index < 0 || typeof this.$refs['formWizard'].tabs[step_index] === 'undefined')
                     return false;
 
-                for (let i = 0; i <= step_index; i++) {
+                for (let i = 0; i <= step_index; i++)
                     this.$set(this.$refs['formWizard'].tabs[i], 'checked', true);
-                }
 
                 this.$set(this.$refs['formWizard'], 'maxStep', step_index);
 
-                if (jump) {
+                if (jump)
                     this.$refs['formWizard'].changeTab(this.$refs['formWizard'].activeTabIndex, step_index);
-                }
             },
+
             addResource(event) {
-                if (event) {
-                    event.target.blur();
-                }
-                this.resources_count ++;
-                let resource = {
-                    dataset_id: '',
-                    collection_id: '',
-                    'id': this.resources_count,
-                    'filter': {
-                        'type': 'AND',
-                        'conditions': [],
-                    },
-                    limit: -1,
-                    related: [],
-                    related_array: false,
-                };
-                this.resources.push(resource);
+                if (event) event.target.blur();
+                this.$root.addResource();
             },
+
             addMatch(event) {
-                if (event) {
-                    event.target.blur();
-                }
-                this.matches_count++;
-                let match = {
-                    'id': this.matches.length,
-                    'is_association': false,
-                    'label': 'Alignment ' + (this.matches.length + 1),
-                    'sources': [],
-                    'targets': [],
-                    'type': 'AND',
-                    'conditions': [],
-                };
-                this.matches.push(match);
+                if (event) event.target.blur();
+                this.$root.addMatch();
             },
-            clearForm() {
-                this.resources = [];
-                this.matches = [];
-                this.resources_count = 0;
-                this.matches_count = 0;
+
+            async createJob(inputs) {
+                const jobId = await this.$root.createJob(inputs);
+                this.setJobId(jobId);
             },
-            copyToClipboard(el) {
-                let disabled = el.hasAttribute('disabled');
-                if (disabled) {
-                    el.removeAttribute('disabled');
-                }
 
-                let selected = document.getSelection().rangeCount > 0 ? document.getSelection().getRangeAt(0) : false;
+            async updateJob(job_data) {
+                this.is_updating = true;
 
-                el.select();
-                document.execCommand('copy');
+                await this.$root.updateJob(job_data);
+                await this.getJobData();
 
-                document.getSelection().removeAllRanges();
-                if (selected) {
-                    document.getSelection().addRange(selected);
-                }
-
-                if (disabled) {
-                    el.setAttribute('disabled', 'disabled');
-                }
-
-                this.$refs['clipboard_copy_message'].removeAttribute('hidden');
-                setTimeout(() => {
-                    this.$refs['clipboard_copy_message'].setAttribute('hidden', 'hidden');
-                }, 2000)
-            },
-            createJob() {
-                fetch("/job/create/",
-                    {
-                        headers: {
-                            'Accept': 'application/json',
-                            'Content-Type': 'application/json',
-                        },
-                        method: "POST",
-                        body: JSON.stringify(this.inputs),
-                    }
-                )
-                    .then((response) => response.json())
-                    .then((data) => {
-                        this.setJobId(data.job_id);
-                    }
-                );
-            },
-            getDatasets() {
-                let vue = this;
-                fetch('/datasets')
-                    .then((response) => response.json())
-                    .then((data) => {
-                        // Make internal references for referenced collections
-                        Object.keys(data).forEach(dataset_name => {
-                            let dataset = data[dataset_name];
-                            Object.keys(dataset.collections).forEach(collection_name => {
-                                let collection = dataset.collections[collection_name];
-                                Object.keys(collection).forEach(property_name => {
-                                    let property = collection[property_name];
-                                    if (typeof property['referencedCollections'] !== 'undefined') {
-                                        let referenced_collections = property['referencedCollections'];
-                                        property['referencedCollections'] = {};
-                                        referenced_collections = referenced_collections.filter(ref_collection_name => {
-                                            return ref_collection_name !== 'tim_unknown'
-                                        });
-                                        referenced_collections.forEach(ref_collection_name => {
-                                            property['referencedCollections'][ref_collection_name] = dataset.collections[ref_collection_name];
-                                        });
-                                    }
-                                });
-                            });
-                        });
-
-                        vue.datasets = data;
-
-                        let urlParams = new URLSearchParams(window.location.search);
-                        let job_id = urlParams.get('job_id');
-                        if (job_id) {
-                            this.job_id = job_id;
-                            this.idea_form = 'existing';
-                            this.$set(this.inputs, 'job_id', job_id);
-                            this.getJobData();
-                        }
-                    });
-            },
-            getJobData(callback) {
                 this.is_updating = false;
-                this.planned_refresh_job_data = false;
-
-                if (this.job_id !== '') {
-                    fetch('/job/' + this.job_id)
-                        .then((response) => response.json())
-                        .then((data) => {
-                            this.job_data = JSON.parse(JSON.stringify(data));
-
-                            this.$set(this.inputs, 'job_title', data.job_title);
-                            this.$set(this.inputs, 'job_description', data.job_description);
-
-                            this.activateStep('collections');
-
-                            if (this.resources_count < 1) {
-                                if (data.resources_form_data) {
-                                    this.resources = data.resources_form_data;
-                                    this.resources_count = this.resources.length;
-                                } else {
-                                    this.addResource();
-                                }
-                            }
-
-                            if (this.matches.length < 1) {
-                                if (data.mappings_form_data) {
-                                    this.matches = data.mappings_form_data;
-                                    this.activateStep('alignments');
-                                } else {
-                                    this.addMatch();
-                                }
-                            }
-
-                            let has_finished = false;
-                            let has_unfinished = false;
-                            Object.keys(this.job_data.results.alignments).forEach(alignment_key => {
-                                let alignment = this.job_data.results.alignments[alignment_key];
-                                if (alignment.status === 'Finished') {
-                                    has_finished = true;
-                                } else if (!alignment.status.startsWith('FAILED')) {
-                                    has_unfinished = true;
-                                }
-                            });
-
-                            if (has_finished) {
-                                this.activateStep('clusters');
-                            }
-
-                            if (has_unfinished) {
-                                if (!this.planned_refresh_job_data) {
-                                    this.planned_refresh_job_data = true;
-                                    setTimeout(this.getJobData, 5000);
-                                }
-                            }
-
-                            if (callback) {
-                                callback();
-                            }
-                        })
-                        .catch(() => {
-                            this.job_data = null;
-                        });
-                }
-            },
-            getResourceById(resource_id, resources = this.resources) {
-                for (let i = 0; i < resources.length; i++) {
-                    if (resources[i].id == resource_id || resources[i].label === resource_id)
-                        return resources[i];
-                }
             },
 
-            getOrCreate(subject, key, default_value) {
-                if (typeof subject[key] === 'undefined') {
-                    this.$set(subject, key, default_value);
-                }
-
-                return subject[key];
-            },
-            saveIdea() {
-                if (this.validateIdea()) {
-                    if (this.job_id) {
-                        this.updateJob(this.inputs);
-                    }
-                    else {
-                        this.createJob();
-                    }
-                }
-            },
-            setJobId(job_id) {
+            async setJobId(job_id) {
                 this.$set(this, 'job_id', job_id);
-                this.$set(this.inputs, 'job_id', job_id);
 
                 let parsedUrl = new URL(window.location.href);
                 parsedUrl.searchParams.set('job_id', job_id);
                 window.history.pushState(null, null, parsedUrl.href);
 
-                this.clearForm();
-                this.getJobData();
+                await this.getJobData();
             },
-            submitForm() {
-                let vue = this;
-                function get_value(value_object, target_object) {
-                    if (value_object.value_type === 'property') {
-                        let converted_property = create_references_for_property(value_object.property);
 
-                        let resource_label = converted_property[0] == parseInt(converted_property[0]) ?
-                            vue.getResourceById(converted_property[0]).label :
-                            converted_property[0];
+            async getJobData() {
+                this.planned_refresh_job_data = false;
 
-                        target_object.property = [
-                            resource_label,
-                            converted_property[1].toLowerCase()
-                        ];
-                    }
+                if (this.job_id !== '') {
+                    await this.$root.loadJobData(this.job_id);
 
-                    let exclude_keys = ['', 'function_name', 'property', 'transformers', 'value_type'];
+                    if (this.$root.job) {
+                        this.job_title = this.$root.job.job_title;
+                        this.job_description = this.$root.job.job_description;
 
-                    if (value_object.value_type === 'function') {
-                        if (Array.isArray(value_object[value_object.function_name])) {
-                            target_object[value_object.function_name] = [];
-                            value_object[value_object.function_name].forEach(parameter_object => {
-                                let target_parameter_object = {};
-                                target_object[value_object.function_name].push(get_value(parameter_object, target_parameter_object))
-                            });
-                        } else {
-                            target_object[value_object.function_name] = {};
-                            if (value_object[value_object.function_name].value_type === '') {
-                                Object.keys(value_object[value_object.function_name]).forEach(field_name => {
-                                    if (exclude_keys.indexOf(field_name) < 0) {
-                                        target_object[value_object.function_name][field_name] = {};
-                                        target_object[value_object.function_name][field_name] = get_value(value_object[value_object.function_name][field_name], target_object[value_object.function_name][field_name]);
-                                    }
-                                });
-                            } else {
-                                target_object[value_object.function_name] = get_value(value_object[value_object.function_name], target_object[value_object.function_name])
-                            }
-                        }
-                    }
+                        this.activateStep('collections');
 
-                    if (value_object.value_type === '') {
-                        Object.keys(value_object).forEach(field_name => {
-                            if (exclude_keys.indexOf(field_name) < 0) {
-                                target_object[field_name] = {};
-                                target_object[field_name] = get_value(value_object[field_name], target_object[field_name]);
-                            }
+                        if (this.$root.resources.length === 0)
+                            this.$root.addResource();
+
+                        if (this.$root.matches.length === 0)
+                            this.$root.addMatch();
+                        else
+                            this.activateStep('alignments');
+
+                        let hasFinished = false;
+                        let hasUnfinished = false;
+                        Object.keys(this.$root.job.results.alignments).forEach(alignment_key => {
+                            let alignment = this.$root.job.results.alignments[alignment_key];
+
+                            if (alignment.status === 'Finished')
+                                hasFinished = true;
+                            else if (!alignment.status.startsWith('FAILED'))
+                                hasUnfinished = true;
                         });
-                    }
 
-                    if (value_object.transformers && value_object.transformers.length > 0) {
-                        target_object.transformers = value_object.transformers;
-                    }
+                        if (hasFinished)
+                            this.activateStep('clusters');
 
-                    return target_object;
-                }
-
-                function create_references_for_property(property) {
-                    // Check if reference
-                    if (property.length > 2) {
-                        // Don't follow reference if user selected 'Value'
-                        if (property[2] === '__value__') {
-                            return property.slice(0, 2)
+                        if (hasUnfinished && !this.planned_refresh_job_data) {
+                            this.planned_refresh_job_data = true;
+                            setTimeout(this.getJobData, 5000);
                         }
-
-                        let base_referenced_resource = vue.getResourceById(property[0], resources_copy);
-
-                        // Add resource
-                        let referenced_resource = {
-                            "collection_id": property[2],
-                            "dataset_id": base_referenced_resource.dataset_id,
-                            "related": []
-                        };
-                        referenced_resource['label'] = vue.$utilities.md5(property[0] + property[1] + JSON.stringify(referenced_resource));
-
-                        let resource_exists = false;
-                        resources_copy.forEach(rc => {
-                            if (rc.label === referenced_resource.label) {
-                                resource_exists = true;
-                                return false
-                            }
-                        });
-                        if (!resource_exists) {
-                            resources_copy.push(referenced_resource);
-                        }
-
-                        // Add relation
-                        let relation = {
-                            "resource": referenced_resource.label,
-                            "local_property": property[1],
-                            "remote_property": "uri"
-                        };
-                        let relation_exists = false;
-                        base_referenced_resource.related.forEach(existing_relation => {
-                            if (JSON.stringify(existing_relation) === JSON.stringify(relation)) {
-                                relation_exists = true;
-                                return false
-                            }
-                        });
-                        if (!relation_exists) {
-                            base_referenced_resource.related.push(relation);
-                        }
-
-                        if (base_referenced_resource.related.length > 1) {
-                            base_referenced_resource.related_array = true;
-                        }
-
-                        // Replace part of property that was processed and re-enter the function with that output
-                        return create_references_for_property([referenced_resource.label, property[3].toLowerCase()].concat(property.slice(4)))
-                    }
-
-                    return property
-                }
-
-                function get_recursive_conditions(filter_obj) {
-                    let conditions = [];
-                    let obj_arr;
-
-                    if (Array.isArray(filter_obj)) {
-                        obj_arr = filter_obj;
-                    } else if (Array.isArray(filter_obj.conditions)) {
-                        obj_arr = filter_obj.conditions;
-                    }
-
-                    if (obj_arr) {
-                        obj_arr.forEach(condition => {
-                            conditions = conditions.concat(get_recursive_conditions(condition));
-                        });
-                        return conditions;
-                    } else {
-                        return [filter_obj]
                     }
                 }
-
-                let resources = [];
-                let resources_copy = JSON.parse(JSON.stringify(this.resources));
-                let matches_copy = JSON.parse(JSON.stringify(this.matches));
-
-                // Check for references
-                resources_copy.forEach(resource_copy => {
-                    if (resource_copy.filter.type) {
-                        get_recursive_conditions(resource_copy.filter.conditions).forEach(condition => {
-                            condition.property = create_references_for_property(condition.property);
-                        });
-                    }
-                });
-
-                matches_copy.forEach(match_copy => {
-                    ['sources', 'targets'].forEach(resources_key => {
-                        match_copy[resources_key].forEach((resource_id, resource_index) => {
-                            if (resource_id == parseInt(resource_id)) {
-                                match_copy[resources_key][resource_index] = this.getResourceById(resource_id).label;
-                            }
-                        });
-                    });
-
-                    get_recursive_conditions(match_copy.conditions).forEach(condition => {
-                        ['sources', 'targets'].forEach(resources_key => {
-                            Object.keys(condition[resources_key]).forEach(resource_id => {
-                                condition[resources_key][resource_id].forEach((property, property_index) => {
-                                    condition[resources_key][resource_id][property_index].property = create_references_for_property(property.property);
-                                    condition[resources_key][resource_id][property_index].property.forEach((property_part, property_part_index) => {
-                                        if (property_part > 0) {
-                                            condition[resources_key][resource_id][property_index].property[property_part_index] = this.getResourceById(property_part).label;
-                                        }
-                                    });
-                                });
-
-                                condition[resources_key][this.getResourceById(resource_id).label] = condition[resources_key][resource_id];
-                                delete condition[resources_key][resource_id];
-                            });
-                        });
-                    });
-                });
-
-                resources_copy.forEach(resource_copy => {
-                    if (resource_copy.filter && resource_copy.filter.type) {
-                        get_recursive_conditions(resource_copy.filter.conditions).forEach(condition => {
-                            if (condition.property[0] == parseInt(condition.property[0])) {
-                                condition.property[0] = this.getResourceById(condition.property[0]).label;
-                            }
-                            condition.property[1] = condition.property[1].toLowerCase();
-                            if (typeof condition.value_type !== 'undefined') {
-                                condition[condition.value_type] = condition.value;
-                                delete condition.value;
-                                delete condition.value_type;
-                            }
-                        });
-                    } else {
-                        delete resource_copy.filter;
-                    }
-
-                    if (resource_copy.related) {
-                        resource_copy.related.forEach(related => {
-                            if (related.resource == parseInt(related.resource)) {
-                                related.resource = this.getResourceById(related.resource).label;
-                            }
-                            related.local_property = [related.local_property.toLowerCase()];
-                            related.remote_property = [related.remote_property.toLowerCase()];
-                            delete related.resource_index;
-                        });
-
-                        if (resource_copy.related_array) {
-                            resource_copy.related = [resource_copy.related]
-                        }
-                    }
-
-                    delete resource_copy.related_array;
-                    let resource_copy_copy = JSON.parse(JSON.stringify(resource_copy));
-                    delete resource_copy_copy.id;
-
-                    resources.push(resource_copy_copy);
-                });
-
-                let data = {
-                    'resources': resources,
-                    'matches': matches_copy,
-                    'resources_original': this.resources,
-                    'matches_original': this.matches,
-                    'status': 'Requested',
-                };
-
-                Object.keys(this.inputs).forEach(key => {
-                    data[key] = this.inputs[key];
-                });
-
-                this.updateJob(data);
-            },
-            updateJob(job_data) {
-                this.is_updating = true;
-
-                fetch("/job/update/",
-                    {
-                        headers: {
-                            'Accept': 'application/json',
-                            'Content-Type': 'application/json',
-                        },
-                        method: "POST",
-                        body: JSON.stringify(job_data),
-                    }
-                )
-                    .then((response) => response.json())
-                    .then((data) => {
-                        this.getJobData();
-                    })
-                    .catch(() => this.is_updating = false);
             },
         },
-        mounted() {
-            this.getDatasets();
+        async mounted() {
+            await this.$root.loadDatasets();
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const job_id = urlParams.get('job_id');
+            if (job_id) {
+                this.job_id = job_id;
+                this.idea_form = 'existing';
+                this.getJobData();
+            }
         },
     };
 </script>

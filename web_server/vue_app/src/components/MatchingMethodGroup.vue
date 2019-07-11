@@ -1,5 +1,5 @@
 <template>
-  <div v-if="matching_method_group.conditions" :class="'shadow p-3 border mb-3 ' + style_class">
+  <div v-if="matching_method_group.conditions" :class="'shadow p-3 border mb-3 ' + styleClass">
     <div class="row align-items-center">
       <div class="col-auto">
         <octicon name="chevron-down" scale="2" v-b-toggle="uid"></octicon>
@@ -36,7 +36,7 @@
     </div>
 
     <b-collapse visible :id="uid" :ref="uid">
-      <matching-method-group-component
+      <matching-method-group
           v-for="(condition, condition_index) in matching_method_group.conditions"
           :matching_method_group="condition"
           :index="condition_index"
@@ -64,14 +64,24 @@
     import ValidationMixin from '../mixins/ValidationMixin';
 
     export default {
+        name: 'MatchingMethodGroup',
         mixins: [ValidationMixin],
         components: {
-            'match-condition': MatchCondition
+            MatchCondition
+        },
+        props: {
+            matching_method_group: {},
+            sources: Array,
+            targets: Array,
+            is_root: false,
+            uid: '',
+            index: Number,
         },
         computed: {
-            style_class() {
+            styleClass() {
                 let styleClass = this.is_root ? '' : 'mt-3 ';
-                if (this.is_root || this.$parent.$parent.style_class.includes('bg-primary-light'))
+
+                if (this.is_root || this.$parent.$parent.styleClass.includes('bg-primary-light'))
                     styleClass += 'bg-info-light border-info';
                 else
                     styleClass += 'bg-primary-light border-primary';
@@ -106,7 +116,7 @@
                     'sources': this.sources.reduce((acc, from_resource) => {
                         acc[from_resource] = [{'property': [from_resource, '']}];
                         return acc;
-                      }, {}),
+                    }, {}),
                     'targets': this.targets.reduce((acc, from_resource) => {
                         acc[from_resource] = [{'property': [from_resource, '']}];
                         return acc;
@@ -120,18 +130,12 @@
                 this.matching_method_group.conditions.splice(condition_index, 1);
 
                 if (!this.is_root && this.matching_method_group.conditions.length === 1) {
-                    this.$emit('demote-matching-method-group', {'group': this.$parent.$parent.matching_method_group, 'index': this.index})
+                    this.$emit('demote-matching-method-group', {
+                        'group': this.$parent.$parent.matching_method_group,
+                        'index': this.index
+                    })
                 }
             },
         },
-        name: 'matching-method-group-component',
-        props: {
-            matching_method_group: {},
-            sources: Array,
-            targets: Array,
-            is_root: false,
-            uid: '',
-            index: Number,
-        }
     }
 </script>

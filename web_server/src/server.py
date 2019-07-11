@@ -31,7 +31,6 @@ def datasets():
 @app.route('/job/create/', methods=['POST'])
 def job_create():
     job_id = hash_string(request.json['job_title'] + request.json['job_description'])
-    del request.json['job_id']
 
     update_job_data(job_id, request.json)
 

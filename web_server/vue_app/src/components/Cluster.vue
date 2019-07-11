@@ -24,10 +24,10 @@
         </button>
       </div>
 
-      <div v-if="app.job_data" class="col-auto">
+      <div v-if="associationFiles" class="col-auto">
         <select class="form-control" v-model="association" :id="'match_' + match.id + '_association'">
           <option value="">No association</option>
-          <option v-for="association_file_name in app.job_data.association_files" :value="association_file_name">
+          <option v-for="association_file_name in associationFiles" :value="association_file_name">
             {{ association_file_name }}
           </option>
         </select>
@@ -96,49 +96,46 @@
         </div>
 
         <div class="row ml-4" v-for="(property, idx) in this.properties">
-          <property-component
+          <property
+              v-if="property[0]"
               :property="property"
               :singular="true"
               :singular-resource-info="true"
               :follow-referenced-collection="false"
-              @resetProperty="resetProperty(idx, property, $event)"
-          />
+              @resetProperty="resetProperty(idx, property, $event)"/>
         </div>
       </div>
 
-      <cluster-table-component
+      <cluster-table
           v-if="showData"
           :clusters="clusters"
           :cluster_id_selected="cluster_id_selected"
-          @select:cluster_id="cluster_id_selected = $event"
-      />
+          @select:cluster_id="cluster_id_selected = $event"/>
 
-      <cluster-visualization-component
+      <cluster-visualization
           v-if="showData && cluster_id_selected && hasProperties"
           parent_tab="clusters"
           :clustering_id="clustering_id"
           :cluster_id="cluster_id_selected"
           :cluster_data="clusters[cluster_id_selected]"
           :properties="properties"
-          :association="association"
-      />
+          :association="association"/>
     </b-collapse>
   </div>
 </template>
 
 <script>
-    import ClusterTableComponent from "./ClusterTable";
-    import ClusterVisualizationComponent from "./ClusterVisualization";
+    import ClusterTable from "./ClusterTable";
+    import ClusterVisualization from "./ClusterVisualization";
 
     export default {
-        name: "ClusterComponent",
+        name: "Cluster",
         components: {
-            ClusterTableComponent,
-            ClusterVisualizationComponent,
+            ClusterTable,
+            ClusterVisualization,
         },
         data() {
             return {
-                app: this.$root.$children[0],
                 properties: [],
                 association: '',
                 cluster_id_selected: null,
@@ -147,69 +144,52 @@
                 clusters: [],
             }
         },
-        props: ['match'],
+        props: {
+            match: Object,
+        },
         computed: {
             hasProperties() {
                 return !this.properties.map(res => res[1] !== '').includes(false);
             },
+
+            associationFiles() {
+                return this.$root.job.association_files;
+            },
         },
         methods: {
-            getClusters(clustering_id) {
+            async getClusters(clustering_id) {
                 this.clustering_id = clustering_id;
-
-                fetch('/job/' + this.job_id + '/clusters/' + clustering_id + '?association=' + this.association)
-                    .then((response) => response.json())
-                    .then((data) => {
-                        this.clusters = data;
-                    });
+                this.clusters = await this.$root.getClusters(clustering_id, this.association);
             },
+
             getResultForMatch(match_id) {
                 let clusterings = [];
 
-                if (this.app.job_data) {
-                    this.app.job_data.results.clusterings.forEach(clustering => {
-                        if (clustering.alignment === match_id) {
+                if (this.$root.job) {
+                    this.$root.job.results.clusterings.forEach(clustering => {
+                        if (clustering.alignment === match_id)
                             clusterings.push(clustering);
-                        }
                     });
                 }
 
-                return {
-                    'clusterings': clusterings,
-                }
+                return {'clusterings': clusterings};
             },
-            createClustering(mapping_id, event) {
+
+            async createClustering(mapping_id, event) {
                 if (event) {
                     let btn = event.target;
                     btn.setAttribute('disabled', 'disabled');
                 }
-                const clustered = this.getResultForMatch(mapping_id).clusterings.length > 0;
 
-                fetch('/job/' + this.app.job_id + '/create_clustering/',
-                    {
-                        headers: {
-                            'Accept': 'application/json',
-                            'Content-Type': 'application/json',
-                        },
-                        method: "POST",
-                        body: JSON.stringify({
-                            'alignment': mapping_id,
-                            'association_file': clustered ? this.association : '',
-                            'clustered': clustered,
-                        })
-                    })
-                    .then((response) => response.json())
-                    .then((data) => {
-                        if (!clustered && this.association) {
-                            this.app.getJobData(() => {
-                                this.createClustering(mapping_id);
-                            });
-                        }
-                        else {
-                            this.app.getJobData();
-                        }
-                    });
+                const clustered = this.getResultForMatch(mapping_id).clusterings.length > 0;
+                const associationFile = clustered ? this.association : '';
+
+                await this.$root.createClustering(mapping_id, associationFile, clustered);
+
+                if (!clustered && this.association)
+                    this.createClustering(mapping_id);
             },
+
             resetProperty(idx, property, property_index) {
                 let new_property = property.slice(0, property_index);
                 new_property.push('');
@@ -220,10 +200,10 @@
             },
         },
         mounted() {
-            const resources = [...this.match.sources];
+            const resources = [];
             this.match.targets.forEach(res => {
                 if (!resources.includes(res))
-                    resources.push(res)
+                    resources.push(res);
             });
             this.properties = resources.map(res => [res, '']);
         },
