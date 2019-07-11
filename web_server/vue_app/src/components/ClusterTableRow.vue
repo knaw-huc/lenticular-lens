@@ -31,3 +31,16 @@
         },
     }
 </script>
+
+<style scoped>
+  tr {
+    width: 100%;
+    display: flex;
+  }
+
+  td {
+    display: flex;
+    flex: 1;
+    align-items: center;
+  }
+</style>

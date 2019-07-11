@@ -1,6 +1,6 @@
 <template>
-  <div id="clustering_dataset_linking_stats_cluster_results">
-    <table class="table table-striped" id="clustering_resultTable">
+  <div id="clustering_result">
+    <table class="table table-striped">
       <thead>
       <tr>
         <th>Ext</th>
@@ -40,16 +40,32 @@
 </script>
 
 <style scoped>
-  #clustering_dataset_linking_stats_cluster_results {
+  #clustering_result {
     height: 20em;
-    width: 100%;
-    scroll: both;
-    overflow: auto;
   }
 
-  #clustering_resultTable {
-    height: 20em;
-    scroll: both;
-    overflow: auto;
+  table {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  table thead {
+    margin-right: 15px;
+  }
+
+  table tbody {
+    overflow-y: scroll;
+  }
+
+  table tr {
+    width: 100%;
+    display: flex;
+  }
+
+  table tr th {
+    display: flex;
+    flex: 1;
+    align-items: center;
   }
 </style>

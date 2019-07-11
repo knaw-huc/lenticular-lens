@@ -141,7 +141,7 @@
                 cluster_id_selected: null,
                 showData: false,
                 clustering_id: null,
-                clusters: [],
+                clusters: {},
             }
         },
         props: {
@@ -200,7 +200,7 @@
             },
         },
         mounted() {
-            const resources = [];
+            const resources = [...this.match.sources];
             this.match.targets.forEach(res => {
                 if (!resources.includes(res))
                     resources.push(res);
