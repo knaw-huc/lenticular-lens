@@ -10,7 +10,12 @@
 
     <slot></slot>
 
-    <b-alert variant="danger" class="mt-4" :show="tab_error !== ''">
+    <b-alert :show="is_saved && tab_error !== ''" variant="warning" class="mt-4 mb-0">
+      Successfully saved, but with errors:
+      {{ tab_error }}
+    </b-alert>
+
+    <b-alert :show="!is_saved && tab_error !== ''" variant="danger" class="mt-4 mb-0">
       {{ tab_error }}
     </b-alert>
   </div>
@@ -22,6 +27,7 @@
         props: {
             title: String,
             tab_error: String,
+            is_saved: Boolean,
         },
     };
 </script>

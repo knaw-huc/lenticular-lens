@@ -7,7 +7,7 @@
         shape="square"
         ref="formWizard">
       <tab-content title="Idea" :before-change="validateIdeaTab">
-        <tab-content-structure title="Idea" :tab_error="tab_error">
+        <tab-content-structure title="Idea" :tab_error="tab_error" :is_saved="is_saved">
           <template v-slot:header>
             <div class="col-auto" v-if="$root.job">
               <span class="badge badge-info">Created {{ $root.job.created_at }}</span>
@@ -28,7 +28,7 @@
       </tab-content>
 
       <tab-content title="Collections" :before-change="validateCollectionsTab">
-        <tab-content-structure title="Collections" :tab_error="tab_error">
+        <tab-content-structure title="Collections" :tab_error="tab_error" :is_saved="is_saved">
           <template v-slot:header>
             <div class="col-auto">
               <button-add @click="addResource" title="Add a Collection"/>
@@ -46,7 +46,7 @@
       </tab-content>
 
       <tab-content title="Alignments" :before-change="validateAlignmentsTab">
-        <tab-content-structure title="Alignment Specifications" :tab_error="tab_error">
+        <tab-content-structure title="Alignment Specifications" :tab_error="tab_error" :is_saved="is_saved">
           <template v-slot:header>
             <div class="col-auto">
               <button-add @click="addMatch" title="Add an Alignment"/>
@@ -57,6 +57,7 @@
               v-for="(match, index) in $root.matches"
               :match="match"
               :key="match.id"
+              @duplicate="duplicateMatch($event)"
               @submit="$root.submit()"
               @remove="$root.matches.splice(index, 1)"
               @update:label="match.label = $event"
@@ -68,7 +69,7 @@
       <tab-content title="Link Validation"></tab-content>
 
       <tab-content title="Clusters">
-        <tab-content-structure title="Clusters" :tab_error="tab_error">
+        <tab-content-structure title="Clusters" :tab_error="tab_error" :is_saved="is_saved">
           <cluster
               v-for="match in $root.matches"
               :match="match"
@@ -149,6 +150,7 @@
                 job_id: '',
                 job_title: '',
                 job_description: '',
+                is_saved: true,
                 is_updating: false,
                 planned_refresh_job_data: false,
                 steps: [
@@ -169,37 +171,38 @@
             },
         },
         methods: {
-            isTabValid(isValid, message) {
+            isTabValid(isValid, isSaved, message) {
                 this.tab_error = isValid ? '' : message;
+                this.is_saved = isSaved;
                 return !!isValid;
             },
 
             validateIdeaTab() {
-                return this.isTabValid(this.$root.job, 'Please update or create your idea first!');
+                return this.isTabValid(this.$root.job, false, 'Please update or create your idea first!');
             },
 
-            validateCollectionsTab() {
+            validateCollectionsTab(alwaysSave = false) {
                 const results = this.$refs.resourceComponents
                     .map(resourceComponent => resourceComponent.validateResource());
 
-                if (results.includes(false))
-                    return this.isTabValid(false, 'One or more resources contain errors!');
+                const isValid = results.includes(false)
+                    ? this.isTabValid(false, alwaysSave, 'One or more resources contain errors!')
+                    : this.isTabValid(this.$root.resources.length > 0, false, 'Please add at least one resource!');
 
-                const isValid = this.isTabValid(this.$root.resources.length > 0, 'Please add at least one resource!');
-                if (isValid)
+                if (isValid || alwaysSave)
                     this.$root.submit();
 
                 return isValid;
             },
 
-            validateAlignmentsTab() {
+            validateAlignmentsTab(alwaysSave = false) {
                 const results = this.$refs.matchComponents.map(matchComponent => matchComponent.validateMatch());
 
-                if (results.includes(false))
-                    return this.isTabValid(false, 'One or more alignments contain errors!');
+                const isValid = results.includes(false)
+                    ? this.isTabValid(false, alwaysSave, 'One or more alignments contain errors!')
+                    : this.isTabValid(this.$root.matches.length > 0, false, 'Please add at least one alignment!');
 
-                const isValid = this.isTabValid(this.$root.matches.length > 0, 'Please add at least one alignment!');
-                if (isValid)
+                if (isValid || alwaysSave)
                     this.$root.submit();
 
                 return isValid;
@@ -208,9 +211,9 @@
             validateAndSave(activeTabIndex) {
                 switch (activeTabIndex) {
                     case 1:
-                        return this.validateCollectionsTab();
+                        return this.validateCollectionsTab(true);
                     case 2:
-                        return this.validateAlignmentsTab();
+                        return this.validateAlignmentsTab(true);
                     default:
                         return false;
                 }
@@ -239,6 +242,10 @@
             addMatch(event) {
                 if (event) event.target.blur();
                 this.$root.addMatch();
+            },
+
+            duplicateMatch(match) {
+                this.$root.duplicateMatch(match);
             },
 
             async createJob(inputs) {

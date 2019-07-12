@@ -36,6 +36,15 @@ export default {
             });
         },
 
+        duplicateMatch(match) {
+            const duplicate = copy(match);
+            this.matches.push({
+                ...duplicate,
+                'id': findId(this.matches),
+                'label': 'Alignment ' + (this.matches.length + 1),
+            });
+        },
+
         getResourceById(resource_id, resources = this.resources) {
             resource_id = parseInt(resource_id);
             for (let i = 0; i < resources.length; i++) {

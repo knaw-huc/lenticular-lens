@@ -45,6 +45,10 @@
       </div>
 
       <div class="col-auto">
+        <b-button variant="info" @click="$emit('duplicate', match)">Duplicate Alignment</b-button>
+      </div>
+
+      <div class="col-auto">
         <b-button variant="info" @click="runAlignment">Run Alignment</b-button>
       </div>
 

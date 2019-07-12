@@ -1,27 +1,21 @@
 <template>
-    <div>
-        <b-button
-                class="btn text-info pt-1"
-                :title="title"
-                v-b-modal="'info_' + uuid"
-                ref="button"
-                variant="block"
-        >
-            <octicon name="question" :scale="scale"/>
-        </b-button>
+  <div>
+    <a class="btn btn-block text-info pt-1" @click="$refs['info_' + uuid].show()">
+      <octicon name="question" :scale="scale"/>
+    </a>
 
-        <b-modal
-                :id="'info_' + uuid"
-                :title="popup_title"
-                :size="popup_size"
-                scrollable
-                class="text-center"
-                hide-footer
-                :return-focus="$root.$children[0].$el"
-        >
-            <slot></slot>
-        </b-modal>
-    </div>
+    <b-modal
+        :id="'info_' + uuid"
+        :ref="'info_' + uuid"
+        :title="popup_title"
+        :size="popup_size"
+        scrollable
+        class="text-center"
+        hide-footer
+        :return-focus="$root.$children[0].$el">
+      <slot></slot>
+    </b-modal>
+  </div>
 </template>
 
 <script>
@@ -42,7 +36,6 @@
                 type: Number,
                 default: 1.5,
             },
-            title: String,
         },
     }
 </script>
