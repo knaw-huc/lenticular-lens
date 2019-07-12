@@ -328,30 +328,7 @@
                 this.match[resources_key].push('');
             },
 
-            deleteMatchResource(resources_key, resource_index) {
-                const updateConditions = (group) => {
-                    group.conditions.forEach(condition => {
-                        this.$delete(condition[resources_key], resource_id);
-                        if (condition.conditions) {
-                            updateConditions(condition);
-                        }
-                    });
-                };
-
-                let resource_id = this.match[resources_key][resource_index];
-
-                updateConditions(this.match);
-                this.$delete(this.match[resources_key], resource_index);
-
-                if (this.match[resources_key].length < 1)
-                    this.addMatchResource(resources_key);
-            },
-
-            scrollTo(ref) {
-                this.$refs[ref].$el.parentNode.scrollIntoView({'behavior': 'smooth', 'block': 'start'});
-            },
-
-            updateMatchResource(resources_key, index, value) {
+            updateMatchResource(resources_key, resource_index, value) {
                 const updateConditions = (group) => {
                     group.conditions.forEach(condition => {
                         this.$set(condition[resources_key], value, [{'property': [value, '']}]);
@@ -361,8 +338,47 @@
                     });
                 };
 
-                this.$set(this.match[resources_key], index, value);
+                const resourceId = this.match[resources_key][resource_index];
+                this.$set(this.match[resources_key], resource_index, value);
+
                 updateConditions(this.match);
+                this.updateProperties(resourceId, value);
+            },
+
+            deleteMatchResource(resources_key, resource_index) {
+                const updateConditions = (group) => {
+                    group.conditions.forEach(condition => {
+                        this.$delete(condition[resources_key], resourceId);
+                        if (condition.conditions) {
+                            updateConditions(condition);
+                        }
+                    });
+                };
+
+                const resourceId = this.match[resources_key][resource_index];
+                if (this.match[resources_key].length < 1)
+                    this.addMatchResource(resources_key);
+
+                updateConditions(this.match);
+                this.$delete(this.match[resources_key], resource_index);
+
+                this.updateProperties(resourceId);
+            },
+
+            updateProperties(oldValue, newValue) {
+                const sourcesHasValue = this.match.sources.find(res => res === oldValue);
+                const targetsHasValue = this.match.targets.find(res => res === oldValue);
+                const oldValueIndex = this.match.properties.findIndex(prop => prop[0] === oldValue);
+
+                if ((oldValueIndex >= 0) && !sourcesHasValue && !targetsHasValue)
+                    this.match.properties.splice(oldValueIndex, 1);
+
+                if (newValue && !this.match.properties.find(prop => prop[0] === newValue))
+                    this.match.properties.push([newValue, '']);
+            },
+
+            scrollTo(ref) {
+                this.$refs[ref].$el.parentNode.scrollIntoView({'behavior': 'smooth', 'block': 'start'});
             },
 
             async runAlignment(force = false) {

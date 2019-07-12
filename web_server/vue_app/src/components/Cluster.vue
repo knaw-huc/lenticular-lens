@@ -95,7 +95,7 @@
           <div class="h4 col-auto">Properties</div>
         </div>
 
-        <div class="row ml-4" v-for="(property, idx) in this.properties">
+        <div class="row ml-4" v-for="(property, idx) in this.match.properties">
           <property
               v-if="property[0]"
               :property="property"
@@ -118,7 +118,7 @@
           :clustering_id="clustering_id"
           :cluster_id="cluster_id_selected"
           :cluster_data="clusters[cluster_id_selected]"
-          :properties="properties"
+          :properties="match.properties"
           :association="association"/>
     </b-collapse>
   </div>
@@ -136,7 +136,6 @@
         },
         data() {
             return {
-                properties: [],
                 association: '',
                 cluster_id_selected: null,
                 showData: false,
@@ -149,7 +148,7 @@
         },
         computed: {
             hasProperties() {
-                return !this.properties.map(res => res[1] !== '').includes(false);
+                return !this.match.properties.map(res => res[1] !== '').includes(false);
             },
 
             associationFiles() {
@@ -196,16 +195,8 @@
                 if (new_property.length % 2 > 0) {
                     new_property.push('');
                 }
-                this.$set(this.properties, idx, new_property);
+                this.$set(this.match.properties, idx, new_property);
             },
-        },
-        mounted() {
-            const resources = [...this.match.sources];
-            this.match.targets.forEach(res => {
-                if (!resources.includes(res))
-                    resources.push(res);
-            });
-            this.properties = resources.map(res => [res, '']);
         },
     }
 </script>

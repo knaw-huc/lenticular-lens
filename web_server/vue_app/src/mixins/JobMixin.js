@@ -30,6 +30,7 @@ export default {
                 'label': 'Alignment ' + (this.matches.length + 1),
                 'sources': [],
                 'targets': [],
+                'properties': [],
                 'type': 'AND',
                 'conditions': [],
             });
