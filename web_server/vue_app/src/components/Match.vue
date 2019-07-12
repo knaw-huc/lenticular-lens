@@ -1,5 +1,5 @@
 <template>
-  <div class="border p-4 mt-4 bg-light">
+  <div class="border p-4 mt-4 bg-light" v-bind:class="{'is-invalid': errors.length > 0}">
     <div class="row align-items-top justify-content-between">
       <div class="col-auto" title="Expand / Collapse">
         <octicon name="chevron-down" scale="3" v-b-toggle="'match_' + match.id"></octicon>
@@ -265,25 +265,26 @@
         },
         methods: {
             validateMatch() {
-                const sourcesValid = this.validateField('sources', this.match.sources.length > 0)
-                    && !this.$refs.sourceResourceComponents
+                const sourcesValid = this.validateField('sources', this.match.sources.length > 0);
+                const targetsValid = this.validateField('targets', this.match.targets.length > 0);
+
+                const sourcesSelectValid = this.validateField('sources_select',
+                    !this.$refs.sourceResourceComponents
                         .map(sourceResourceComponent => sourceResourceComponent.validateResource())
-                        .includes(false);
-                const targetsValid = this.validateField('targets', this.match.targets.length > 0)
-                    && !this.$refs.targetResourceComponents
+                        .includes(false)
+                );
+                const targetsSelectValid = this.validateField('targets_select',
+                    !this.$refs.targetResourceComponents
                         .map(targetResourceComponent => targetResourceComponent.validateResource())
-                        .includes(false);
+                        .includes(false)
+                );
 
                 let matchingMethodGroupValid = true;
                 if (this.$refs.matchingMethodGroupComponent)
                     matchingMethodGroupValid = this.$refs.matchingMethodGroupComponent.validateMatchingGroup();
 
-                const valid = sourcesValid && targetsValid && matchingMethodGroupValid;
-                const isShown = this.$refs[`match_${this.match.id}`].show;
-                if (!valid && !isShown)
-                    this.$root.$emit('bv::toggle::collapse', `match_${this.match.id}`);
-
-                return valid;
+                return sourcesValid && targetsValid && sourcesSelectValid
+                    && targetsSelectValid && matchingMethodGroupValid;
             },
 
             addRootCondition() {

@@ -1,5 +1,5 @@
 <template>
-  <div class="border p-4 mt-4 bg-light">
+  <div class="border p-4 mt-4 bg-light" v-bind:class="{'is-invalid': errors.length > 0}">
     <div class="row align-items-center justify-content-between mb-2">
       <div class="col-auto">
         <octicon name="chevron-down" scale="3" v-b-toggle="'resource_' + resource.id"></octicon>
@@ -83,79 +83,81 @@
             <label class="form-check-label" :for="'resource_' + resource.id + '_random'">Randomize order</label>
           </div>
 
-          <div class="row mt-3">
-            <div class="col-auto pr-0 pt-1">
-              <octicon name="chevron-down" v-b-toggle="'resource_' + resource.id + '_relations'"/>
+          <div v-bind:class="{'is-invalid': errors.find(err => err.startsWith('relation_'))}">
+            <div class="row mt-3">
+              <div class="col-auto pr-0 pt-1">
+                <octicon name="chevron-down" v-b-toggle="'resource_' + resource.id + '_relations'"/>
+              </div>
+              <div class="col" v-b-toggle="'resource_' + resource.id + '_relations'">
+                <h3>Relations</h3>
+              </div>
             </div>
-            <div class="col" v-b-toggle="'resource_' + resource.id + '_relations'">
-              <h3>Relations</h3>
-            </div>
+            <b-collapse :id="'resource_' + resource.id + '_relations'" :ref="'resource_' + resource.id + '_relations'">
+              <div v-if="resource.related.length > 0" class="form-group form-check">
+                <input :id="resource.label + 'related_array'" class="form-check-input" type="checkbox"
+                       v-model="resource.related_array">
+                <label :for="resource.label + 'related_array'" class="form-check-label">Use relations as combined
+                  source</label>
+              </div>
+
+              <div v-for="(relation, index) in resource.related" class="row">
+                <div class="form-group col-4">
+                  <label :for="'resource_' + resource.id + '_related_' + relation.id + '_resource'">Related
+                    collection</label>
+                  <v-select v-model="relation.resource"
+                            :id="'resource_' + resource.id + '_related_' + relation.id + '_resource'"
+                            v-bind:class="{'is-invalid': errors.includes(`relations_resource_${index}`)}">
+                    <option disabled selected value="">Choose a collection</option>
+                    <option v-for="(root_resource, index) in $root.resources" :value="root_resource.id"
+                            v-if="root_resource.id != resource.id">{{ root_resource.label }}
+                    </option>
+                  </v-select>
+                  <div class="invalid-feedback" v-show="errors.includes(`relations_resource_${index}`)">
+                    Please provide a related collection
+                  </div>
+                </div>
+
+                <div v-if="relation.resource > 0" class="form-group col-4">
+                  <label :for="'resource_' + resource.id + '_related_' + relation.id + '_local_property'">Local
+                    property</label>
+                  <v-select v-model="relation.local_property"
+                            v-bind:class="{'is-invalid': errors.includes(`relations_local_prop_${index}`)}">
+                    <option value="" selected disabled>Select local property</option>
+                    <option
+                        v-for="(property_info, property) in $root.datasets[resource.dataset_id]['collections'][resource.collection_id]"
+                        :value="property">{{ property }}
+                    </option>
+                  </v-select>
+                  <div class="invalid-feedback" v-show="errors.includes(`relations_local_prop_${index}`)">
+                    Please provide a local property
+                  </div>
+                </div>
+
+                <div v-if="relation.resource > 0" class="form-group col-3">
+                  <label :for="'resource_' + resource.id + '_related_' + relation.id + '_remote_property'">Remote
+                    property</label>
+                  <v-select v-model="relation.remote_property"
+                            v-bind:class="{'is-invalid': errors.includes(`relations_remote_prop_${index}`)}">
+                    <option value="" selected disabled>Select remote property</option>
+                    <option v-for="(property_info, property) in getPropertiesForResource(relation.resource)"
+                            :value="property">{{ property }}
+                    </option>
+                  </v-select>
+                  <div class="invalid-feedback" v-show="errors.includes(`relations_remote_prop_${index}`)">
+                    Please provide a remote property
+                  </div>
+                </div>
+
+                <div class="form-group col-1 align-self-end">
+                  <button-delete v-on:click="resource.related.splice(index, 1)"/>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <button-add v-on:click="addRelation($event)" title="Add relation"/>
+              </div>
+            </b-collapse>
           </div>
-          <b-collapse :id="'resource_' + resource.id + '_relations'" :ref="'resource_' + resource.id + '_relations'">
-            <div v-if="resource.related.length > 0" class="form-group form-check">
-              <input :id="resource.label + 'related_array'" class="form-check-input" type="checkbox"
-                     v-model="resource.related_array">
-              <label :for="resource.label + 'related_array'" class="form-check-label">Use relations as combined
-                source</label>
-            </div>
-
-            <div v-for="(relation, index) in resource.related" class="row">
-              <div class="form-group col-4">
-                <label :for="'resource_' + resource.id + '_related_' + relation.id + '_resource'">Related
-                  collection</label>
-                <v-select v-model="relation.resource"
-                          :id="'resource_' + resource.id + '_related_' + relation.id + '_resource'"
-                          v-bind:class="{'is-invalid': errors.includes(`resource_${index}`)}">
-                  <option disabled selected value="">Choose a collection</option>
-                  <option v-for="(root_resource, index) in $root.resources" :value="root_resource.id"
-                          v-if="root_resource.id != resource.id">{{ root_resource.label }}
-                  </option>
-                </v-select>
-                <div class="invalid-feedback" v-show="errors.includes(`resource_${index}`)">
-                  Please provide a related collection
-                </div>
-              </div>
-
-              <div v-if="relation.resource > 0" class="form-group col-4">
-                <label :for="'resource_' + resource.id + '_related_' + relation.id + '_local_property'">Local
-                  property</label>
-                <v-select v-model="relation.local_property"
-                          v-bind:class="{'is-invalid': errors.includes(`local_prop_${index}`)}">
-                  <option value="" selected disabled>Select local property</option>
-                  <option
-                      v-for="(property_info, property) in $root.datasets[resource.dataset_id]['collections'][resource.collection_id]"
-                      :value="property">{{ property }}
-                  </option>
-                </v-select>
-                <div class="invalid-feedback" v-show="errors.includes(`local_prop_${index}`)">
-                  Please provide a local property
-                </div>
-              </div>
-
-              <div v-if="relation.resource > 0" class="form-group col-3">
-                <label :for="'resource_' + resource.id + '_related_' + relation.id + '_remote_property'">Remote
-                  property</label>
-                <v-select v-model="relation.remote_property"
-                          v-bind:class="{'is-invalid': errors.includes(`remote_prop_${index}`)}">
-                  <option value="" selected disabled>Select remote property</option>
-                  <option v-for="(property_info, property) in getPropertiesForResource(relation.resource)"
-                          :value="property">{{ property }}
-                  </option>
-                </v-select>
-                <div class="invalid-feedback" v-show="errors.includes(`remote_prop_${index}`)">
-                  Please provide a remote property
-                </div>
-              </div>
-
-              <div class="form-group col-1 align-self-end">
-                <button-delete v-on:click="resource.related.splice(index, 1)"/>
-              </div>
-            </div>
-
-            <div class="form-group">
-              <button-add v-on:click="addRelation($event)" title="Add relation"/>
-            </div>
-          </b-collapse>
         </template>
       </fieldset>
     </b-collapse>
@@ -204,40 +206,30 @@
                 const limitValid = this.validateField('limit', !isNaN(limit) && (limit === -1 || limit > 0));
 
                 let relatedValid = true;
+                this.errors = this.errors.filter(err => !err.startsWith('relations_'));
                 this.resource.related.forEach((related, idx) => {
                     const remoteResource = this.$root.resources.find(res => res.id === parseInt(related.resource));
-                    const resourceValid = this.validateField(`resource_${idx}`,
+                    const resourceValid = this.validateField(`relations_resource_${idx}`,
                         related.resource && remoteResource);
 
                     const localProperties = datasets && datasets.collections[this.resource.collection_id];
-                    const localPropValid = this.validateField(`local_prop_${idx}`,
+                    const localPropValid = this.validateField(`relations_local_prop_${idx}`,
                         related.local_property && localProperties && localProperties.hasOwnProperty(related.local_property));
 
                     const remoteDatasets = remoteResource && this.$root.datasets[remoteResource.dataset_id];
                     const remoteProperties = remoteDatasets && remoteDatasets.collections[remoteResource.collection_id];
-                    const remotePropValid = this.validateField(`remote_prop_${idx}`,
+                    const remotePropValid = this.validateField(`relations_remote_prop_${idx}`,
                         related.remote_property && remoteProperties && remoteProperties.hasOwnProperty(related.remote_property));
 
                     if (!(resourceValid && localPropValid && remotePropValid))
                         relatedValid = false;
                 });
 
-                if (this.$refs[`resource_${this.resource.id}_relations`]) {
-                    const relationsAreShown = this.$refs[`resource_${this.resource.id}_relations`].show;
-                    if (!relatedValid && !relationsAreShown)
-                        this.$root.$emit('bv::toggle::collapse', `resource_${this.resource.id}_relations`);
-                }
-
                 let filtersGroupsValid = true;
                 if (this.$refs.filterGroupComponents)
                     filtersGroupsValid = this.$refs.filterGroupComponents.validateFilterGroup();
 
-                const valid = collectionValid && datasetValid && limitValid && relatedValid && filtersGroupsValid;
-                const isShown = this.$refs[`resource_${this.resource.id}`].show;
-                if (!valid && !isShown)
-                    this.$root.$emit('bv::toggle::collapse', `resource_${this.resource.id}`);
-
-                return valid;
+                return collectionValid && datasetValid && limitValid && relatedValid && filtersGroupsValid;
             },
 
             isUsedInAlignmentResults() {

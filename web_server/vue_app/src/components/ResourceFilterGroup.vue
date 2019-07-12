@@ -1,5 +1,6 @@
 <template>
-  <div v-if="filter_object.conditions" :class="'shadow p-3 border mb-3 ' + styleClass">
+  <div v-if="filter_object.conditions" class="shadow p-3 border mb-3"
+       v-bind:class="[{'is-invalid': errors.length > 0}, ...styleClass]">
     <div class="row align-items-center">
       <div class="col-auto">
         <octicon name="chevron-down" scale="2" v-b-toggle="uid"></octicon>
@@ -74,11 +75,15 @@
         },
         computed: {
             styleClass() {
-                let styleClass = this.is_root ? '' : 'mt-3 ';
+                const styleClass = [];
+
+                if (this.is_root)
+                    styleClass.push('mt-3');
+
                 if (this.is_root || this.$parent.$parent.styleClass.includes('bg-primary-light'))
-                    styleClass += 'bg-info-light border-info';
+                    styleClass.push('bg-info-light', 'border-info');
                 else
-                    styleClass += 'bg-primary-light border-primary';
+                    styleClass.push('bg-primary-light', 'border-primary');
 
                 return styleClass;
             },
@@ -90,16 +95,18 @@
                         .map(filterGroupComponent => filterGroupComponent.validateFilterGroup())
                         .includes(false);
 
-                    const isShown = this.$refs[this.uid].show;
-                    if (!valid && !isShown)
-                        this.$root.$emit('bv::toggle::collapse', this.uid);
-
+                    this.validateField(this.uid, valid);
                     return valid;
                 }
 
-                if (!this.filter_object.conditions)
-                    return this.$refs.filterConditionComponent.validateFilterCondition();
+                if (!this.filter_object.conditions) {
+                    const valid = this.$refs.filterConditionComponent.validateFilterCondition();
 
+                    this.validateField(this.uid, valid);
+                    return valid;
+                }
+
+                this.validateField(this.uid, true);
                 return true;
             },
 
