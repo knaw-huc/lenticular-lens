@@ -169,9 +169,8 @@ export default {
                             condition[resources_key][resource_id].forEach((property, property_index) => {
                                 condition[resources_key][resource_id][property_index].property = this.createReferencesForProperty(property.property, resources_copy);
                                 condition[resources_key][resource_id][property_index].property.forEach((property_part, property_part_index) => {
-                                    if (property_part > 0) {
+                                    if (!isNaN(parseInt(property_part)) && property_part >= 0)
                                         condition[resources_key][resource_id][property_index].property[property_part_index] = this.getResourceById(property_part).label;
-                                    }
                                 });
                             });
 
@@ -294,7 +293,7 @@ function copy(obj) {
 }
 
 function findId(objs) {
-    let latestId = 0;
+    let latestId = -1;
     objs.forEach(obj => {
         if (obj.id > latestId) latestId = obj.id;
     });
