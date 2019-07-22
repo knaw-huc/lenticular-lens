@@ -47,7 +47,7 @@
         </div>
       </div>
 
-      <template v-if="value[0] && value[0] !== '__value__'">
+      <template v-if="value[0] !== '' && value[0] !== '__value__'">
         <div v-if="!Array.isArray(resources)" class="col-auto p-1">
           <octicon name="arrow-right"/>
         </div>
@@ -96,7 +96,7 @@
         },
         computed: {
             selectReferencedCollection() {
-                return !this.value[0];
+                return this.value[0] === '';
             },
 
             showResourceInfo() {

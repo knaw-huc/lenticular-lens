@@ -294,7 +294,7 @@ function copy(obj) {
 }
 
 function findId(objs) {
-    let latestId = -1;
+    let latestId = 0;
     objs.forEach(obj => {
         if (obj.id > latestId) latestId = obj.id;
     });

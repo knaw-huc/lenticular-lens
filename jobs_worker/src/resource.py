@@ -1,6 +1,6 @@
 from datasets_config import DatasetsConfig
 from filter_function import FilterFunction
-from helpers import hash_string, PropertyField
+from helpers import hash_string, PropertyField, get_absolute_property
 from psycopg2 import sql as psycopg2_sql
 
 
@@ -76,8 +76,9 @@ class Resource:
             filter_sqls = map(self.r_get_filter_sql, filter_obj['conditions'])
             return psycopg2_sql.SQL('({})').format(psycopg2_sql.SQL('\n %s ' % filter_obj['type']).join(filter_sqls))
 
-        prop = hash_string(filter_obj['property'][1])
-        column_info = self.collection.table_data['columns'][prop]
+        absolute_property = get_absolute_property(filter_obj['property'])
+        prop_resource = self.config.get_resource_by_label(absolute_property[0])
+        column_info = prop_resource.collection.table_data['columns'][absolute_property[1]]
 
         return FilterFunction(filter_obj, self.label, column_info['LIST']).sql
 
