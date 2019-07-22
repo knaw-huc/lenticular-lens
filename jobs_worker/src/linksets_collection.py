@@ -203,18 +203,17 @@ class LinksetsCollection:
 
     def get_join_sql(self, resource):
         joins = []
+        property_join_added = []
 
         matching_fields = resource.matching_fields
-        self.get_matching_fields_joins_sql(resource, matching_fields, joins)
+        self.get_matching_fields_joins_sql(resource, matching_fields, property_join_added, joins)
 
         for relation in resource.related:
-            self.r_get_join_sql(resource.label, relation, matching_fields, joins)
+            self.r_get_join_sql(resource.label, relation, matching_fields, property_join_added, joins)
 
         return sql.Composed(joins)
 
-    def get_matching_fields_joins_sql(self, resource, matching_fields, joins):
-        property_join_added = []
-
+    def get_matching_fields_joins_sql(self, resource, matching_fields, property_join_added, joins):
         for property_field in matching_fields:
             prop_resource = self.get_resource_by_label(property_field.resource_label)
             column_info = prop_resource.collection.table_data['columns'][property_field.prop_label]
@@ -233,17 +232,20 @@ class LinksetsCollection:
 
         return joins
 
-    def r_get_join_sql(self, parent_resource, relation, matching_fields, joins):
+    def r_get_join_sql(self, parent_resource, relation, matching_fields, property_join_added, joins):
         if isinstance(relation, list):
             for sub_relation in relation:
-                joins = self.r_get_join_sql(parent_resource, sub_relation, matching_fields, joins)
+                joins = self.r_get_join_sql(parent_resource, sub_relation, matching_fields, property_join_added, joins)
             return joins
 
         parent = self.get_resource_by_label(parent_resource)
         resource = self.get_resource_by_label(hash_string(relation['resource']))
-        local_column_info = parent.collection.table_data['columns'][hash_string(relation['local_property'][0])]
+        column_label = hash_string(relation['local_property'][0])
+        local_column_info = parent.collection.table_data['columns'][column_label]
 
-        if local_column_info['LIST']:
+        if local_column_info['LIST'] and [parent_resource, column_label] not in property_join_added:
+            property_join_added.append([parent_resource, column_label])
+
             joins.append(sql.SQL("""
                 LEFT JOIN jsonb_array_elements_text({table_name}.{column_name}) 
                 AS {column_name_expanded} ON true""").format(
@@ -271,9 +273,9 @@ class LinksetsCollection:
         ))
 
         for relation in resource.related:
-            joins = self.r_get_join_sql(resource.label, relation, matching_fields, joins)
+            joins = self.r_get_join_sql(resource.label, relation, matching_fields, property_join_added, joins)
 
-        self.get_matching_fields_joins_sql(resource, matching_fields, joins)
+        self.get_matching_fields_joins_sql(resource, matching_fields, property_join_added, joins)
 
         return joins
 
