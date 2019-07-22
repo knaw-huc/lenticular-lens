@@ -1,7 +1,7 @@
 from links_to_rdf import convert_link
 import datetime
 from config_db import db_conn
-from helpers import get_absolute_property, get_property_sql, get_extended_property_sql, get_unnested_list, hash_string
+from helpers import get_absolute_property, get_property_sql, get_extended_property_sql, get_extended_property_name, get_unnested_list, hash_string
 import jstyleson
 import locale
 from match import Match
@@ -227,7 +227,7 @@ class LinksetsCollection:
                 AS {column_name_expanded} ON true""").format(
                     table_name=sql.Identifier(property_field.resource_label),
                     column_name=sql.Identifier(property_field.prop_label),
-                    column_name_expanded=sql.Identifier(property_field.prop_label + '_extended'),
+                    column_name_expanded=sql.Identifier(get_extended_property_name(property_field.absolute_property)),
                 ))
 
         return joins
@@ -250,8 +250,8 @@ class LinksetsCollection:
                 LEFT JOIN jsonb_array_elements_text({table_name}.{column_name}) 
                 AS {column_name_expanded} ON true""").format(
                 table_name=sql.Identifier(parent_resource),
-                column_name=sql.Identifier(hash_string(relation['local_property'][0])),
-                column_name_expanded=sql.Identifier(hash_string(relation['local_property'][0]) + '_extended'),
+                column_name=sql.Identifier(column_label),
+                column_name_expanded=sql.Identifier(get_extended_property_name([parent_resource, column_label])),
             ))
 
         lhs = get_extended_property_sql(get_absolute_property(relation['local_property'], parent_resource)) \

@@ -49,7 +49,11 @@ def get_property_sql(property_array):
 
 
 def get_extended_property_sql(property_array):
-    return get_property_sql([property_array[1] + '_extended', 'value'])
+    return get_property_sql([get_extended_property_name(property_array), 'value'])
+
+
+def get_extended_property_name(property_array):
+    return hash_string('.'.join(property_array)) + '_extended'
 
 
 def is_property_object(value):
