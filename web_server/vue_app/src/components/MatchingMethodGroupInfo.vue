@@ -3,7 +3,7 @@
     <template v-for="(condition, idx) in matching_method_group.conditions">
       <matching-method-group-info :matching_method_group="condition" :key="idx"/>
 
-      <p class="font-weight-bold m-0 text-info" v-if="idx < (matching_method_group.conditions.length - 1)">
+      <p class="font-weight-bold my-2 text-info" v-if="idx < (matching_method_group.conditions.length - 1)">
         {{ matching_method_group.type }}
       </p>
     </template>
@@ -21,7 +21,10 @@
             MatchConditionInfo
         },
         props: {
-            is_root: false,
+            is_root: {
+                type: Boolean,
+                default: false,
+            },
             matching_method_group: {},
         },
     }
