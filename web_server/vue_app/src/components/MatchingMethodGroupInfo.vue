@@ -1,5 +1,5 @@
 <template>
-  <div v-if="matching_method_group.conditions" v-bind:class="!is_root ? 'border shadow' : {}">
+  <div v-if="matching_method_group.conditions" v-bind:class="!is_root ? 'border shadow p-1' : {}">
     <template v-for="(condition, idx) in matching_method_group.conditions">
       <matching-method-group-info :matching_method_group="condition" :key="idx"/>
 
