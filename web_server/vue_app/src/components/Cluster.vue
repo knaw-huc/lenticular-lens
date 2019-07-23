@@ -1,12 +1,23 @@
 <template>
   <div class="border p-4 mt-4 bg-light">
-    <div class="row align-items-center justify-content-between">
+    <div class="row align-items-center">
       <div class="col-auto">
-        <octicon name="chevron-down" scale="3" v-b-toggle="'clustering_clusters_match_' + match.id"></octicon>
+        <div class="row align-items-center">
+          <div class="col-auto">
+            <octicon name="chevron-down" scale="3" v-b-toggle="'clustering_clusters_match_' + match.id"></octicon>
+          </div>
+
+          <div class="col-auto" v-b-toggle="'clustering_clusters_match_' + match.id">
+            <div class="h2">{{ match.label }}</div>
+          </div>
+        </div>
       </div>
 
-      <div class="col" v-b-toggle="'clustering_clusters_match_' + match.id">
-        <div class="h2">{{ match.label }}</div>
+      <div class="col-auto mr-auto">
+        <button type="button" class="btn btn-info btn-sm" v-b-toggle="'matches_info_' + match.id">
+          <octicon name="chevron-down" scale="1" v-b-toggle="'matches_info_' + match.id"></octicon>
+          Show alignment
+        </button>
       </div>
 
       <div v-if="getResultForMatch(match.id).clusterings.length > 0" class="col-auto">
@@ -83,6 +94,10 @@
       </div>
     </div>
 
+    <b-collapse :id="'matches_info_' + match.id" accordion="matches-info-accordion">
+      <match-info :match="match"/>
+    </b-collapse>
+
     <b-collapse
         @show="getClusters(getResultForMatch(match.id).clusterings[0].clustering_id)"
         v-model="showData"
@@ -125,12 +140,14 @@
 </template>
 
 <script>
+    import MatchInfo from "./MatchInfo";
     import ClusterTable from "./ClusterTable";
     import ClusterVisualization from "./ClusterVisualization";
 
     export default {
         name: "Cluster",
         components: {
+            MatchInfo,
             ClusterTable,
             ClusterVisualization,
         },
@@ -187,6 +204,8 @@
 
                 if (!clustered && this.association)
                     this.createClustering(mapping_id);
+                else
+                    this.$emit('reload');
             },
 
             resetProperty(idx, property, property_index) {

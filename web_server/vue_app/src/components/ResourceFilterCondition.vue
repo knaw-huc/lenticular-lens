@@ -1,8 +1,8 @@
 <template>
   <div class="border border-dark p-3 mt-3">
-    <div class="row align-items-top justify-content-between mb-2">
+    <div class="row align-items-center justify-content-between mb-2">
       <div class="col-auto">
-        <label>Property:</label>
+        Property:
       </div>
 
       <div class="col">

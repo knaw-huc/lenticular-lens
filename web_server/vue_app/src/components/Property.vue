@@ -6,6 +6,8 @@
         :value="property.slice(index, index + 2)"
         :resources="getResourcesForIndex(index)"
         :properties="index === 0 ? dataset[resource.collection_id] : dataset[property[index]]"
+        :read-only="readOnly"
+        :small="small"
         :singular="singular"
         :singular-resource-info="singularResourceInfo"
         :follow-referenced-collection="followReferencedCollection"
@@ -28,6 +30,14 @@
         },
         props: {
             property: Array,
+            readOnly: {
+                type: Boolean,
+                default: false,
+            },
+            small: {
+                type: Boolean,
+                default: false,
+            },
             singular: {
                 type: Boolean,
                 default: false,

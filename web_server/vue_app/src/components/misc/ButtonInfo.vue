@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="btn-info-popup">
     <a class="btn btn-block text-info pt-1" @click="$refs['info_' + uuid].show()">
       <octicon name="question" :scale="scale"/>
     </a>
@@ -39,3 +39,10 @@
         },
     }
 </script>
+
+<style>
+  .btn-info-popup a.btn.disabled,
+  fieldset:disabled .btn-info-popup a.btn {
+    pointer-events: auto;
+  }
+</style>

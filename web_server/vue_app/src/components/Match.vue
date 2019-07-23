@@ -13,10 +13,9 @@
           <div class="col form-check mb-1 pl-0">
             <b-form-checkbox
                 :id="'match_' + match.id + '_is_association'"
-                :disabled="!!job_results"
+                :disabled="!!jobResults"
                 v-model.boolean="match.is_association"
-                title="Check this box if this Alignment is intended for creating associations"
-            >
+                title="Check this box if this Alignment is intended for creating associations">
               Association
             </b-form-checkbox>
           </div>
@@ -24,42 +23,44 @@
       </div>
 
       <div class="col">
-        <div v-if="job_results">
+        <div v-if="jobResults">
           <div>
-            <strong>Request received at: </strong>{{ job_results.requested_at }}
+            <strong>Request received at: </strong>{{ jobResults.requested_at }}
           </div>
-          <div v-if="job_results.processing_at">
-            <strong>Processing started at: </strong>{{ job_results.processing_at }}
+          <div v-if="jobResults.processing_at">
+            <strong>Processing started at: </strong>{{ jobResults.processing_at }}
           </div>
-          <div v-if="job_results.finished_at">
-            <strong>Processing finished at: </strong>{{ job_results.finished_at }}
+          <div v-if="jobResults.finished_at">
+            <strong>Processing finished at: </strong>{{ jobResults.finished_at }}
           </div>
           <div>
             <strong>Status: </strong>
-            <pre class="d-inline">{{ job_results.status }}</pre>
+            <pre class="d-inline">{{ jobResults.status }}</pre>
           </div>
-          <div v-if="job_results.status === 'Finished'">
-            <strong>Links found:</strong> {{ job_results.links_count || 0 }}
+          <div v-if="jobResults.status === 'Finished'">
+            <strong>Links found:</strong> {{ jobResults.links_count || 0 }}
           </div>
         </div>
       </div>
 
       <div class="col-auto">
-        <b-button variant="info" @click="$emit('duplicate', match)">Duplicate Alignment</b-button>
+        <b-button variant="info" @click="$emit('duplicate', match)">Duplicate</b-button>
       </div>
 
       <div class="col-auto">
-        <b-button variant="info" @click="runAlignment">Run Alignment</b-button>
+        <b-button variant="info" @click="runAlignment">
+          Run <template v-if="jobResults">again</template>
+        </b-button>
       </div>
 
       <div class="col-auto">
-        <button-delete @click="$emit('remove')" :scale="2" :disabled="!!job_results" title="Delete this Alignment"/>
+        <button-delete @click="$emit('remove')" :scale="2" :disabled="!!jobResults" title="Delete this Alignment"/>
       </div>
     </div>
 
     <b-collapse :id="'match_' + match.id" :ref="'match_' + match.id" class="pt-4"
                 accordion="matches-accordion" @shown="scrollTo('match_' + match.id)">
-      <fieldset :disabled="!!job_results">
+      <fieldset :disabled="!!jobResults">
         <div class="bg-white border p-3 justify-content-around rounded mb-4">
           <div class="row align-items-center justify-content-between mb-2">
             <div class="col-auto">
@@ -263,7 +264,7 @@
             match: Object,
         },
         computed: {
-            job_results() {
+            jobResults() {
                 return this.$root.job.results.alignments[this.match.id];
             },
         },

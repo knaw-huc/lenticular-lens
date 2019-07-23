@@ -246,9 +246,9 @@ export default {
             return callApi(`/job/${this.job.job_id}/clusters/${clusteringId}?association=${association}`);
         },
 
-        async createClustering(alignment, associationFile, clustered) {
+        async createClustering(alignment, association_file, clustered) {
             return callApi(`/job/${this.job.job_id}/create_clustering`, {
-                alignment, associationFile, clustered
+                alignment, association_file, clustered
             });
         },
 

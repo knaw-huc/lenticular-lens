@@ -58,7 +58,7 @@
               :match="match"
               :key="match.id"
               @duplicate="duplicateMatch($event)"
-              @submit="$root.submit()"
+              @submit="submit"
               @remove="$root.matches.splice(index, 1)"
               @update:label="match.label = $event"
               ref="matchComponents"
@@ -74,6 +74,7 @@
               v-for="match in $root.matches"
               :match="match"
               :key="match.id"
+              @reload="getJobData"
           ></cluster>
         </tab-content-structure>
       </tab-content>
@@ -190,7 +191,7 @@
                     : this.isTabValid(this.$root.resources.length > 0, false, 'Please add at least one resource!');
 
                 if (isValid || alwaysSave)
-                    this.$root.submit();
+                    this.submit();
 
                 return isValid;
             },
@@ -203,7 +204,7 @@
                     : this.isTabValid(this.$root.matches.length > 0, false, 'Please add at least one alignment!');
 
                 if (isValid || alwaysSave)
-                    this.$root.submit();
+                    this.submit();
 
                 return isValid;
             },
@@ -269,6 +270,11 @@
                 parsedUrl.searchParams.set('job_id', job_id);
                 window.history.pushState(null, null, parsedUrl.href);
 
+                await this.getJobData();
+            },
+
+            async submit() {
+                await this.$root.submit();
                 await this.getJobData();
             },
 
