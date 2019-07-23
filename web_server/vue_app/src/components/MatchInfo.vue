@@ -1,6 +1,6 @@
 <template>
   <div class="match-info bg-white border shadow px-4 py-2 mt-3">
-    <p class="font-weight-bold m-0">Matching</p>
+    <p class="font-weight-bold mb-2">Matching</p>
 
     <matching-method-group-info :matching_method_group="match" :is_root="true"/>
   </div>

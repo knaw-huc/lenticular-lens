@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="border shadow p-2">
     <template v-for="collection_properties in condition.sources">
       <div v-for="resource in collection_properties" class="row m-0">
         <property :property="resource.property" :read-only="true" :small="true"/>
@@ -59,7 +59,19 @@
 
             methodValuePropsHumanReadable() {
                 return this.methodValueTemplate.items
-                    .map(item => `<span class="text-info">${item.label} = ${this.condition.method_value[item.key]}</span>`)
+                    .map(item => {
+                        let value = this.condition.method_value[item.key];
+
+                        if (this.condition.method_name === 'IS_IN_SET')
+                            value = this.$root.matches.find(match => match.id === value.value).label;
+                        else if (item.choices)
+                            value = Object.keys(item.choices).find(key => item.choices[key] === value);
+
+                        if (item.label)
+                            return `<span class="text-info">${item.label} = ${value}</span>`;
+
+                        return `<span class="text-info">${value}</span>`;
+                    })
                     .join(' and ');
             }
         },
