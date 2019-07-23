@@ -1,5 +1,5 @@
 <template>
-  <div v-if="matching_method_group.conditions" class="shadow p-3 border mb-3"
+  <div v-if="matching_method_group.conditions" class="shadow p-3 border mt-3"
        v-bind:class="[{'is-invalid': errors.length > 0}, ...styleClass]">
     <div class="row align-items-center">
       <div class="col-auto">

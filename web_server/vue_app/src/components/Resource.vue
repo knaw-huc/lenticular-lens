@@ -48,8 +48,9 @@
         </div>
 
         <template v-if="resource.collection_id != ''">
-          <div class="pb-3 pt-4 row">
+          <div class="mt-4 row">
             <div class="h3 col-auto">Filter</div>
+
             <div class="col-auto pl-0">
               <button-add @click="addRootFilterCondition" title="Add Filter Condition"/>
             </div>
@@ -66,7 +67,8 @@
               @demote-filter-group="demoteFilterGroup($event)"
           />
 
-          <h3>Sample</h3>
+          <h3 class="mt-4">Sample</h3>
+
           <div class="form-group row align-items-end">
             <label class="col-auto" :for="'resource_' + resource.id + '_limit'">Only use a sample of this amount of
               records (-1 is no limit):</label>
