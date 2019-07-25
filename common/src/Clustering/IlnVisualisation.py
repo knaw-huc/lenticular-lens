@@ -1371,8 +1371,8 @@ def plot_compact(specs, vis=None, root=None, map_of_labels=None, sub_clusters=No
                     db_label = get_uri_local_name_plus(table[i][1])
                     underscore = db_label.split("__")
                     db_label = underscore[1] if len(underscore) > 1 else db_label
-                    # label = F"{label_prefix}{table[i][3]} ({db_label} {hasher(uri)})"
-                    label = F"{label_prefix}{table[i][3]} ({db_label})"
+                    label = F"{label_prefix}{table[i][3]} ({db_label} {hasher(uri)})"
+                    # label = F"{label_prefix}{table[i][3]} ({db_label})"
 
                     label_map[inverse_map[uri]] = label
 
