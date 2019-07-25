@@ -51,11 +51,11 @@ def print_time(pading=100):
     print(F"\n{datetime.datetime.today().strftime(_format):.>{pading}}\n{empty:.>{pading}}\n")
 
 
-def print_heading(text):
+def print_heading(text, tab=""):
 
     heading = ""
     text = text.split("\n")
-    formatted = "{:.^100}\n"
+    formatted = F"{tab}{{:.^100}}\n"
     for text in text:
         if text.strip():
             heading += formatted.format(F" {text} ")
