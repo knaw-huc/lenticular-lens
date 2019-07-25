@@ -54,7 +54,7 @@ export default {
 
         getMatchById(match_id, matches = this.matches) {
             for (let i = 0; i < matches.length; i++) {
-                if (matches[i].id === parseInt(resource_id) || matches[i].label === match_id)
+                if (matches[i].id === parseInt(match_id) || matches[i].label === match_id)
                     return matches[i];
             }
         },
