@@ -65,7 +65,6 @@ export function draw(popup, graph_parent, svg_name, svg_name_child) {
             .selectAll("line")
             .data(json_graph.links)
             .enter().append("line")
-            .on("click", function() { rejectLink() })
             .style("stroke-width", function(d) { return Math.sqrt(d.value)+1; })
             .style("stroke", function(d) {
                 if (d.strength < 1) return "red";

@@ -27,13 +27,14 @@ from src.LLData.CSV_Associations import CSV_ASSOCIATIONS_DIR
 from src.LLData.Serialisation import CLUSTER_SERIALISATION_DIR
 import src.DataAccess.Stardog.Query as Stardog
 
+label_prefix = '-- '
 related_distance = 550
 short_distance = 350
 _format = "It is %a %b %d %Y %H:%M:%S"
 date = datetime.datetime.today()
 _line = "--------------------------------------------------------------" \
         "--------------------------------------------------------------"
-
+sat_reducer = 1
 
 # ****************************************************
 "                 HELPER FUNCTIONS                  "
@@ -1251,34 +1252,15 @@ def plot_reconciliation(specs, visualisation_obj=None, activated=False):
 # ****************************************************
 
 
-def plot_compact(specs, vis=None, root=None, map_of_labels=None, sub_clusters=None, link_thickness=1,
-                 investigated=True, color=None, decimal_size=5, desc=True, delta=None, activated=False):
+def plot_compact(specs, vis=None, root=None, map_of_labels=None, sub_clusters=None,
+                 link_thickness=2, investigated=True, color=None, decimal_size=5, desc=True,
+                 delta=None, community_only=False, html_color="#FFFFE0", activated=False):
 
     if activated is False or specs is None:
         problem(text="--> THE FUNCTION [improved_cluster_vis] IS NOT ACTIVATED.")
         return
 
-    the_delta = F"\nWITH A DELTA OF {delta}" if delta is not None else ""
-    print_heading(F"PLOTTING THE ILN IN A COMPACT REPRESENTATION{the_delta}")
-
-    cluster = deepcopy(specs["cluster_data"])
-    data_store = specs["data_store"]
-    # USER SELECTED PROPERTIES
-    properties = specs['properties']
-    # DICTIONARY WITH A LIST OF STRENGTHS
-    strengths = cluster["strengths"]
-    # DICTIONARY OF COMPACT CLUSTERS
-    compact = defaultdict(list)
-    total = len(cluster['nodes'])
-    total_links = len(cluster['nodes'])
-
-    link_view, nodes_view = [], []
-    added, link_checker = set(), set()
-    aggregated, new_links = dict(), dict()
-    group_map, sub_cluster_link_count = dict(), dict()
-    new_root = root if root is not None else dict()
-    label_map = map_of_labels if map_of_labels is not None else dict()
-    new_clusters = sub_clusters if sub_clusters is not None else dict()
+    step = time.time()
 
     def strength_classification(stop=0.5, delta_diff=0.1, decimal=5, reverse=True):
 
@@ -1296,56 +1278,6 @@ def plot_compact(specs, vis=None, root=None, map_of_labels=None, sub_clusters=No
 
         return range_list
 
-    problem(tab="\t", text=F"MISSING LINKS: {total*(total-1)/2 -  len(strengths)}\n", label=" INFO ")
-    print("\t--> THE CLUSTER [{}] IS OF {} NODES AND {}: {}".format(
-        specs['cluster_id'], total, total_links, "INVESTIGATED" if investigated is True else "EVIDENCE"))
-    # print_object(strengths)
-
-    # ***********************************
-    print("\n\t--> 1. GET THE MAXIMUM")
-    # ***********************************
-    for key, value in strengths.items():
-        if isinstance(value, list) is False:
-            problem(text="THE STRENGTH MUST BE A LIST")
-            exit()
-        strengths[key] = round(float(max(value)), decimal_size)
-    # print_object(strengths, overview=False)
-
-    if delta is not None and delta > 0:
-
-        strengths = dict(sorted(strengths.items(), key=lambda item_to_sort: item_to_sort[1], reverse=False))
-        classification = []
-
-        # ******************************************************
-        print("\t--> 2. ORDER THE MAXIMUM IN DESCENDING ORDER")
-        # ******************************************************
-        for key, value in strengths.items():
-            classification = strength_classification(stop=value, delta_diff=delta, decimal=decimal_size, reverse=desc)
-            break
-
-        # *******************************************
-        print("\n\t--> 3. FIND ALL POSSIBLE GROUPS")
-        # *******************************************
-        for interval in classification:
-            s = intervals.to_string(interval)
-            if s not in aggregated:
-                aggregated[s] = []
-
-    else:
-
-        # *****************************************************
-        print("\t--> 2. ORDER THE MAXIMUM IN DESCENDING ORDER")
-        # *****************************************************
-        strengths = dict(sorted(strengths.items(), key=lambda item_to_sort: item_to_sort[1], reverse=desc))
-
-        # *********************************************
-        print("\n\t--> 3. FIND ALL POSSIBLE GROUPS")
-        # *********************************************
-        for key, value in strengths.items():
-            s = intervals.to_string(intervals.singleton(value))
-            if s not in aggregated:
-                aggregated[s] = []
-
     # USE THE AGGREGATED TO REORGANIZE THE LINKS
     def find_bin(search_strength, bin_input, delta_used, stop, reverse=True):
         # print(bin_input)
@@ -1355,416 +1287,1151 @@ def plot_compact(specs, vis=None, root=None, map_of_labels=None, sub_clusters=No
         # print(bin_input[index])
         return bin_input[index]
 
-    # LIST OF ALL BINS
-    bins_list = list(aggregated.keys())
-    bin_end = intervals.from_string(bins_list[0], conv=float).lower if desc is False \
-        else intervals.from_string(bins_list[0], conv=float).upper
-    # print_object(bins_list)
+    # UPDATING THE NUMBER OF INTERLINK BETWEEN COMMUNITIES
+    def update_inter_link(delete=None, is_source=True):
+
+        if delete is None:
+            inter_key = get_key(new_root[source], new_root[target])
+            if inter_key not in inter_links:
+                inter_links[inter_key] = [new_root[source], new_root[target], link_strength, 1]
+            else:
+                inter_links[inter_key][3] += 1
+                if inter_links[inter_key][2] < link_strength:
+                    inter_links[inter_key][2] = link_strength
+        else:
+            # merged_id = new_root[delete]
+            to_del = set()
+
+            for del_k, del_item in inter_links.items():
+
+                if delete in del_item:
+                    to_del.add(del_k)
+
+            for deletion_key in to_del:
+
+                del_item = inter_links[deletion_key]
+
+                new_group = new_root[list(new_clusters[delete])[0]]
+
+                is_source = (delete == del_item[0])
+
+                new_key = get_key(new_group, del_item[1]) if is_source else get_key(del_item[0], new_group)
+                if is_source:
+                    del_item[0] = new_group
+                else:
+                    del_item[1] = new_group
+
+                # new_key = get_key(new_root[del_item[0]], new_root[del_item[1]])
+
+                if new_key not in inter_links:
+                    inter_links[new_key] = del_item
+
+                else:
+                    inter_links[new_key][3] += del_item[3]
+                    if inter_links[new_key][2] < del_item[2]:
+                        inter_links[new_key][2] = del_item[2]
+
+                del inter_links[deletion_key]
+
+    # LABELLING A NODE
+    def node_label():
+
+        # global properties_converted
+        # SELECT ?resource ?dataset ?property ?value
+        print('\t\tLABELLING THE NODE USING THE DATA STORE') if properties is not None \
+            else print('\t\tKEEPING THE RESOURCE URIS AS PROPERTY ATTRIBUTE IS NONE')
+
+        # ************************************
+        # 6.1 GET A LABEL FOR THE SUB-CLUSTER
+        # ************************************
+        resource = []
+        inverse_map = dict()
+        for g_id, g_label in label_map.items():
+            if g_label.__contains__("http"):
+                g_label = g_label.replace("-- ", "")
+                resource.append(g_label)
+                inverse_map[g_label] = g_id
+
+        # QUERY FOR FETCHING THE LABEL
+        query = Middleware.node_labels_switcher[data_store](
+            resources=resource, targets=properties_converted)
+
+        # FETCHING THE LABELS
+        table = None
+        if data_store in Middleware.run_query_matrix_switcher and query:
+            result = Middleware.run_query_matrix_switcher[data_store](query)
+            Stardog.display_matrix(result, spacing=130, is_activated=False)
+            table = result[St.result] if isinstance(result, dict) else result
+
+        if properties_converted is not None and table is not None:
+
+            for i, rsc_label in enumerate(table):
+                if i > 0:
+                    uri = to_nt_format(table[i][0])
+                    db_label = get_uri_local_name_plus(table[i][1])
+                    underscore = db_label.split("__")
+                    db_label = underscore[1] if len(underscore) > 1 else db_label
+                    # label = F"{label_prefix}{table[i][3]} ({db_label} {hasher(uri)})"
+                    label = F"{label_prefix}{table[i][3]} ({db_label})"
+
+                    label_map[inverse_map[uri]] = label
+
+    the_delta = F"\nWITH A DELTA OF {delta}" if delta is not None else ""
+    indent = "\t" # if vis is None else "t"
+    print_heading(F"PLOTTING THE ILN IN A COMPACT REPRESENTATION{the_delta}", tab=indent)
+    data_store = specs["data_store"]
+    cluster = deepcopy(specs["cluster_data"])
+
+    # 5% of the total of the node should be swolloed
+    node_total = specs["cluster_data"]["nodes"]
+    node_total_ratio = round(15 * len(node_total) / 100)
+
+    loners = dict()
+    properties_converted = None
+
+    # USER SELECTED PROPERTIES
+    properties = specs['properties']
+
+    # DICTIONARY WITH A LIST OF STRENGTHS
+    strengths = cluster["strengths"]
+
+    # LINKS RESTRUCTURED AS SOURCE - TARGET - MAX STRENGTH
+    links = []
+
+    # THE SET OF ALL MAX STRENGTH
+    unique_strengths = set()
+
+    # AGGREGATED IS A DICTIONARY WHERE THE KEY IS THE INTERVAL CONSTRAINT
+    aggregated, inter_links = dict(), dict()
 
     # DICTIONARY OF LINKS ORGANISED PER BINS
     grouped_links = dict()
 
-    # INITIALISE THE BINS IN WHICH THE LINKS CAN B E ORGANISED
+    # ADDED IS TO CHECK THE NODES THAT HAVE BEEN GROUPED
+    added, link_checker = set(), set()
+
+    group_map, sub_cluster_link_count = dict(), dict()
+    new_root = root if root is not None else dict()
+    label_map = map_of_labels if map_of_labels is not None else dict()
+    new_clusters = sub_clusters if sub_clusters is not None else dict()
+
+    # VIEW OBJECTS
+    link_view, nodes_view = [], []
+
+    # COMPACT NODE (N>1)
+    parent_nodes = dict()
+
+    # DICTIONARY OF COMPACT CLUSTERS
+    compact = defaultdict(list)
+
+    # ####################################################################################
+    print("\t1. RESTRUCTURE THE LINKS IN TERMS OF SOURCE - TARGET - MAX STRENGTH")
+    # ####################################################################################
+
+    for source, target in cluster["links"]:
+
+        # GET THE MAXIMUM STRENGTH
+        max_strength = round(float(max(strengths[get_key(source, target)])), decimal_size)
+
+        # ADD MAX-STRENGTH TO THE UNIQUE SET OF STRENGTHS
+        unique_strengths.add(max_strength)
+
+        # RESTRUCTURE THE LINK
+        links.append((source, target, max_strength))
+
+    # ####################################################################################
+    print("\n\t2. CREATING THE CLASSIFICATION BINS BASED ON DELTA OR POINT.")
+    # ####################################################################################
+
+    if delta is not None and delta > 0:
+
+        # 2. SORT THE SET ALL MAX STRENGTHS NOW AS A LIST
+        unique_strengths = sorted(unique_strengths, reverse=False)
+
+        # ***********************************************************
+        print("\t\t2.1 ORDER THE MAXIMUM IN DESCENDING ORDER")
+        # ***********************************************************
+
+        classification = strength_classification(
+            stop=unique_strengths[0], delta_diff=delta, decimal=decimal_size, reverse=desc)
+
+        # ***********************************************************
+        print("\t\t2.2. FIND ALL POSSIBLE GROUPS")
+        # ***********************************************************
+        for interval in classification:
+            s = intervals.to_string(interval)
+            if s not in aggregated:
+                aggregated[s] = []
+
+    else:
+
+        # ***********************************************************
+        print("\t\t2.1. ORDER THE MAXIMUM IN DESCENDING ORDER")
+        # ***********************************************************
+        # strengths = dict(sorted(strengths.items(), key=lambda item_to_sort: item_to_sort[1], reverse=desc))
+        unique_strengths = sorted(unique_strengths, reverse=desc)
+
+        # ***********************************************************
+        print("\t\t2.2. FIND ALL POSSIBLE GROUPS")
+        # ***********************************************************
+        for value in unique_strengths:
+            s = intervals.to_string(intervals.singleton(value))
+            if s not in aggregated:
+                aggregated[s] = []
+
+    # ####################################################################################
+    print("\n\t3. POPULATING THE BINS")
+    # ####################################################################################
+
+    # LIST OF ALL BINS FOR QUICK ACCESS
+    bins_list = list(aggregated.keys())
+
+    # DEPENDING OF THE ORDER, GET THE LAST BIN (STRENGTH INTERVAL)
+    bin_end = intervals.from_string(bins_list[0], conv=float).lower if desc is False \
+        else intervals.from_string(bins_list[0], conv=float).upper
+
+    # INITIALISE THE BINS IN WHICH THE LINKS CAN BE ORGANISED
     for bin_key in aggregated:
         grouped_links[bin_key] = set()
 
-    # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    " (BOTTLENECK SOLUTION-1) "
-    # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     # ORGANISE THE LINKS IN THE BINS
-    for source, target in cluster["links"]:
-
-        # GET THE KEY OF THE CURRENT LINK
-        link_key = get_key(source, target)
-
-        # GET THE STRENGTH OF THE CURRENT LINK
-        link_strength = strengths[link_key]
+    for source, target, link_strength in links:
 
         # FIND THE BIN FOR THE CURRENT LINK BASED ON ITS STRENGTH
         bin_key = find_bin(
-                search_strength=link_strength, bin_input=bins_list, delta_used=delta, stop=bin_end, reverse=desc) \
+            search_strength=link_strength, bin_input=bins_list, delta_used=delta, stop=bin_end, reverse=desc) \
             if delta is not None and delta > 0 else intervals.to_string(intervals.singleton(link_strength))
 
         # APPEND THE LINK TO THE BIN STACK
-        grouped_links[bin_key].add((source, target))
-
-    # print_object(list(grouped_links.keys()), overview=False)
-    # print_object(grouped_links, overview=False)
-    # print_object(aggregated, overview=False)
+        grouped_links[bin_key].add((source, target, link_strength))
 
     print(F"\t\t   >>> {len(aggregated)} POSSIBLE SUB-GROUPS FOUND BASED ON STRENGTH.")
     print("\t\t   >>> THE CLASSIFICATION IS {} .".format(" | ".join(str(x) for x in aggregated.keys())))
 
-    # ************************************************************
-    # ************************************************************
-    print("\n\t--> 4. FIND NEW SUB-CLUSTERS AT EACH ITERATION. "
-          "THIS ASSUMES THAT THE DICTIONARY IS SORTED IN REVERSE")
-    # AT THE END OF THIS, WE HAVE ALL
-    # SUB-CLUSTERS BASED ON AGGREGATED STRENGTHS
-    # ************************************************************
-    # ************************************************************
+    # ####################################################################################
+    print("\n\t4. FIND NEW SUB-CLUSTERS AT EACH ITERATION (REVERSED SORTED DICTIONARY)")
+    """ AT THE END OF THIS, WE HAVE ALL SUB-CLUSTERS BASED ON AGGREGATED STRENGTHS """
+    # ####################################################################################
+
     step_4 = time.time()
+
     for constraint_key in aggregated.keys():
 
-        # ITERATING THROUGH THE LINKS
-        print(F"\t\tBIN {constraint_key:17}")
+        # GROUP OF THE CURRENT STRENGTH.
+        groups = aggregated[constraint_key]
 
-        # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        " (BOTTLENECK PROBLEM-1) "
-        # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        # for source, target in cluster["links"]:
-        for source, target in grouped_links[constraint_key]:
+        # print("group_position", group_position)
 
-            # GET THE KEY OF THE CURRENT LINK
-            link_key = get_key(source, target)
+        # FETCH THE LINKS IN THE CURRENT INTERVAL
+        for source, target, link_strength in grouped_links[constraint_key]:
 
-            # GET THE STRENGTH OF THE CURRENT LINK
-            link_strength = strengths[link_key]
+            src_pos = groups.index(new_root[source]) if (source in new_root) and (new_root[source] in groups) else None
+            trg_pos = groups.index(new_root[target]) if (target in new_root) and (new_root[target] in groups) else None
 
-            # WE ARE INTERESTED IN FINDING NODES OF THE CURRENT GROUP
-            # print(link_strength, constraint_key)
-            if link_strength not in intervals.from_string(constraint_key, conv=float):
-                continue
+            # IF THE SOURCE IS A LONER, MAKE IT AVAILABLE TO CONNECT WITH NODES OF LOWER STRENGTH
+            if source in loners:
 
-            # LOOKING FOR NODES THAT CAN BE GROUPED-IN WITH THE CURRENT STRENGTH
-            src_pos, trg_pos = None, None
+                loner_constraint = loners[source][0]
+                loner_group_id = loners[source][1]
 
-            # GROUP OF THE CURRENT STRENGTH.
-            groups = aggregated[constraint_key]
+                aggregated[loner_constraint].remove(loner_group_id)
+                aggregated[constraint_key].append(loner_group_id)
 
-            # LOOK FOR A GROUP THAT HAS THE SOURCE OR TARGET
-            for i in range(0, len(groups)):
-                if source in groups[i]:
-                    src_pos = i
-                if target in groups[i]:
-                    trg_pos = i
-                if src_pos is not None and trg_pos is not None:
-                    break
+                group_map[loner_group_id] = constraint_key
+                src_pos = aggregated[constraint_key].index(loner_group_id)
+                del loners[source]
+
+                # added.remove(source)
+                # group_id = loners[source][1]
+                # aggregated[loners[source][0]].remove(group_id)
+                # del new_root[source], new_clusters[group_id], loners[source]
+                # # del new_clusters[group_id]
+                # # del loners[source]
+                # src_pos = None
+
+            if target in loners:
+
+                loner_constraint = loners[target][0]
+                loner_group_id = loners[target][1]
+                aggregated[loner_constraint].remove(loner_group_id)
+                aggregated[constraint_key].append(loner_group_id)
+                group_map[loner_group_id] = constraint_key
+                trg_pos = aggregated[constraint_key].index(loner_group_id)
+                del loners[target]
+
+                # added.remove(target)
+                # group_id = loners[target][1]
+                # aggregated[loners[target][0]].remove(group_id)
+                # del new_root[target], new_clusters[group_id], loners[target]
+                # # del new_clusters[group_id]
+                # # del loners[target]
+                # trg_pos = None
 
             # print(constraint_key, source, target)
             # print(src_pos, trg_pos)
 
             # FILL AGGREGATED WITH THE NEW SUB-CLUSTERS
             # SAVING THE NODE IN THE CORRECT GROUP
-            if src_pos == trg_pos is None:
+            group_id = get_key(source, target)
 
-                if source not in added and target not in added:
-                    aggregated[constraint_key] += [{source, target}]
-                    added.add(source)
-                    added.add(target)
+            if True:
 
-                elif source not in added and target in added:
-                    aggregated[constraint_key] += [{source}]
-                    added.add(source)
+                # 1. SOURCE AND TARGET ARE NOT AGGREGATED (NOT IN A GROUP)
+                if src_pos == trg_pos is None:
 
-                elif source in added and target not in added:
-                    aggregated[constraint_key] += [{target}]
-                    added.add(target)
+                    # SOURCE AND TARGET ARE IN THE SAME GROUP BUT IN THE SAME BIN
+                    if source not in added and target not in added:
+                        group = {source, target}
+                        groups += [group_id]
+                        added.add(source)
+                        added.add(target)
 
-            elif src_pos is not None and trg_pos is None:
+                        # CREATE A NEW GROUP
+                        new_clusters[group_id] = group
 
-                # if source not in added:
-                #     aggregated[link_strength][src_pos].add(source)
-                #     added.add(source)
+                        # EXTRACT CHILDREN OF COMPACT THAT ARE BIGGEST THAN 2
+                        compact[group_id].append((source, target, link_strength))
 
-                if target not in added:
-                    aggregated[constraint_key][src_pos].add(target)
-                    added.add(target)
+                        # GROUP LABEL
+                        label_map[group_id] = F"{label_prefix}{source}"
 
-            elif src_pos is None and trg_pos is not None:
+                        # DOCUMENT THE GROUP A NODE BELONGS TO
+                        new_root[source] = group_id
+                        new_root[target] = group_id
 
-                if source not in added:
-                    aggregated[constraint_key][trg_pos].add(source)
-                    added.add(source)
-                # if target not in added:
-                #     aggregated[link_strength][trg_pos].add(target)
-                #     added.add(target)
+                        # DOCUMENT THE ALL MAP
+                        group_map[group_id] = constraint_key
 
-            elif src_pos is not None and trg_pos is not None and src_pos != trg_pos:
-
-                if len(aggregated[constraint_key][src_pos]) > len(aggregated[constraint_key][trg_pos]):
-                    big = aggregated[constraint_key][src_pos]
-                    small = aggregated[constraint_key][trg_pos]
-                    for item in small:
-                        big.add(item)
-                    aggregated[constraint_key].__delitem__(trg_pos)
-
-                else:
-                    small = aggregated[constraint_key][src_pos]
-                    big = aggregated[constraint_key][trg_pos]
-                    for item in small:
-                        big.add(item)
-                    aggregated[constraint_key].__delitem__(src_pos)
-    print(F"\t\tDONE IN {datetime.timedelta(seconds=time.time() - step_4)}")
-    # print_object(aggregated, overview=False)
-
-    # ************************************************************
-    print("\n\t--> 5. CREATING "
-          "\n\t\t5.1 SUB-CLUSTERS "
-          "\n\t\t5.2 NUMBER OF LINKS WITHIN SUB-CLUSTERS "
-          "\n\t\t5.3 LINKS ACROSS SUB-GROUPS")
-    # ************************************************************
-    count_bins = 0
-    bins_total = len(aggregated)
-    step_5 = time.time()
-    for key, groups in aggregated.items():
-
-        count_bins += 1
-        made = F'IS MADE OF {len(groups)} GROUPS'
-        print(F"\t\t\t{count_bins} / {bins_total} BIN {key:7} {made:17} AND {len(grouped_links[key])} LINKS")
-        # FOR EACH GROUP OF THE SAME STRENGTH
-        for group in groups:
-
-            # GENERATE THE ID OF THIS GROUP BASED ON THE SMALLEST NODE STRING
-            smallest = None
-            for resource in group:
-                if smallest is None:
-                    smallest = resource
-                elif smallest > resource:
-                    smallest = resource
-            # print("smallest", smallest)
-            group_id = hasher(smallest)
-
-            # *****************************
-            # 5.1 RECONSTRUCT THE CLUSTER
-            # *****************************
-            new_clusters[group_id] = group
-
-            # 5.2 DOCUMENT THE ALL MAP
-            group_map[group_id] = key
-
-            # **************************
-            # 5.3 GENERATE THE ROOT MAP
-            # **************************
-            for resource in group:
-                new_root[resource] = group_id
-
-            # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            # ITERATING THROUGH THE LINKS (BOTTLENECK-2)
-            # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            # for source, target in cluster["links"]:
-            # for source, target in grouped_links[key]:
-            copy = deepcopy(grouped_links[key])
-            for source, target in copy:
-
-                # ****************************************
-                #  5.4 FIND LINKS ACROSS SUB CLUSTERS
-                # ****************************************
-                # link_key = get_key(source, target)
-                # if (source not in group and target in group) or (source in group and target not in group):
-                #     if link_key not in new_links:
-                #         new_links[link_key] = source, target, strengths[link_key]
-
-                # ******************************************************
-                # 5.5 COUNT THE NUMBER OFF LINKS WITHIN EACH SUB-CLUSTER
-                # ******************************************************
-                if (source != target) and (source in group and target in group):
-
-                    if group_id not in sub_cluster_link_count:
+                        # ADD A WITHIN GROUP LINK CONT FOR THE GROUP
                         sub_cluster_link_count[group_id] = 1
+
+                    # SOURCE AND TARGET ARE NOT FOUND IN THE CURRENT GROUP BUT ARE ADDED ALREADY
+                    elif source in added and target in added:
+
+                        if new_root[source] == new_root[target]:
+                            sub_cluster_link_count[new_root[source]] += 1
+                            # EXTRACT CHILDREN OF COMPACT THAT ARE BIGGEST THAN 2
+                            compact[new_root[source]].append((source, target, link_strength))
+
+                        else:
+                            # print("\t\t--------------- INTER COMMUNITY ---------------")
+                            # print(source, "|", target)
+                            update_inter_link()
+
+                    # SOURCE AND TARGET ARE IN DIFFERENT GROUPS BUT IN THE SAME BIN
+                    elif source not in added and target in added:
+
+                        group = {source}
+                        groups += [group_id]
+                        added.add(source)
+
+                        # CREATE A NEW GROUP
+                        new_clusters[group_id] = group
+
+                        # GROUP LABEL
+                        label_map[group_id] = F"{label_prefix}{source}"
+
+                        # DOCUMENT THE GROUP A NODE BELONGS TO
+                        new_root[source] = group_id
+
+                        # DOCUMENT THE ALL MAP
+                        group_map[group_id] = constraint_key
+
+                        #  NO LINK TO ADD BECAUSE SOURCE AND TARGET ARE IN DIFFERENT GROUPS
+                        if new_root[source] != new_root[target]:
+                            # print("\t\t--------------- INTER COMMUNITY ")
+                            # print(source, "|", target)
+
+                            update_inter_link()
+
+                    # SOURCE AND TARGET ARE IN DIFFERENT GROUPS BUT IN THE SAME BIN
+                    elif source in added and target not in added:
+
+                        group = {target}
+                        groups += [group_id]
+                        added.add(target)
+
+                        # CREATE A NEW GROUP
+                        new_clusters[group_id] = group
+
+                        # GROUP LABEL
+                        label_map[group_id] = F"{label_prefix}{target}"
+
+                        # DOCUMENT THE GROUP A NODE BELONGS TO
+                        new_root[target] = group_id
+
+                        # DOCUMENT THE ALL MAP
+                        group_map[group_id] = constraint_key
+
+                        #  NO LINK TO ADD BECAUSE SOURCE AND TARGET ARE IN DIFFERENT GROUPS
+                        if new_root[source] != new_root[target]:
+                            # print("\t\t--------------- INTER COMMUNITY ")
+                            # print(source, "|", target)
+
+                            update_inter_link()
+
+                # 2. THE TARGET NODE HAS NO GROUP
+                elif src_pos is not None and trg_pos is None:
+
+                    if target not in added:
+
+                        # AT SOURCE POSITION, ADD TARGET
+                        # groups[src_pos].add(target)
+                        added.add(target)
+
+                        #  ADD TO AN EXISTING GROUP
+                        new_clusters[new_root[source]].add(target)
+
+                        # EXTRACT CHILDREN OF COMPACT THAT ARE BIGGEST THAN 2
+                        compact[new_root[source]].append((source, target, link_strength))
+
+                        # DOCUMENT THE GROUP A NODE BELONGS TO
+                        new_root[target] = new_root[source]
+
+                        # ADD A WITHIN GROUP LINK CONT FOR THE GROUP
+                        if new_root[source] in sub_cluster_link_count:
+                            sub_cluster_link_count[new_root[source]] += 1
+                        else:
+                            sub_cluster_link_count[new_root[source]] = 1
+
                     else:
-                        sub_cluster_link_count[group_id] += 1
 
-                    # REMOVE LINKS FOUND
-                    grouped_links[key].remove((source, target))
+                        if new_root[source] == new_root[target]:
 
-                    # EXTRACT CHILDREN OF COMPACT THAT ARE BIGGEST THAN 2
-                    if len(group) >= 2:
-                            compact[group_id].append((source, target, strengths[get_key(source, target)]))
+                            if new_root[source] in sub_cluster_link_count:
+                                sub_cluster_link_count[new_root[source]] += 1
+                            else:
+                                sub_cluster_link_count[new_root[source]] = 1
 
-    for key, groups in aggregated.items():
-        for group in groups:
-            copy = deepcopy(grouped_links)
-            for bin_key, value in copy.items():
+                            # sub_cluster_link_count[new_root[source]] += 1
+                            # EXTRACT CHILDREN OF COMPACT THAT ARE BIGGEST THAN 2
+                            compact[new_root[source]].append((source, target, link_strength))
 
-                if intervals.from_string(bin_key, float) < intervals.from_string(key, float):
-                    for source, target in value:
+                        else:
+                            # print("\t\t--------------- INTER COMMUNITY ---------------")
+                            # print(source, "|", target)
 
-                        # ****************************************
-                        #  5.4 FIND LINKS ACROSS SUB CLUSTERS
-                        # ****************************************
-                        link_key = get_key(source, target)
-                        if (source not in group and target in group) or (source in group and target not in group):
-                            if link_key not in new_links:
-                                new_links[link_key] = source, target, strengths[link_key]
+                            update_inter_link()
 
-                            # REMNOVE LINKS FOUND
-                            grouped_links[bin_key].remove((source, target))
+                # 3. THE SOURCE NODE HAS NO GROUP
+                elif src_pos is None and trg_pos is not None:
 
-    print(F"\t\tDONE IN {datetime.timedelta(seconds=time.time() - step_5)}")
-    # print_object(new_clusters, overview=False)
-    # print_object(new_links, overview=False)
-    # print_object(group_map, overview=False)
-    # print_object(new_root, overview=False)
+                    if source not in added:
 
-    # *****************************************************************
-    print("\n\t--> 6. FETCH LABELS AND GENERATE VISUALISATION NODES")
-    # *****************************************************************
+                        # ADD THE SOURCE AT THE TARGET'S POSITION
+                        # groups[trg_pos].add(source)
+                        added.add(source)
 
+                        #  ADD TO AN EXISTING GROUP
+                        new_clusters[new_root[target]].add(source)
+
+                        # EXTRACT CHILDREN OF COMPACT THAT ARE BIGGEST THAN 2
+                        compact[new_root[target]].append((source, target, link_strength))
+
+                        # DOCUMENT THE NEW GROUP THE SOURCE BELONGS TO
+                        new_root[source] = new_root[target]
+
+                        # ADD A WITHIN GROUP LINK COUNT FOR THE GROUP
+                        if new_root[target] in sub_cluster_link_count:
+                            sub_cluster_link_count[new_root[target]] += 1
+                        else:
+                            sub_cluster_link_count[new_root[target]] = 1
+
+                    else:
+                        if new_root[source] == new_root[target]:
+                            sub_cluster_link_count[new_root[source]] += 1
+                            # EXTRACT CHILDREN OF COMPACT THAT ARE BIGGEST THAN 2
+                            compact[new_root[source]].append((source, target, link_strength))
+                        else:
+                            # print("\t\t--------------- INTER COMMUNITY ---------------")
+                            # print(source, "|", target)
+
+                            update_inter_link()
+
+                # 4. SOURCE AND TARGET ARE IN DIFFERENT GROUPS
+                elif src_pos is not None and trg_pos is not None and src_pos != trg_pos:
+
+                    # SOURCE IS IN THE BIGGEST CLUSTER
+                    trg_grp = new_clusters[new_root[target]]
+                    src_grp = new_clusters[new_root[source]]
+                    if len(src_grp) > len(trg_grp):
+
+                        big = src_grp
+                        small = trg_grp
+                        del_key = new_root[target]
+                        source_id = new_root[source]
+
+                        # THE LABEL OF THE SMALL GETS REMOVED
+                        del label_map[new_root[target]]
+
+                        # EXTRACT CHILDREN OF COMPACT THAT ARE BIGGEST THAN 2
+                        compact[new_root[source]].append((source, target, link_strength))
+
+                        compact[new_root[source]] += compact[new_root[target]]
+                        del compact[new_root[target]]
+
+                        for item in small:
+
+                            big.add(item)
+
+                            #  ADD TO AN EXISTING GROUP
+                            new_clusters[source_id].add(item)
+
+                            # DOCUMENT THE GROUP A NODE BELONGS TO
+                            new_root[item] = new_root[source]
+
+                        # A NEW LINK IS ADDED ==> 1 ADD THE LINK-COUNT OF THE SMALL GROUP
+                        if del_key in sub_cluster_link_count:
+
+                            sub_cluster_link_count[source_id] += 1 + sub_cluster_link_count[del_key]
+
+                            # DELETE THE EXISTING COUNT
+                            del sub_cluster_link_count[del_key]
+
+                        else:
+                            sub_cluster_link_count[source_id] += 1
+
+                        update_inter_link(delete=del_key, is_source=False)
+
+                        # REMOVE THE TARGET GROUP AS IT GOT MERGED
+                        del new_clusters[del_key]
+
+                        # REMOVE THE TARGET GROUP MERGED
+                        del group_map[del_key]
+
+                        # del sub_cluster_link_count[del_key]
+                        # groups.__delitem__(trg_pos)
+                        groups.remove(del_key)
+                        # print("source")
+
+                    # TARGET IS IN THE BIGGEST CLUSTER
+                    else:
+                        small = src_grp
+                        big = trg_grp
+                        del_key = new_root[source]
+                        target_id = new_root[target]
+
+                        # THE LABEL OF THE SMALL GETS REMOVED
+                        del label_map[new_root[source]]
+
+                        # EXTRACT CHILDREN OF COMPACT THAT ARE BIGGEST THAN 2
+                        compact[new_root[target]].append((source, target, link_strength))
+
+                        compact[new_root[target]] += compact[new_root[source]]
+                        del compact[new_root[source]]
+
+                        for item in small:
+
+                            big.add(item)
+
+                            #  ADD TO AN EXISTING GROUP
+                            new_clusters[new_root[target]].add(item)
+
+                            # DOCUMENT THE GROUP A NODE BELONGS TO
+                            new_root[item] = new_root[target]
+
+                        # A NEW LINK IS ADDED ==> 1 ADD THE LINK-COUNT OF THE SMALL GROUP
+                        if del_key in sub_cluster_link_count:
+
+                            if target_id in sub_cluster_link_count:
+                                sub_cluster_link_count[target_id] += 1 + sub_cluster_link_count[del_key]
+                            else:
+                                sub_cluster_link_count[target_id] = 1 + sub_cluster_link_count[del_key]
+
+                            # DELETE THE EXISTING COUNT
+                            del sub_cluster_link_count[del_key]
+
+                        else:
+                            if target_id in sub_cluster_link_count:
+                                sub_cluster_link_count[target_id] += 1
+                            else:
+                                sub_cluster_link_count[target_id] = 1
+
+                        update_inter_link(delete=del_key, is_source=True)
+
+                        del new_clusters[del_key]
+                        del group_map[del_key]
+                        # groups.__delitem__(src_pos)
+                        groups.remove(del_key)
+                        # print("target")
+
+                # 5. SOURCE AND TARGETS ARE FOUND BUT NOT IN THE SAME GROUP
+                elif src_pos is not None and trg_pos is not None and src_pos == trg_pos:
+                    if new_root[source] in sub_cluster_link_count:
+                        sub_cluster_link_count[new_root[source]] += 1
+                    else:
+                        sub_cluster_link_count[new_root[source]] = 1
+                    compact[new_root[source]].append((source, target, link_strength))
+
+            # except Exception as err:
+            #     print("EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE")
+            #     print(err)
+            #     print(source, target)
+            #     print(new_clusters)
+            #     print(new_root)
+
+        print(F"\t\tBIN {constraint_key:17} : {len(groups)} group(2)")
+
+        # LONERS
+        for group_id in groups:
+            group = new_clusters[group_id]
+            if len(group) == 1:
+                # THE SOURCE OR TARGET IS USED AS THE KEY OF THE LONER
+                loners[list(group)[0]] = constraint_key, group_id
+
+    print(F"\t\tDONE WITH STEP 4 IN {datetime.timedelta(seconds=time.time() - step_4)}")
+
+    # ####################################################################################
+    print('\n\t5. GENERATE VISUALISATION NODES')
+    # ####################################################################################
+
+    # UPDATE THE LABEL IF THE PROPERTIES ARE GIVEN
+    step_5 = time.time()
     properties_converted = convert_properties(properties) if properties is not None else None
-    step_6 = time.time()
+    node_label()
 
-    group_count = 2
-    for key, sub_cluster in new_clusters.items():
+    for key in new_clusters:
 
-        # ************************************
-        # 6.1 GET A LABEL FOR THE SUB-CLUSTER
-        # ************************************
-        # result = None
-        resource = list(sub_cluster)[0]
-        # print_object(resource, overview=False)
-        # QUERY FOR FETCHING THE LABEL
-        query = Middleware.node_labels_switcher[data_store](
-            resources=[resource], targets=properties_converted)
-
-        # FETCHING THE LABELS
-        table = None
-        if data_store in Middleware.run_query_matrix_switcher and query:
-            result = Middleware.run_query_matrix_switcher[data_store](query)
-            # Stardog.display_matrix(result, spacing=130, is_activated=True)
-            table = result[St.result] if isinstance(result, dict) else result
-
-        if properties_converted is not None and table is not None:
-            db_label = get_uri_local_name_plus(table[1][1])
-            underscore = db_label.split("__")
-            db_label = underscore[1] if len(underscore) > 1 else db_label
-            label = F"-- {table[1][3]} ({db_label} {hasher(table[1][0])})"
-
-        else:
-            # label = F"-- ({resource})"
-            # label = F"-- {get_uri_local_name_plus(resource)}"
-            label = F"-- {resource}"
-
-        # MAP THE LABEL TO THE SUB-CLUSTER
-        label_map[key] = label
-
-        # ****************************************
-        # 6.2 GENERATE THE NODES FOR VISUALISATION
-        # ****************************************
-        group_size = len(sub_cluster)
+        group_size = len(new_clusters[key])
         possible = group_size * (group_size - 1) / 2
-        missing_links = (possible - sub_cluster_link_count[key]) / float(possible) \
-            if key in sub_cluster_link_count else 0
 
+        # print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        # print(group_size)
+        # print(possible)
+        # print(sub_cluster_link_count[key] if key in sub_cluster_link_count else 0)
+
+        # MISSING LINKS IS THE PERCENTAGE OF MISSING LINKS
+        temp = possible - sub_cluster_link_count[key] if key in sub_cluster_link_count else 0
+        temp = temp if temp > 0 else 0
+        missing_links = temp / possible if possible > 0 else 0
+
+        # nodes
         if key in group_map:
 
-            node = {
-                'nodes': group_size,
-                'strength': group_map[key],
-                'size': 10,
-                'missing_links': missing_links,
-                'group': color,
-                'id': label_map[key],
-                'investigated': str(investigated).lower()
-            }
+            if group_size > 1:
+                parent_nodes[label_map[key]] = group_size
 
+            node = compact_node(
+                node_id=label_map[key], group_size=group_size, strength=group_map[key], missing_links=missing_links,
+                group_color=color if color is not None else (1 if group_size == 1 else int(hash_number(key))),
+                investigated=investigated, child=None, size=10)
+
+            # COMPACT NODE: ADDING THE CHILD OF THE COMPACT NODE
             if key in compact:
                 node['child'] = get_compact_child(key, compact[key], properties_converted, data_store)
 
-            # node['group'] =  int((hash_number(key)) if color is None else int(color)
-            node['group'] = color if color is not None else (1 if group_size == 1 else int(hash_number(key)) )
-            # node['group'] = 1 if group_size == 1 else int((hash_number(key)) if color is None else int(color))
-            # node['group'] = group_count if color is None else int(color)
-
-            # if node['group'] > 1:
-            #     print("\t\t --> COMMUNITY COLOR",  node['group'])
             nodes_view += [node]
 
             if node['missing_links'] < 0:
-                print(sub_cluster_link_count[key])
-                print("possible:", possible)
-                print("group_size:", group_size)
-                print("sub_cluster_link_count", sub_cluster_link_count[key])
-    print(F"\t\tDONE IN {datetime.timedelta(seconds=time.time() - step_6)}")
-    # print_object(nodes_view, overview=False)
+
+                print("group_size             :", group_size)
+                print("possible               :", possible)
+                print("sub cluster link_count :", sub_cluster_link_count[key])
+                print("missing                :", node['missing_links'])
+
+    print(F"\t\tDONE WITH STEP 5 IN {datetime.timedelta(seconds=time.time() - step_5)}")
 
     # ***************************************************
-    print('\t--> 7. GENERATE VISUALISATION LINKS')
+    print('\n\t6. GENERATE VISUALISATION LINKS')
     # ***************************************************
-    link_count = dict()
-    step_7 = time.time()
-    for key, link in new_links.items():
+    step_8 = time.time()
+
+    for key, link in inter_links.items():
+        # print(link)
 
         # [link[0]]     -> RETURNS THE RESOURCE
-        # [new_root]    -> RETURNS THE SUB-CLUSTER THO WITCH THE RESOURCE BELONGS TO
+        # [new_root]    -> RETURNS THE SUB-CLUSTER TO WITCH THE RESOURCE BELONGS TO
         # [label_map]   -> RETURNS THE LABEL OF SUB-CLUSTER
-        # print_object(new_root)
-        label_1 = label_map[new_root[link[0]]]
-        label_2 = label_map[new_root[link[1]]]
-        strength = link[2]
-        distance = short_distance
+
+        label_1, label_2 = label_map[link[0]], label_map[link[1]]
+        strength,distance = link[2], short_distance
 
         # ORDERING THE LABELS
         if label_1 < label_2:
             source, target = label_1, label_2
-            dist_factor = [len(new_clusters[new_root[link[0]]]), len(new_clusters[new_root[link[1]]])]
+            dist_factor = [len(new_clusters[link[0]]), len(new_clusters[link[1]])]
         else:
             source, target = label_2, label_1
-            dist_factor = [len(new_clusters[new_root[link[1]]]), len(new_clusters[new_root[link[0]]])]
+            dist_factor = [len(new_clusters[link[1]]), len(new_clusters[link[0]])]
 
         # GENERATE THE KEY
         labels = F"{source}-{target}"
 
-        if labels not in link_count:
-            link_count[labels] = 1
-        else:
-            link_count[labels] += 1
-
-        current = {
-            'source': source,
-            'target': target,
-            "dash": F"3,{20 * (1 - float(strength))}",
-            'distance': distance,
-            'color': 'red' if float(strength) < 1 else "black",
-            'value': 4,
-            'strength': strength,
-            'dist_factor': dist_factor,
-        }
+        current = edge(
+            source=source, target=target, strength=strength, distance=distance,
+            dist_factor=dist_factor, link_thickness=link_thickness, count=link[3])
 
         if labels not in link_checker:
             link_view += [current]
             link_checker.add(labels)
+
         else:
-            # print(labels)
+
+            # UPDATING THE STRENGTH OF THE CONNECTION TO IT MAX STRENGTH
             for dictionary in link_view:
                 curr_label = F"{dictionary['source']}-{dictionary['target']}"
                 if labels == curr_label:
                     dictionary['strength'] = max(dictionary['strength'], current['strength'])
                     break
 
-    # UPDATING THE THICKNESS OF GHE LINKS
-    for link in link_view:
-        link['value'] = link_count[F"{link['source']}-{link['target']}"] * link_thickness
-
     # VISUALISATION OBJECT
     if vis is None:
-        vis = {
-            "id": specs["cluster_id"],
-            "confidence": 1,
-            "decision": 1,
-            "metric": "e_Q MESSAGE",
-            "messageConf": "",
-            'links': link_view,
-            'nodes': nodes_view
-        }
+
+        vis = vis_object(
+            cluster_id=specs["cluster_id"], confidence=0, decision=0, metric="e_Q MESSAGE",
+            message_conf="", color=html_color, links=link_view, nodes=nodes_view)
+
     else:
 
         vis['links'] += link_view
         vis['nodes'] += nodes_view
 
-    print(F"\t\tDONE IN {datetime.timedelta(seconds=time.time() - step_7)}")
-    # print_object(vis, overview=False)
-    # print_object(nodes_view, overview=False)
-    # print_object(link_view, overview=False)
-    # print_object(aggregated, overview=False)
-    # print_object(link_count, overview=False)
-    # print_object(label_map, overview=False)
+    print(F"\t\tDONE WITH STEP 8 IN {datetime.timedelta(seconds=time.time() - step_8)}")
+    print(F"\n\t9. THE ALGORITHM FOUND {len(compact)} COMPACT NODES")
+    print(F"\n\tDONE IN {datetime.timedelta(seconds=time.time() - step)}")
 
-    # with open('C:\\Users\Al\Dropbox\@VU\Ve\Golden Agents\Cluster Vis Code\data_new_vis.json', mode='w') as file:
-    #     json.dump(vis, file)
+    # print("\n\n2 CLUSTERS  -->", len(new_clusters), new_clusters)
+    # # for key, item in new_clusters.items():
+    # #     print("\t", key, len(item), )
+    # print("\n\n2 ROOT        -->", len(new_root), new_root)
+    # print("\n\n2 GROUP MAP   -->", len(group_map), group_map)
+    # print("\n\n2 COUNTS      -->", len(sub_cluster_link_count), sub_cluster_link_count)
+    # print("\n\n2 INTER LINKS -->", len(inter_links), inter_links)
+    # print("\n\n2 LABEL MAP   -->", len(label_map), label_map)
+    # # for item, value in inter_links.items():
+    # #     print(item, value)
+    # print("\n\n2 COMPACT     -->", len(compact), compact)
+    # for ky, comp in compact.items():
+    #     print(ky, compact)
 
-    # return vis, compact
+    if community_only is False:
+        return vis
+
+    return vis_community(vis, strict=True, reducer=node_total_ratio)
+
+
+def vis_community(vis, strict=True, reducer=sat_reducer, children=None, init=True):
+
+    if children is None:
+        children = defaultdict(list)
+    else:
+        children.clear()
+
+    max = 0
+    started = time.time()
+    visited_parent = set()
+    link_count = defaultdict(int)
+
+    def swallow():
+
+        if len(vis['links']) == 0:
+            return
+
+        # SATELLITE MOVES TO PARENT
+        # parent_id = parents_id.pop()
+
+        # NEW COMMUNITY
+        if parent not in visited_parent:
+
+            # SET THE PARENT AS VISITED
+            visited_parent.add(parent)
+
+            # RESET CHILD BY PUTTING THE COPY OF THE CURRENT NODE AS A CHILD
+            nodes[parent]['child'] = vis_object(
+                cluster_id="666", nodes=deepcopy(nodes[parent]))
+
+            nodes[parent]['satellite'] = 'true'
+
+        # CURRENT PAIR SPACE FOR COMPUTING MISSING LINKS
+        pairs = nodes[parent]['nodes'] * (nodes[parent]['nodes'] - 1) / 2
+        curr_link_count = round(pairs * (1 - nodes[parent]['missing_links']))
+
+        # INCREMENT THE PARENT'S NODES COUNT
+        nodes[parent]['nodes'] += nodes[child]['nodes']
+        pairs = nodes[parent]['nodes'] * (nodes[parent]['nodes'] - 1) / 2
+
+        # REMOVE LINK
+        removals = []
+        for counter, arc in enumerate(vis['links']):
+
+            source_id, target_id = arc['source'], arc['target']
+            if source_id == child or target_id == child:
+
+                link_count[parent] = arc['count'] if arc['count'] > 0 else 1
+                # print(parent_id, compacts[parent_id]['nodes'], link_count[parent_id], link['count'])
+
+                # ADD THE NODE TO THE NEW CHILD NODE OBJECT
+                if nodes[child] not in nodes[parent]['child']['nodes']:
+                    nodes[parent]['child']['nodes'] += [nodes[child]]
+
+                # REMOVE THE SATELLITES FROM THE NODE OBJECT
+                if nodes[child] in vis['nodes']:
+                    removals.append(counter)
+                    vis['nodes'].remove(nodes[child])
+
+        # ADD CHILD LINK COUNT IF IT IS A COMPACT NODE
+        if nodes[child]['nodes'] > 1:
+            child_pairs = nodes[child]['nodes'] * (nodes[child]['nodes'] - 1) / 2
+            child_curr_link_count = round(child_pairs * (1 - nodes[child]['missing_links']))
+            link_count[parent] += child_curr_link_count
+
+        # REMOVE A SATELLITE LINK
+        for remove_idx in removals:
+
+            # ADD THE LINK TO THE NEW CHILD
+            nodes[parent]['child']['links'] += [vis['links'][remove_idx]]
+
+            # REMOVE THE SATELLITE=PARENT LINK FROM THE CURRENT VIS
+            vis['links'].__delitem__(remove_idx)
+
+        nodes[parent]['missing_links'] = (pairs - (curr_link_count + link_count[parent]))/float(pairs)
+
+    def swallow_complex():
+
+        global arc, parent
+        biggest_list = []
+        removals = []
+
+        if len(vis['links']) == 0:
+            return
+
+        #  DECIDE THE PARENTS WHO GETS TO SWALLOW THE CHILD
+        if strict is False:
+            "NO NEED TO MODIFY SATELLITES WITH MORE THAN ONE PARENT"
+            pass
+
+        # print("CHILD", child)
+        # FIND PARENTS WITH THE BIGGEST STRENGTH
+        for arc in vis['links']:
+            src_id, trg_id = arc['source'], arc['target']
+
+            # THE TARGET IS THE PARENT
+            if src_id == child:  # and trg_id in parents:
+
+                if len(biggest_list) == 0 or biggest_list[0][1] < arc['strength']:
+                    biggest_list = [(trg_id, arc['strength'])]
+                elif biggest_list[0][1] == arc['strength']:
+                    biggest_list += [(trg_id, arc['strength'])]
+
+            # THE SOURCE IS THE PARENT
+            elif trg_id == child:  # and src_id in parents:
+                if len(biggest_list) == 0 or biggest_list[0][1] < arc['strength']:
+                    biggest_list = [(src_id, arc['strength'])]
+                elif biggest_list[0][1] == arc['strength']:
+                    biggest_list += [(src_id, arc['strength'])]
+
+        # FROM PARENTS WITH THE BIGGEST STRENGTH, GET THE ONE WITH THE MOST NODES
+        biggest_parent = None
+        for cid, strength in biggest_list:
+            if biggest_parent is None:
+                biggest_parent = cid
+            else:
+                if nodes[biggest_parent]['nodes'] <= nodes[cid]['nodes']:
+                    biggest_parent = cid
+
+        if biggest_parent is None:
+            print(biggest_list)
+            print("\t!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            # print(parents)
+            # print(children)
+            # print(vis['links'])
+            exit()
+            return
+
+        # SATELLITE MOVES TO PARENT
+        parent = biggest_parent
+
+        # NEW COMMUNITY
+        if parent not in visited_parent:
+
+            # SET THE PARENT AS VISITED
+            visited_parent.add(parent)
+
+            # RESET CHILD BY PUTTING THE COPY OF THE CURRENT NODE AS A CHILD
+            nodes[parent]['child'] = vis_object(
+                cluster_id="666", nodes=deepcopy(nodes[parent]))
+
+        nodes[parent]['satellite'] = 'true'
+
+        # CURRENT PAIR SPACE FOR COMPUTING MISSING LINKS
+        pairs = nodes[parent]['nodes'] * (nodes[parent]['nodes'] - 1) / 2
+        curr_link_count = round(pairs * (1 - nodes[parent]['missing_links']))
+
+        # INCREMENT THE PARENT'S NODES COUNT
+        nodes[parent]['nodes'] += nodes[child]['nodes']
+        pairs = nodes[parent]['nodes'] * (nodes[parent]['nodes'] - 1) / 2
+
+        # REMOVE A SATELLITE NODE FROM THE VIS OBJECT AND COLLECT THE LINKS TO BE REMOVED FROM THE VIS LINK OBJECT
+        for counter, arc in enumerate(vis['links']):
+
+            src_id, trg_id = arc['source'], arc['target']
+            if src_id == child or trg_id == child:
+
+                link_count[parent] = arc['count'] if arc['count'] > 0 else 1
+
+                # ADD THE NODE TO THE NEW CHILD NODE OBJECT
+                if nodes[child] not in nodes[parent]['child']['nodes']:
+                    nodes[parent]['child']['nodes'] += [nodes[child]]
+
+                # REMOVE THE SATELLITES FROM THE NODE OBJECT
+                if nodes[child] in vis['nodes']:
+                    vis['nodes'].remove(nodes[child])
+
+                # COLLECT THE LINKS TO BE REMOVED FROM THE VIS LINK OBJECT
+                removals.append(counter)
+
+        # ADD CHILD LINK COUNT IF IT IS A COMPACT NODE
+        if nodes[child]['nodes'] > 1:
+            child_pairs = nodes[child]['nodes'] * (nodes[child]['nodes'] - 1) / 2
+            child_curr_link_count = round(child_pairs * (1 - nodes[child]['missing_links']))
+            link_count[parent] += child_curr_link_count
+
+        # REORDER SO THAT THE DELETION OF SMALLER INDEX DO NOT MESS-UP THE DELETION OF LARGER INDEX
+        removals = sorted(removals, reverse=True)
+
+        # REMOVE A SATELLITE LINK
+        for remove_idx in removals:
+
+            # LINK TO REMOVE
+            source, target = vis['links'][remove_idx]["source"], vis['links'][remove_idx]['target']
+
+            if source == parent or target == parent:
+
+                # ADD THE LINK TO THE NEW CHILD
+                nodes[parent]['child']['links'] += [vis['links'][remove_idx]]
+
+                # REMOVE THE SATELLITE=PARENT LINK FROM THE CURRENT VIS
+                del vis['links'][remove_idx]
+
+            else:
+
+                check = False
+
+                if source == child:
+
+                    # MODIFY THE LINK TO POINT TO THE SATELLITE PARENT AND NOT TO THE SATELLITE ITSELF
+                    # BUT BECAUSE THE LINK ALREADY EXIST, NOW ONLY INCREMENT THE INTER-LINK COUNT
+                    for inter_link in vis['links']:
+                        # for i in removals:
+                        #     inter_link = vis['links'][i]
+                        inter_source, inter_target = inter_link['source'], inter_link['target']
+
+                        if inter_source in [parent, target] and inter_target in [parent, target]:
+                            inter_link['count'] += vis['links'][remove_idx]['count']
+                            check = True
+
+                            # REMOVE THE SATELLITE-PARENT LINK FROM THE CURRENT VIS
+                            del vis['links'][remove_idx]
+
+                    # MODIFY THE LINK TO POINT TO THE SATELLITE PARENT AND NOT TO THE SATELLITE ITSELF
+                    if check is False:
+                        vis['links'][remove_idx]['source'] = parent
+                        # removals.remove(remove_idx)
+
+                elif target == child:
+
+                    # MODIFY THE LINK TO POINT TO THE SATELLITE PARENT AND NOT TO THE SATELLITE ITSELF
+                    # BUT BECAUSE THE LINK ALREADY EXIST, NOW ONLY INCREMENT THE INTER-LINK COUNT
+                    for inter_link in vis['links']:
+                        # for i in removals:
+                        #     inter_link = vis['links'][i]
+                        inter_source, inter_target = inter_link['source'], inter_link['target']
+
+                        if inter_source in [parent, source] and inter_target in [parent, source]:
+                            inter_link['count'] += vis['links'][remove_idx]['count']
+                            check = True
+
+                            # REMOVE THE SATELLITE=PARENT LINK FROM THE CURRENT VIS
+                            del vis['links'][remove_idx]
+
+                    # MODIFY THE LINK TO POINT TO THE SATELLITE PARENT AND NOT TO THE SATELLITE ITSELF
+                    if check is False:
+                        vis['links'][remove_idx]['target'] = parent
+                        # removals.remove(remove_idx)
+
+        nodes[parent]['missing_links'] = (pairs - (curr_link_count + link_count[parent]))/float(pairs)
+
+    if len(vis['links']) == 0:
+        return vis
+
+    print_heading(F"CONVERTING THE VIS OBJECT INTO COMMUNITIES ONLY WITH REDUCER SET TO {reducer}")
+
+    # DOCUMENTING IDS OF SOURCE OR TARGET AS KEY OR LIST IN THE VALUE POSITION
+    nodes, parents = dict(), defaultdict(list)
+
+    print("\n\t1. DICTIONARY OF THE NODES")
+    for node in vis['nodes']:
+        nodes[node['id']] = node
+        if 'nodes' in node and max < node['nodes']:
+            max = node['nodes']
+
+    # ##################################################################################
+    print("\t2. ALLOWING BIGGER COMPACT NODES TO BECOME SATELLITE")
+    # ##################################################################################
+    if reducer:
+        if reducer >= max:
+            reducer = max - 5
+            print(F"\t5. THE CONVERSION NOW RETURN A VISUALISATION "
+                  F"OF {len(vis['nodes'])} NODES WITH A REDUCER OF {reducer}.")
+
+    # ##################################################################################
+    so_far = datetime.timedelta(seconds=time.time() - started)
+    print("\t{:55}{} SO FAR".format("3. PARENT VERSUS CHILDREN", so_far))
+    # ##################################################################################
+    for arc in vis['links']:
+
+        source, target = arc['source'], arc['target']
+
+        if 'nodes' in nodes[source] and nodes[source]['nodes'] > nodes[target]['nodes']:
+
+            if nodes[target]['nodes'] <= reducer:
+                parents[source].append(target)
+                children[target].append(source)
+                # if target in children:
+                #     children[target].append(source)
+                # else:
+                #     children[target] = [source]
+        else:
+            if 'nodes' in nodes[source] and nodes[source]['nodes'] <= reducer:
+                parents[target].append(source)
+                children[source].append(target)
+                # if source in children:
+                #     children[source].append(target)
+                # else:
+                #     children[source] = [target]
+
+    so_far = datetime.timedelta(seconds=time.time() - started)
+    print("\t{:55}{} SO FAR".format("4. ORDER THE CHILDREN DICTIONARY", so_far))
+
+    # ##################################################################################
+    so_far = datetime.timedelta(seconds=time.time() - started)
+    print("\t{:55}{} SO FAR".format("5. ITERATE THROUGH PARENTS FOR LEAVES", so_far))
+    # ##################################################################################
+
+    cond = False
+    for parent, infants in parents.items():
+
+        for child in infants:
+
+            # SINGLE PARENT LEAF CHILD
+            if child not in parents and len(children[child]) == 1:
+                swallow()
+                cond = True
+                # print("\t\tDELETING CHILD 1:", child)
+                del children[child]
+
+    if cond:
+        cond = False
+        vis_community(vis, strict=strict, reducer=reducer, children=children, init=False)
+
+        sorted_children = dict(sorted(children.items(), key=lambda item: nodes[item[0]]['nodes']))
+        for child, parents_ in sorted_children.items():
+            swallow_complex()
+            cond = True
+            # print("\t\tDELETING CHILD 2:", child)
+            del children[child]
+
+        if cond:
+            vis_community(vis, strict=strict, reducer=reducer, children=children, init=False)
+
+    if init is True:
+        so_far = datetime.timedelta(seconds=time.time() - started)
+        print("\t{:55}{}".format("DONE IN", so_far))
+        print(F"\n\tTHE CONVERSION NOW RETURNS A VISUALISATION OF {len(vis['nodes'])} NODES WITH A REDUCER OF {reducer}.")
+
     return vis
+
+
+def vis_object(
+        cluster_id, confidence=0, decision=0, metric="", message_conf="", color='#FFFFE0', links=None, nodes=None):
+
+    # CREATE A VISUALISATION OBJECT, UPDATE IT AND RETURN IT
+    vis = {
+        "id": cluster_id,
+        "confidence": confidence,
+        "decision": decision,
+        "metric": metric,
+        "messageConf": message_conf,
+        "nodes": [],
+        "links": [],
+        "page_color": color
+    }
+
+    # LIST OF DICTIONARY OBJECTS (NODES)
+    if nodes:
+
+        vis['nodes'] += nodes if isinstance(nodes, list) else [nodes]
+
+    # LIST OF DICTIONARY OBJECTS (LINKS)
+    if links:
+        vis['links'] += links if isinstance(links, list) else [links]
+
+    return vis
+
+
+def compact_node(node_id: str, group_size: int, strength: float, missing_links: int,
+                 group_color: int, investigated: bool, child: vis_object, size: int = 10):
+
+    node = {
+        'id': node_id,
+        'size': size,
+        'nodes': group_size,
+        'strength': strength,
+        'group': group_color,
+        'missing_links': missing_links,
+        'investigated': str(investigated).lower(),
+    }
+
+    if child:
+        node['child'] = child
+
+    return node
+
+
+def vis_node(node_id, uri, group_color, investigated):
+
+    # CREATE THE NODE OBJECT FOR VISUALISATION
+    node_dict = {
+        'id': node_id,
+        "uri": uri,
+        "group": group_color,
+        "size": 5
+    }
+
+    if investigated is True:
+        node_dict['investigated'] = str(investigated).lower()
+        node_dict["size"] = 8
+
+    return node_dict
+
+
+def edge(source, target, strength, distance, dist_factor, link_thickness=2, count=1):
+
+    return {
+        'source': source,
+        'target': target,
+        'count': count,
+        'strength': strength,
+        'distance': distance,
+        'dist_factor': dist_factor,
+        "dash": F"3,{20 * (1 - float(strength))}",
+        'color': 'red' if float(strength) < 1 else "black",
+        'value': 4 if count == 1 else count * link_thickness,
+    }
+
+
+def association_edge(source, target, dist_factor, count=1):
+
+    return {
+        'count': count,
+        "value": 1,
+        "color": "purple",
+        "dash": "20,10,5,5,5,10",
+        "distance": related_distance,
+        'dist_factor': dist_factor,
+        "source": source,
+        "target": target,
+    }
 
 
 def get_compact_child(key, child, properties, data_store):
@@ -1886,9 +2553,6 @@ def plot_compact_child(children):
     # THIS FUNCTION COMPLEMENTS PLOT COMPACT AS IT PLOTS
     # THE COMPACT GROUPS FOUND BY THE PLOT COMPACT FUNCTION
 
-    host = "http://localhost:63342/LenticularLens/src/LLData/Validation/{}"
-    from src.LLData.Validation import CLUSTER_VISUALISATION_DIR
-    import webbrowser as web
     visualisation_obj = None
     investigated = True
 
