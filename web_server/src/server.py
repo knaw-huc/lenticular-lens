@@ -247,7 +247,7 @@ def get_cluster_graph_data(job_id, clustering_id, cluster_id):
 
     return jsonify({
         'cluster_graph': visualise_1(specs=specifications, activated=True) if get_cluster else None,
-        'cluster_graph_compact': visualise_3(specs=specifications, community_only=True, activated=True) if get_cluster_compact else None,
+        'cluster_graph_compact': visualise_3(specs=specifications, activated=True) if get_cluster_compact else None,
         'reconciliation_graph': visualise_2(specs=specifications, activated=True)[
             1] if get_reconciliation else None,
     })
