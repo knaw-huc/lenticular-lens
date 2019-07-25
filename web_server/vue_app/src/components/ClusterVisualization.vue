@@ -390,6 +390,19 @@
     background-color: #FFFFE0;
   }
 
+  div.tooltip {
+    position: absolute;
+    background-color: white;
+    max-width: 200px;
+    height: auto;
+    padding: 1px;
+    border-style: solid;
+    border-radius: 4px;
+    border-width: 1px;
+    box-shadow: 3px 3px 10px rgba(0, 0, 0, .5);
+    pointer-events: none;
+  }
+
   .links line {
     stroke: #999;
     stroke-opacity: 0.6;
@@ -402,6 +415,6 @@
 
   text {
     font-family: sans-serif;
-    font-size: 10px;
+    font-size: 14px;
   }
 </style>
