@@ -46,17 +46,15 @@ export default {
         },
 
         getResourceById(resource_id, resources = this.resources) {
-            resource_id = parseInt(resource_id);
             for (let i = 0; i < resources.length; i++) {
-                if (resources[i].id === resource_id || resources[i].label === resource_id)
+                if (resources[i].id === parseInt(resource_id) || resources[i].label === resource_id)
                     return resources[i];
             }
         },
 
         getMatchById(match_id, matches = this.matches) {
-            match_id = parseInt(match_id);
             for (let i = 0; i < matches.length; i++) {
-                if (matches[i].id === match_id || matches[i].label === match_id)
+                if (matches[i].id === parseInt(resource_id) || matches[i].label === match_id)
                     return matches[i];
             }
         },
