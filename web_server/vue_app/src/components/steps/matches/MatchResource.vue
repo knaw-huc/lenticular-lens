@@ -27,7 +27,7 @@
 </template>
 
 <script>
-    import ValidationMixin from "../mixins/ValidationMixin";
+    import ValidationMixin from "../../../mixins/ValidationMixin";
 
     export default {
         name: "MatchResource",

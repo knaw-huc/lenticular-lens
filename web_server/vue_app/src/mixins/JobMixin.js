@@ -12,10 +12,10 @@ export default {
             this.resources.push({
                 dataset_id: '',
                 collection_id: '',
-                'id': findId(this.resources),
-                'filter': {
-                    'type': 'AND',
-                    'conditions': [],
+                id: findId(this.resources),
+                filter: {
+                    type: 'AND',
+                    conditions: [],
                 },
                 limit: -1,
                 related: [],
@@ -25,14 +25,14 @@ export default {
 
         addMatch() {
             this.matches.push({
-                'id': findId(this.matches),
-                'is_association': false,
-                'label': 'Alignment ' + (this.matches.length + 1),
-                'sources': [],
-                'targets': [],
-                'properties': [],
-                'type': 'AND',
-                'conditions': [],
+                id: findId(this.matches),
+                is_association: false,
+                label: 'Alignment ' + (this.matches.length + 1),
+                sources: [],
+                targets: [],
+                properties: [],
+                type: 'AND',
+                conditions: [],
             });
         },
 
@@ -40,8 +40,8 @@ export default {
             const duplicate = copy(match);
             this.matches.push({
                 ...duplicate,
-                'id': findId(this.matches),
-                'label': 'Alignment ' + (this.matches.length + 1),
+                id: findId(this.matches),
+                label: 'Alignment ' + (this.matches.length + 1),
             });
         },
 

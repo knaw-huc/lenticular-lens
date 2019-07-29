@@ -6,7 +6,7 @@
 
   <div v-else class="row" @mouseenter="hovering = true" @mouseleave="hovering = false">
     <div class="h2 col">{{ value }}</div>
-    <button type="button" class="btn col-auto pl-0 pt-0 align-self-start" title="Click to Edit">
+    <button type="button" class="btn col-auto pl-0 pt-0" title="Click to Edit">
       <octicon name="pencil" scale="1.2" :class="hideClass" @click.native.stop.prevent="editing = true"/>
     </button>
   </div>

@@ -36,7 +36,7 @@
 </template>
 
 <script>
-    import props from "../utils/props";
+    import props from "../../utils/props";
 
     export default {
         name: "MatchConditionInfo",

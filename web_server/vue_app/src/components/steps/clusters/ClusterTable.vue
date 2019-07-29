@@ -1,5 +1,5 @@
 <template>
-  <div id="clustering_result">
+  <div class="clustering_result bg-white border mt-4">
     <table class="table table-striped">
       <thead>
       <tr>
@@ -39,33 +39,38 @@
     }
 </script>
 
-<style scoped>
-  #clustering_result {
+<style>
+  .clustering_result {
     height: 20em;
   }
 
-  table {
+  .clustering_result table {
     display: flex;
     flex-direction: column;
     height: 100%;
   }
 
-  table thead {
+  .clustering_result table thead {
     margin-right: 15px;
   }
 
-  table tbody {
+  .clustering_result table tbody {
     overflow-y: scroll;
   }
 
-  table tr {
+  .clustering_result table tr {
     width: 100%;
     display: flex;
   }
 
-  table tr th {
+  .clustering_result table th {
     display: flex;
     flex: 1;
     align-items: center;
+  }
+
+  .clustering_result table th,
+  .clustering_result table td {
+    border: none;
   }
 </style>

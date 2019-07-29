@@ -125,11 +125,12 @@
 </template>
 
 <script>
-    import Idea from './components/Idea';
-    import Resource from './components/Resource';
-    import Match from './components/Match';
-    import Cluster from './components/Cluster';
-    import TabContentStructure from './components/TabContentStructure';
+    import Idea from './components/steps/idea/Idea';
+    import Resource from './components/steps/resources/Resource';
+    import Match from './components/steps/matches/Match';
+    import Cluster from './components/steps/clusters/Cluster';
+
+    import TabContentStructure from './components/structural/TabContentStructure';
 
     import ValidationMixin from "./mixins/ValidationMixin";
 

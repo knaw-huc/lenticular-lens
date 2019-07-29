@@ -1,17 +1,18 @@
 <template>
-  <div class="match-info bg-white border shadow px-4 py-2 mt-3">
+  <sub-card class="match-info">
     <p class="font-weight-bold mb-2">Matching</p>
-
     <matching-method-group-info :matching_method_group="match" :is_root="true"/>
-  </div>
+  </sub-card>
 </template>
 
 <script>
+    import SubCard from "../structural/SubCard";
     import MatchingMethodGroupInfo from "./MatchingMethodGroupInfo";
 
     export default {
         name: "MatchInfo",
         components: {
+            SubCard,
             MatchingMethodGroupInfo
         },
         props: {

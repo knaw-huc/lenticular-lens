@@ -6,12 +6,12 @@ import VueFormWizard from 'vue-form-wizard';
 Vue.use(BootstrapVue);
 Vue.use(VueFormWizard);
 
-import EditLabel from './components/EditLabel';
+import EditLabel from './components/misc/EditLabel';
 import ButtonAdd from './components/misc/ButtonAdd';
 import ButtonDelete from './components/misc/ButtonDelete';
 import ButtonInfo from './components/misc/ButtonInfo';
 import VSelect from './components/misc/VSelect';
-import Property from './components/Property';
+import Property from './components/helpers/Property';
 import Octicon from 'vue-octicon/components/Octicon.vue';
 import 'vue-octicon/icons';
 
@@ -43,8 +43,8 @@ Vue.filter('capitalize', function (value) {
 });
 
 import App from './App.vue';
-import ResultsComponent from './components/Results';
-import ClusterVisualization from './components/ClusterVisualization';
+import ResultsComponent from './Results';
+import ClusterVisualization from './components/steps/clusters/ClusterVisualization';
 import JobMixin from './mixins/JobMixin';
 
 import './assets/app.scss';

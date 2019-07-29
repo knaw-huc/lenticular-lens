@@ -1,6 +1,6 @@
 <template>
   <div class="border border-dark p-3 mt-3">
-    <div class="row align-items-top justify-content-between mb-2">
+    <div class="row align-items-start justify-content-between mb-2">
       <div class="col-auto">
         <div class="row">
           <label class="h4 col-auto">Method</label>
@@ -61,11 +61,11 @@
       <div class="col-auto">
         <div class="row">
           <div class="col-auto">
-            <button-delete @click="$emit('remove')" title="Delete this Method" class="pt-1 pr-0"/>
+            <button-delete @click="$emit('remove', index)" title="Delete this Method" class="pt-1 pr-0"/>
           </div>
 
           <div class="col-auto">
-            <button-add v-on:click="$emit('add-matching-method')" title="Add Method and Create Group"/>
+            <button-add v-on:click="$emit('add')" title="Add Method and Create Group"/>
           </div>
         </div>
       </div>
@@ -142,8 +142,8 @@
 </template>
 
 <script>
-    import ValidationMixin from "../mixins/ValidationMixin";
-    import props from "../utils/props";
+    import ValidationMixin from "../../../mixins/ValidationMixin";
+    import props from "../../../utils/props";
 
     export default {
         name: "MatchCondition",
@@ -154,7 +154,7 @@
                 matchingMethods: props.matchingMethods,
             };
         },
-        props: ['condition'],
+        props: ['condition', 'index'],
         computed: {
             methodValueTemplate() {
                 if (this.matchingMethods.hasOwnProperty(this.condition.method_name))

@@ -17,11 +17,11 @@
       <div class="col-auto">
         <div class="row">
           <div class="col-auto">
-            <button-delete @click="$emit('remove')" title="Delete this Filter Condition" class="pt-1 pr-0"/>
+            <button-delete @click="$emit('remove', index)" title="Delete this Filter Condition" class="pt-1 pr-0"/>
           </div>
 
           <div class="col-auto">
-            <button-add v-on:click="$emit('add-condition')" title="Add Filter Condition and Create Group"/>
+            <button-add v-on:click="$emit('add')" title="Add Filter Condition and Create Group"/>
           </div>
         </div>
       </div>
@@ -90,7 +90,7 @@
 </template>
 
 <script>
-    import ValidationMixin from "../mixins/ValidationMixin";
+    import ValidationMixin from "../../../mixins/ValidationMixin";
 
     export default {
         name: "ResourceFilterCondition",
