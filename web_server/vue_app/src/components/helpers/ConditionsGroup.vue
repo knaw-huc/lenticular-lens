@@ -43,6 +43,8 @@
           :index="conditionIndex"
           :uid="uid + '_' + conditionIndex"
           :conditions-group="condition"
+          :should-have-conditions="shouldHaveConditions"
+          :validate-method-name="validateMethodName"
           @add="$emit('add', $event)"
           @remove="removeCondition($event)"
           @promote="promoteConditionGroup($event)"
@@ -70,7 +72,12 @@
             uid: '',
             index: 0,
             conditionsGroup: {},
+            validateMethodName: String,
             isRoot: {
+                type: Boolean,
+                default: false,
+            },
+            shouldHaveConditions: {
                 type: Boolean,
                 default: false,
             },
@@ -93,6 +100,8 @@
         methods: {
             validateConditionsGroup() {
                 if (this.conditionsGroup.conditions && this.conditionsGroup.conditions.length > 0) {
+                    this.validateField('conditions', true);
+
                     const valid = !this.$refs.conditionGroupComponents
                         .map(conditionGroupComponent => conditionGroupComponent.validateConditionsGroup())
                         .includes(false);
@@ -101,10 +110,19 @@
                     return valid;
                 }
 
-                const valid = this.validateField('conditions', this.conditionsGroup.conditions.length > 0);
-                this.validateField(this.uid, valid);
+                if (this.conditionsGroup.conditions && this.shouldHaveConditions) {
+                    const valid = this.validateField('conditions', this.conditionsGroup.conditions.length > 0);
+                    this.validateField(this.uid, valid);
 
-                return valid;
+                    return valid;
+                }
+
+                if (!this.conditionsGroup.conditions && this.validateMethodName && this.$children.length > 0) {
+                    if (typeof this.$children[0][this.validateMethodName] === 'function')
+                        return this.$children[0][this.validateMethodName]();
+                }
+
+                return true;
             },
 
             removeCondition(index) {

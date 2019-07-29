@@ -52,6 +52,7 @@
         <conditions-group :conditions-group="resource.filter"
                           :is-root="true"
                           :uid="'resource_' + resource.id + '_filter_group_0'"
+                          validate-method-name="validateFilterCondition"
                           v-slot="curCondition"
                           @add="addFilterCondition($event)"
                           ref="filterGroupComponent">
@@ -59,7 +60,7 @@
               :condition="curCondition.condition"
               :index="curCondition.index"
               :resource="resource"
-              ref="filterConditionComponent"
+              ref="filterConditionComponents"
               @add="curCondition.add()"
               @remove="curCondition.remove()"/>
         </conditions-group>
@@ -239,8 +240,8 @@
                 });
 
                 let filtersGroupsValid = true;
-                if (this.$refs.filterGroupComponents)
-                    filtersGroupsValid = this.$refs.filterGroupComponents.validateFilterGroup();
+                if (this.$refs.filterGroupComponent)
+                    filtersGroupsValid = this.$refs.filterGroupComponent.validateConditionsGroup();
 
                 return collectionValid && datasetValid && limitValid && relatedValid && filtersGroupsValid;
             },

@@ -84,7 +84,7 @@
       </sub-card>
 
       <sub-card label="Targets" :has-info="true" add-button="Add a Collection as a Target"
-               @add="addMatchResource('targets', $event)">
+                @add="addMatchResource('targets', $event)">
         <template v-slot:info>
           <match-targets-info/>
         </template>
@@ -121,16 +121,15 @@
 
         <conditions-group :conditions-group="match"
                           :is-root="true"
+                          :should-have-conditions="true"
                           :uid="'match_' + match.id  + '_group_0'"
+                          validate-method-name="validateMatchCondition"
                           v-slot="curCondition"
                           @add="addMatchCondition($event)"
                           ref="matchingMethodGroupComponent">
           <match-condition
-              :condition="curCondition.condition"
-              :index="curCondition.index"
-              ref="matchConditionComponent"
-              @add="curCondition.add()"
-              @remove="curCondition.remove()"/>
+              :condition="curCondition.condition" :index="curCondition.index"
+              @add="curCondition.add()" @remove="curCondition.remove()"/>
         </conditions-group>
       </sub-card>
     </fieldset>
@@ -190,10 +189,10 @@
 
                 let matchingMethodGroupValid = true;
                 if (this.$refs.matchingMethodGroupComponent)
-                    matchingMethodGroupValid = this.$refs.matchingMethodGroupComponent.validateMatchingGroup();
+                    matchingMethodGroupValid = this.$refs.matchingMethodGroupComponent.validateConditionsGroup();
 
-                return sourcesValid && targetsValid && sourcesSelectValid
-                    && targetsSelectValid && matchingMethodGroupValid;
+                return sourcesValid && targetsValid
+                    && sourcesSelectValid && targetsSelectValid && matchingMethodGroupValid;
             },
 
             addMatchCondition(group) {
