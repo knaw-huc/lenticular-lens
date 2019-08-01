@@ -1,3 +1,0 @@
-jstyleson
-psycopg2-binary
-requests

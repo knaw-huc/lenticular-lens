@@ -2,14 +2,16 @@ version: '3.7'
 
 services:
   postgres:
-    build: postgres_timbuctoo
+    build:
+      context: .
+      dockerfile: Dockerfile.postgres
     image: knawhuc/postgres_reconciliation_worker:postgres-latest
     ports:
       - 5432:5432
     volumes:
-      - /mnt/SSD/pgdata:/pgdata
-    env_file:
-      - .docker-env
+      - pgdata:/pgdata
+    environment:
+      - PGDATA=/pgdata
 
   jobs_worker:
     build:
@@ -19,7 +21,11 @@ services:
     depends_on:
       - postgres
     environment:
-      - DATABASE_CONFIG={"host":"postgres","database":"postgres","user":"postgres","password":"postgres"}
+      - DATABASE_HOST=postgres
+      - DATABASE_DB=postgres
+      - DATABASE_USER=postgres
+      - DATABASE_PASSWORD=postgres
+      - DATA_DIR=/common/src/LLData
     volumes:
       - output:/common/src/LLData
 
@@ -31,7 +37,10 @@ services:
     depends_on:
       - postgres
     environment:
-      - DATABASE_CONFIG={"host":"postgres","database":"postgres","user":"postgres","password":"postgres"}
+      - DATABASE_HOST=postgres
+      - DATABASE_DB=postgres
+      - DATABASE_USER=postgres
+      - DATABASE_PASSWORD=postgres
 
   web_server:
     build:
@@ -41,7 +50,11 @@ services:
     depends_on:
       - postgres
     environment:
-      - DATABASE_CONFIG={"host":"postgres","database":"postgres","user":"postgres","password":"postgres"}
+      - DATABASE_HOST=postgres
+      - DATABASE_DB=postgres
+      - DATABASE_USER=postgres
+      - DATABASE_PASSWORD=postgres
+      - DATA_DIR=/common/src/LLData
     ports:
       - 8000:8000
     volumes:
@@ -58,11 +71,14 @@ services:
       - timbuctoo_worker
       - jobs_worker
     environment:
-      - DATABASE_CONFIG={"host":"postgres","database":"postgres","user":"postgres","password":"postgres"}
+      - DATABASE_HOST=postgres
+      - DATABASE_DB=postgres
+      - DATABASE_USER=postgres
+      - DATABASE_PASSWORD=postgres
+      - DATA_DIR=/common/src/LLData
     volumes:
       - output:/output
 
 volumes:
   pgdata:
-  common:
   output:

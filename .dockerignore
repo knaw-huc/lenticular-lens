@@ -1,9 +1,6 @@
-backups
-rdf_output
-.git
-scripted_matching
-.idea
-structured_matching
+docker
+venv
 node_modules
-hello-world
-postgres_timbuctoo/pgdata
+.idea
+.git
+*.iml

@@ -1,0 +1,13 @@
+FROM postgres:11.4
+
+RUN apt-get update && apt-get install -y \
+    python3-pip \
+    postgresql-plpython3-11
+
+RUN echo listen_addresses='0.0.0.0' >> /usr/lib/tmpfiles.d/postgresql.conf
+
+RUN pip3 install requests unidecode
+
+ENV PYTHONPATH /app
+
+COPY ./setup.sql /docker-entrypoint-initdb.d
