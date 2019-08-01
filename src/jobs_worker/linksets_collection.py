@@ -1,27 +1,25 @@
-from jobs_worker.links_to_rdf import convert_link
-import datetime
-from common.config_db import db_conn
-from common.helpers import get_absolute_property, get_property_sql, get_extended_property_sql, get_extended_property_name, get_unnested_list, hash_string
-import jstyleson
-import locale
-from jobs_worker.match import Match
-from psycopg2 import extras
-from psycopg2 import sql
 import re
-from jobs_worker.resource import Resource
 import sys
 import time
+import locale
+import datetime
+
+from psycopg2 import sql, extras
+
+from jobs_worker.match import Match
+from jobs_worker.resource import Resource
+from jobs_worker.links_to_rdf import convert_link
+
+from common.config_db import db_conn
+from common.helpers import get_job_data, get_absolute_property, get_property_sql, \
+    get_extended_property_sql, get_extended_property_name, get_unnested_list, hash_string
 
 locale.setlocale(locale.LC_ALL, '')
 
 
 class LinksetsCollection:
-    sql_only = False
-
     def __init__(
             self,
-            resources_filename,
-            matches_filename,
             job_id,
             run_match=None,
             sql_only=False,
@@ -30,8 +28,6 @@ class LinksetsCollection:
             return_limit=None
     ):
         self.sql_only = sql_only
-        self.resources_only = resources_only
-        self.matches_only = matches_only
         self.return_limit = return_limit or 0
         self.results = []
         self.job_id = job_id
@@ -40,9 +36,10 @@ class LinksetsCollection:
         self.__matches = None
         self.__resources = None
 
+        job_data = get_job_data(self.job_id, include_results=False)
         self.data = {
-            'resources': self.get_json_config(resources_filename),
-            'matches': self.get_json_config(matches_filename),
+            'resources': job_data['resources'],
+            'matches': job_data['matches'],
         }
 
         self.run_matches = []
@@ -414,16 +411,6 @@ ORDER BY uri{limit}
                 wheres=self.replace_sql_variables(resource.where_sql),
                 limit=resource.limit_sql,
         )
-
-    def get_json_config(self, filename=None):
-        if filename is None:
-            filename = self.filename
-
-        json_file = open(filename, 'r')
-        json_config = jstyleson.load(json_file)
-        json_file.close()
-
-        return json_config
 
     def get_option(self, option, default=False, options=None):
         if options is None:

@@ -112,7 +112,7 @@ def run():
 
                         conn.commit()
 
-                        with subprocess.Popen(['python', './run_json.py', '-r', job['resources_filename'], '-m', job['mappings_filename'], '--job-id', job['job_id'], '--run-mapping', str(job['alignment'])],
+                        with subprocess.Popen(['python', './run_json.py', '--job-id', job['job_id'], '--run-mapping', str(job['alignment'])],
                                               cwd=dirname(realpath(__file__)), stdout=subprocess.PIPE, stderr=subprocess.PIPE) as converting_process:
                             with open(os.path.join(RDF_DIR, '%s_output.nq.gz') % job['job_id'], 'wb') as output_file:
                                 with subprocess.Popen(['gzip'], stdin=converting_process.stdout, stdout=output_file) as gzip_process:
@@ -161,7 +161,7 @@ def run():
                                     )
 
                             print("Generating CSVs")
-                            linksets_collection = LinksetsCollection(job['resources_filename'], job['mappings_filename'], job_id=job['job_id'])
+                            linksets_collection = LinksetsCollection(job_id=job['job_id'])
                             for match in linksets_collection.matches:
                                 if str(match.id) != str(job['alignment']):
                                     continue

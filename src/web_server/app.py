@@ -1,19 +1,22 @@
-from common.datasets_config import DatasetsConfig
-from common.config_db import db_conn, run_query
-from flask import Flask, jsonify, send_file, request, abort, make_response
-from common.helpers import get_job_data, hasher, update_job_data
-from web_server.clustering import cluster_csv, get_cluster_data, hash_string, cluster_reconciliation_csv
-import json
-from os.path import join, splitext
-import psycopg2
-from psycopg2 import sql as psycopg2_sql
 import re
-from common.ll.Generic.Utility import pickle_deserializer
-from common.ll.Clustering.IlnVisualisation import plot_reconciliation as visualise_2, plot as visualise_1, \
-    plot_compact as visualise_3
+import json
 import subprocess
 
-from common.ll.LLData import GENERATED_JSON_DIR
+from os.path import join, splitext
+
+import psycopg2
+from psycopg2 import sql as psycopg2_sql
+
+from flask import Flask, jsonify, send_file, request, abort, make_response
+
+from common.config_db import db_conn, run_query
+from common.datasets_config import DatasetsConfig
+from common.helpers import get_job_data, hasher, update_job_data
+from common.ll.Generic.Utility import pickle_deserializer
+from common.ll.Clustering.IlnVisualisation import plot, plot_compact, plot_reconciliation
+
+from web_server.clustering import cluster_csv, get_cluster_data, hash_string, cluster_reconciliation_csv
+
 from common.ll.LLData.CSV_Alignments import CSV_ALIGNMENTS_DIR
 from common.ll.LLData.Serialisation import CLUSTER_SERIALISATION_DIR
 
@@ -54,22 +57,9 @@ def job_update():
         job_data['mappings_form_data'] = json.dumps(request.json['matches_original'])
 
     if 'resources' in request.json:
-        resources_json = json.dumps(request.json['resources'], indent=2)
-        resources_filename = join(GENERATED_JSON_DIR, 'resources_' + hash_string(resources_json) + '.json')
-        job_data['resources_filename'] = resources_filename
-
-        json_file = open(resources_filename, 'w')
-        json_file.write(resources_json)
-        json_file.close()
-
+        job_data['resources'] = json.dumps(request.json['resources'])
     if 'matches' in request.json:
-        matches_json = json.dumps(request.json['matches'], indent=2)
-        matches_filename = join(GENERATED_JSON_DIR, 'matches_' + hash_string(matches_json) + '.json')
-        job_data['mappings_filename'] = matches_filename
-
-        json_file = open(matches_filename, 'w')
-        json_file.write(matches_json)
-        json_file.close()
+        job_data['matches'] = json.dumps(request.json['matches'])
 
     update_job_data(job_id, job_data)
 
@@ -198,11 +188,6 @@ def clusters(job_id, clustering_id):
     return jsonify(clusters)
 
 
-@app.route('/job/<job_id>/cluster/<clustering_id>/<cluster_id>')
-def cluster_visualization(job_id, clustering_id, cluster_id):
-    return index()
-
-
 @app.route('/job/<job_id>/cluster/<clustering_id>/<cluster_id>/graph', methods=['POST'])
 def get_cluster_graph_data(job_id, clustering_id, cluster_id):
     cluster_data = request.json['cluster_data'] \
@@ -231,11 +216,11 @@ def get_cluster_graph_data(job_id, clustering_id, cluster_id):
     }
 
     return jsonify({
-        'cluster_graph': visualise_1(specs=specifications, activated=True) if get_cluster else None,
-        'cluster_graph_compact': visualise_3(specs=specifications, community_only=True,
-                                             activated=True) if get_cluster_compact else None,
-        'reconciliation_graph': visualise_2(specs=specifications, activated=True)[
-            1] if get_reconciliation else None,
+        'cluster_graph': plot(specs=specifications, activated=True) if get_cluster else None,
+        'cluster_graph_compact': plot_compact(specs=specifications, community_only=True,
+                                              activated=True) if get_cluster_compact else None,
+        'reconciliation_graph': plot_reconciliation(specs=specifications,
+                                                    activated=True)[1] if get_reconciliation else None,
     })
 
 

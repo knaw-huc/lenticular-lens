@@ -94,7 +94,7 @@ def get_unnested_list(nest):
     return unnested
 
 
-def get_job_data(job_id):
+def get_job_data(job_id, include_results=True):
     n = 0
     while True:
         try:
@@ -109,7 +109,7 @@ def get_job_data(job_id):
             print('Database error. Retry %i' % n)
             time.sleep((2 ** n) + (random.randint(0, 1000) / 1000))
 
-    if job_data:
+    if job_data and include_results:
         job_data['results'] = {}
         n = 0
         while True:
