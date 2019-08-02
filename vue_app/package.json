@@ -10,6 +10,7 @@
     "jquery": "^3.4.0",
     "md5": "^2.2.1",
     "octicons": "^8.5.0",
+    "papaparse": "^5.0.1",
     "vue": "^2.6.10",
     "vue-form-wizard": "^0.8.4",
     "vue-octicon": "^2.1.1",

@@ -66,7 +66,17 @@
         </tab-content-structure>
       </tab-content>
 
-      <tab-content title="Link Validation"></tab-content>
+      <tab-content title="Link Validation">
+        <tab-content-structure title="Link Validation" :tab_error="tab_error" :is_saved="is_saved">
+          <links
+              v-if="$root.job.results.alignments[match.id]"
+              v-for="match in $root.matches"
+              :match="match"
+              :key="match.id"
+              @reload="getJobData"
+          ></links>
+        </tab-content-structure>
+      </tab-content>
 
       <tab-content title="Clusters">
         <tab-content-structure title="Clusters" :tab_error="tab_error" :is_saved="is_saved">
@@ -128,6 +138,7 @@
     import Idea from './components/steps/idea/Idea';
     import Resource from './components/steps/resources/Resource';
     import Match from './components/steps/matches/Match';
+    import Links from "./components/steps/links/Links";
     import Cluster from './components/steps/clusters/Cluster';
 
     import TabContentStructure from './components/structural/TabContentStructure';
@@ -142,6 +153,7 @@
             Idea,
             Resource,
             Match,
+            Links,
             Cluster,
         },
         data() {

@@ -1,5 +1,6 @@
 import re
 import json
+import gzip
 import subprocess
 
 from os.path import join, splitext
@@ -19,6 +20,7 @@ from web_server.clustering import cluster_csv, get_cluster_data, hash_string, cl
 
 from common.ll.LLData.CSV_Alignments import CSV_ALIGNMENTS_DIR
 from common.ll.LLData.Serialisation import CLUSTER_SERIALISATION_DIR
+from common.ll.DataAccess.PostgreSQL.Query import get_values_for
 
 app = Flask(__name__)
 
@@ -103,6 +105,22 @@ def result(job_id, alignment):
     response = make_response(send_file(csv_filepath, mimetype='text/csv'))
     response.headers['Content-Encoding'] = 'gzip'
     return response
+
+
+@app.route('/job/<job_id>/alignment/<alignment>/properties', methods=['POST'])
+def alignment_properties(job_id, alignment):
+    targets = request.json['targets'] if 'targets' in request.json else None
+    resources = set()
+
+    filename = f'alignment_{hasher(job_id)}_alignment_{alignment}.csv.gz'
+    with gzip.open(join(CSV_ALIGNMENTS_DIR, filename), mode="rt", encoding="utf-8") as csv:
+        position = 0
+        for line in csv:
+            position += 1
+            split = (line.strip()).split(sep=',')
+            resources.update([split[0].strip(), split[1].strip()])
+
+    return jsonify(get_values_for(resources, targets))
 
 
 @app.route('/job/<job_id>/create_clustering/', methods=['POST'])
@@ -222,6 +240,14 @@ def get_cluster_graph_data(job_id, clustering_id, cluster_id):
         'reconciliation_graph': plot_reconciliation(specs=specifications,
                                                     activated=True)[1] if get_reconciliation else None,
     })
+
+
+@app.route('/properties', methods=['POST'])
+def properties():
+    resources = request.json['resources'] if 'resources' in request.json else None
+    targets = request.json['targets'] if 'targets' in request.json else None
+
+    return jsonify(get_values_for(resources, targets))
 
 
 @app.route('/server_status/')

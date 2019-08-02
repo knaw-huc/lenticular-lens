@@ -1,3 +1,5 @@
+import Papa from 'papaparse';
+
 export default {
     data() {
         return {
@@ -46,17 +48,35 @@ export default {
         },
 
         getResourceById(resource_id, resources = this.resources) {
-            for (let i = 0; i < resources.length; i++) {
-                if (resources[i].id === parseInt(resource_id) || resources[i].label === resource_id)
-                    return resources[i];
-            }
+            return resources.find(res => res.id === parseInt(resource_id) || res.label === resource_id);
+        },
+
+        getResourceByDatasetId(dataset_id, resources = this.resources) {
+            return resources.find(res => res.dataset_id === dataset_id);
         },
 
         getMatchById(match_id, matches = this.matches) {
-            for (let i = 0; i < matches.length; i++) {
-                if (matches[i].id === parseInt(match_id) || matches[i].label === match_id)
-                    return matches[i];
-            }
+            return matches.find(match => match.id === parseInt(match_id) || match.label === match_id);
+        },
+
+        getTargetsForMatch(match_id) {
+            const match = this.getMatchById(match_id);
+            return match.properties.reduce((targets, prop) => {
+                const resource = this.getResourceById(prop[0]);
+
+                let target = targets.find(t => t.graph === resource.dataset_id);
+                if (!target) {
+                    target = {graph: resource.dataset_id, data: []};
+                    targets.push(target);
+                }
+
+                target.data.push({
+                    entity_type: resource.collection_id,
+                    properties: [prop[1]]
+                });
+
+                return targets;
+            }, []);
         },
 
         createReferencesForProperty(property, resources) {
@@ -237,7 +257,15 @@ export default {
 
         async runAlignment(matchId, restart) {
             await this.submit();
-            return await callApi(`/job/${this.job.job_id}/run_alignment/${matchId}`, {restart});
+            return callApi(`/job/${this.job.job_id}/run_alignment/${matchId}`, {restart});
+        },
+
+        async getAlignment(matchId) {
+            return callApiCsv(`/job/${this.job.job_id}/alignment/${matchId}`);
+        },
+
+        async loadPropertiesForAlignment(matchId, targets) {
+            return callApi(`/job/${this.job.job_id}/alignment/${matchId}/properties`, {targets});
         },
 
         async getClusters(clusteringId, association) {
@@ -282,6 +310,10 @@ export default {
             });
 
             this.datasets = datasets;
+        },
+
+        async loadProperties(resources, targets) {
+            return callApi('/properties', {resources, targets});
         },
     },
 };
@@ -337,4 +369,16 @@ async function callApi(path, body) {
     const response = await fetch(path);
 
     return response.json();
+}
+
+function callApiCsv(path) {
+    return new Promise((resolve, reject) => {
+        Papa.parse(path, {
+            download: true,
+            fastMode: true,
+            delimiter: ',',
+            complete: results => resolve(results.data),
+            error: err => reject(err),
+        });
+    });
 }

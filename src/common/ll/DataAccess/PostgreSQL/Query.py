@@ -1,3 +1,4 @@
+from collections import defaultdict
 from common.config_db import execute_query, run_query
 from psycopg2 import sql as psycopg2_sql
 from common.helpers import hash_string
@@ -79,6 +80,29 @@ def get_table_info(dataset_id, collection_id):
 
 def get_column_name(property_name):
     return hash_string(property_name.lower())
+
+
+def get_values_for(resources, targets):
+    query = get_resource_value(resources, targets)
+    result = execute_query(query)
+
+    response = defaultdict(list)
+    res_idx = result[0].index('resource')
+    for row in result[1:]:
+        row_dict = {label: row[idx] for idx, label in enumerate(result[0])}
+        del row_dict['resource']
+
+        targets = response[row[res_idx]]
+        matching_targets = [target for target in targets
+                            if target['dataset'] == row_dict['dataset'] and target['property'] == row_dict['property']]
+        if matching_targets:
+            matching_targets[0]['values'].append(row_dict['value'])
+        else:
+            row_dict['values'] = [row_dict['value']]
+            del row_dict['value']
+            targets.append(row_dict)
+
+    return response
 
 
 if __name__ == '__main__':

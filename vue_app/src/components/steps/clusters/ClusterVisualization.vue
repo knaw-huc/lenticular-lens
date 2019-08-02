@@ -1,7 +1,7 @@
 <template>
   <div>
     <sub-card label="Cluster" :has-collapse="true" :has-info="true" :has-columns="true"
-             id="cluster_plot_row_1" type="cluster">
+              id="cluster_plot_row_1" type="cluster">
       <template v-slot:info>
         <cluster-visualization-info/>
       </template>
@@ -11,10 +11,6 @@
           <button type="button" v-if="association" @click="getGraphData('cluster')" class="btn btn-info mr-4">
             Load Original Clusters
           </button>
-
-          <a :href="getGraphLink()" target="_blank" class="btn btn-info">
-            Open in new tab
-          </a>
         </div>
       </template>
 
@@ -22,7 +18,7 @@
     </sub-card>
 
     <sub-card label="Compact Cluster" :has-collapse="true" :has-info="true" :has-columns="true"
-             id="cluster_plot_row_2" type="cluster-compact">
+              id="cluster_plot_row_2" type="cluster-compact">
       <template v-slot:info>
         <cluster-visualization-compact-info/>
       </template>
@@ -32,10 +28,6 @@
           <button type="button" v-if="association" @click="getGraphData('cluster')" class="btn btn-info mr-4">
             Load Original Clusters
           </button>
-
-          <a :href="getGraphLink()" target="_blank" class="btn btn-info">
-            Open in new tab
-          </a>
         </div>
       </template>
 
@@ -43,7 +35,7 @@
     </sub-card>
 
     <sub-card v-if="association" label="Reconciled" :has-collapse="true" :has-info="true" :has-columns="true"
-             id="cluster_plot_row_3" type="cluster-compact">
+              id="cluster_plot_row_3" type="cluster-compact">
       <template v-slot:info>
         <cluster-visualization-reconciled-info/>
       </template>
@@ -53,10 +45,6 @@
           <button type="button" v-if="association" @click="getGraphData('cluster')" class="btn btn-info mr-4">
             Load Original Clusters
           </button>
-
-          <a :href="getGraphLink()" target="_blank" class="btn btn-info">
-            Open in new tab
-          </a>
         </div>
       </template>
 
@@ -89,15 +77,14 @@
         },
         props: {
             properties: Array,
-            cluster_data: Object,
-            cluster_id: String,
-            clustering_id: String,
-            parent_tab: String,
+            clusterData: Object,
+            clusterId: String,
+            clusteringId: String,
             association: String,
         },
         methods: {
             getGraphLink() {
-                return `/job/${this.$root.job.job_id}/cluster/${this.clustering_id}/${this.cluster_id}`;
+                return `/job/${this.$root.job.job_id}/cluster/${this.clusteringId}/${this.clusterId}`;
             },
 
             draw(graph_parent, svg_name) {
@@ -105,11 +92,6 @@
             },
 
             async getGraphData(type) {
-                if (this.parent_tab && this.$root.$children[0].$refs['formWizard'].activeTabIndex !== this.$root.$children[0].steps.indexOf(this.parent_tab))
-                    return;
-
-                const vm = this;
-
                 clear('graph_cluster_1');
                 clear('graph_cluster_2');
                 clear('graph_cluster_3');
@@ -123,12 +105,12 @@
                     };
                 });
 
-                const data = await this.$root.getClusterGraphs(this.clustering_id, this.cluster_id, {
-                    cluster_data: this.cluster_data,
+                const data = await this.$root.getClusterGraphs(this.clusteringId, this.clusterId, {
+                    cluster_data: this.clusterData,
                     properties: properties,
                     get_cluster: !Boolean(this.association) || type === 'cluster',
-                    get_reconciliation: this.cluster_data.extended === 'yes',
-                    associations: this.cluster_data.extended === 'yes' ? this.association : '',
+                    get_reconciliation: this.clusterData.extended === 'yes',
+                    associations: this.clusterData.extended === 'yes' ? this.association : '',
                 });
 
                 if (data.cluster_graph)
@@ -140,17 +122,13 @@
                 if (data.reconciliation_graph)
                     this.draw(data.reconciliation_graph, "svg#graph_cluster_3");
             },
-
-            scrollTo(ref) {
-                this.$refs[ref].$el.parentNode.scrollIntoView({'behavior': 'smooth', 'block': 'start'});
-            },
         },
         mounted() {
-            if (this.cluster_id)
+            if (this.clusterId)
                 this.getGraphData();
         },
         watch: {
-            cluster_id() {
+            clusterId() {
                 this.getGraphData();
             },
         },

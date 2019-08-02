@@ -1,11 +1,18 @@
 <template>
-  <card :id="'clusters_match_' + match.id" type="clusters-matches" :label="match.label" :fillLabel="false"
+  <card :id="'clusters_match_' + match.id" type="clusters-matches" :label="match.label" :fill-label="false"
         @show="getClusters" @hide="showData = false">
     <template v-slot:columns>
-      <div class="col-auto mr-auto">
+      <div class="col-auto">
         <button type="button" class="btn btn-info btn-sm" v-b-toggle="'matches_info_' + match.id">
           <octicon name="chevron-down" scale="1" v-b-toggle="'matches_info_' + match.id"></octicon>
           Show alignment
+        </button>
+      </div>
+
+      <div class="col-auto mr-auto">
+        <button type="button" class="btn btn-info btn-sm" v-b-toggle="'properties_' + match.id">
+          <octicon name="chevron-down" scale="1" v-b-toggle="'properties_' + match.id"></octicon>
+          Select properties
         </button>
       </div>
 
@@ -37,6 +44,10 @@
     <template v-slot:header>
       <b-collapse :id="'matches_info_' + match.id" accordion="matches-info-accordion">
         <match-info :match="match"/>
+      </b-collapse>
+
+      <b-collapse :id="'properties_' + match.id" accordion="properties-accordion">
+        <properties :properties="match.properties"/>
       </b-collapse>
 
       <sub-card v-if="getResultForMatch(match.id).clusterings.length > 0">
@@ -92,65 +103,76 @@
       </sub-card>
     </template>
 
-    <sub-card label="Properties">
-      <div class="row ml-4" v-for="(property, idx) in this.match.properties"
-           v-bind:class="{'mt-3': idx === 0}">
-        <property
-            v-if="property[0]"
-            :property="property"
-            :singular="true"
-            :singular-resource-info="true"
-            :follow-referenced-collection="false"
-            @resetProperty="resetProperty(idx, property, $event)"/>
+    <div class="bg-white border px-3 py-1 mt-4 mb-2">
+      <div class="row font-weight-bold">
+        <div class="col">Extended</div>
+        <div class="col">Reconciled</div>
+        <div class="col">Id</div>
+        <div class="col">Count</div>
+        <div class="col">Size</div>
       </div>
-    </sub-card>
+    </div>
 
-    <cluster-table
-        v-if="showData"
-        :clusters="clusters"
-        :cluster_id_selected="cluster_id_selected"
-        @select:cluster_id="cluster_id_selected = $event"/>
+    <virtual-list
+        v-if="showData && hasProperties"
+        :size="150"
+        :remain="5"
+        :item="item"
+        :itemcount="getResultForMatch(match.id).clusterings[0].clusters_count"
+        :itemprops="getItemProps"/>
 
     <cluster-visualization
-        v-if="showData && cluster_id_selected && hasProperties"
-        parent_tab="clusters"
-        :clustering_id="clustering_id"
-        :cluster_id="cluster_id_selected"
-        :cluster_data="clusters[cluster_id_selected]"
+        v-if="showData && clusterIdSelected && hasProperties"
+        :clustering-id="clusteringId"
+        :cluster-id="clusterIdSelected"
+        :cluster-data="clusters[clusterIdSelected]"
         :properties="match.properties"
         :association="association"/>
   </card>
 </template>
 
 <script>
+    import VirtualList from 'vue-virtual-scroll-list';
+
     import Card from "../../structural/Card";
     import SubCard from "../../structural/SubCard";
+
     import MatchInfo from "../../helpers/MatchInfo";
-    import ClusterTable from "./ClusterTable";
+    import Properties from "../../helpers/Properties";
+
+    import Clustering from "./Clustering";
     import ClusterVisualization from "./ClusterVisualization";
 
     export default {
         name: "Cluster",
         components: {
+            VirtualList,
             Card,
             SubCard,
             MatchInfo,
-            ClusterTable,
+            Properties,
+            Clustering,
             ClusterVisualization,
         },
         data() {
             return {
-                association: '',
-                cluster_id_selected: null,
-                showData: false,
-                clustering_id: null,
                 clusters: {},
+                clusteringId: null,
+                clusterIdSelected: null,
+                association: '',
+                properties: Object,
+                item: Clustering,
+                showData: false,
             }
         },
         props: {
             match: Object,
         },
         computed: {
+            clusterIds() {
+                return Object.keys(this.clusters);
+            },
+
             hasProperties() {
                 return !this.match.properties.map(res => res[1] !== '').includes(false);
             },
@@ -158,15 +180,31 @@
             associationFiles() {
                 return this.$root.job.association_files;
             },
+
+            resources() {
+                const linkResources = Object.values(this.clusters)
+                    .flatMap(cluster => cluster.links)
+                    .flatMap(links => links)
+                    .map(res => res.substring(1, res.length - 1));
+
+                const nodeResources = Object.values(this.clusters)
+                    .flatMap(cluster => cluster.nodes)
+                    .map(res => res.substring(1, res.length - 1));
+
+                return [...new Set(linkResources.concat(nodeResources))];
+            },
         },
         methods: {
             async getClusters() {
-                this.showData = true;
-
                 const results = this.getResultForMatch(this.match.id);
                 if (results.clusterings.length > 0) {
-                    this.clustering_id = results.clusterings[0].clustering_id;
-                    this.clusters = await this.$root.getClusters(this.clustering_id, this.association);
+                    this.clusteringId = results.clusterings[0].clustering_id;
+                    const targets = this.$root.getTargetsForMatch(this.match.id);
+
+                    this.clusters = await this.$root.getClusters(this.clusteringId, this.association);
+                    this.properties = await this.$root.loadProperties(this.resources, targets);
+
+                    this.showData = true;
                 }
             },
 
@@ -200,14 +238,21 @@
                     this.$emit('reload');
             },
 
-            resetProperty(idx, property, property_index) {
-                let new_property = property.slice(0, property_index);
-                new_property.push('');
-                if (new_property.length % 2 > 0) {
-                    new_property.push('');
-                }
-                this.$set(this.match.properties, idx, new_property);
+            getItemProps(idx) {
+                const clusterId = this.clusterIds[idx];
+                return {
+                    props: {
+                        clusterId: clusterId,
+                        clusterData: this.clusters[clusterId],
+                        properties: this.properties,
+                        selected: this.clusterIdSelected === clusterId,
+                        isFirst: idx === 0,
+                    },
+                    on: {
+                        'select:clusterId': clusterId => this.clusterIdSelected = clusterId,
+                    }
+                };
             },
         },
-    }
+    };
 </script>

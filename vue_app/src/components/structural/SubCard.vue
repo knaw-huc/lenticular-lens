@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-white border p-3 mt-4">
+  <div class="bg-white border p-3" v-bind:class="{'mt-4': !isFirst && !smallSpacing, 'mt-2': !isFirst && smallSpacing}">
     <div v-if="hasColumns || hasCollapse || label || hasInfo || addButton"
          class="row align-items-center justify-content-between">
       <div v-if="hasCollapse" class="col-auto">
@@ -37,6 +37,7 @@
             id: String,
             type: String,
             label: String,
+            addButton: String,
             hasCollapse: {
                 type: Boolean,
                 default: false
@@ -45,10 +46,17 @@
                 type: Boolean,
                 default: false
             },
-            addButton: String,
             hasColumns: {
                 type: Boolean,
                 default: false
+            },
+            isFirst: {
+                type: Boolean,
+                default: false,
+            },
+            smallSpacing: {
+                type: Boolean,
+                default: false,
             },
         },
     };

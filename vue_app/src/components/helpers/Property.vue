@@ -17,6 +17,19 @@
         @clone="$emit('clone')"
         ref="propertyComponents"
     ></property-component>
+
+    <template v-if="values && values.length > 0">
+      <div class="col-auto ml-2 p-1">
+        <octicon name="arrow-left"/>
+        <octicon name="arrow-right"/>
+      </div>
+
+      <div v-for="value in values"
+           class="col-auto btn border border-info bg-white text-info rounded-pill mx-2 my-1 py-0"
+           v-bind:class="small ? 'btn-sm' : {}">
+        {{ value }}
+      </div>
+    </template>
   </div>
 </template>
 
@@ -30,6 +43,7 @@
         },
         props: {
             property: Array,
+            values: Array,
             readOnly: {
                 type: Boolean,
                 default: false,
