@@ -28,6 +28,8 @@ class LinksetsCollection:
             return_limit=None
     ):
         self.sql_only = sql_only
+        self.resources_only = resources_only
+        self.matches_only = matches_only
         self.return_limit = return_limit or 0
         self.results = []
         self.job_id = job_id
