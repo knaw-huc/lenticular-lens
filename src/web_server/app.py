@@ -61,7 +61,7 @@ def job_update():
     if 'resources' in request.json:
         job_data['resources'] = json.dumps(request.json['resources'])
     if 'matches' in request.json:
-        job_data['matches'] = json.dumps(request.json['matches'])
+        job_data['mappings'] = json.dumps(request.json['matches'])
 
     update_job_data(job_id, job_data)
 

@@ -39,7 +39,7 @@ class LinksetsCollection:
         job_data = get_job_data(self.job_id, include_results=False)
         self.data = {
             'resources': job_data['resources'],
-            'matches': job_data['matches'],
+            'matches': job_data['mappings'],
         }
 
         self.run_matches = []
