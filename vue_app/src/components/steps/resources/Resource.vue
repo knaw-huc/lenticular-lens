@@ -279,16 +279,8 @@
                 });
             },
 
-            getPropertiesForResource(resource_id) {
-                let resource;
-                const resources = this.$root.resources;
-                resource_id = parseInt(resource_id);
-
-                for (let i = 0; i < resources.length; i++) {
-                    if (resources[i].id === resource_id)
-                        resource = resources[i];
-                }
-
+            getPropertiesForResource(resourceId) {
+                const resource = this.$root.getResourceById(resourceId);
                 return this.$root.datasets[resource.dataset_id]['collections'][resource.collection_id];
             },
         },

@@ -239,7 +239,7 @@ class LinksetsCollection:
 
         parent = self.get_resource_by_label(parent_resource)
         resource = self.get_resource_by_label(hash_string(relation['resource']))
-        column_label = hash_string(relation['local_property'][0])
+        column_label = hash_string(relation['local_property'][0].lower())
         local_column_info = parent.collection.table_data['columns'][column_label]
 
         if local_column_info['LIST'] and [parent_resource, column_label] not in property_join_added:

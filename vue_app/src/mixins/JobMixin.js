@@ -47,20 +47,21 @@ export default {
             });
         },
 
-        getResourceById(resource_id, resources = this.resources) {
-            return resources.find(res => res.id === parseInt(resource_id) || res.label === resource_id);
+        getResourceById(resourceId, resources = this.resources) {
+            return resources.find(res =>
+                (isId(resourceId) && res.id === parseInt(resourceId)) || res.label === resourceId);
         },
 
-        getResourceByDatasetId(dataset_id, resources = this.resources) {
-            return resources.find(res => res.dataset_id === dataset_id);
+        getResourceByDatasetId(datasetId, resources = this.resources) {
+            return resources.find(res => res.dataset_id === datasetId);
         },
 
-        getMatchById(match_id, matches = this.matches) {
-            return matches.find(match => match.id === parseInt(match_id) || match.label === match_id);
+        getMatchById(matchId, matches = this.matches) {
+            return matches.find(match => (isId(matchId) && match.id === parseInt(matchId)) || match.label === matchId);
         },
 
-        getTargetsForMatch(match_id) {
-            const match = this.getMatchById(match_id);
+        getTargetsForMatch(matchId) {
+            const match = this.getMatchById(matchId);
             return match.properties.reduce((targets, prop) => {
                 const resource = this.getResourceById(prop[0]);
 
@@ -80,66 +81,39 @@ export default {
         },
 
         createReferencesForProperty(property, resources) {
-            // Check if reference
-            if (property.length > 2) {
-                // Don't follow reference if user selected 'Value'
-                if (property[2] === '__value__') {
-                    return property.slice(0, 2)
-                }
+            const baseReferencedResource = this.getResourceById(property[0], resources);
+            property[0] = baseReferencedResource.label;
 
-                let base_referenced_resource = this.getResourceById(property[0], resources);
+            if (property.length < 3)
+                return property;
 
-                const resource_id = parseInt(property[0]);
-                for (let i = 0; i < resources.length; i++) {
-                    if (resources[i].id === resource_id || resources[i].label === resource_id)
-                        base_referenced_resource = resources[i];
-                }
+            if (property[2] === '__value__')
+                return property.slice(0, 2);
 
-                // Add resource
-                let referenced_resource = {
-                    "collection_id": property[2],
-                    "dataset_id": base_referenced_resource.dataset_id,
-                    "related": []
-                };
-                referenced_resource['label'] = this.$utilities.md5(property[0] + property[1] + JSON.stringify(referenced_resource));
+            const referencedResource = {
+                label: this.$utilities.md5(property[0] + property[1] + property[2]),
+                collection_id: property[2],
+                dataset_id: baseReferencedResource.dataset_id,
+                related: []
+            };
 
-                let resource_exists = false;
-                resources.forEach(rc => {
-                    if (rc.label === referenced_resource.label) {
-                        resource_exists = true;
-                        return false
-                    }
-                });
-                if (!resource_exists) {
-                    resources.push(referenced_resource);
-                }
+            if (!resources.find(rc => rc.label === referencedResource.label))
+                resources.push(referencedResource);
 
-                // Add relation
-                let relation = {
-                    "resource": referenced_resource.label,
-                    "local_property": property[1],
-                    "remote_property": "uri"
-                };
-                let relation_exists = false;
-                base_referenced_resource.related.forEach(existing_relation => {
-                    if (JSON.stringify(existing_relation) === JSON.stringify(relation)) {
-                        relation_exists = true;
-                        return false
-                    }
-                });
-                if (!relation_exists) {
-                    base_referenced_resource.related.push(relation);
-                }
+            const relation = {
+                resource: referencedResource.label,
+                local_property: property[1],
+                remote_property: 'uri'
+            };
 
-                if (base_referenced_resource.related.length > 1) {
-                    base_referenced_resource.related_array = true;
-                }
+            if (!baseReferencedResource.related.find(rel => JSON.stringify(rel) === JSON.stringify(relation)))
+                baseReferencedResource.related.push(relation);
 
-                // Replace part of property that was processed and re-enter the function with that output
-                return this.createReferencesForProperty([referenced_resource.label, property[3].toLowerCase()].concat(property.slice(4)), resources);
-            }
+            if (baseReferencedResource.related.length > 1)
+                baseReferencedResource.related_array = true;
 
-            return property
+            const newProperty = [referencedResource.label, property[3], ...property.slice(4)];
+            return this.createReferencesForProperty(newProperty, resources);
         },
 
         async loadJobData(jobId) {
@@ -159,92 +133,66 @@ export default {
         },
 
         async submit() {
-            let new_resources = [];
-            let resources_copy = copy(this.resources);
-            let matches_copy = copy(this.matches);
+            const resources = copy(this.resources);
+            const matches = copy(this.matches);
 
-            // Check for references
-            resources_copy.forEach(resource_copy => {
-                if (resource_copy.filter.type) {
-                    getRecursiveConditions(resource_copy.filter.conditions).forEach(condition => {
-                        condition.property = this.createReferencesForProperty(condition.property, resources_copy);
-                    });
-                }
-            });
-
-            matches_copy.forEach(match_copy => {
-                ['sources', 'targets'].forEach(resources_key => {
-                    match_copy[resources_key].forEach((resource_id, resource_index) => {
-                        if (resource_id == parseInt(resource_id)) {
-                            match_copy[resources_key][resource_index] = this.getResourceById(resource_id).label;
-                        }
+            matches.forEach(match => {
+                ['sources', 'targets'].forEach(key => {
+                    match[key].forEach((resourceId, index) => {
+                        if (isId(resourceId))
+                            match[key][index] = this.getResourceById(resourceId).label;
                     });
                 });
 
-                getRecursiveConditions(match_copy.conditions).forEach(condition => {
-                    ['sources', 'targets'].forEach(resources_key => {
-                        Object.keys(condition[resources_key]).forEach(resource_id => {
-                            condition[resources_key][resource_id].forEach((property, property_index) => {
-                                condition[resources_key][resource_id][property_index].property = this.createReferencesForProperty(property.property, resources_copy);
-                                condition[resources_key][resource_id][property_index].property.forEach((property_part, property_part_index) => {
-                                    if (!isNaN(parseInt(property_part)) && property_part >= 0)
-                                        condition[resources_key][resource_id][property_index].property[property_part_index] = this.getResourceById(property_part).label;
-                                });
+                getRecursiveConditions(match.conditions).forEach(condition => {
+                    ['sources', 'targets'].forEach(key => {
+                        Object.keys(condition[key]).forEach(resourceId => {
+                            condition[key][resourceId].forEach((property, index) => {
+                                condition[key][resourceId][index].property =
+                                    this.createReferencesForProperty(property.property, resources);
                             });
 
-                            condition[resources_key][this.getResourceById(resource_id).label] = condition[resources_key][resource_id];
-                            delete condition[resources_key][resource_id];
+                            condition[key][this.getResourceById(resourceId).label] = condition[key][resourceId];
+                            delete condition[key][resourceId];
                         });
                     });
                 });
+
+                delete match.properties;
             });
 
-            resources_copy.forEach(resource_copy => {
-                if (resource_copy.filter && resource_copy.filter.type) {
-                    getRecursiveConditions(resource_copy.filter.conditions).forEach(condition => {
-                        if (condition.property[0] == parseInt(condition.property[0])) {
-                            condition.property[0] = this.getResourceById(condition.property[0]).label;
-                        }
-                        condition.property[1] = condition.property[1].toLowerCase();
-                        if (typeof condition.value_type !== 'undefined') {
-                            condition[condition.value_type] = condition.value;
-                            delete condition.value;
-                            delete condition.value_type;
-                        }
+            resources.forEach(resource => {
+                if (resource.filter && resource.filter.conditions && resource.filter.conditions.length > 0) {
+                    getRecursiveConditions(resource.filter.conditions).forEach(condition => {
+                        condition.property = this.createReferencesForProperty(condition.property, resources);
                     });
                 }
-                else {
-                    delete resource_copy.filter;
-                }
+                else
+                    delete resource.filter;
 
-                if (resource_copy.related) {
-                    resource_copy.related.forEach(related => {
-                        if (related.resource == parseInt(related.resource)) {
+                if (resource.related) {
+                    resource.related.forEach(related => {
+                        if (isId(related.resource))
                             related.resource = this.getResourceById(related.resource).label;
-                        }
-                        related.local_property = [related.local_property.toLowerCase()];
-                        related.remote_property = [related.remote_property.toLowerCase()];
-                        delete related.resource_index;
+
+                        related.local_property = [related.local_property];
+                        related.remote_property = [related.remote_property];
                     });
 
-                    if (resource_copy.related_array) {
-                        resource_copy.related = [resource_copy.related]
-                    }
+                    if (resource.related_array)
+                        resource.related = [resource.related];
                 }
 
-                delete resource_copy.related_array;
-                let resource_copy_copy = copy(resource_copy);
-                delete resource_copy_copy.id;
-
-                new_resources.push(resource_copy_copy);
+                delete resource.related_array;
+                delete resource.id;
             });
 
             await this.updateJob({
                 job_id: this.job.job_id,
                 job_title: this.job.job_title,
                 job_description: this.job.job_description,
-                resources: new_resources,
-                matches: matches_copy,
+                resources: resources,
+                matches: matches,
                 resources_original: this.resources,
                 matches_original: this.matches,
                 status: 'Requested',
@@ -322,6 +270,10 @@ function copy(obj) {
     return JSON.parse(JSON.stringify(obj));
 }
 
+function isId(id) {
+    return Number.isInteger(id) || /^\d+$/.test(id);
+}
+
 function findId(objs) {
     let latestId = -1;
     objs.forEach(obj => {
@@ -330,26 +282,17 @@ function findId(objs) {
     return latestId + 1;
 }
 
-function getRecursiveConditions(filter_obj) {
-    let conditions = [];
-    let obj_arr;
+function getRecursiveConditions(conditionsGroup) {
+    let conditions;
+    if (Array.isArray(conditionsGroup))
+        conditions = conditionsGroup;
+    else if (Array.isArray(conditionsGroup.conditions))
+        conditions = conditionsGroup.conditions;
 
-    if (Array.isArray(filter_obj)) {
-        obj_arr = filter_obj;
-    }
-    else if (Array.isArray(filter_obj.conditions)) {
-        obj_arr = filter_obj.conditions;
-    }
+    if (conditions)
+        return conditions.reduce((acc, condition) => acc.concat(getRecursiveConditions(condition)), []);
 
-    if (obj_arr) {
-        obj_arr.forEach(condition => {
-            conditions = conditions.concat(getRecursiveConditions(condition));
-        });
-        return conditions;
-    }
-    else {
-        return [filter_obj]
-    }
+    return [conditionsGroup];
 }
 
 async function callApi(path, body) {
