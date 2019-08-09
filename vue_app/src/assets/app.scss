@@ -44,38 +44,38 @@ div#app::before {
 
 .vue-form-wizard {
   .wizard-title {
-    color: #efc501!important;
+    color: #efc501 !important;
     font-size: 3.2rem;
   }
 
   .wizard-tab-content {
-    margin-top: 40px!important;
+    margin-top: 40px !important;
   }
 
   .wizard-icon-circle {
-    background-color: #0c8c75!important;
+    background-color: #0c8c75 !important;
   }
 
   .wizard-icon-circle.square_shape {
-    border-radius: 2px!important;
+    border-radius: 2px !important;
   }
 
   .wizard-icon-container {
     background-color: inherit !important;
   }
 
-  .wizard-nav-pills>li>a {
-    color: rgba(0, 0, 0, 0.6)!important;
+  .wizard-nav-pills > li > a {
+    color: rgba(0, 0, 0, 0.6) !important;
 
     .stepTitle {
-      color: #efc501bd!important;
-      text-shadow: 5px 5px 5px #000!important;
-      font-size: 1.4rem!important;
+      color: #efc501bd !important;
+      text-shadow: 5px 5px 5px #000 !important;
+      font-size: 1.4rem !important;
     }
   }
 
   .wizard-card-footer {
-    padding: 20px!important;
+    padding: 20px !important;
     background-color: #333;
     background-image: url(/static/images/bg-trade01.jpg);
     background-repeat: no-repeat;
@@ -106,5 +106,8 @@ div#app::before {
 div.is-invalid {
   @extend .border;
   @extend .border-danger;
-  background-color: mix($danger, $light, 10%) !important;
+
+  &.bg-white {
+    background-color: mix($danger, $light, 10%) !important;
+  }
 }

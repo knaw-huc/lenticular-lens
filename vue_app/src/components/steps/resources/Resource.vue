@@ -1,6 +1,5 @@
 <template>
-  <card :id="'resource_' + resource.id" type="resources" :label="resource.label"
-        :hasError="errors.length > 0" :editableLabel="true">
+  <card :id="'resource_' + resource.id" type="resources" v-model="resource.label" :hasError="errors.length > 0">
     <template v-slot:columns>
       <div class="col-auto">
         <button-delete v-on:click="$emit('remove')" :disabled="isUsedInAlignmentResults()" title="Delete Collection"/>
@@ -8,7 +7,7 @@
     </template>
 
     <fieldset :disabled="isUsedInAlignmentResults()">
-      <sub-card>
+      <sub-card :hasError="errors.includes('dataset') || errors.includes('collection')">
         <div class="row">
           <div class="form-group col-8">
             <label :for="'dataset_' + resource.id">Dataset</label>
@@ -46,9 +45,7 @@
         </div>
       </sub-card>
 
-      <sub-card v-if="resource.collection_id !== ''" label="Filter"
-                :add-button="resource.filter.conditions.length === 0 ? 'Add Filter Condition' : ''"
-                @add="addFilterCondition(resource.filter)">
+      <sub-card v-if="resource.collection_id !== ''" label="Filter" :hasError="errors.includes('filters')">
         <conditions-group :conditions-group="resource.filter"
                           :is-root="true"
                           :uid="'resource_' + resource.id + '_filter_group_0'"
@@ -66,7 +63,7 @@
         </conditions-group>
       </sub-card>
 
-      <sub-card v-if="resource.collection_id !== ''" label="Sample">
+      <sub-card v-if="resource.collection_id !== ''" label="Sample" :hasError="errors.includes('limit')">
         <div class="form-group row align-items-end mt-3">
           <label class="col-auto" :for="'resource_' + resource.id + '_limit'">
             Only use a sample of this amount of records (-1 is no limit):
@@ -89,7 +86,8 @@
         </div>
       </sub-card>
 
-      <sub-card v-if="resource.collection_id !== ''" label="Relations" add-button="Add Relation" @add="addRelation">
+      <sub-card v-if="resource.collection_id !== ''" label="Relations" add-button="Add Relation"
+                :hasError="errors.find(err => err.startsWith('relations_'))" @add="addRelation">
         <div v-if="resource.related.length === 0" class="font-italic mt-3">
           No relations
         </div>
@@ -242,6 +240,7 @@
                 let filtersGroupsValid = true;
                 if (this.$refs.filterGroupComponent)
                     filtersGroupsValid = this.$refs.filterGroupComponent.validateConditionsGroup();
+                filtersGroupsValid = this.validateField('filters', filtersGroupsValid);
 
                 return collectionValid && datasetValid && limitValid && relatedValid && filtersGroupsValid;
             },

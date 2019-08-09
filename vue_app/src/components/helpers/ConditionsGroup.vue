@@ -23,9 +23,9 @@
         </div>
       </div>
 
-      <div class="col-auto" v-if="conditionsGroup.conditions.length > 0">
+      <div class="col-auto">
         <div class="row">
-          <div class="col-auto" v-if="!isRoot">
+          <div class="col-auto" v-if="!isRoot && conditionsGroup.conditions.length > 0">
             <button-delete @click="$emit('remove', index)" title="Delete this group" class="pt-1 pr-0"/>
           </div>
 
@@ -99,30 +99,26 @@
         },
         methods: {
             validateConditionsGroup() {
-                if (this.conditionsGroup.conditions && this.conditionsGroup.conditions.length > 0) {
-                    this.validateField('conditions', true);
+                let conditionsValid = true;
+                let groupValid = true;
+                let childrenValid = true;
 
-                    const valid = !this.$refs.conditionGroupComponents
+                if (this.conditionsGroup.conditions && this.conditionsGroup.conditions.length > 0)
+                    groupValid = !this.$refs.conditionGroupComponents
                         .map(conditionGroupComponent => conditionGroupComponent.validateConditionsGroup())
                         .includes(false);
-
-                    this.validateField(this.uid, valid);
-                    return valid;
-                }
-
-                if (this.conditionsGroup.conditions && this.shouldHaveConditions) {
-                    const valid = this.validateField('conditions', this.conditionsGroup.conditions.length > 0);
-                    this.validateField(this.uid, valid);
-
-                    return valid;
-                }
-
-                if (!this.conditionsGroup.conditions && this.validateMethodName && this.$children.length > 0) {
+                else if (this.conditionsGroup.conditions && this.shouldHaveConditions)
+                    conditionsValid = this.validateField('conditions', this.conditionsGroup.conditions.length > 0);
+                else if (!this.conditionsGroup.conditions && this.validateMethodName && this.$children.length > 0) {
                     if (typeof this.$children[0][this.validateMethodName] === 'function')
-                        return this.$children[0][this.validateMethodName]();
+                        childrenValid = this.$children[0][this.validateMethodName]();
                 }
 
-                return true;
+                conditionsValid = this.validateField('conditions', conditionsValid);
+                groupValid = this.validateField('group', groupValid);
+                childrenValid = this.validateField('children', childrenValid);
+
+                return conditionsValid && groupValid && childrenValid;
             },
 
             removeCondition(index) {

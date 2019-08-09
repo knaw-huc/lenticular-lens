@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-white row align-items-center">
+  <div class="row align-items-center">
     <div v-if="!match_resource" class="col-auto pr-0" @mouseenter="hovering = true" @mouseleave="hovering = false">
       <v-select
           @input="$emit('input', $event); hovering = false"
@@ -8,7 +8,7 @@
           v-bind:class="{'is-invalid': errors.includes('resource')}"
       >
         <option disabled selected value="">Choose a collection</option>
-        <option v-for="(root_resource, index) in resources" :value.number="root_resource.id">{{ root_resource.label }}
+        <option v-for="root_resource in resources" :value.number="root_resource.id">{{ root_resource.label }}
         </option>
       </v-select>
 

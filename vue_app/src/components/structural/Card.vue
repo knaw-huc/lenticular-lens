@@ -6,7 +6,7 @@
       </div>
 
       <div class="col-auto" v-bind:class="{'flex-fill': fillLabel}" v-b-toggle="id">
-        <edit-label v-if="editableLabel" v-model="label" :required="true"/>
+        <edit-label v-if="!label" :value="value" :required="true" @input="$emit('input', $event)"/>
         <div v-else class="h2">{{ label }}</div>
 
         <slot name="title-extra"></slot>
@@ -30,11 +30,8 @@
             id: String,
             type: String,
             label: String,
+            value: String,
             hasError: {
-                type: Boolean,
-                default: false,
-            },
-            editableLabel: {
                 type: Boolean,
                 default: false,
             },

@@ -1,5 +1,6 @@
 <template>
-  <div class="bg-white border p-3" v-bind:class="{'mt-4': !isFirst && !smallSpacing, 'mt-2': !isFirst && smallSpacing}">
+  <div class="bg-white border p-3"
+       v-bind:class="{'mt-4': !isFirst && !smallSpacing, 'mt-2': !isFirst && smallSpacing, 'is-invalid': hasError}">
     <div v-if="hasColumns || hasCollapse || label || hasInfo || addButton"
          class="row align-items-center justify-content-between">
       <div v-if="hasCollapse" class="col-auto">
@@ -38,6 +39,10 @@
             type: String,
             label: String,
             addButton: String,
+            hasError: {
+                type: Boolean,
+                default: false
+            },
             hasCollapse: {
                 type: Boolean,
                 default: false

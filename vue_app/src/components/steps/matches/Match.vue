@@ -1,6 +1,5 @@
 <template>
-  <card :id="'match_' + match.id" type="matches" :label="match.label"
-        :hasError="errors.length > 0" :editableLabel="true" :fillLabel="false">
+  <card :id="'match_' + match.id" type="matches" v-model="match.label" :hasError="errors.length > 0" :fillLabel="false">
     <template v-slot:title-extra>
       <div class="form-row">
         <div class="col form-check mb-1 pl-0">
@@ -55,6 +54,7 @@
 
     <fieldset :disabled="!!jobResults">
       <sub-card label="Sources" :has-info="true" add-button="Add a Collection as a Source"
+                :hasError="errors.includes('sources') || errors.includes('sources_select')"
                 @add="addMatchResource('sources', $event)">
         <template v-slot:info>
           <match-sources-info/>
@@ -84,6 +84,7 @@
       </sub-card>
 
       <sub-card label="Targets" :has-info="true" add-button="Add a Collection as a Target"
+                :hasError="errors.includes('targets') || errors.includes('targets_select')"
                 @add="addMatchResource('targets', $event)">
         <template v-slot:info>
           <match-targets-info/>
@@ -112,9 +113,7 @@
         </div>
       </sub-card>
 
-      <sub-card label="Matching Methods" :has-info="true"
-                :add-button="match.conditions.length === 0 ? 'Add a Matching Method' : ''"
-                @add="addMatchCondition(match)">
+      <sub-card label="Matching Methods" :has-info="true" :hasError="errors.includes('matching-methods')">
         <template v-slot:info>
           <match-matching-methods-info/>
         </template>
@@ -190,6 +189,7 @@
                 let matchingMethodGroupValid = true;
                 if (this.$refs.matchingMethodGroupComponent)
                     matchingMethodGroupValid = this.$refs.matchingMethodGroupComponent.validateConditionsGroup();
+                matchingMethodGroupValid = this.validateField('matching-methods', matchingMethodGroupValid);
 
                 return sourcesValid && targetsValid
                     && sourcesSelectValid && targetsSelectValid && matchingMethodGroupValid;
