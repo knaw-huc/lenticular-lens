@@ -4,6 +4,8 @@ export default {
     data() {
         return {
             job: null,
+            alignments: [],
+            clusterings: [],
             resources: [],
             matches: [],
             datasets: null,
@@ -116,22 +118,6 @@ export default {
             return this.createReferencesForProperty(newProperty, resources);
         },
 
-        async loadJobData(jobId) {
-            const jobData = await callApi('/job/' + jobId);
-            this.job = jobData;
-
-            if (this.job.resources_form_data)
-                this.resources = copy(this.job.resources_form_data);
-
-            if (this.job.mappings_form_data)
-                this.matches = copy(this.job.mappings_form_data);
-        },
-
-        async createJob(inputs) {
-            const data = await callApi("/job/create/", inputs);
-            return data.job_id;
-        },
-
         async submit() {
             const resources = copy(this.resources);
             const matches = copy(this.matches);
@@ -199,6 +185,31 @@ export default {
             });
         },
 
+        async loadJob(jobId) {
+            this.job = await callApi('/job/' + jobId);
+
+            if (this.job.resources_form_data)
+                this.resources = copy(this.job.resources_form_data);
+
+            if (this.job.mappings_form_data)
+                this.matches = copy(this.job.mappings_form_data);
+
+            await Promise.all([this.loadAlignments(), this.loadClusterings()]);
+        },
+
+        async loadAlignments() {
+            this.alignments = await callApi(`/job/${this.job.job_id}/alignments`);
+        },
+
+        async loadClusterings() {
+            this.clusterings = await callApi(`/job/${this.job.job_id}/clusterings`);
+        },
+
+        async createJob(inputs) {
+            const data = await callApi("/job/create/", inputs);
+            return data.job_id;
+        },
+
         async updateJob(jobData) {
             await callApi("/job/update/", jobData);
         },
@@ -212,7 +223,7 @@ export default {
             return callApiCsv(`/job/${this.job.job_id}/alignment/${matchId}`);
         },
 
-        async loadPropertiesForAlignment(matchId, targets) {
+        async getPropertiesForAlignment(matchId, targets) {
             return callApi(`/job/${this.job.job_id}/alignment/${matchId}/properties`, {targets});
         },
 
@@ -230,6 +241,14 @@ export default {
             return callApi(`/job/${this.job.job_id}/cluster/${clusteringId}/${clusterId}/graph`, graphData);
         },
 
+        async getAssociationFiles() {
+            return callApi("/association_files");
+        },
+
+        async getProperties(resources, targets) {
+            return callApi('/properties', {resources, targets});
+        },
+
         async loadDatasets() {
             if (this.datasets)
                 return;
@@ -237,31 +256,28 @@ export default {
             const datasets = await callApi("/datasets");
 
             // Make internal references for referenced collections
-            Object.keys(datasets).forEach(dataset_name => {
-                let dataset = datasets[dataset_name];
-                Object.keys(dataset.collections).forEach(collection_name => {
-                    let collection = dataset.collections[collection_name];
-                    Object.keys(collection).forEach(property_name => {
-                        let property = collection[property_name];
-                        if (typeof property['referencedCollections'] !== 'undefined') {
-                            let referenced_collections = property['referencedCollections'];
-                            property['referencedCollections'] = {};
-                            referenced_collections = referenced_collections.filter(ref_collection_name => {
-                                return ref_collection_name !== 'tim_unknown'
-                            });
-                            referenced_collections.forEach(ref_collection_name => {
-                                property['referencedCollections'][ref_collection_name] = dataset.collections[ref_collection_name];
-                            });
+            Object.keys(datasets).forEach(datasetName => {
+                const dataset = datasets[datasetName];
+
+                Object.keys(dataset.collections).forEach(collectionName => {
+                    const collection = dataset.collections[collectionName];
+
+                    Object.keys(collection).forEach(propertyName => {
+                        const property = collection[propertyName];
+
+                        if (property.hasOwnProperty('referencedCollections')) {
+                            const referencedCollections = property.referencedCollections;
+                            property.referencedCollections = {};
+
+                            referencedCollections
+                                .filter(name => name !== 'tim_unknown')
+                                .forEach(name => property.referencedCollections[name] = dataset.collections[name]);
                         }
                     });
                 });
             });
 
             this.datasets = datasets;
-        },
-
-        async loadProperties(resources, targets) {
-            return callApi('/properties', {resources, targets});
         },
     },
 };

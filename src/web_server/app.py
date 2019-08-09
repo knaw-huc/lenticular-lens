@@ -12,7 +12,8 @@ from flask import Flask, jsonify, send_file, request, abort, make_response
 
 from common.config_db import db_conn, run_query
 from common.datasets_config import DatasetsConfig
-from common.helpers import get_job_data, hasher, update_job_data
+from common.helpers import get_job_data, get_job_alignments, get_job_clusterings, \
+    get_association_files, hasher, update_job_data
 from common.ll.Generic.Utility import pickle_deserializer
 from common.ll.Clustering.IlnVisualisation import plot, plot_compact, plot_reconciliation
 
@@ -33,6 +34,11 @@ def index():
 @app.route('/datasets')
 def datasets():
     return jsonify(DatasetsConfig().data)
+
+
+@app.route('/association_files')
+def association_files():
+    return jsonify(get_association_files())
 
 
 @app.route('/job/create/', methods=['POST'])
@@ -73,6 +79,22 @@ def job_data(job_id):
     job_data = get_job_data(job_id)
     if job_data:
         return jsonify(job_data)
+    return abort(404)
+
+
+@app.route('/job/<job_id>/alignments')
+def job_alignments(job_id):
+    job_alignments = get_job_alignments(job_id)
+    if job_alignments:
+        return jsonify(job_alignments)
+    return abort(404)
+
+
+@app.route('/job/<job_id>/clusterings')
+def job_clusterings(job_id):
+    job_clusterings = get_job_clusterings(job_id)
+    if job_clusterings:
+        return jsonify(job_clusterings)
     return abort(404)
 
 
@@ -171,7 +193,6 @@ def create_clustering(job_id):
 
 @app.route('/job/<job_id>/clusters/<clustering_id>')
 def clusters(job_id, clustering_id):
-    clusters = {}
     clusters_data = pickle_deserializer(CLUSTER_SERIALISATION_DIR, f'{clustering_id}-1.txt.gz')
 
     if request.args.get('association'):
@@ -199,11 +220,8 @@ def clusters(job_id, clustering_id):
         else:
             cluster_data['reconciled'] = 'no'
             cluster_data['extended'] = 'yes' if extended_data and cluster_id in extended_data else 'no'
-        clusters[cluster_id] = cluster_data
-        if i == 20:
-            break
 
-    return jsonify(clusters)
+    return jsonify(clusters_data)
 
 
 @app.route('/job/<job_id>/cluster/<clustering_id>/<cluster_id>/graph', methods=['POST'])

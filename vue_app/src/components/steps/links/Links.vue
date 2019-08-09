@@ -81,7 +81,7 @@
                 const targets = this.$root.getTargetsForMatch(this.match.id);
 
                 this.links = await this.$root.getAlignment(this.match.id);
-                this.properties = await this.$root.loadPropertiesForAlignment(this.match.id, targets);
+                this.properties = await this.$root.getPropertiesForAlignment(this.match.id, targets);
 
                 this.showData = true;
             },

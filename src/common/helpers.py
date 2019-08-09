@@ -94,7 +94,7 @@ def get_unnested_list(nest):
     return unnested
 
 
-def get_job_data(job_id, include_results=True):
+def get_job_data(job_id):
     n = 0
     while True:
         try:
@@ -109,31 +109,37 @@ def get_job_data(job_id, include_results=True):
             print('Database error. Retry %i' % n)
             time.sleep((2 ** n) + (random.randint(0, 1000) / 1000))
 
-    if job_data and include_results:
-        job_data['results'] = {}
-        n = 0
-        while True:
-            try:
-                with conn:
-                    with conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) as cur:
-                        cur.execute('SELECT * FROM clusterings WHERE job_id = %s', (job_id,))
-                        job_data['results']['clusterings'] = cur.fetchall()
-                break
-            except (psycopg2.InterfaceError, psycopg2.OperationalError):
-                n += 1
-                print('Database error. Retry %i' % n)
-                time.sleep((2 ** n) + (random.randint(0, 1000) / 1000))
-
-    #     Add alignment data
-        alignments = execute_query({'query': "SELECT * FROM alignment_jobs WHERE job_id = %s", 'parameters': (job_id,)}, {'cursor_factory': psycopg2_extras.RealDictCursor})
-        job_data['results']['alignments'] = {alignment['alignment']: alignment for alignment in alignments}
-
-    #     Add association files
-        job_data['association_files'] = [
-            f for f in listdir(CSV_ASSOCIATIONS_DIR) if isfile(join(CSV_ASSOCIATIONS_DIR, f)) and f.endswith(('.csv', '.csv.gz'))
-        ]
-
     return job_data
+
+
+def get_job_alignments(job_id):
+    return execute_query({
+        'query': "SELECT * FROM alignment_jobs WHERE job_id = %s",
+        'parameters': (job_id,)
+    }, {'cursor_factory': psycopg2_extras.RealDictCursor})
+
+
+def get_job_clusterings(job_id):
+    n = 0
+    while True:
+        try:
+            conn = db_conn()
+            with conn:
+                with conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) as cur:
+                    cur.execute('SELECT * FROM clusterings WHERE job_id = %s', (job_id,))
+                    clusterings = cur.fetchall()
+            break
+        except (psycopg2.InterfaceError, psycopg2.OperationalError):
+            n += 1
+            print('Database error. Retry %i' % n)
+            time.sleep((2 ** n) + (random.randint(0, 1000) / 1000))
+
+    return clusterings
+
+
+def get_association_files():
+    return [f for f in listdir(CSV_ASSOCIATIONS_DIR)
+            if isfile(join(CSV_ASSOCIATIONS_DIR, f)) and f.endswith(('.csv', '.csv.gz'))]
 
 
 def update_alignment_job(job_id, alignment, job_data):
@@ -142,10 +148,11 @@ def update_alignment_job(job_id, alignment, job_data):
         try:
             with db_conn() as conn:
                 with conn.cursor() as cur:
-                    cur.execute(psycopg2_sql.SQL("UPDATE alignment_jobs SET ({}) = ROW %s WHERE job_id = %s AND alignment = %s")
+                    cur.execute(
+                        psycopg2_sql.SQL("UPDATE alignment_jobs SET ({}) = ROW %s WHERE job_id = %s AND alignment = %s")
                             .format(
                             psycopg2_sql.SQL(', '.join(job_data.keys()))),
-                            (tuple(job_data.values()), job_id, alignment))
+                        (tuple(job_data.values()), job_id, alignment))
 
         except (psycopg2.InterfaceError, psycopg2.OperationalError):
             n += 1
@@ -214,7 +221,8 @@ class PropertyField:
             if 'transformers' in self.__data:
                 white_list = get_json_from_file("transformers.json")
 
-                self.__transformers = [transformer for transformer in self.__data['transformers'] if transformer in white_list]
+                self.__transformers = [transformer for transformer in self.__data['transformers'] if
+                                       transformer in white_list]
                 for transformer in self.__data['transformers']:
                     if transformer not in white_list:
                         raise self.TransformerUnknown('Transformer "%s" is not whitelisted.' % transformer)
@@ -225,7 +233,7 @@ class PropertyField:
 
     def sql(self, is_list):
         if 'property' in self.__data:
-            sql = get_extended_property_sql(get_absolute_property(self.__data['property']))\
+            sql = get_extended_property_sql(get_absolute_property(self.__data['property'])) \
                 if is_list else get_property_sql(get_absolute_property(self.__data['property']))
         elif isinstance(self.__data['value'], collections.Mapping):
             sql_function = SqlFunction(self.__data['value'])
@@ -250,11 +258,11 @@ class SqlFunction:
             self.function_name = function_name
             self.parameters = {}
             if isinstance(parameters, list):
-                self.parameters['list_values'] = psycopg2_sql.SQL(', ')\
+                self.parameters['list_values'] = psycopg2_sql.SQL(', ') \
                     .join([self.get_value_sql(parameter) for parameter in parameters])
             elif isinstance(parameters, collections.Mapping):
                 if is_property_object(parameters):
-                    self.parameters['parameter'] =\
+                    self.parameters['parameter'] = \
                         get_property_sql(get_absolute_property(parameters['property'], self.parent_label))
                 else:
                     for key, value in parameters.items():

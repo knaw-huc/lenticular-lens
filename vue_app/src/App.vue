@@ -69,7 +69,7 @@
       <tab-content title="Link Validation">
         <tab-content-structure title="Link Validation" :tab_error="tab_error" :is_saved="is_saved">
           <links
-              v-if="$root.job.results.alignments[match.id]"
+              v-if="$root.alignments[match.id]"
               v-for="match in $root.matches"
               :match="match"
               :key="match.id"
@@ -81,6 +81,7 @@
       <tab-content title="Clusters">
         <tab-content-structure title="Clusters" :tab_error="tab_error" :is_saved="is_saved">
           <cluster
+              v-if="$root.alignments[match.id]"
               v-for="match in $root.matches"
               :match="match"
               :key="match.id"
@@ -166,7 +167,6 @@
                 job_description: '',
                 is_saved: true,
                 is_updating: false,
-                planned_refresh_job_data: false,
                 steps: [
                     'idea',
                     'collections',
@@ -292,10 +292,8 @@
             },
 
             async getJobData() {
-                this.planned_refresh_job_data = false;
-
                 if (this.job_id !== '') {
-                    await this.$root.loadJobData(this.job_id);
+                    await this.$root.loadJob(this.job_id);
 
                     if (this.$root.job) {
                         this.job_title = this.$root.job.job_title;
@@ -311,26 +309,29 @@
                         else
                             this.activateStep('alignments');
 
-                        let hasFinished = false;
-                        let hasUnfinished = false;
-                        Object.keys(this.$root.job.results.alignments).forEach(alignment_key => {
-                            let alignment = this.$root.job.results.alignments[alignment_key];
-
-                            if (alignment.status === 'Finished')
-                                hasFinished = true;
-                            else if (!alignment.status.startsWith('FAILED'))
-                                hasUnfinished = true;
-                        });
-
-                        if (hasFinished)
-                            this.activateStep('clusters');
-
-                        if (hasUnfinished && !this.planned_refresh_job_data) {
-                            this.planned_refresh_job_data = true;
-                            setTimeout(this.getJobData, 5000);
-                        }
+                        this.refreshAlignments();
                     }
                 }
+            },
+
+            refreshAlignments() {
+                let hasFinished = false;
+                let hasUnfinished = false;
+
+                Object.keys(this.$root.alignments).forEach(alignmentKey => {
+                    const alignment = this.$root.alignments[alignmentKey];
+
+                    if (alignment.status === 'Finished')
+                        hasFinished = true;
+                    else if (!alignment.status.startsWith('FAILED'))
+                        hasUnfinished = true;
+                });
+
+                if (hasFinished)
+                    this.activateStep('clusters');
+
+                if (hasUnfinished)
+                    setTimeout(() => this.$root.loadAlignments().then(() => this.refreshAlignments()), 5000);
             },
         },
         async mounted() {

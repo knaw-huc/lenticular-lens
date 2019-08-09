@@ -41,7 +41,7 @@
         <b-button variant="info" @click="$emit('duplicate', match)">Duplicate</b-button>
       </div>
 
-      <div class="col-auto">
+      <div class="col-auto" v-if="!jobResults || jobResults.status === 'Finished'">
         <b-button variant="info" @click="runAlignment">
           Run
           <template v-if="jobResults">again</template>
@@ -168,7 +168,7 @@
         },
         computed: {
             jobResults() {
-                return this.$root.job.results.alignments[this.match.id];
+                return this.$root.alignments[this.match.id];
             },
         },
         methods: {

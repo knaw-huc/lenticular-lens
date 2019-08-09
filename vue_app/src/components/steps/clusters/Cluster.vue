@@ -16,17 +16,18 @@
         </button>
       </div>
 
-      <div v-if="getResultForMatch(match.id).clusterings.length > 0" class="col-auto">
+      <div v-if="clustering" class="col-auto">
         <div class="h3 text-success">Clustered</div>
       </div>
 
       <div class="col-auto">
-        <button v-if="getResultForMatch(match.id).clusterings.length > 0" type="button" class="btn btn-info"
-                @click="createClustering(match.id, $event)" :disabled="association === ''"
+        <button v-if="clustering" type="button" class="btn btn-info"
+                @click="createClustering($event)" :disabled="association === ''"
                 :title="association === '' ? 'Choose an association first' : ''">Reconcile
         </button>
-        <button v-if="getResultForMatch(match.id).clusterings.length === 0" type="button" class="btn btn-info"
-                @click="createClustering(match.id, $event)">Cluster
+
+        <button v-if="!clustering" type="button" class="btn btn-info"
+                @click="createClustering($event)">Cluster
           <template v-if="association !== ''"> &amp; Reconcile</template>
         </button>
       </div>
@@ -50,7 +51,7 @@
         <properties :properties="match.properties"/>
       </b-collapse>
 
-      <sub-card v-if="getResultForMatch(match.id).clusterings.length > 0">
+      <sub-card v-if="clustering">
         <div class="row">
           <div class="col-5">
             <div class="row">
@@ -58,7 +59,7 @@
                 Clusters:
               </div>
               <div class="col-6">
-                {{ getResultForMatch(match.id).clusterings[0].clusters_count }}
+                {{ clustering.clusters_count }}
               </div>
             </div>
             <div class="row">
@@ -66,7 +67,7 @@
                 Extended Clusters:
               </div>
               <div class="col-6">
-                {{ getResultForMatch(match.id).clusterings[0].extended_count }}
+                {{ clustering.extended_count }}
               </div>
             </div>
             <div class="row">
@@ -74,7 +75,7 @@
                 Clusters with Cycles:
               </div>
               <div class="col-6">
-                {{ getResultForMatch(match.id).clusterings[0].cycles_count }}
+                {{ clustering.cycles_count }}
               </div>
             </div>
           </div>
@@ -85,8 +86,7 @@
                 Clusters not Extended:
               </div>
               <div class="col-6">
-                {{ getResultForMatch(match.id).clusterings[0].clusters_count -
-                getResultForMatch(match.id).clusterings[0].extended_count }}
+                {{ clustering.clusters_count - clustering.extended_count }}
               </div>
             </div>
             <div class="row">
@@ -94,8 +94,7 @@
                 Clusters without Cycles:
               </div>
               <div class="col-6">
-                {{ getResultForMatch(match.id).clusterings[0].clusters_count -
-                getResultForMatch(match.id).clusterings[0].cycles_count }}
+                {{ clustering.clusters_count - clustering.cycles_count }}
               </div>
             </div>
           </div>
@@ -118,7 +117,7 @@
         :size="150"
         :remain="5"
         :item="item"
-        :itemcount="getResultForMatch(match.id).clusterings[0].clusters_count"
+        :itemcount="clustering.clusters_count"
         :itemprops="getItemProps"/>
 
     <cluster-visualization
@@ -163,6 +162,7 @@
                 properties: Object,
                 item: Clustering,
                 showData: false,
+                associationFiles: [],
             }
         },
         props: {
@@ -177,8 +177,8 @@
                 return !this.match.properties.map(res => res[1] !== '').includes(false);
             },
 
-            associationFiles() {
-                return this.$root.job.association_files;
+            clustering() {
+                return this.$root.clusterings.find(clustering => clustering.alignment === this.match.id);
             },
 
             resources() {
@@ -195,47 +195,31 @@
             },
         },
         methods: {
-            async getClusters() {
-                const results = this.getResultForMatch(this.match.id);
-                if (results.clusterings.length > 0) {
-                    this.clusteringId = results.clusterings[0].clustering_id;
-                    const targets = this.$root.getTargetsForMatch(this.match.id);
-
-                    this.clusters = await this.$root.getClusters(this.clusteringId, this.association);
-                    this.properties = await this.$root.loadProperties(this.resources, targets);
-
-                    this.showData = true;
-                }
-            },
-
-            getResultForMatch(match_id) {
-                let clusterings = [];
-
-                if (this.$root.job) {
-                    this.$root.job.results.clusterings.forEach(clustering => {
-                        if (clustering.alignment === match_id)
-                            clusterings.push(clustering);
-                    });
-                }
-
-                return {'clusterings': clusterings};
-            },
-
-            async createClustering(mapping_id, event) {
+            async createClustering(event) {
                 if (event) {
                     let btn = event.target;
                     btn.setAttribute('disabled', 'disabled');
                 }
 
-                const clustered = this.getResultForMatch(mapping_id).clusterings.length > 0;
-                const associationFile = clustered ? this.association : '';
+                const associationFile = this.clustering ? this.association : '';
+                await this.$root.createClustering(this.match.id, associationFile, this.clustering);
 
-                await this.$root.createClustering(mapping_id, associationFile, clustered);
-
-                if (!clustered && this.association)
-                    this.createClustering(mapping_id);
+                if (!this.clustering && this.association)
+                    this.createClustering(this.match.id);
                 else
                     this.$emit('reload');
+            },
+
+            async getClusters() {
+                if (this.clustering) {
+                    this.clusteringId = this.clustering.clustering_id;
+                    const targets = this.$root.getTargetsForMatch(this.match.id);
+
+                    this.clusters = await this.$root.getClusters(this.clusteringId, this.association);
+                    this.properties = await this.$root.getProperties(this.resources, targets);
+
+                    this.showData = true;
+                }
             },
 
             getItemProps(idx) {
@@ -254,5 +238,8 @@
                 };
             },
         },
+        async mounted() {
+            this.associationFiles = await this.$root.getAssociationFiles();
+        }
     };
 </script>

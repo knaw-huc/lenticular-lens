@@ -247,7 +247,7 @@
             },
 
             isUsedInAlignmentResults() {
-                const alignmentsInResults = Object.keys(this.$root.job.results.alignments);
+                const alignmentsInResults = Object.keys(this.$root.alignments);
 
                 for (let i = 0; i < this.$root.matches.length; i++) {
                     const match = this.$root.matches[i];
