@@ -1,6 +1,8 @@
 <template>
-  <div class="border p-4 mt-4 bg-light" v-bind:class="{'is-invalid': hasError}">
-    <div class="row flex-nowrap align-items-center justify-content-between">
+  <div class="border px-4 pt-2 mt-4 bg-light"
+       v-bind:class="[{'is-invalid': hasError}, showContent ? 'pb-4' : 'pb-2']">
+    <div class="row flex-nowrap align-items-center justify-content-between sticky-top py-2 bg-light"
+         v-bind:class="showContent ? 'border-bottom' : {}">
       <div class="col-auto">
         <octicon name="chevron-down" scale="3" v-b-toggle="id"></octicon>
       </div>
@@ -17,7 +19,8 @@
 
     <slot name="header"></slot>
 
-    <b-collapse :id="id" :ref="id" :accordion="type + '-accordion'" @show="$emit('show')" @hide="$emit('hide')">
+    <b-collapse :id="id" :ref="id" :accordion="type + '-accordion'" v-model="showContent"
+                @show="$emit('show')" @hide="$emit('hide')">
       <slot></slot>
     </b-collapse>
   </div>
@@ -39,6 +42,11 @@
                 type: Boolean,
                 default: true,
             },
+        },
+        data() {
+            return {
+                showContent: false
+            };
         },
     };
 </script>
