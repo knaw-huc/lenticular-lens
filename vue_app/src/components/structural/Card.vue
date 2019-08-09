@@ -1,6 +1,5 @@
 <template>
-  <div class="border px-4 pt-2 mt-4 bg-light"
-       v-bind:class="[{'is-invalid': hasError}, showContent ? 'pb-4' : 'pb-2']">
+  <div class="border p-4 mt-4 bg-light" v-bind:class="{'is-invalid': hasError}">
     <div class="row flex-nowrap align-items-center justify-content-between sticky-top py-2 bg-light"
          v-bind:class="showContent ? 'border-bottom' : {}">
       <div class="col-auto">
