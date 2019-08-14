@@ -1,37 +1,55 @@
 <template>
-  <sub-card>
-    <div class="row ml-4" v-for="(property, idx) in properties" v-bind:class="{'mt-3': idx === 0}">
-      <property
-          v-if="property[0]"
-          :property="property"
-          :singular="true"
-          :singular-resource-info="true"
-          :follow-referenced-collection="false"
-          @resetProperty="resetProperty(idx, property, $event)"/>
+  <div>
+    <div class="row m-0" v-for="propInfo in propsByResource">
+      <div class="col-auto">
+        <div class="row mb-1">
+          <div class="col-auto btn btn-sm border border-info bg-white rounded-pill py-0 my-1">
+            {{ propInfo.title }}
+          </div>
+
+          <div class="col-auto btn btn-sm border border-info bg-white rounded-pill py-0 my-1 mx-2">
+            {{ propInfo.collectionId }}
+          </div>
+        </div>
+
+        <div class="row">
+          <div v-for="propAndValues in propInfo.propAndValues" class="col-auto ml-4">
+            <property :property="propAndValues.property" :small="true" :read-only="true" :resource-info="false">
+              <div v-for="value in propAndValues.values"
+                   class="col-auto btn btn-sm border border-info bg-white text-info rounded-pill mx-2 py-0">
+                {{ value }}
+              </div>
+            </property>
+          </div>
+        </div>
+      </div>
     </div>
-  </sub-card>
+  </div>
 </template>
 
 <script>
-    import SubCard from "../structural/SubCard";
-
     export default {
         name: "Properties",
-        components: {
-            SubCard,
-        },
         props: {
             properties: Array,
         },
-        methods: {
-            resetProperty(idx, property, propertyIndex) {
-                const newProperty = property.slice(0, propertyIndex);
-                newProperty.push('');
+        computed: {
+            propsByResource() {
+                return this.properties.reduce((acc, propAndValues) => {
+                    if (!acc.hasOwnProperty(propAndValues.property[0])) {
+                        const resource = this.$root.getResourceById(propAndValues.property[0]);
+                        const collection = this.$root.datasets[resource.dataset_id];
 
-                if (newProperty.length % 2 > 0)
-                    newProperty.push('');
+                        acc[propAndValues.property[0]] = {
+                            collectionId: resource.collection_id,
+                            title: collection.title,
+                            propAndValues: [],
+                        };
+                    }
 
-                this.$set(this.properties, idx, newProperty);
+                    acc[propAndValues.property[0]].propAndValues.push(propAndValues);
+                    return acc;
+                }, {});
             },
         },
     }

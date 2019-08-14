@@ -1,6 +1,6 @@
 <template>
   <card :id="'clusters_match_' + match.id" type="clusters-matches" :label="match.label" :fill-label="false"
-        @show="getClusters" @hide="showData = false">
+        @show="getLinksOrClusters()" @hide="showData = false">
     <template v-slot:columns>
       <div class="col-auto">
         <button type="button" class="btn btn-info btn-sm" v-b-toggle="'matches_info_' + match.id">
@@ -42,27 +42,51 @@
       </div>
     </template>
 
+    <template v-slot:header-sticky v-if="selectedCluster">
+      <div class="bg-white border px-3 py-1 mt-2 mb-2">
+        <div class="row font-weight-bold">
+          <div class="col">Id</div>
+          <div class="col">Extended</div>
+          <div class="col">Reconciled</div>
+          <div class="col">Size</div>
+          <div class="col">Links</div>
+          <div class="col-4">Property</div>
+        </div>
+      </div>
+
+      <clustering :cluster-id="clusterIdSelected" :cluster-data="selectedCluster" :properties="properties"/>
+    </template>
+
     <template v-slot:header>
-      <b-collapse :id="'matches_info_' + match.id" accordion="matches-info-accordion">
+      <b-collapse :id="'matches_info_' + match.id" accordion="cluster-toggle-accordion">
         <match-info :match="match"/>
       </b-collapse>
 
-      <b-collapse :id="'properties_' + match.id" accordion="properties-accordion">
-        <properties :properties="match.properties"/>
+      <b-collapse :id="'properties_' + match.id" accordion="cluster-toggle-accordion">
+        <sub-card>
+          <property
+              v-for="(property, idx) in match.properties"
+              v-if="property[0]"
+              class="mx-0"
+              :property="property"
+              :singular="true"
+              :follow-referenced-collection="false"
+              @resetProperty="resetProperty(idx, property, $event)"/>
+        </sub-card>
       </b-collapse>
 
-      <sub-card v-if="clustering">
+      <sub-card>
         <div class="row">
           <div class="col-5">
             <div class="row">
               <div class="col-6 font-weight-bold">
-                Clusters:
+                Links:
               </div>
               <div class="col-6">
-                {{ clustering.clusters_count }}
+                {{ alignment.links_count }}
               </div>
             </div>
-            <div class="row">
+            <div class="row" v-if="clustering">
               <div class="col-6 font-weight-bold">
                 Extended Clusters:
               </div>
@@ -70,7 +94,7 @@
                 {{ clustering.extended_count }}
               </div>
             </div>
-            <div class="row">
+            <div class="row" v-if="clustering">
               <div class="col-6 font-weight-bold">
                 Clusters with Cycles:
               </div>
@@ -80,7 +104,15 @@
             </div>
           </div>
 
-          <div class="col-5">
+          <div class="col-5" v-if="clustering">
+            <div class="row">
+              <div class="col-6 font-weight-bold">
+                Clusters:
+              </div>
+              <div class="col-6">
+                {{ clustering.clusters_count }}
+              </div>
+            </div>
             <div class="row">
               <div class="col-6 font-weight-bold">
                 Clusters not Extended:
@@ -102,36 +134,69 @@
       </sub-card>
     </template>
 
-    <div class="bg-white border px-3 py-1 mt-4 mb-2">
-      <div class="row font-weight-bold">
-        <div class="col">Extended</div>
-        <div class="col">Reconciled</div>
-        <div class="col">Id</div>
-        <div class="col">Count</div>
-        <div class="col">Size</div>
-      </div>
-    </div>
+    <loading v-if="loading"/>
 
-    <virtual-list
-        v-if="showData && hasProperties"
-        :size="150"
-        :remain="5"
-        :item="item"
-        :itemcount="clustering.clusters_count"
-        :itemprops="getItemProps"/>
+    <template v-else-if="!clustering">
+      <virtual-list
+          v-if="showData"
+          class="mt-4"
+          :size="130"
+          :remain="5"
+          :item="linkItem"
+          :pagemode="true"
+          :itemcount="links.length"
+          :itemprops="getLinkItemProps"/>
+    </template>
 
-    <cluster-visualization
-        v-if="showData && clusterIdSelected && hasProperties"
-        :clustering-id="clusteringId"
-        :cluster-id="clusterIdSelected"
-        :cluster-data="clusters[clusterIdSelected]"
-        :properties="match.properties"
-        :association="association"/>
+    <template v-else>
+      <sub-card label="Clusters" :has-collapse="true" id="clusters-list" type="clusters-list">
+        <div class="bg-white px-3 py-1 mt-4 mb-2">
+          <div class="row font-weight-bold">
+            <div class="col">Id</div>
+            <div class="col">Extended</div>
+            <div class="col">Reconciled</div>
+            <div class="col">Size</div>
+            <div class="col">Links</div>
+            <div class="col-4">Property</div>
+          </div>
+        </div>
+
+        <virtual-list
+            v-if="showData"
+            :size="90"
+            :remain="5"
+            :item="clusterItem"
+            :itemcount="clustering.clusters_count"
+            :itemprops="getClusterItemProps"/>
+      </sub-card>
+
+      <sub-card v-if="showData && clusterIdSelected" label="Links" :has-collapse="true"
+                id="cluster-links" type="cluster-links">
+        <virtual-list
+            class="mt-4"
+            :size="130"
+            :remain="5"
+            :item="linkItem"
+            :pagemode="true"
+            :itemcount="clusterLinks.length"
+            :itemprops="getClusterLinkItemProps"/>
+      </sub-card>
+
+      <cluster-visualization
+          v-if="showData && clusterIdSelected && hasProperties"
+          :clustering-id="clustering.clustering_id"
+          :cluster-id="clusterIdSelected"
+          :cluster-data="clusters[clusterIdSelected]"
+          :properties="match.properties"
+          :association="association"/>
+    </template>
   </card>
 </template>
 
 <script>
     import VirtualList from 'vue-virtual-scroll-list';
+
+    import Loading from "../../misc/Loading";
 
     import Card from "../../structural/Card";
     import SubCard from "../../structural/SubCard";
@@ -139,6 +204,7 @@
     import MatchInfo from "../../helpers/MatchInfo";
     import Properties from "../../helpers/Properties";
 
+    import MatchLink from "./MatchLink";
     import Clustering from "./Clustering";
     import ClusterVisualization from "./ClusterVisualization";
 
@@ -146,22 +212,26 @@
         name: "Cluster",
         components: {
             VirtualList,
+            Loading,
             Card,
             SubCard,
             MatchInfo,
             Properties,
+            MatchLink,
             Clustering,
             ClusterVisualization,
         },
         data() {
             return {
+                loading: false,
+                showData: false,
+                links: [],
+                linkItem: MatchLink,
                 clusters: {},
-                clusteringId: null,
+                clusterItem: Clustering,
                 clusterIdSelected: null,
                 association: '',
-                properties: Object,
-                item: Clustering,
-                showData: false,
+                properties: {},
                 associationFiles: [],
             }
         },
@@ -175,6 +245,10 @@
 
             hasProperties() {
                 return !this.match.properties.map(res => res[1] !== '').includes(false);
+            },
+
+            alignment() {
+                return this.$root.alignments.find(alignment => alignment.alignment === this.match.id);
             },
 
             clustering() {
@@ -193,6 +267,26 @@
 
                 return [...new Set(linkResources.concat(nodeResources))];
             },
+
+            selectedCluster() {
+                if (!this.clusterIdSelected)
+                    return null;
+
+                return this.clusters[this.clusterIdSelected];
+            },
+
+            clusterLinks() {
+                if (!this.selectedCluster)
+                    return [];
+
+                return this.selectedCluster.links.map(link => {
+                    return [
+                        link[0].substring(1, link[0].length - 1),
+                        link[1].substring(1, link[1].length - 1),
+                        '1'
+                    ];
+                });
+            },
         },
         methods: {
             async createClustering(event) {
@@ -210,19 +304,57 @@
                     this.$emit('reload');
             },
 
-            async getClusters() {
+            async getLinksOrClusters() {
+                this.loading = true;
+                this.showData = true;
+
                 if (this.clustering) {
-                    this.clusteringId = this.clustering.clustering_id;
+                    this.links = [];
+                    await this.getClusters();
+                }
+                else {
+                    this.clusters = {};
+                    await this.getLinks();
+                }
+
+                this.loading = false;
+            },
+
+            async getLinks() {
+                this.links = await this.$root.getAlignment(this.match.id);
+
+                if (this.hasProperties) {
                     const targets = this.$root.getTargetsForMatch(this.match.id);
-
-                    this.clusters = await this.$root.getClusters(this.clusteringId, this.association);
-                    this.properties = await this.$root.getProperties(this.resources, targets);
-
-                    this.showData = true;
+                    this.properties = await this.$root.getPropertiesForAlignment(this.match.id, targets);
                 }
             },
 
-            getItemProps(idx) {
+            async getClusters() {
+                if (this.clustering) {
+                    this.clusters = await this.$root.getClusters(this.clustering.clustering_id, this.association);
+
+                    if (this.hasProperties) {
+                        const targets = this.$root.getTargetsForMatch(this.match.id);
+                        this.properties = await this.$root.getProperties(this.resources, targets);
+                    }
+                }
+            },
+
+            getLinkItemProps(idx) {
+                const link = this.links[idx];
+                return {
+                    props: {
+                        source: link[0],
+                        sourceValues: this.properties[link[0]] || [],
+                        target: link[1],
+                        targetValues: this.properties[link[1]] || [],
+                        strength: link[2],
+                        isFirst: (idx === 0),
+                    },
+                };
+            },
+
+            getClusterItemProps(idx) {
                 const clusterId = this.clusterIds[idx];
                 return {
                     props: {
@@ -236,6 +368,30 @@
                         'select:clusterId': clusterId => this.clusterIdSelected = clusterId,
                     }
                 };
+            },
+
+            getClusterLinkItemProps(idx) {
+                const link = this.clusterLinks[idx];
+                return {
+                    props: {
+                        source: link[0],
+                        sourceValues: this.properties[link[0]] || [],
+                        target: link[1],
+                        targetValues: this.properties[link[1]] || [],
+                        strength: link[2],
+                        isFirst: (idx === 0),
+                    },
+                };
+            },
+
+            resetProperty(idx, property, propertyIndex) {
+                const newProperty = property.slice(0, propertyIndex);
+                newProperty.push('');
+
+                if (newProperty.length % 2 > 0)
+                    newProperty.push('');
+
+                this.$set(this.match.properties, idx, newProperty);
             },
         },
         async mounted() {

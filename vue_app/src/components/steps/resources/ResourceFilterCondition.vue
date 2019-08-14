@@ -9,6 +9,7 @@
         <property
             :property="condition.property"
             :singular="true"
+            :resource-info="false"
             @resetProperty="resetProperty(condition.property, $event)"
             ref="propertyComponent"
         />

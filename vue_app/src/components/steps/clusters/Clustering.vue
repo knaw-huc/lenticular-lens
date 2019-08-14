@@ -2,35 +2,28 @@
   <sub-card :small-spacing="true" :is-first="isFirst" v-bind:class="selected ? 'bg-info-light' : {}">
     <div @click="$emit('select:clusterId', clusterId)">
       <div class="row">
-        <div class="col font-weight-bold" v-bind:class="'ext_' + clusterData.extended">
-          {{ clusterData.extended }}
-        </div>
-
-        <div class="col font-weight-bold" v-bind:class="'ext_' + clusterData.reconciled">
-          {{ clusterData.reconciled }}
-        </div>
-
-        <div class="col">
+        <div class="col font-weight-bold">
           {{ clusterId }}
         </div>
 
-        <div class="col">
-          {{ clusterData.index }}
+        <div class="col" v-bind:class="'ext_' + clusterData.extended">
+          {{ clusterData.extended }}
+        </div>
+
+        <div class="col" v-bind:class="'ext_' + clusterData.reconciled">
+          {{ clusterData.reconciled }}
         </div>
 
         <div class="col">
           {{ clusterData.nodes.length }}
         </div>
-      </div>
 
-      <div class="row">
         <div class="col">
-          <property
-              v-for="(prop, idx) in props"
-              :key="idx"
-              :property="prop.property"
-              :values="prop.values"
-              :read-only="true"/>
+          {{ clusterData.links.length }}
+        </div>
+
+        <div class="col-4">
+          <properties :properties="props"/>
         </div>
       </div>
     </div>
@@ -39,11 +32,13 @@
 
 <script>
     import SubCard from '../../structural/SubCard';
+    import Properties from "../../helpers/Properties";
 
     export default {
         name: "Clustering",
         components: {
-            SubCard
+            SubCard,
+            Properties,
         },
         props: {
             clusterId: String,
@@ -65,16 +60,26 @@
             },
 
             props() {
-                return Object.entries(this.properties)
+                const props = Object.entries(this.properties)
                     .filter(([resourceId, _]) => this.resources.includes(resourceId))
-                    .slice(0, 5)
                     .flatMap(([_, value]) => value)
-                    .map(value => {
-                        return {
-                            property: [this.$root.getResourceByDatasetId(value.dataset).id, value.property],
-                            values: value.values,
-                        };
-                    });
+                    .reduce((acc, value) => {
+                        const property = [this.$root.getResourceByDatasetId(value.dataset).id, value.property];
+                        let propAndValues =
+                            acc.find(pv => pv.property[0] === property[0] && pv.property[1] === property[1]);
+
+                        if (!propAndValues) {
+                            propAndValues = {property, values: []};
+                            acc.push(propAndValues);
+                        }
+
+                        propAndValues.values.push(...value.values);
+
+                        return acc;
+                    }, []);
+
+                props.forEach(pv => pv.values = [...new Set(pv.values)]);
+                return props;
             },
         },
     }

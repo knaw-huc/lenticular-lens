@@ -1,8 +1,10 @@
 <template>
   <div class="border shadow p-2">
     <template v-for="collection_properties in condition.sources">
-      <div v-for="resource in collection_properties" class="row m-0">
-        <property :property="resource.property" :read-only="true" :small="true"/>
+      <div v-for="resource in collection_properties" class="row mx-0">
+        <div class="col-auto">
+          <property :property="resource.property" :read-only="true" :small="true"/>
+        </div>
 
         <p class="font-weight-bold m-0" v-if="resource.transformers">
           with transformers {{ resource.transformers.join(', ') }}
@@ -13,8 +15,10 @@
     <p class="font-weight-bold m-0">against</p>
 
     <template v-for="collection_properties in condition.targets">
-      <div v-for="resource in collection_properties" class="row m-0">
-        <property :property="resource.property" :read-only="true" :small="true"/>
+      <div v-for="resource in collection_properties" class="row mx-0">
+        <div class="col-auto">
+          <property :property="resource.property" :read-only="true" :small="true"/>
+        </div>
 
         <p class="font-weight-bold m-0" v-if="resource.transformers">
           with transformers

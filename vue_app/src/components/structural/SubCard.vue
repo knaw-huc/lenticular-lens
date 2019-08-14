@@ -7,7 +7,7 @@
         <octicon name="chevron-down" scale="2" v-b-toggle="id"></octicon>
       </div>
 
-      <div v-if="label" class="col-auto pr-0">
+      <div v-if="label" class="col-auto pr-0" v-bind:class="{'mr-auto': !hasInfo && !addButton}">
         <h3>{{ label }}</h3>
       </div>
 

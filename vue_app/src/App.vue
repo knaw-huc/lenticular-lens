@@ -66,18 +66,6 @@
         </tab-content-structure>
       </tab-content>
 
-      <tab-content title="Link Validation">
-        <tab-content-structure title="Link Validation" :tab_error="tab_error" :is_saved="is_saved">
-          <links
-              v-if="$root.alignments[match.id]"
-              v-for="match in $root.matches"
-              :match="match"
-              :key="match.id"
-              @reload="getJobData"
-          ></links>
-        </tab-content-structure>
-      </tab-content>
-
       <tab-content title="Clusters">
         <tab-content-structure title="Clusters" :tab_error="tab_error" :is_saved="is_saved">
           <cluster
@@ -89,8 +77,6 @@
           ></cluster>
         </tab-content-structure>
       </tab-content>
-
-      <tab-content title="Cluster Validation"></tab-content>
 
       <template v-if="(props.activeTabIndex === 0  && !job_id) || [1,2].includes(props.activeTabIndex)"
                 slot="next" slot-scope="props">
@@ -171,9 +157,7 @@
                     'idea',
                     'collections',
                     'alignments',
-                    'link_validation',
                     'clusters',
-                    'cluster_validation',
                 ],
             }
         },

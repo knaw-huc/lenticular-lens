@@ -1,19 +1,22 @@
 <template>
   <div class="border p-4 mt-4 bg-light" v-bind:class="{'is-invalid': hasError}">
-    <div class="row flex-nowrap align-items-center justify-content-between sticky-top py-2 bg-light"
-         v-bind:class="showContent ? 'border-bottom' : {}">
-      <div class="col-auto">
-        <octicon name="chevron-down" scale="3" v-b-toggle="id"></octicon>
+    <div class="sticky-top bg-light py-2" v-bind:class="showContent ? 'border-bottom' : {}">
+      <div class="row flex-nowrap align-items-center justify-content-between">
+        <div class="col-auto">
+          <octicon name="chevron-down" scale="3" v-b-toggle="id"></octicon>
+        </div>
+
+        <div class="col-auto" v-bind:class="{'flex-fill': fillLabel}" v-b-toggle="id">
+          <edit-label v-if="!label" :value="value" :required="true" @input="$emit('input', $event)"/>
+          <div v-else class="h2">{{ label }}</div>
+
+          <slot name="title-extra"></slot>
+        </div>
+
+        <slot name="columns"></slot>
       </div>
 
-      <div class="col-auto" v-bind:class="{'flex-fill': fillLabel}" v-b-toggle="id">
-        <edit-label v-if="!label" :value="value" :required="true" @input="$emit('input', $event)"/>
-        <div v-else class="h2">{{ label }}</div>
-
-        <slot name="title-extra"></slot>
-      </div>
-
-      <slot name="columns"></slot>
+      <slot name="header-sticky"></slot>
     </div>
 
     <slot name="header"></slot>
