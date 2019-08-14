@@ -18,7 +18,7 @@
       <div class="col-auto ml-auto mr-auto">
         <div class="bg-white border small p-2" v-if="alignment">
           <div class="row align-items-center m-0">
-            <div class="col-auto" v-if="alignment.status !== 'Finished'">
+            <div class="col-auto" v-if="alignmentRunning">
               <loading :small="true"/>
             </div>
             <div class="col-auto">
@@ -47,7 +47,7 @@
         <b-button variant="info" @click="$emit('duplicate', match)">Duplicate</b-button>
       </div>
 
-      <div class="col-auto" v-if="!alignment || alignment.status === 'Finished'">
+      <div class="col-auto" v-if="!alignmentRunning">
         <b-button variant="info" @click="runAlignment">
           Run
           <template v-if="alignment">again</template>
@@ -175,6 +175,12 @@
         computed: {
             alignment() {
                 return this.$root.alignments[this.match.id];
+            },
+
+            alignmentRunning() {
+                return this.alignment &&
+                    this.alignment.status !== 'Finished' &&
+                    !this.alignment.status.startsWith('FAILED');
             },
         },
         methods: {

@@ -18,15 +18,8 @@ locale.setlocale(locale.LC_ALL, '')
 
 
 class LinksetsCollection:
-    def __init__(
-            self,
-            job_id,
-            run_match=None,
-            sql_only=False,
-            resources_only=False,
-            matches_only=False,
-            return_limit=None
-    ):
+    def __init__(self, job_id, run_match=None,
+                 sql_only=False, resources_only=False, matches_only=False, return_limit=None):
         self.sql_only = sql_only
         self.resources_only = resources_only
         self.matches_only = matches_only

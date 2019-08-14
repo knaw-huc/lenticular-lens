@@ -5,7 +5,7 @@
       <div class="col-auto ml-auto mr-auto">
         <div class="bg-white border small p-2">
           <div class="row align-items-center m-0">
-            <div class="col-auto" v-if="clustering && clustering.status !== 'Finished'">
+            <div class="col-auto" v-if="clusteringRunning">
               <loading :small="true"/>
             </div>
 
@@ -95,13 +95,14 @@
             </div>
           </div>
 
-          <button v-if="clustering && clustering.status === 'Finished'" type="button" class="btn btn-info my-1"
+          <button v-if="clustering && !clusteringRunning" type="button" class="btn btn-info my-1"
                   @click="runClustering($event)" :disabled="association === ''"
                   :title="association === '' ? 'Choose an association first' : ''">
             Reconcile
           </button>
 
-          <button v-else-if="!clustering" type="button" class="btn btn-info my-1" @click="runClustering($event)">
+          <button v-else-if="!clustering && !clusteringRunning" type="button" class="btn btn-info my-1"
+                  @click="runClustering($event)">
             Cluster
             <template v-if="association !== ''"> &amp; Reconcile</template>
           </button>
@@ -138,7 +139,7 @@
 
     <loading v-if="loading" class="mt-4"/>
 
-    <template v-else-if="!clustering || clustering.status !== 'Finished'">
+    <template v-else-if="!clustering || clusteringRunning">
       <virtual-list
           v-if="showData"
           class="mt-4"
@@ -252,6 +253,12 @@
 
             clustering() {
                 return this.$root.clusterings.find(clustering => clustering.alignment === this.match.id);
+            },
+
+            clusteringRunning() {
+                return this.clustering &&
+                    this.clustering.status !== 'Finished' &&
+                    !this.clustering.status.startsWith('FAILED');
             },
 
             resources() {

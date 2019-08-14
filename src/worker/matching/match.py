@@ -102,26 +102,31 @@ class Match:
     @property
     def similarity_fields_sql(self):
         fields = []
+        fields_added = []
 
         for matching_function in self.conditions.matching_functions:
             if matching_function.similarity_sql:
-                # Add source and target values
                 field_name = psycopg_sql.Identifier(matching_function.field_name)
-                fields.append(psycopg_sql.SQL('source.{field_name} AS {source_field_name}').format(
-                    field_name=field_name,
-                    source_field_name=psycopg_sql.Identifier(f'source_{matching_function.field_name}'),
-                ))
-                fields.append(psycopg_sql.SQL('target.{field_name} AS {target_field_name}').format(
-                    field_name=field_name,
-                    target_field_name=psycopg_sql.Identifier(f'target_{matching_function.field_name}'),
-                ))
 
-                # Add similarity field
-                fields.append(psycopg_sql.SQL('{field} AS {field_name}')
-                                 .format(
-                                    field=matching_function.similarity_sql.format(field_name=field_name),
-                                    field_name=psycopg_sql.Identifier(matching_function.field_name + '_similarity')
-                ))
+                # Add source and target values; if not done already
+                if field_name not in fields_added:
+                    fields_added.append(field_name)
+
+                    fields.append(psycopg_sql.SQL('source.{field_name} AS {source_field_name}').format(
+                        field_name=field_name,
+                        source_field_name=psycopg_sql.Identifier(f'source_{matching_function.field_name}')
+                    ))
+
+                    fields.append(psycopg_sql.SQL('target.{field_name} AS {target_field_name}').format(
+                        field_name=field_name,
+                        target_field_name=psycopg_sql.Identifier(f'target_{matching_function.field_name}')
+                    ))
+
+                    # Add similarity field
+                    fields.append(psycopg_sql.SQL('{field} AS {field_name}').format(
+                        field=matching_function.similarity_sql.format(field_name=field_name),
+                        field_name=psycopg_sql.Identifier(matching_function.field_name + '_similarity')
+                    ))
 
                 cluster_field = matching_function.similarity_sql.format(field_name=field_name)
 
