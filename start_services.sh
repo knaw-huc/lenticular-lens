@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
-jobs_worker_instances=2
 timbuctoo_worker_instances=5
+alignments_worker_instances=2
+clusterings_worker_instances=2
 
 . .env >/dev/null 2>&1
 
@@ -13,6 +14,7 @@ fi
 
 docker-compose up \
     --build \
-    --scale jobs_worker=${jobs_worker_instances} \
     --scale timbuctoo_worker=${timbuctoo_worker_instances} \
+    --scale alignments_worker=${alignments_worker_instances} \
+    --scale clusterings_worker=${clusterings_worker_instances} \
     "$@"

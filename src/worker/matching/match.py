@@ -1,4 +1,4 @@
-from jobs_worker.conditions import Conditions
+from worker.matching.conditions import Conditions
 from common.helpers import hash_string
 from psycopg2 import sql as psycopg_sql
 

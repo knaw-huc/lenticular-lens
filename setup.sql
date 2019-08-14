@@ -15,17 +15,6 @@ CREATE TABLE IF NOT EXISTS reconciliation_jobs (
   UNIQUE (job_title, job_description)
 );
 
-CREATE TABLE IF NOT EXISTS alignment_jobs (
-    job_id text not null,
-    alignment int not null,
-    status text,
-    requested_at timestamp,
-    processing_at timestamp,
-    finished_at timestamp,
-    links_count bigint,
-    PRIMARY KEY (job_id, alignment)
-);
-
 CREATE TABLE IF NOT EXISTS timbuctoo_tables (
   table_name text primary key,
   dataset_id text not null,
@@ -40,14 +29,31 @@ CREATE TABLE IF NOT EXISTS timbuctoo_tables (
   UNIQUE (dataset_id, collection_id)
 );
 
-CREATE TABLE IF NOT EXISTS clusterings (
-  clustering_id text unique not null,
+CREATE TABLE IF NOT EXISTS alignments (
   job_id text not null,
   alignment int not null,
+  status text,
+  requested_at timestamp,
+  processing_at timestamp,
+  finished_at timestamp,
+  links_count bigint,
+  PRIMARY KEY (job_id, alignment)
+);
+
+CREATE TABLE IF NOT EXISTS clusterings (
+  job_id text not null,
+  alignment int not null,
+  clustering_id text unique null,
   clustering_type text not null,
+  association_file text null,
+  status text,
+  requested_at timestamp,
+  processing_at timestamp,
+  finished_at timestamp,
   clusters_count bigint,
   extended_count int,
-  cycles_count int
+  cycles_count int,
+  PRIMARY KEY (job_id, alignment)
 );
 
 CREATE OR REPLACE FUNCTION public.ecartico_full_name(text) RETURNS text IMMUTABLE AS $$

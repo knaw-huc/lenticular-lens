@@ -10,14 +10,14 @@ from psycopg2 import sql as psycopg2_sql
 
 from flask import Flask, jsonify, send_file, request, abort, make_response
 
-from common.config_db import db_conn, run_query
+from common.config_db import run_query
 from common.datasets_config import DatasetsConfig
 from common.helpers import get_job_data, get_job_alignments, get_job_clusterings, \
     get_association_files, hasher, update_job_data
 from common.ll.Generic.Utility import pickle_deserializer
 from common.ll.Clustering.IlnVisualisation import plot, plot_compact, plot_reconciliation
 
-from web_server.clustering import cluster_csv, get_cluster_data, hash_string, cluster_reconciliation_csv
+from web_server.clustering import get_cluster_data, hash_string
 
 from common.ll.LLData.CSV_Alignments import CSV_ALIGNMENTS_DIR
 from common.ll.LLData.Serialisation import CLUSTER_SERIALISATION_DIR
@@ -87,7 +87,7 @@ def job_alignments(job_id):
     job_alignments = get_job_alignments(job_id)
     if job_alignments:
         return jsonify(job_alignments)
-    return abort(404)
+    return jsonify([])
 
 
 @app.route('/job/<job_id>/clusterings')
@@ -95,13 +95,13 @@ def job_clusterings(job_id):
     job_clusterings = get_job_clusterings(job_id)
     if job_clusterings:
         return jsonify(job_clusterings)
-    return abort(404)
+    return jsonify([])
 
 
 @app.route('/job/<job_id>/run_alignment/<alignment>', methods=['POST'])
 def run_alignment(job_id, alignment):
     if 'restart' in request.json and request.json['restart'] is True:
-        query = psycopg2_sql.SQL("DELETE FROM alignment_jobs WHERE job_id = %s AND alignment = %s")
+        query = psycopg2_sql.SQL("DELETE FROM alignments WHERE job_id = %s AND alignment = %s")
         params = (job_id, alignment)
         run_query(query, params)
 
@@ -110,7 +110,7 @@ def run_alignment(job_id, alignment):
 
     try:
         query = psycopg2_sql.SQL(
-            "INSERT INTO alignment_jobs (job_id, alignment, status, requested_at) VALUES (%s, %s, %s, now())")
+            "INSERT INTO alignments (job_id, alignment, status, requested_at) VALUES (%s, %s, %s, now())")
         params = (job_id, alignment, 'Requested')
         run_query(query, params)
     except psycopg2.errors.UniqueViolation:
@@ -145,50 +145,35 @@ def alignment_properties(job_id, alignment):
     return jsonify(get_values_for(resources, targets))
 
 
-@app.route('/job/<job_id>/create_clustering/', methods=['POST'])
-def create_clustering(job_id):
-    filename = f'alignment_{hasher(job_id)}_alignment_{request.json["alignment"]}.csv.gz'
-    csv_filepath = join(CSV_ALIGNMENTS_DIR, filename)
-    if request.json['association_file'] != '':
-        if request.json['clustered']:
-            reconciliation_result = cluster_reconciliation_csv(request.json['association_file'], job_id,
-                                                               request.json['alignment'])
+@app.route('/job/<job_id>/run_clustering/<alignment>', methods=['POST'])
+def run_clustering(job_id, alignment):
+    try:
+        job_clusterings = get_job_clusterings(job_id)
+        clustering = next((cl for cl in job_clusterings if cl['alignment'] == alignment), None)
 
-            with db_conn() as conn, conn.cursor() as cur:
-                cur.execute('''
-                UPDATE clusterings
-                SET extended_count = %s, cycles_count = %s
+        if clustering:
+            query = psycopg2_sql.SQL("""
+                UPDATE clusterings 
+                SET association_file = %s, status = %s, 
+                    requested_at = now(), processing_at = null, finished_at = null
                 WHERE job_id = %s AND alignment = %s
-                ''', (
-                    reconciliation_result['extended_clusters_count'],
-                    reconciliation_result['cycles_count'],
-                    job_id,
-                    request.json['alignment'],
-                ))
+                """)
+            params = (request.json['association_file'], 'Requested', job_id, alignment)
+            run_query(query, params)
 
-            return jsonify(reconciliation_result)
+            return jsonify({'result': 'ok'})
         else:
-            abort(400)
-    else:
-        clustering_result = cluster_csv(csv_filepath, job_id, request.json['alignment'])
+            query = psycopg2_sql.SQL("""
+                INSERT INTO clusterings (job_id, alignment, clustering_type, association_file, status, requested_at) 
+                VALUES (%s, %s, %s, %s, %s, now())
+            """)
+            params = (job_id, alignment, request.json.get('clustering_type', 'default'),
+                      request.json['association_file'], 'Requested')
+            run_query(query, params)
 
-        try:
-            with db_conn() as conn, conn.cursor() as cur:
-                cur.execute('''
-                INSERT INTO clusterings
-                (clustering_id, job_id, alignment, clustering_type, clusters_count)
-                VALUES (%s, %s, %s, %s, %s)
-                ''', (
-                    clustering_result['file_name'],
-                    job_id,
-                    request.json['alignment'],
-                    request.json.get('clustering_type', 'default'),
-                    clustering_result['clusters_count'],
-                ))
-        except psycopg2.IntegrityError:
-            pass
-
-        return jsonify(clustering_result)
+            return jsonify({'result': 'ok'})
+    except psycopg2.errors.UniqueViolation:
+        return jsonify({'result': 'exists'})
 
 
 @app.route('/job/<job_id>/clusters/<clustering_id>')

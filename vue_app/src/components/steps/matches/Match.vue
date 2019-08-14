@@ -5,7 +5,7 @@
         <div class="col form-check mb-1 pl-0">
           <b-form-checkbox
               :id="'match_' + match.id + '_is_association'"
-              :disabled="!!jobResults"
+              :disabled="!!alignment"
               v-model.boolean="match.is_association"
               title="Check this box if this Alignment is intended for creating associations">
             Association
@@ -15,23 +15,30 @@
     </template>
 
     <template v-slot:columns>
-      <div class="col-auto flex-fill">
-        <div v-if="jobResults">
-          <div>
-            <strong>Request received at: </strong>{{ jobResults.requested_at }}
-          </div>
-          <div v-if="jobResults.processing_at">
-            <strong>Processing started at: </strong>{{ jobResults.processing_at }}
-          </div>
-          <div v-if="jobResults.finished_at">
-            <strong>Processing finished at: </strong>{{ jobResults.finished_at }}
-          </div>
-          <div>
-            <strong>Status: </strong>
-            <pre class="d-inline">{{ jobResults.status }}</pre>
-          </div>
-          <div v-if="jobResults.status === 'Finished'">
-            <strong>Links found:</strong> {{ jobResults.links_count || 0 }}
+      <div class="col-auto ml-auto mr-auto">
+        <div class="bg-white border small p-2" v-if="alignment">
+          <div class="row align-items-center m-0">
+            <div class="col-auto" v-if="alignment.status !== 'Finished'">
+              <loading :small="true"/>
+            </div>
+            <div class="col-auto">
+              <div>
+                <strong>Request received at: </strong>{{ alignment.requested_at }}
+              </div>
+              <div v-if="alignment.processing_at">
+                <strong>Processing started at: </strong>{{ alignment.processing_at }}
+              </div>
+              <div v-if="alignment.finished_at">
+                <strong>Processing finished at: </strong>{{ alignment.finished_at }}
+              </div>
+              <div>
+                <strong>Status: </strong>
+                <pre class="d-inline">{{ alignment.status }}</pre>
+              </div>
+              <div v-if="alignment.status === 'Finished'">
+                <strong>Links found:</strong> {{ alignment.links_count || 0 }}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -40,19 +47,19 @@
         <b-button variant="info" @click="$emit('duplicate', match)">Duplicate</b-button>
       </div>
 
-      <div class="col-auto" v-if="!jobResults || jobResults.status === 'Finished'">
+      <div class="col-auto" v-if="!alignment || alignment.status === 'Finished'">
         <b-button variant="info" @click="runAlignment">
           Run
-          <template v-if="jobResults">again</template>
+          <template v-if="alignment">again</template>
         </b-button>
       </div>
 
       <div class="col-auto">
-        <button-delete @click="$emit('remove')" :scale="2" :disabled="!!jobResults" title="Delete this Alignment"/>
+        <button-delete @click="$emit('remove')" :scale="2" :disabled="!!alignment" title="Delete this Alignment"/>
       </div>
     </template>
 
-    <fieldset :disabled="!!jobResults">
+    <fieldset :disabled="!!alignment">
       <sub-card label="Sources" :has-info="true" add-button="Add a Collection as a Source"
                 :hasError="errors.includes('sources') || errors.includes('sources_select')"
                 @add="addMatchResource('sources', $event)">
@@ -166,7 +173,7 @@
             match: Object,
         },
         computed: {
-            jobResults() {
+            alignment() {
                 return this.$root.alignments[this.match.id];
             },
         },
@@ -275,6 +282,8 @@
                 const data = await this.$root.runAlignment(this.match.id, force);
                 if (data.result === 'exists' && confirm('This Alignment job already exists.\nDo you want to overwrite it with the current configuration?'))
                     await this.runAlignment(true);
+
+                this.$emit('refresh');
             },
         },
         mounted() {

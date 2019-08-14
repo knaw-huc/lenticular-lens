@@ -1,6 +1,6 @@
 from common.datasets_config import DatasetsConfig
-from jobs_worker.filter_function import FilterFunction
-from common.helpers import hash_string, PropertyField, get_absolute_property
+from worker.matching.filter_function import FilterFunction
+from common.helpers import hash_string, get_absolute_property
 from psycopg2 import sql as psycopg2_sql
 
 

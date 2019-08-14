@@ -114,7 +114,7 @@ def get_job_data(job_id):
 
 def get_job_alignments(job_id):
     return execute_query({
-        'query': "SELECT * FROM alignment_jobs WHERE job_id = %s",
+        'query': "SELECT * FROM alignments WHERE job_id = %s",
         'parameters': (job_id,)
     }, {'cursor_factory': psycopg2_extras.RealDictCursor})
 
@@ -149,7 +149,27 @@ def update_alignment_job(job_id, alignment, job_data):
             with db_conn() as conn:
                 with conn.cursor() as cur:
                     cur.execute(
-                        psycopg2_sql.SQL("UPDATE alignment_jobs SET ({}) = ROW %s WHERE job_id = %s AND alignment = %s")
+                        psycopg2_sql.SQL("UPDATE alignments SET ({}) = ROW %s WHERE job_id = %s AND alignment = %s")
+                            .format(
+                            psycopg2_sql.SQL(', '.join(job_data.keys()))),
+                        (tuple(job_data.values()), job_id, alignment))
+
+        except (psycopg2.InterfaceError, psycopg2.OperationalError):
+            n += 1
+            print('Database error. Retry %i' % n)
+            time.sleep((2 ** n) + (random.randint(0, 1000) / 1000))
+        else:
+            break
+
+
+def update_clustering_job(job_id, alignment, job_data):
+    n = 0
+    while True:
+        try:
+            with db_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        psycopg2_sql.SQL("UPDATE clusterings SET ({}) = ROW %s WHERE job_id = %s AND alignment = %s")
                             .format(
                             psycopg2_sql.SQL(', '.join(job_data.keys()))),
                         (tuple(job_data.values()), job_id, alignment))

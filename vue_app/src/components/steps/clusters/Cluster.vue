@@ -2,59 +2,119 @@
   <card :id="'clusters_match_' + match.id" type="clusters-matches" :label="match.label" :fill-label="false"
         @show="getLinksOrClusters()" @hide="showData = false">
     <template v-slot:columns>
-      <div class="col-auto">
-        <button type="button" class="btn btn-info btn-sm" v-b-toggle="'matches_info_' + match.id">
-          <octicon name="chevron-down" scale="1" v-b-toggle="'matches_info_' + match.id"></octicon>
-          Show alignment
-        </button>
-      </div>
+      <div class="col-auto ml-auto mr-auto">
+        <div class="bg-white border small p-2">
+          <div class="row align-items-center m-0">
+            <div class="col-auto" v-if="clustering && clustering.status !== 'Finished'">
+              <loading :small="true"/>
+            </div>
 
-      <div class="col-auto mr-auto">
-        <button type="button" class="btn btn-info btn-sm" v-b-toggle="'properties_' + match.id">
-          <octicon name="chevron-down" scale="1" v-b-toggle="'properties_' + match.id"></octicon>
-          Select properties
-        </button>
-      </div>
+            <div class="col-auto">
+              <div>
+                <strong>Links: </strong>
+                {{ alignment.links_count }}
+              </div>
+              <div>
+                <strong>Clustering request received at: </strong>
+                <template v-if="clustering">{{ clustering.requested_at }}</template>
+                <template v-else>-</template>
+              </div>
+              <div>
+                <strong>Clustering started at: </strong>
+                <template v-if="clustering && clustering.processing_at">{{ clustering.processing_at }}</template>
+                <template v-else>-</template>
+              </div>
+              <div>
+                <strong>Clustering finished at: </strong>
+                <template v-if="clustering && clustering.finished_at">{{ clustering.finished_at }}</template>
+                <template v-else>-</template>
+              </div>
+              <div>
+                <strong>Status: </strong>
+                <pre v-if="clustering" class="d-inline">{{ clustering.status }}</pre>
+                <pre v-else class="d-inline">Not yet clustered</pre>
+              </div>
+            </div>
 
-      <div v-if="clustering" class="col-auto">
-        <div class="h3 text-success">Clustered</div>
-      </div>
-
-      <div class="col-auto">
-        <button v-if="clustering" type="button" class="btn btn-info"
-                @click="createClustering($event)" :disabled="association === ''"
-                :title="association === '' ? 'Choose an association first' : ''">Reconcile
-        </button>
-
-        <button v-if="!clustering" type="button" class="btn btn-info"
-                @click="createClustering($event)">Cluster
-          <template v-if="association !== ''"> &amp; Reconcile</template>
-        </button>
-      </div>
-
-      <div v-if="associationFiles" class="col-auto">
-        <select class="form-control" v-model="association" :id="'match_' + match.id + '_association'">
-          <option value="">No association</option>
-          <option v-for="association_file_name in associationFiles" :value="association_file_name">
-            {{ association_file_name }}
-          </option>
-        </select>
-      </div>
-    </template>
-
-    <template v-slot:header-sticky v-if="selectedCluster">
-      <div class="bg-white border px-3 py-1 mt-2 mb-2">
-        <div class="row font-weight-bold">
-          <div class="col">Id</div>
-          <div class="col">Extended</div>
-          <div class="col">Reconciled</div>
-          <div class="col">Size</div>
-          <div class="col">Links</div>
-          <div class="col-4">Property</div>
+            <div class="col-auto">
+              <div>
+                <strong>Clusters: </strong>
+                <template v-if="clustering && clustering.status === 'Finished'">
+                  {{ clustering.clusters_count }}
+                </template>
+                <template v-else>-</template>
+              </div>
+              <div>
+                <strong>Extended Clusters: </strong>
+                <template v-if="clustering && clustering.status === 'Finished'">
+                  {{ clustering.extended_count || 0 }}
+                </template>
+                <template v-else>-</template>
+              </div>
+              <div>
+                <strong>Clusters with Cycles: </strong>
+                <template v-if="clustering && clustering.status === 'Finished'">
+                  {{ clustering.cycles_count || 0 }}
+                </template>
+                <template v-else>-</template>
+              </div>
+              <div>
+                <strong>Clusters not Extended: </strong>
+                <template v-if="clustering && clustering.status === 'Finished'">
+                  {{ clustering.clusters_count - clustering.extended_count }}
+                </template>
+                <template v-else>-</template>
+              </div>
+              <div>
+                <strong>Clusters without Cycles: </strong>
+                <template v-if="clustering && clustering.status === 'Finished'">
+                  {{ clustering.clusters_count - clustering.cycles_count }}
+                </template>
+                <template v-else>-</template>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <clustering :cluster-id="clusterIdSelected" :cluster-data="selectedCluster" :properties="properties"/>
+      <div class="col-auto">
+        <div class="d-flex flex-column align-items-center">
+          <div class="row my-1">
+            <div class="col-auto">
+              <button type="button" class="btn btn-sm btn-info" v-b-toggle="'matches_info_' + match.id">
+                <octicon name="chevron-down" scale="1" v-b-toggle="'matches_info_' + match.id"></octicon>
+                Show alignment
+              </button>
+            </div>
+
+            <div class="col-auto">
+              <button type="button" class="btn btn-sm btn-info" v-b-toggle="'properties_' + match.id">
+                <octicon name="chevron-down" scale="1" v-b-toggle="'properties_' + match.id"></octicon>
+                Select properties
+              </button>
+            </div>
+          </div>
+
+          <button v-if="clustering && clustering.status === 'Finished'" type="button" class="btn btn-info my-1"
+                  @click="runClustering($event)" :disabled="association === ''"
+                  :title="association === '' ? 'Choose an association first' : ''">
+            Reconcile
+          </button>
+
+          <button v-else-if="!clustering" type="button" class="btn btn-info my-1" @click="runClustering($event)">
+            Cluster
+            <template v-if="association !== ''"> &amp; Reconcile</template>
+          </button>
+
+          <select v-if="associationFiles" class="form-control association-select my-1" v-model="association"
+                  :id="'match_' + match.id + '_association'">
+            <option value="">No association</option>
+            <option v-for="association_file_name in associationFiles" :value="association_file_name">
+              {{ association_file_name }}
+            </option>
+          </select>
+        </div>
+      </div>
     </template>
 
     <template v-slot:header>
@@ -74,69 +134,11 @@
               @resetProperty="resetProperty(idx, property, $event)"/>
         </sub-card>
       </b-collapse>
-
-      <sub-card>
-        <div class="row">
-          <div class="col-5">
-            <div class="row">
-              <div class="col-6 font-weight-bold">
-                Links:
-              </div>
-              <div class="col-6">
-                {{ alignment.links_count }}
-              </div>
-            </div>
-            <div class="row" v-if="clustering">
-              <div class="col-6 font-weight-bold">
-                Extended Clusters:
-              </div>
-              <div class="col-6">
-                {{ clustering.extended_count }}
-              </div>
-            </div>
-            <div class="row" v-if="clustering">
-              <div class="col-6 font-weight-bold">
-                Clusters with Cycles:
-              </div>
-              <div class="col-6">
-                {{ clustering.cycles_count }}
-              </div>
-            </div>
-          </div>
-
-          <div class="col-5" v-if="clustering">
-            <div class="row">
-              <div class="col-6 font-weight-bold">
-                Clusters:
-              </div>
-              <div class="col-6">
-                {{ clustering.clusters_count }}
-              </div>
-            </div>
-            <div class="row">
-              <div class="col-6 font-weight-bold">
-                Clusters not Extended:
-              </div>
-              <div class="col-6">
-                {{ clustering.clusters_count - clustering.extended_count }}
-              </div>
-            </div>
-            <div class="row">
-              <div class="col-6 font-weight-bold">
-                Clusters without Cycles:
-              </div>
-              <div class="col-6">
-                {{ clustering.clusters_count - clustering.cycles_count }}
-              </div>
-            </div>
-          </div>
-        </div>
-      </sub-card>
     </template>
 
-    <loading v-if="loading"/>
+    <loading v-if="loading" class="mt-4"/>
 
-    <template v-else-if="!clustering">
+    <template v-else-if="!clustering || clustering.status !== 'Finished'">
       <virtual-list
           v-if="showData"
           class="mt-4"
@@ -196,8 +198,6 @@
 <script>
     import VirtualList from 'vue-virtual-scroll-list';
 
-    import Loading from "../../misc/Loading";
-
     import Card from "../../structural/Card";
     import SubCard from "../../structural/SubCard";
 
@@ -212,7 +212,6 @@
         name: "Cluster",
         components: {
             VirtualList,
-            Loading,
             Card,
             SubCard,
             MatchInfo,
@@ -289,26 +288,17 @@
             },
         },
         methods: {
-            async createClustering(event) {
-                if (event) {
-                    let btn = event.target;
-                    btn.setAttribute('disabled', 'disabled');
-                }
-
-                const associationFile = this.clustering ? this.association : '';
-                await this.$root.createClustering(this.match.id, associationFile, this.clustering);
-
-                if (!this.clustering && this.association)
-                    this.createClustering(this.match.id);
-                else
-                    this.$emit('reload');
+            async runClustering() {
+                const associationFile = this.association !== '' ? this.association : null;
+                await this.$root.runClustering(this.match.id, associationFile);
+                this.$emit('refresh');
             },
 
             async getLinksOrClusters() {
                 this.loading = true;
                 this.showData = true;
 
-                if (this.clustering) {
+                if (this.clustering && this.clustering.status === 'Finished') {
                     this.links = [];
                     await this.getClusters();
                 }
@@ -330,7 +320,7 @@
             },
 
             async getClusters() {
-                if (this.clustering) {
+                if (this.clustering && this.clustering.status === 'Finished') {
                     this.clusters = await this.$root.getClusters(this.clustering.clustering_id, this.association);
 
                     if (this.hasProperties) {
@@ -399,3 +389,9 @@
         }
     };
 </script>
+
+<style>
+  .association-select {
+    width: 160px !important;
+  }
+</style>

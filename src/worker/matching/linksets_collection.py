@@ -6,9 +6,9 @@ import datetime
 
 from psycopg2 import sql, extras
 
-from jobs_worker.match import Match
-from jobs_worker.resource import Resource
-from jobs_worker.links_to_rdf import convert_link
+from worker.matching.match import Match
+from worker.matching.resource import Resource
+from worker.matching.links_to_rdf import convert_link
 
 from common.config_db import db_conn
 from common.helpers import get_job_data, get_absolute_property, get_property_sql, \

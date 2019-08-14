@@ -11,6 +11,7 @@ import ButtonAdd from './components/misc/ButtonAdd';
 import ButtonDelete from './components/misc/ButtonDelete';
 import ButtonInfo from './components/misc/ButtonInfo';
 import VSelect from './components/misc/VSelect';
+import Loading from './components/misc/Loading';
 import Property from './components/helpers/Property';
 import Octicon from 'vue-octicon/components/Octicon.vue';
 import 'vue-octicon/icons';
@@ -20,6 +21,7 @@ Vue.component('button-add', ButtonAdd);
 Vue.component('button-delete', ButtonDelete);
 Vue.component('button-info', ButtonInfo);
 Vue.component('v-select', VSelect);
+Vue.component('loading', Loading);
 Vue.component('property', Property);
 Vue.component('octicon', Octicon);
 

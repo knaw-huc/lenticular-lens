@@ -61,6 +61,7 @@
               @submit="submit"
               @remove="$root.matches.splice(index, 1)"
               @update:label="match.label = $event"
+              @refresh="refreshAlignments(true)"
               ref="matchComponents"
           ></match>
         </tab-content-structure>
@@ -69,11 +70,11 @@
       <tab-content title="Clusters">
         <tab-content-structure title="Clusters" :tab_error="tab_error" :is_saved="is_saved">
           <cluster
-              v-if="$root.alignments[match.id]"
+              v-if="$root.alignments[match.id] && $root.alignments[match.id].status === 'Finished'"
               v-for="match in $root.matches"
               :match="match"
               :key="match.id"
-              @reload="getJobData"
+              @refresh="refreshClusterings(true)"
           ></cluster>
         </tab-content-structure>
       </tab-content>
@@ -294,11 +295,15 @@
                             this.activateStep('alignments');
 
                         this.refreshAlignments();
+                        this.refreshClusterings();
                     }
                 }
             },
 
-            refreshAlignments() {
+            async refreshAlignments(loadAlignments = false) {
+                if (loadAlignments)
+                    await this.$root.loadAlignments();
+
                 let hasFinished = false;
                 let hasUnfinished = false;
 
@@ -316,6 +321,22 @@
 
                 if (hasUnfinished)
                     setTimeout(() => this.$root.loadAlignments().then(() => this.refreshAlignments()), 5000);
+            },
+
+            async refreshClusterings(loadClusterings = false) {
+                if (loadClusterings)
+                    await this.$root.loadClusterings();
+
+                let hasUnfinished = false;
+
+                Object.keys(this.$root.clusterings).forEach(clusteringKey => {
+                    const clustering = this.$root.clusterings[clusteringKey];
+                    if (clustering.status !== 'Finished' && !clustering.status.startsWith('FAILED'))
+                        hasUnfinished = true;
+                });
+
+                if (hasUnfinished)
+                    setTimeout(() => this.$root.loadClusterings().then(() => this.refreshClusterings()), 5000);
             },
         },
         async mounted() {

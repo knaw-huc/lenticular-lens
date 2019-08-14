@@ -6,7 +6,7 @@
           <octicon name="chevron-down" scale="3" v-b-toggle="id"></octicon>
         </div>
 
-        <div class="col-auto" v-bind:class="{'flex-fill': fillLabel}" v-b-toggle="id">
+        <div class="col-auto flex-shrink-1" v-bind:class="{'flex-fill': fillLabel}" v-b-toggle="id">
           <edit-label v-if="!label" :value="value" :required="true" @input="$emit('input', $event)"/>
           <div v-else class="h2">{{ label }}</div>
 
@@ -15,8 +15,6 @@
 
         <slot name="columns"></slot>
       </div>
-
-      <slot name="header-sticky"></slot>
     </div>
 
     <slot name="header"></slot>

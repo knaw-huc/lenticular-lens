@@ -13,11 +13,11 @@ services:
     environment:
       - PGDATA=/pgdata
 
-  jobs_worker:
+  timbuctoo_worker:
     build:
       context: .
-      dockerfile: Dockerfile.jobs_worker
-    image: knawhuc/postgres_reconciliation_worker:jobs_worker-latest
+      dockerfile: Dockerfile.worker
+    image: knawhuc/postgres_reconciliation_worker:worker-latest
     depends_on:
       - postgres
     environment:
@@ -26,14 +26,15 @@ services:
       - DATABASE_USER=postgres
       - DATABASE_PASSWORD=postgres
       - DATA_DIR=/common/src/LLData
+      - WORKER_TYPE=timbuctoo
     volumes:
       - output:/common/src/LLData
 
-  timbuctoo_worker:
+  alignments_worker:
     build:
       context: .
-      dockerfile: Dockerfile.timbuctoo_worker
-    image: knawhuc/postgres_reconciliation_worker:timbuctoo_worker-latest
+      dockerfile: Dockerfile.worker
+    image: knawhuc/postgres_reconciliation_worker:worker-latest
     depends_on:
       - postgres
     environment:
@@ -41,6 +42,27 @@ services:
       - DATABASE_DB=postgres
       - DATABASE_USER=postgres
       - DATABASE_PASSWORD=postgres
+      - DATA_DIR=/common/src/LLData
+      - WORKER_TYPE=alignments
+    volumes:
+      - output:/common/src/LLData
+
+  clusterings_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    image: knawhuc/postgres_reconciliation_worker:worker-latest
+    depends_on:
+      - postgres
+    environment:
+      - DATABASE_HOST=postgres
+      - DATABASE_DB=postgres
+      - DATABASE_USER=postgres
+      - DATABASE_PASSWORD=postgres
+      - DATA_DIR=/common/src/LLData
+      - WORKER_TYPE=clusterings
+    volumes:
+      - ./docker/output:/common/src/LLData
 
   web_server:
     build:
