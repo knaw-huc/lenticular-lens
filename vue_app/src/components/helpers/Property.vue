@@ -12,8 +12,8 @@
       </div>
 
       <div class="col-auto pl-0 ml-0 my-1" v-if="!singular && !readOnly">
-        <button-add @click="$emit('clone')" scale="0.8" title="Add another property for this Collection"/>
-        <button-delete @click="$emit('delete')" scale="1.3" title="Remove this property"/>
+        <button-add @click="$emit('clone')" size="sm" title="Add another property for this Collection"/>
+        <button-delete @click="$emit('delete')" size="sm" title="Remove this property"/>
       </div>
     </template>
 
@@ -21,7 +21,7 @@
       <div
           v-if="!Array.isArray(prop.resources) && (followReferencedCollection || readOnly || prop.value[0] !== '__value__')"
           class="col-auto">
-        <octicon name="arrow-right"/>
+        <fa-icon icon="arrow-right"/>
       </div>
 
       <div v-if="prop.value[0] === '' && !readOnly" :value="prop.value[0]" class="col-auto my-1">
@@ -58,7 +58,7 @@
 
       <template v-if="prop.value[0] !== '' && prop.value[0] !== '__value__'">
         <div v-if="!Array.isArray(prop.resources)" class="col-auto">
-          <octicon name="arrow-right"/>
+          <fa-icon icon="arrow-right"/>
         </div>
 
         <div v-if="!prop.value[1] && !readOnly" class="col-auto my-1">

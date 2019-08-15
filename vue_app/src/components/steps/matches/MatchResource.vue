@@ -16,12 +16,13 @@
         Please select a collection
       </div>
     </div>
-    <div v-else @mouseenter="hovering = true" @mouseleave="hovering = false" class="ml-3 pt-2">
+
+    <div v-else @mouseenter="hovering = true" @mouseleave="hovering = false" class="ml-3">
       {{ match_resource.label }}
     </div>
 
     <div class="col-auto pl-0" @mouseenter="hovering = true" @mouseleave="hovering = false">
-      <button-delete @click="$emit('remove')" :scale="1.4" :class="'pt-1' + showOnHover"/>
+      <button-delete @click="$emit('remove')" size="sm" :class="'btn-sm pt-1' + showOnHover"/>
     </div>
   </div>
 </template>

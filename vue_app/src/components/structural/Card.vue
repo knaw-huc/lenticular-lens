@@ -3,7 +3,7 @@
     <div class="sticky-top bg-light py-2" v-bind:class="showContent ? 'border-bottom' : {}">
       <div class="row flex-nowrap align-items-center justify-content-between">
         <div class="col-auto">
-          <octicon name="chevron-down" scale="3" v-b-toggle="id"></octicon>
+          <fa-icon icon="chevron-down" size="2x" v-b-toggle="id"></fa-icon>
         </div>
 
         <div class="col-auto flex-shrink-1" v-bind:class="{'flex-fill': fillLabel}" v-b-toggle="id">

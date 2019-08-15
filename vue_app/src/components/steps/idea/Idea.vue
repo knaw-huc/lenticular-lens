@@ -48,7 +48,7 @@
 
           <div class="col-auto">
             <b-button @click="copyToClipboard($refs['job_id_copy'])">
-              <octicon name="clippy" class="align-text-top"></octicon>
+              <fa-icon :icon="['far', 'clipboard']"/>
             </b-button>
           </div>
         </template>

@@ -99,14 +99,12 @@
               <div class="row align-items-center">
                 <div class="col-auto h5">Transformers</div>
 
-                <div class="col-auto">
-                  <button-add
-                      @click="$utilities.getOrCreate($set, 'transformers', []).push('')"
-                      scale="0.7"
-                      title="Add Transformer"
-                  />
+                <div class="col-auto p-0">
+                  <button-add @click="$utilities.getOrCreate($set, resource, 'transformers', []).push('')"
+                              size="sm" title="Add Transformer" class="btn-sm"/>
                 </div>
-                <div v-for="(transformer, index) in resource.transformers" class="col-auto">
+
+                <div v-for="(_, index) in resource.transformers" class="col-auto">
                   <div class="row align-items-center">
                     <div class="col-auto pr-0">
                       <v-select v-model="resource.transformers[index]"
@@ -121,8 +119,8 @@
                       </div>
                     </div>
 
-                    <div class="col-auto pl-0">
-                      <button-delete @click="resource.transformers.splice(index, 1)" scale="1.3" class="pt-1"/>
+                    <div class="col-auto p-0">
+                      <button-delete @click="resource.transformers.splice(index, 1)" size="sm" class="btn-sm"/>
                     </div>
                   </div>
                 </div>

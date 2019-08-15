@@ -4,7 +4,7 @@
     <div v-if="hasColumns || hasCollapse || label || hasInfo || addButton"
          class="row align-items-center justify-content-between">
       <div v-if="hasCollapse" class="col-auto">
-        <octicon name="chevron-down" scale="2" v-b-toggle="id"></octicon>
+        <fa-icon icon="chevron-down" size="lg" v-b-toggle="id"></fa-icon>
       </div>
 
       <div v-if="label" class="col-auto pr-0" v-bind:class="{'mr-auto': !hasInfo && !addButton}">

@@ -31,7 +31,7 @@
         <tab-content-structure title="Collections" :tab_error="tab_error" :is_saved="is_saved">
           <template v-slot:header>
             <div class="col-auto">
-              <button-add @click="addResource" title="Add a Collection"/>
+              <button-add @click="addResource" title="Add a Collection" size="2x"/>
             </div>
           </template>
 
@@ -49,7 +49,7 @@
         <tab-content-structure title="Alignment Specifications" :tab_error="tab_error" :is_saved="is_saved">
           <template v-slot:header>
             <div class="col-auto">
-              <button-add @click="addMatch" title="Add an Alignment"/>
+              <button-add @click="addMatch" title="Add an Alignment" size="2x"/>
             </div>
           </template>
 

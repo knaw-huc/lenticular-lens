@@ -3,7 +3,7 @@
        v-bind:class="[{'is-invalid': errors.length > 0}, ...styleClass]">
     <div class="row align-items-center">
       <div class="col-auto">
-        <octicon name="chevron-down" scale="2" v-b-toggle="uid"></octicon>
+        <fa-icon icon="chevron-down" size="lg" v-b-toggle="uid"></fa-icon>
       </div>
 
       <div v-if="conditionsGroup.conditions.length > 0" class="col">

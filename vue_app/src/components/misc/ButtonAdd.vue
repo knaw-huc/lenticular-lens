@@ -1,13 +1,7 @@
 <template>
-    <button
-            type="button"
-            :class="'btn btn-outline-info rounded-circle' + (scale < 1 ? ' pt-1 pb-1' : '')"
-            :title="title"
-            @click="handleBtnClick"
-            ref="button"
-    >
-        <octicon name="plus" :scale="scale"/>
-    </button>
+  <button type="button" class="btn text-info" :title="title" @click="handleBtnClick" ref="button">
+    <fa-icon icon="plus" :size="size"/>
+  </button>
 </template>
 
 <script>
@@ -19,9 +13,9 @@
             },
         },
         props: {
-            scale: {
-                type: [Number, String],
-                default: 1,
+            size: {
+                type: String,
+                default: 'lg',
             },
             title: String,
         },

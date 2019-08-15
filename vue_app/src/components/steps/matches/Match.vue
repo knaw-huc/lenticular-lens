@@ -55,7 +55,7 @@
       </div>
 
       <div class="col-auto">
-        <button-delete @click="$emit('remove')" :scale="2" :disabled="!!alignment" title="Delete this Alignment"/>
+        <button-delete @click="$emit('remove')" size="2x" :disabled="!!alignment" title="Delete this Alignment"/>
       </div>
     </template>
 

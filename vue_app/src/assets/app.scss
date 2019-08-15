@@ -12,7 +12,7 @@ $container-max-widths: (lg: 1500px);
   }
 }
 
-.octicon[role="button"] {
+.fa-chevron-down[role="button"] {
   transition: .3s transform ease-in-out;
 
   &.collapsed {

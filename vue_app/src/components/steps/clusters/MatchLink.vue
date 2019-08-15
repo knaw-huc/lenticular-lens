@@ -19,14 +19,14 @@
 
           <div class="col-auto">
             <button type="button" class="btn btn-sm btn-success m-1">
-              <octicon name="check" scale="1"/>
+              <fa-icon icon="check"/>
               Accept
             </button>
           </div>
 
           <div class="col-auto">
             <button type="button" class="btn btn-sm btn-danger m-1">
-              <octicon name="x" scale="1"/>
+              <fa-icon icon="times"/>
               Decline
             </button>
           </div>

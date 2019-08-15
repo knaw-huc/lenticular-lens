@@ -1,7 +1,7 @@
 <template>
   <div class="btn-info-popup">
-    <a class="btn btn-block text-info pt-1" @click="$refs['info_' + uuid].show()">
-      <octicon name="question" :scale="scale"/>
+    <a class="btn btn-block text-info py-0" @click="$refs['info_' + uuid].show()">
+      <fa-icon :icon="['far', 'question-circle']" size="lg"/>
     </a>
 
     <b-modal
@@ -32,10 +32,6 @@
                 default: 'xl',
             },
             popup_title: String,
-            scale: {
-                type: Number,
-                default: 1.5,
-            },
         },
     }
 </script>

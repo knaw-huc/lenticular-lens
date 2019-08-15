@@ -1,7 +1,7 @@
 <template>
-    <button type="button" class="btn text-danger" :title="title" @click="handleBtnClick" ref="button">
-        <octicon name="trashcan" :scale="scale"/>
-    </button>
+  <button type="button" class="btn text-danger" :title="title" @click="handleBtnClick" ref="button">
+    <fa-icon icon="trash-alt" :size="size"/>
+  </button>
 </template>
 
 <script>
@@ -13,9 +13,9 @@
             },
         },
         props: {
-            scale: {
-                type: [Number, String],
-                default: 2,
+            size: {
+                type: String,
+                default: 'lg',
             },
             title: String,
         },

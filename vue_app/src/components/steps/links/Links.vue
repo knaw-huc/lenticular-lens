@@ -4,14 +4,14 @@
     <template v-slot:columns>
       <div class="col-auto">
         <button type="button" class="btn btn-info btn-sm" v-b-toggle="'matches_info_' + match.id">
-          <octicon name="chevron-down" scale="1" v-b-toggle="'matches_info_' + match.id"></octicon>
+          <fa-icon icon="chevron-down" v-b-toggle="'matches_info_' + match.id"></fa-icon>
           Show alignment
         </button>
       </div>
 
       <div class="col-auto mr-auto">
         <button type="button" class="btn btn-info btn-sm" v-b-toggle="'properties_' + match.id">
-          <octicon name="chevron-down" scale="1" v-b-toggle="'properties_' + match.id"></octicon>
+          <fa-icon icon="chevron-down" v-b-toggle="'properties_' + match.id"></fa-icon>
           Select properties
         </button>
       </div>

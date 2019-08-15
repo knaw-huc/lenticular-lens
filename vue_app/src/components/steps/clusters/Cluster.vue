@@ -82,14 +82,14 @@
           <div class="row my-1">
             <div class="col-auto">
               <button type="button" class="btn btn-sm btn-info" v-b-toggle="'matches_info_' + match.id">
-                <octicon name="chevron-down" scale="1" v-b-toggle="'matches_info_' + match.id"></octicon>
+                <fa-icon icon="chevron-down" v-b-toggle="'matches_info_' + match.id"></fa-icon>
                 Show alignment
               </button>
             </div>
 
             <div class="col-auto">
               <button type="button" class="btn btn-sm btn-info" v-b-toggle="'properties_' + match.id">
-                <octicon name="chevron-down" scale="1" v-b-toggle="'properties_' + match.id"></octicon>
+                <fa-icon icon="chevron-down" v-b-toggle="'properties_' + match.id"></fa-icon>
                 Select properties
               </button>
             </div>
