@@ -6,9 +6,9 @@
           <fa-icon icon="chevron-down" size="2x" v-b-toggle="id"></fa-icon>
         </div>
 
-        <div class="col-auto flex-shrink-1" v-bind:class="{'flex-fill': fillLabel}" v-b-toggle="id">
-          <edit-label v-if="!label" :value="value" :required="true" @input="$emit('input', $event)"/>
-          <div v-else class="h2">{{ label }}</div>
+        <div class="col-auto flex-shrink-1" v-bind:class="{'flex-fill': fillLabel}">
+          <edit-label v-if="!label" :value="value" :required="true" @input="$emit('input', $event)" v-b-toggle="id"/>
+          <div v-else class="h2" v-b-toggle="id">{{ label }}</div>
 
           <slot name="title-extra"></slot>
         </div>

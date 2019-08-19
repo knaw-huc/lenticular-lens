@@ -12,8 +12,8 @@
       </div>
 
       <div class="col-auto pl-0 ml-0 my-1" v-if="!singular && !readOnly">
-        <button-add @click="$emit('clone')" size="sm" title="Add another property for this Collection"/>
-        <button-delete @click="$emit('delete')" size="sm" title="Remove this property"/>
+        <button-add @click="$emit('clone')" size="sm" title="Add another property"/>
+        <button-delete v-if="allowDelete" class="ml-2" @click="$emit('delete')" size="sm" title="Remove this property"/>
       </div>
     </template>
 
@@ -24,7 +24,7 @@
         <fa-icon icon="arrow-right"/>
       </div>
 
-      <div v-if="prop.value[0] === '' && !readOnly" :value="prop.value[0]" class="col-auto my-1">
+      <div v-if="prop.value[0] === '' && !readOnly" :value="prop.value[0]" class="col-auto p-0 my-1">
         <v-select @input="updateProperty($event, prop.idx)"
                   v-bind:class="{'is-invalid': errors.includes(`value_${prop.idx}`), 'form-control-sm': small}">
           <template v-if="Array.isArray(prop.resources)">
@@ -61,8 +61,8 @@
           <fa-icon icon="arrow-right"/>
         </div>
 
-        <div v-if="!prop.value[1] && !readOnly" class="col-auto my-1">
-          <v-select class="col-auto" :value="prop.value[1]" @input="updateProperty($event, prop.idx + 1)"
+        <div v-if="!prop.value[1] && !readOnly" class="col-auto p-0 my-1">
+          <v-select :value="prop.value[1]" @input="updateProperty($event, prop.idx + 1)"
                     v-bind:class="{'is-invalid': errors.includes(`value_${prop.idx}`), 'form-control-sm': small}">
             <option value="" selected disabled>Choose a property</option>
             <option v-for="propertyOpt in Object.keys(prop.properties)" :value="propertyOpt">
@@ -82,8 +82,6 @@
         </button>
       </template>
     </template>
-
-    <slot></slot>
   </div>
 </template>
 
@@ -106,6 +104,10 @@
             singular: {
                 type: Boolean,
                 default: false,
+            },
+            allowDelete: {
+                type: Boolean,
+                default: true,
             },
             resourceInfo: {
                 type: Boolean,

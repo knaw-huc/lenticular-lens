@@ -1,43 +1,40 @@
 <template>
-  <sub-card :small-spacing="true" :is-first="isFirst" v-bind:class="selected ? 'bg-info-light' : {}">
-    <div @click="$emit('select:clusterId', clusterId)">
-      <div class="row">
-        <div class="col font-weight-bold">
-          {{ clusterId }}
-        </div>
+  <div class="bg-white border clickable p-3" v-bind:class="{'mt-2': !isFirst, 'bg-info-light': selected}"
+       @click="$emit('select:clusterId', clusterId)">
+    <div class="row">
+      <div class="col font-weight-bold">
+        {{ clusterId }}
+      </div>
 
-        <div class="col" v-bind:class="'ext_' + clusterData.extended">
-          {{ clusterData.extended }}
-        </div>
+      <div class="col" v-bind:class="'ext_' + clusterData.extended">
+        {{ clusterData.extended }}
+      </div>
 
-        <div class="col" v-bind:class="'ext_' + clusterData.reconciled">
-          {{ clusterData.reconciled }}
-        </div>
+      <div class="col" v-bind:class="'ext_' + clusterData.reconciled">
+        {{ clusterData.reconciled }}
+      </div>
 
-        <div class="col">
-          {{ clusterData.nodes.length }}
-        </div>
+      <div class="col">
+        {{ clusterData.nodes.length }}
+      </div>
 
-        <div class="col">
-          {{ clusterData.links.length }}
-        </div>
+      <div class="col">
+        {{ clusterData.links.length }}
+      </div>
 
-        <div class="col-4">
-          <properties :properties="props"/>
-        </div>
+      <div class="col-4">
+        <properties :properties="props" :show-resource-info="false"/>
       </div>
     </div>
-  </sub-card>
+  </div>
 </template>
 
 <script>
-    import SubCard from '../../structural/SubCard';
     import Properties from "../../helpers/Properties";
 
     export default {
         name: "Clustering",
         components: {
-            SubCard,
             Properties,
         },
         props: {

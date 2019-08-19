@@ -1,5 +1,5 @@
 <template>
-  <button type="button" class="btn text-danger" :title="title" @click="handleBtnClick" ref="button">
+  <button type="button" class="btn text-danger p-0" :title="title" @click="handleBtnClick" ref="button">
     <fa-icon icon="trash-alt" :size="size"/>
   </button>
 </template>

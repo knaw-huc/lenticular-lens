@@ -1,17 +1,18 @@
 <template>
   <div class="bg-white border p-3"
-       v-bind:class="{'mt-4': !isFirst && !smallSpacing, 'mt-2': !isFirst && smallSpacing, 'is-invalid': hasError}">
+       v-bind:class="{'mt-4': !isFirst, 'is-invalid': hasError}">
     <div v-if="hasColumns || hasCollapse || label || hasInfo || addButton"
          class="row align-items-center justify-content-between">
       <div v-if="hasCollapse" class="col-auto">
         <fa-icon icon="chevron-down" size="lg" v-b-toggle="id"></fa-icon>
       </div>
 
-      <div v-if="label" class="col-auto pr-0" v-bind:class="{'mr-auto': !hasInfo && !addButton}">
+      <div v-if="label" class="col-auto pr-0" v-b-toggle="hasCollapse ? id : {}"
+           v-bind:class="{'mr-auto': !hasInfo && !addButton && !hasMarginAuto}">
         <h3>{{ label }}</h3>
       </div>
 
-      <div v-if="hasInfo" class="col-auto pl-0" v-bind:class="{'mr-auto': !addButton}">
+      <div v-if="hasInfo" class="col-auto pl-0" v-bind:class="{'mr-auto': !addButton && !hasMarginAuto}">
         <slot name="info"></slot>
       </div>
 
@@ -51,15 +52,15 @@
                 type: Boolean,
                 default: false
             },
+            hasMarginAuto: {
+                type: Boolean,
+                default: false
+            },
             hasColumns: {
                 type: Boolean,
                 default: false
             },
             isFirst: {
-                type: Boolean,
-                default: false,
-            },
-            smallSpacing: {
                 type: Boolean,
                 default: false,
             },

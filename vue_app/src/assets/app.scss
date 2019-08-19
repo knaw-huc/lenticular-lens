@@ -112,6 +112,10 @@ div.is-invalid {
   }
 }
 
+.btn, [role="button"], .clickable {
+  cursor: pointer;
+}
+
 .small {
   font-size: 0.9rem;
 }

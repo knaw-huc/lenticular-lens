@@ -67,15 +67,15 @@
         </tab-content-structure>
       </tab-content>
 
-      <tab-content title="Clusters">
-        <tab-content-structure title="Clusters" :tab_error="tab_error" :is_saved="is_saved">
-          <cluster
+      <tab-content title="Validation">
+        <tab-content-structure title="Validation" :tab_error="tab_error" :is_saved="is_saved">
+          <match-validation
               v-if="$root.alignments[match.id] && $root.alignments[match.id].status === 'Finished'"
               v-for="match in $root.matches"
               :match="match"
               :key="match.id"
               @refresh="refreshClusterings(true)"
-          ></cluster>
+          ></match-validation>
         </tab-content-structure>
       </tab-content>
 
@@ -127,7 +127,7 @@
     import Resource from './components/steps/resources/Resource';
     import Match from './components/steps/matches/Match';
     import Links from "./components/steps/links/Links";
-    import Cluster from './components/steps/clusters/Cluster';
+    import MatchValidation from './components/steps/validation/MatchValidation';
 
     import TabContentStructure from './components/structural/TabContentStructure';
 
@@ -142,7 +142,7 @@
             Resource,
             Match,
             Links,
-            Cluster,
+            MatchValidation,
         },
         data() {
             return {
@@ -158,7 +158,7 @@
                     'idea',
                     'collections',
                     'alignments',
-                    'clusters',
+                    'validation',
                 ],
             }
         },
@@ -317,7 +317,7 @@
                 });
 
                 if (hasFinished)
-                    this.activateStep('clusters');
+                    this.activateStep('validation');
 
                 if (hasUnfinished)
                     setTimeout(() => this.$root.loadAlignments().then(() => this.refreshAlignments()), 5000);

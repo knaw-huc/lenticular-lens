@@ -1,5 +1,5 @@
 <template>
-  <button type="button" class="btn text-info" :title="title" @click="handleBtnClick" ref="button">
+  <button type="button" class="btn text-info p-0" :title="title" @click="handleBtnClick" ref="button">
     <fa-icon icon="plus" :size="size"/>
   </button>
 </template>

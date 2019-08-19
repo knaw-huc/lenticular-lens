@@ -1,16 +1,14 @@
 <template>
   <card :id="'match_' + match.id" type="matches" v-model="match.label" :hasError="errors.length > 0" :fillLabel="false">
     <template v-slot:title-extra>
-      <div class="form-row">
-        <div class="col form-check mb-1 pl-0">
-          <b-form-checkbox
-              :id="'match_' + match.id + '_is_association'"
-              :disabled="!!alignment"
-              v-model.boolean="match.is_association"
-              title="Check this box if this Alignment is intended for creating associations">
-            Association
-          </b-form-checkbox>
-        </div>
+      <div class="col form-check pl-0 mt-1">
+        <b-form-checkbox
+            :id="'match_' + match.id + '_is_association'"
+            :disabled="!!alignment"
+            v-model.boolean="match.is_association"
+            title="Check this box if this Alignment is intended for creating associations">
+          Association
+        </b-form-checkbox>
       </div>
     </template>
 
