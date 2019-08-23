@@ -6,8 +6,19 @@
           <fa-icon icon="chevron-down" size="2x" v-b-toggle="id"></fa-icon>
         </div>
 
-        <div class="col-auto flex-shrink-1" v-bind:class="{'flex-fill': fillLabel}">
-          <edit-label v-if="!label" :value="value" :required="true" @input="$emit('input', $event)" v-b-toggle="id"/>
+        <div class="flex-shrink-1" v-bind:class="[{'mr-auto': fillLabel}, isEditing ? 'col' : 'col-auto']">
+          <input v-if="isEditing" type="text" class="form-control border-0" :value="value" ref="editInput" required
+                 @blur="editing = false" @input="$emit('input', $event.target.value)"/>
+
+          <div v-else-if="!label" class="row" @mouseenter="hovering = true" @mouseleave="hovering = false">
+            <div class="h2 col" v-b-toggle="id">{{ value }}</div>
+
+            <button type="button" class="btn col-auto p-0" title="Click to Edit"
+                    v-bind:class="{'invisible': !hovering}" @click="editing = true">
+              <fa-icon icon="pencil-alt" size="lg"/>
+            </button>
+          </div>
+
           <div v-else class="h2" v-b-toggle="id">{{ label }}</div>
 
           <slot name="title-extra"></slot>
@@ -45,8 +56,27 @@
         },
         data() {
             return {
+                editing: false,
+                hovering: false,
                 showContent: false
             };
         },
+        computed: {
+            isEditing() {
+                return !this.label && (this.editing || this.value === '');
+            }
+        },
+        updated() {
+            if (this.editing)
+                this.$refs.editInput.focus();
+        },
     };
 </script>
+
+<style scoped>
+  input[type="text"] {
+    font-size: 2rem;
+    height: 2.5rem;
+    box-shadow: none;
+  }
+</style>

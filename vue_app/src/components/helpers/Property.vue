@@ -1,26 +1,22 @@
 <template>
   <div class="row align-items-center">
     <template v-if="resourceInfo">
-      <div class="col-auto btn border border-info bg-white rounded-pill py-0 my-1"
-           v-bind:class="small ? 'btn-sm' : {}">
+      <div class="property-resource read-only" v-bind:class="{'btn-sm': small}">
         {{ dataset.title }}
       </div>
 
-      <div class="col-auto btn border border-info bg-white rounded-pill py-0 my-1 mx-2"
-           v-bind:class="small ? 'btn-sm' : {}">
+      <div class="property-resource read-only mx-2" v-bind:class="{'btn-sm': small}">
         {{ resource.collection_id }}
       </div>
 
-      <div class="col-auto pl-0 ml-0 my-1" v-if="!singular && !readOnly">
+      <div v-if="!singular && !readOnly" class="col-auto pl-0 ml-0 my-1">
         <button-add @click="$emit('clone')" size="sm" title="Add another property"/>
         <button-delete v-if="allowDelete" class="ml-2" @click="$emit('delete')" size="sm" title="Remove this property"/>
       </div>
     </template>
 
     <template v-for="prop in props">
-      <div
-          v-if="!Array.isArray(prop.resources) && (followReferencedCollection || readOnly || prop.value[0] !== '__value__')"
-          class="col-auto">
+      <div v-if="!Array.isArray(prop.resources) && prop.inPath" class="col-auto">
         <fa-icon icon="arrow-right"/>
       </div>
 
@@ -43,15 +39,13 @@
         </v-select>
       </div>
 
-      <template
-          v-else-if="!Array.isArray(prop.resources) && (followReferencedCollection || readOnly || prop.value[0] !== '__value__')">
-        <div v-if="readOnly" class="col-auto btn bg-info text-white rounded-pill py-0 my-1"
-             v-bind:class="small ? 'btn-sm' : {}">
+      <template v-else-if="!Array.isArray(prop.resources) && prop.inPath">
+        <div v-if="readOnly" class="property-path read-only" v-bind:class="{'btn-sm': small}">
           {{ prop.value[0] }}
         </div>
 
-        <button v-else type="button" class="col-auto btn btn-info rounded-pill py-0 my-1"
-                v-bind:class="small ? 'btn-sm' : {}" @click="!readOnly ? $emit('resetProperty', prop.idx) : {}">
+        <button v-else type="button" class="property-path" v-bind:class="{'btn-sm': small}"
+                @click="$emit('resetProperty', prop.idx)">
           {{ prop.value[0] }}
         </button>
       </template>
@@ -71,13 +65,12 @@
           </v-select>
         </div>
 
-        <div v-else-if="readOnly" class="col-auto btn bg-info text-white rounded-pill py-0 my-1"
-             v-bind:class="small ? 'btn-sm' : {}">
+        <div v-else-if="readOnly" class="property-path read-only" v-bind:class="{'btn-sm': small}">
           {{ prop.value[1] }}
         </div>
 
-        <button v-else type="button" class="col-auto btn btn-info rounded-pill py-0 my-1"
-                v-bind:class="small ? 'btn-sm' : {}" @click="!readOnly ? $emit('resetProperty', prop.idx + 1) : {}">
+        <button v-else type="button" class="property-path" v-bind:class="{'btn-sm': small}"
+                @click="$emit('resetProperty', prop.idx + 1)">
           {{ prop.value[1] }}
         </button>
       </template>
@@ -136,7 +129,9 @@
                             idx: propertyIdx,
                             value: this.property.slice(propertyIdx, propertyIdx + 2),
                             resources: this.getResourcesForIndex(propertyIdx),
-                            properties: this.getPropertiesForIndex(propertyIdx)
+                            properties: this.getPropertiesForIndex(propertyIdx),
+                            inPath: this.followReferencedCollection || this.readOnly
+                                || this.property[propertyIdx] !== '__value__',
                         };
                     });
             },
@@ -179,5 +174,5 @@
                 }
             },
         },
-    }
+    };
 </script>

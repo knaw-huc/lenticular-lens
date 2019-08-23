@@ -3,23 +3,22 @@
     <div class="row m-0" v-for="propInfo in propsGrouped">
       <div class="col-auto">
         <div class="row mb-1">
-          <div class="col-auto btn btn-sm border border-info bg-white rounded-pill py-0 my-1">
+          <div class="property-resource btn-sm read-only">
             {{ propInfo.title }}
           </div>
 
-          <div class="col-auto btn btn-sm border border-info bg-white rounded-pill py-0 my-1 mx-2">
+          <div class="property-resource btn-sm read-only mx-2">
             {{ propInfo.collectionId }}
           </div>
         </div>
 
         <div class="row">
           <div v-for="propAndValues in propInfo.propsAndValues" class="col-auto ml-4">
-            <div class="col-auto btn btn-sm bg-info text-white rounded-pill py-0 my-1">
+            <div class="property-path btn-sm read-only">
               {{ propAndValues.property[1] }}
             </div>
 
-            <div v-for="value in propAndValues.values"
-                 class="col-auto btn btn-sm border border-info bg-white text-info rounded-pill ml-2 py-0 my-1">
+            <div v-for="value in propAndValues.values" class="property-value btn-sm read-only ml-2">
               {{ value }}
             </div>
           </div>
@@ -30,12 +29,11 @@
 
   <div v-else>
     <div class="row m-0" v-for="(values, property) in propsGrouped">
-      <div class="col-auto btn btn-sm bg-info text-white rounded-pill py-0 my-1">
+      <div class="property-path btn-sm read-only">
         {{ property }}
       </div>
 
-      <div v-for="value in values"
-           class="col-auto btn btn-sm border border-info bg-white text-info rounded-pill ml-2 py-0 my-1">
+      <div v-for="value in values" class="property-value btn-sm read-only ml-2">
         {{ value }}
       </div>
     </div>

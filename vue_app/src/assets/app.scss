@@ -1,6 +1,8 @@
 $yellow: #efc501;
 $primary: $yellow;
 $info: #0c8c75;
+$light: #eff1f3;
+$border-color: #adb5bd;
 $container-max-widths: (lg: 1500px);
 
 @import '~bootstrap/scss/bootstrap.scss';
@@ -112,8 +114,44 @@ div.is-invalid {
   }
 }
 
+.bg-success {
+  background-color: #d8edd8 !important;
+}
+
+.bg-danger {
+  background-color: #ffcfc4 !important;
+}
+
+.property-resource, .property-path, .property-value {
+  @extend .col-auto;
+  @extend .btn;
+  @extend .rounded-pill;
+  @extend .py-0;
+  @extend .my-1;
+}
+
+.property-resource {
+  @extend .border;
+  @extend .border-info;
+  @extend .bg-white;
+}
+
+.property-path {
+  @extend .bg-info;
+  @extend .text-white;
+}
+
+.property-value {
+  @extend .border;
+  @extend .border-info;
+  @extend .bg-white;
+  @extend .text-info;
+}
+
 .btn, [role="button"], .clickable {
-  cursor: pointer;
+  &:not(.read-only) {
+    cursor: pointer;
+  }
 }
 
 .small {

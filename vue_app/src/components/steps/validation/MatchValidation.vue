@@ -2,99 +2,111 @@
   <card :id="'clusters_match_' + match.id" type="clusters-matches" :label="match.label" :fill-label="false"
         @show="getLinksOrClusters" @hide="showData = false">
     <template v-slot:title-extra>
-      <div class="btn-group btn-group-toggle mt-1">
+      <div class="btn-group-toggle mt-1">
         <label class="btn btn-secondary btn-sm" v-bind:class="{'active': showInfo}">
           <input type="checkbox" autocomplete="off" v-model="showInfo"/>
           <fa-icon icon="info-circle"/>
           {{ showInfo ? 'Hide' : 'Show' }} info
         </label>
-
-        <label v-if="clustering && !clusteringRunning" class="btn btn-secondary btn-sm"
-               v-bind:class="{'active': showClusters}">
-          <input type="checkbox" autocomplete="off" v-model="showClusters" @change="getLinksOrClusters"/>
-          <fa-icon icon="project-diagram"/>
-          {{ showClusters ? 'Hide' : 'Show' }} clusters
-        </label>
       </div>
     </template>
 
     <template v-slot:columns>
-      <div class="col-auto ml-auto mr-auto">
-        <div class="bg-white border small p-2">
-          <div class="row align-items-center m-0">
-            <div class="col-auto" v-if="clusteringRunning">
-              <loading :small="true"/>
-            </div>
+      <div class="col-auto d-flex flex-column align-items-center ml-auto mr-auto">
+        <div class="col-auto">
+          <div class="bg-white border small p-2">
+            <div class="row align-items-center m-0">
+              <div class="col-auto" v-if="clusteringRunning">
+                <loading :small="true"/>
+              </div>
 
-            <div class="col-auto">
-              <div>
-                <strong>Links: </strong>
-                {{ alignment.links_count }}
+              <div class="col-auto">
+                <div>
+                  <strong>Links: </strong>
+                  {{ alignment.links_count }}
+                </div>
+                <div>
+                  <strong>Clustering request: </strong>
+                  <template v-if="clustering">{{ clustering.requested_at }}</template>
+                  <template v-else>-</template>
+                </div>
+                <div>
+                  <strong>Clustering started at: </strong>
+                  <template v-if="clustering && clustering.processing_at">{{ clustering.processing_at }}</template>
+                  <template v-else>-</template>
+                </div>
+                <div>
+                  <strong>Clustering finished at: </strong>
+                  <template v-if="clustering && clustering.finished_at">{{ clustering.finished_at }}</template>
+                  <template v-else>-</template>
+                </div>
+                <div>
+                  <strong>Status: </strong>
+                  <pre v-if="clustering" class="d-inline">{{ clustering.status }}</pre>
+                  <pre v-else class="d-inline">Not yet clustered</pre>
+                </div>
               </div>
-              <div>
-                <strong>Clustering request: </strong>
-                <template v-if="clustering">{{ clustering.requested_at }}</template>
-                <template v-else>-</template>
-              </div>
-              <div>
-                <strong>Clustering started at: </strong>
-                <template v-if="clustering && clustering.processing_at">{{ clustering.processing_at }}</template>
-                <template v-else>-</template>
-              </div>
-              <div>
-                <strong>Clustering finished at: </strong>
-                <template v-if="clustering && clustering.finished_at">{{ clustering.finished_at }}</template>
-                <template v-else>-</template>
-              </div>
-              <div>
-                <strong>Status: </strong>
-                <pre v-if="clustering" class="d-inline">{{ clustering.status }}</pre>
-                <pre v-else class="d-inline">Not yet clustered</pre>
-              </div>
-            </div>
 
-            <div class="col-auto">
-              <div>
-                <strong>Clusters: </strong>
-                <template v-if="clustering && clustering.status === 'Finished'">
-                  {{ clustering.clusters_count }}
-                </template>
-                <template v-else>-</template>
-              </div>
-              <div>
-                <strong>Extended Clusters: </strong>
-                <template v-if="clustering && clustering.status === 'Finished'">
-                  {{ clustering.extended_count || 0 }}
-                </template>
-                <template v-else>-</template>
-              </div>
-              <div>
-                <strong>Clusters with Cycles: </strong>
-                <template v-if="clustering && clustering.status === 'Finished'">
-                  {{ clustering.cycles_count || 0 }}
-                </template>
-                <template v-else>-</template>
-              </div>
-              <div>
-                <strong>Clusters not Extended: </strong>
-                <template v-if="clustering && clustering.status === 'Finished'">
-                  {{ clustering.clusters_count - clustering.extended_count }}
-                </template>
-                <template v-else>-</template>
-              </div>
-              <div>
-                <strong>Clusters without Cycles: </strong>
-                <template v-if="clustering && clustering.status === 'Finished'">
-                  {{ clustering.clusters_count - clustering.cycles_count }}
-                </template>
-                <template v-else>-</template>
+              <div class="col-auto">
+                <div>
+                  <strong>Clusters: </strong>
+                  <template v-if="clustering && clustering.status === 'Finished'">
+                    {{ clustering.clusters_count }}
+                  </template>
+                  <template v-else>-</template>
+                </div>
+                <div>
+                  <strong>Extended Clusters: </strong>
+                  <template v-if="clustering && clustering.status === 'Finished'">
+                    {{ clustering.extended_count || 0 }}
+                  </template>
+                  <template v-else>-</template>
+                </div>
+                <div>
+                  <strong>Clusters with Cycles: </strong>
+                  <template v-if="clustering && clustering.status === 'Finished'">
+                    {{ clustering.cycles_count || 0 }}
+                  </template>
+                  <template v-else>-</template>
+                </div>
+                <div>
+                  <strong>Clusters not Extended: </strong>
+                  <template v-if="clustering && clustering.status === 'Finished'">
+                    {{ clustering.clusters_count - clustering.extended_count }}
+                  </template>
+                  <template v-else>-</template>
+                </div>
+                <div>
+                  <strong>Clusters without Cycles: </strong>
+                  <template v-if="clustering && clustering.status === 'Finished'">
+                    {{ clustering.clusters_count - clustering.cycles_count }}
+                  </template>
+                  <template v-else>-</template>
+                </div>
               </div>
             </div>
           </div>
         </div>
+
+        <div class="col-auto" v-if="showData">
+          <div class="btn-group btn-group-toggle mt-2">
+            <label class="btn btn-secondary btn-sm" v-bind:class="{'active': showPropertySelection}">
+              <input type="checkbox" autocomplete="off" v-model="showPropertySelection"/>
+              <fa-icon icon="list"/>
+              {{ showPropertySelection ? 'Hide' : 'Show' }} prop selection
+            </label>
+
+            <label v-if="clustering && !clusteringRunning" class="btn btn-secondary btn-sm"
+                   v-bind:class="{'active': showClusters}">
+              <input type="checkbox" autocomplete="off" v-model="showClusters" @change="getLinksOrClusters"/>
+              <fa-icon icon="list"/>
+              {{ showClusters ? 'Hide' : 'Show' }} clusters
+            </label>
+          </div>
+        </div>
       </div>
 
-      <div class="d-flex flex-column align-items-center">
+      <div class="col-auto d-flex flex-column align-items-center">
         <div class="col-auto">
           <button v-if="clustering && !clusteringRunning" type="button" class="btn btn-info my-1"
                   @click="runClustering($event)" :disabled="association === ''"
@@ -127,31 +139,33 @@
       </b-collapse>
     </template>
 
-    <sub-card :id="'properties_' + match.id" type="properties" label="Property selection" :has-collapse="true"
-              :has-margin-auto="true" :has-columns="true">
-      <template v-slot:columns>
-        <div class="col-auto ml-auto">
-          <button type="button" class="btn btn-info" @click="$root.submit">
-            Save
-          </button>
-        </div>
-      </template>
+    <b-collapse :id="'properties_' + match.id" accordion="properties-toggle-accordion" v-model="showPropertySelection">
+      <sub-card :id="'properties_card_' + match.id" type="properties" label="Property selection"
+                :has-margin-auto="true" :has-columns="true">
+        <template v-slot:columns>
+          <div class="col-auto ml-auto">
+            <button type="button" class="btn btn-info" @click="saveProperties">
+              Save
+            </button>
+          </div>
+        </template>
 
-      <div class="mt-4">
-        <property
-            v-for="(property, idx) in match.properties"
-            v-if="property[0]"
-            class="mx-0"
-            :key="idx"
-            :property="property"
-            :singular="false"
-            :follow-referenced-collection="false"
-            :allow-delete="match.properties.findIndex(p => p[0] === property[0]) !== idx"
-            @clone="match.properties.splice(idx + 1, 0, [match.properties[idx][0], ''])"
-            @delete="$delete(match.properties, idx)"
-            @resetProperty="resetProperty(idx, property, $event)"/>
-      </div>
-    </sub-card>
+        <div class="mt-4">
+          <property
+              v-for="(property, idx) in match.properties"
+              v-if="property[0]"
+              class="mx-0"
+              :key="idx"
+              :property="property"
+              :singular="false"
+              :follow-referenced-collection="false"
+              :allow-delete="match.properties.findIndex(p => p[0] === property[0]) !== idx"
+              @clone="match.properties.splice(idx + 1, 0, [match.properties[idx][0], ''])"
+              @delete="$delete(match.properties, idx)"
+              @resetProperty="resetProperty(idx, property, $event)"/>
+        </div>
+      </sub-card>
+    </b-collapse>
 
     <loading v-if="loading" class="mt-4"/>
 
@@ -271,6 +285,7 @@
                 loading: false,
                 showData: false,
                 showInfo: false,
+                showPropertySelection: false,
                 showClusters: true,
                 links: [],
                 linkItem: MatchLink,
@@ -281,7 +296,8 @@
                 association: '',
                 properties: {},
                 associationFiles: [],
-            }
+                linkStates: {},
+            };
         },
         props: {
             match: Object,
@@ -355,6 +371,11 @@
             },
         },
         methods: {
+            async saveProperties() {
+                await this.$root.submit();
+                await this.getLinksOrClusters();
+            },
+
             async runClustering() {
                 const associationFile = this.association !== '' ? this.association : null;
                 await this.$root.runClustering(this.match.id, associationFile);
@@ -420,6 +441,7 @@
                 const link = this.showAllLinks ? this.links[idx] : this.clusterLinks[idx];
                 return {
                     props: {
+                        state: this.linkStates[this.getLinkHash(link[0], link[1])],
                         source: link[0],
                         sourceValues: this.properties[link[0]] || [],
                         target: link[1],
@@ -427,7 +449,28 @@
                         strength: parseFloat(link[2]).toFixed(3),
                         isFirst: (idx === 0),
                     },
+                    on: {
+                        accepted: () => this.acceptLink(link[0], link[1]),
+                        declined: () => this.declineLink(link[0], link[1]),
+                    },
                 };
+            },
+
+            getLinkHash(source, target) {
+                if (source < target)
+                    return this.$utilities.md5(source + '-' + target);
+
+                return this.$utilities.md5(target + '-' + source);
+            },
+
+            acceptLink(source, target) {
+                if (!this.linkStates.hasOwnProperty(this.getLinkHash(source, target)))
+                   this.$set(this.linkStates, this.getLinkHash(source, target), 'accepted');
+            },
+
+            declineLink(source, target) {
+                if (!this.linkStates.hasOwnProperty(this.getLinkHash(source, target)))
+                    this.$set(this.linkStates, this.getLinkHash(source, target), 'declined');
             },
 
             resetProperty(idx, property, propertyIndex) {

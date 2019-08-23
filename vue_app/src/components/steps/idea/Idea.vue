@@ -47,7 +47,7 @@
           <input type="text" class="col-md-3 col-auto" id="job_id_copy" ref="job_id_copy" disabled v-model="job_id"/>
 
           <div class="col-auto">
-            <b-button @click="copyToClipboard($refs['job_id_copy'])">
+            <b-button @click="copyToClipboard()">
               <fa-icon :icon="['far', 'clipboard']"/>
             </b-button>
           </div>
@@ -105,12 +105,13 @@
                 }
             },
 
-            copyToClipboard(el) {
-                let disabled = el.hasAttribute('disabled');
+            copyToClipboard() {
+                const el = this.$refs.job_id_copy;
+                const disabled = el.hasAttribute('disabled');
                 if (disabled)
                     el.removeAttribute('disabled');
 
-                let selected = document.getSelection().rangeCount > 0 ? document.getSelection().getRangeAt(0) : false;
+                const selected = document.getSelection().rangeCount > 0 ? document.getSelection().getRangeAt(0) : false;
 
                 el.select();
                 document.execCommand('copy');
@@ -122,10 +123,8 @@
                 if (disabled)
                     el.setAttribute('disabled', 'disabled');
 
-                this.$refs['clipboard_copy_message'].removeAttribute('hidden');
-                setTimeout(() => {
-                    this.$refs['clipboard_copy_message'].setAttribute('hidden', 'hidden');
-                }, 2000);
+                this.$refs.clipboard_copy_message.removeAttribute('hidden');
+                setTimeout(() => this.$refs.clipboard_copy_message.setAttribute('hidden', 'hidden'), 2000);
             },
         },
         watch: {
@@ -139,5 +138,5 @@
                     this.description = this.job_description;
             },
         },
-    }
+    };
 </script>
