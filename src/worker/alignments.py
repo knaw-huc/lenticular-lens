@@ -19,7 +19,7 @@ from worker.matching.linksets_collection import LinksetsCollection
 class AlignmentJob:
     def __init__(self, job_id, alignment, status):
         self.job_id = job_id
-        self.alignment = alignment
+        self.alignment = str(alignment)
         self.status = status
         self.linksets_collection = LinksetsCollection(job_id=job_id, run_match=alignment)
 
