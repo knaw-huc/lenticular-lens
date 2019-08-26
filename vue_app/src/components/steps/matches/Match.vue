@@ -172,7 +172,7 @@
         },
         computed: {
             alignment() {
-                return this.$root.alignments[this.match.id];
+                return this.$root.alignments.find(alignment => alignment.alignment === this.match.id);
             },
 
             alignmentRunning() {

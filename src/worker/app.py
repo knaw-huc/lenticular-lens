@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 import random
 import locale
@@ -9,9 +10,9 @@ from enum import Enum
 from common.config_db import db_conn
 from common.helpers import update_alignment_job, update_clustering_job
 
-from worker.timbuctoo import download_from_timbuctoo
-from worker.alignments import run_alignment
-from worker.clustering import start_clustering
+from worker.timbuctoo import TimbuctooJob
+from worker.alignments import AlignmentJob
+from worker.clustering import ClusteringJob
 
 from psycopg2 import extras as psycopg2_extras, InterfaceError, OperationalError
 
@@ -26,17 +27,15 @@ class WorkerType(Enum):
 
 class Worker:
     def __init__(self, type):
-        self.job = None
         self.type = type
+        self.job = None
+        self.job_data = None
 
     def teardown(self):
         print('Worker %s stopped.' % str(self.type))
 
         if self.job:
-            if self.type == WorkerType.ALIGNMENTS:
-                update_alignment_job(self.job['job_id'], self.job['alignment'], {'status': self.job['status']})
-            elif self.type == WorkerType.CLUSTERINGS:
-                update_clustering_job(self.job['job_id'], self.job['alignment'], {'status': self.job['status']})
+            self.job.kill()
 
     def run(self):
         if self.type == WorkerType.TIMBUCTOO:
@@ -56,7 +55,7 @@ class Worker:
             update_status = lambda cur: cur.execute("""
                 UPDATE timbuctoo_tables 
                 SET update_start_time = now() 
-                WHERE "table_name" = %s""", (self.job['table_name'],))
+                WHERE "table_name" = %s""", (self.job_data['table_name'],))
 
             self.watch_for_jobs("timbuctoo_tables", watch_query, update_status, self.run_timbuctoo_job)
         elif self.type == WorkerType.ALIGNMENTS:
@@ -72,7 +71,7 @@ class Worker:
             update_status = lambda cur: cur.execute("""
                 UPDATE alignments
                 SET status = 'Processing', processing_at = now()
-                WHERE job_id = %s AND alignment = %s""", (self.job['job_id'], self.job['alignment']))
+                WHERE job_id = %s AND alignment = %s""", (self.job_data['job_id'], self.job_data['alignment']))
 
             self.watch_for_jobs("alignments", watch_query, update_status, self.run_alignment_job)
         elif self.type == WorkerType.CLUSTERINGS:
@@ -87,7 +86,7 @@ class Worker:
             update_status = lambda cur: cur.execute("""
                 UPDATE clusterings
                 SET status = 'Processing', processing_at = now()
-                WHERE job_id = %s AND alignment = %s""", (self.job['job_id'], self.job['alignment']))
+                WHERE job_id = %s AND alignment = %s""", (self.job_data['job_id'], self.job_data['alignment']))
 
             self.watch_for_jobs("clusterings", watch_query, update_status, self.run_clustering_job)
 
@@ -99,14 +98,14 @@ class Worker:
                     cur.execute("LOCK TABLE %s IN ACCESS EXCLUSIVE MODE;" % table)
                     cur.execute(watch_sql)
 
-                    job = cur.fetchone()
-                    if job:
-                        self.job = job
+                    job_data = cur.fetchone()
+                    if job_data:
+                        self.job_data = job_data
                         update_status(cur)
 
                     conn.commit()
 
-                if job:
+                if job_data:
                     run_job()
                 else:
                     time.sleep(2)
@@ -115,37 +114,39 @@ class Worker:
                 time.sleep((2 ** n1) + (random.randint(0, 1000) / 1000))
 
     def run_timbuctoo_job(self):
-        download_from_timbuctoo(
-            table_name=self.job['table_name'],
-            dataset_id=self.job['dataset_id'],
-            collection_id=self.job['collection_id'],
-            columns=self.job['columns'],
-            cursor=self.job['next_page'],
-            rows_count=self.job['rows_count'],
-            rows_per_page=500
-        )
+        self.job = TimbuctooJob(table_name=self.job_data['table_name'],
+                                dataset_id=self.job_data['dataset_id'],
+                                collection_id=self.job_data['collection_id'],
+                                columns=self.job_data['columns'],
+                                cursor=self.job_data['next_page'],
+                                rows_count=self.job_data['rows_count'],
+                                rows_per_page=500)
+        self.job.run()
 
     def run_alignment_job(self):
-        run_alignment(
-            job_id=self.job['job_id'],
-            alignment=self.job['alignment']
-        )
+        self.job = AlignmentJob(job_id=self.job_data['job_id'],
+                                alignment=self.job_data['alignment'],
+                                status=self.job_data['status'])
+        self.job.run()
 
     def run_clustering_job(self):
-        start_clustering(
-            job_id=self.job['job_id'],
-            alignment=self.job['alignment'],
-            association_file=self.job['association_file'],
-            clustering_id=self.job['clustering_id'],
-        )
+        self.job = ClusteringJob(job_id=self.job_data['job_id'],
+                                 alignment=self.job_data['alignment'],
+                                 association_file=self.job_data['association_file'],
+                                 clustering_id=self.job_data['clustering_id'])
+        self.job.run()
 
 
 if __name__ == '__main__':
     def teardown(signum=0):
         worker.teardown()
-        exit(signum)
+        sys.exit(signum)
+
 
     worker_type = WorkerType[os.environ['WORKER_TYPE'].upper()]
     worker = Worker(worker_type)
+
     signal.signal(signal.SIGTERM, teardown)
+    signal.signal(signal.SIGINT, teardown)
+
     worker.run()

@@ -1,14 +1,11 @@
-import os
 import re
 import time
 import gzip
-import fcntl
 import locale
 import datetime
-import subprocess
+import threading
 
-from subprocess import PIPE
-from os.path import join, dirname, realpath
+from os.path import join
 
 from common.config_db import db_conn
 from common.helpers import hasher, update_alignment_job, table_to_csv
@@ -19,61 +16,83 @@ from psycopg2 import sql as psycopg2_sql, ProgrammingError
 from worker.matching.linksets_collection import LinksetsCollection
 
 
-def run_alignment(job_id, alignment):
-    with subprocess.Popen(['python', './matching/run_json.py', '--job-id', job_id, '--run-mapping', str(alignment)],
-                          cwd=dirname(realpath(__file__)), stdout=PIPE, stderr=PIPE) as converting_process:
-        messages_log = ''
+class AlignmentJob:
+    def __init__(self, job_id, alignment, status):
+        self.job_id = job_id
+        self.alignment = alignment
+        self.status = status
+        self.linksets_collection = LinksetsCollection(job_id=job_id, run_match=alignment)
 
-        for converting_output in converting_process.stderr:
-            message = converting_output.decode('utf-8')
-            messages_log += message + '\n'
+    def run(self):
+        thread = threading.Thread(target=self.linksets_collection.run)
+        thread.start()
 
+        while thread.is_alive():
+            self.watch_process()
+            time.sleep(1)
+
+        if self.linksets_collection.has_queued_view:
+            print('Job %s downloading.' % self.job_id)
+            update_alignment_job(self.job_id, self.alignment, {'status': 'Downloading'})
+        elif self.linksets_collection.exception:
+            print('Job %s failed.' % self.job_id)
+            err_message = str(self.linksets_collection.exception)
+            update_alignment_job(self.job_id, self.alignment, {'status': 'FAILED: ' + err_message})
+        else:
+            thread = threading.Thread(target=self.write_alignment_to_file)
+            thread.start()
+
+            while thread.is_alive():
+                time.sleep(1)
+
+    def kill(self):
+        update_alignment_job(self.job_id, self.alignment, {'status': self.status})
+
+        with db_conn() as conn, conn.cursor() as cur:
+            cur.execute(psycopg2_sql.SQL('DROP SCHEMA {} CASCADE')
+                        .format(psycopg2_sql.Identifier(f'job_{self.alignment}_{self.job_id}')))
+            conn.commit()
+
+    def watch_process(self):
+        message = self.linksets_collection.status
+
+        if message.startswith('Generating linkset '):
+            view_name = re.search(r'(?<=Generating linkset ).+(?=.$)', message)[0]
+
+            with db_conn() as conn, conn.cursor() as cur:
+                try:
+                    cur.execute(psycopg2_sql.SQL('SELECT last_value FROM {}.{}').format(
+                        psycopg2_sql.Identifier('job_' + self.alignment + '_' + self.job_id),
+                        psycopg2_sql.Identifier(view_name + '_count'),
+                    ))
+                except ProgrammingError:
+                    return
+
+                inserted = cur.fetchone()[0]
+                conn.commit()
+
+            inserted_message = '%s links found so far.' % locale.format_string('%i', inserted, grouping=True)
+            print(inserted_message)
+            update_alignment_job(self.job_id, self.alignment, {'status': inserted_message})
+        else:
             print(message)
-            update_alignment_job(job_id, alignment, {'status': message})
+            update_alignment_job(self.job_id, self.alignment, {'status': message})
 
-            if message.startswith('Generating linkset '):
-                view_name = re.search(r'(?<=Generating linkset ).+(?=.$)', message)[0]
-                next_out = None
-
-                while not next_out:
-                    next_out = non_block_peek(converting_process.stderr)
-                    time.sleep(1)
-
-                    with db_conn() as conn:
-                        with conn.cursor() as cur:
-                            try:
-                                cur.execute(psycopg2_sql.SQL('SELECT last_value FROM {}.{}').format(
-                                    psycopg2_sql.Identifier('job_' + job_id),
-                                    psycopg2_sql.Identifier(view_name + '_count'),
-                                ))
-                            except ProgrammingError:
-                                continue
-
-                            inserted = cur.fetchone()[0]
-                            conn.commit()
-
-                    inserted_message = '%s links found so far.' \
-                                       % locale.format_string('%i', inserted, grouping=True)
-                    print(inserted_message)
-                    update_alignment_job(job_id, alignment, {'status': inserted_message})
-
-    if converting_process.returncode == 0:
+    def write_alignment_to_file(self):
         with db_conn() as conn:
             with conn.cursor() as cur:
                 cur.execute(psycopg2_sql.SQL('SELECT count(*) FROM {}.{}').format(
-                    psycopg2_sql.Identifier('job_' + job_id),
-                    psycopg2_sql.Identifier(view_name)))
+                    psycopg2_sql.Identifier('job_' + self.alignment + '_' + self.job_id),
+                    psycopg2_sql.Identifier(self.linksets_collection.view_name)))
                 inserted = cur.fetchone()[0]
 
             with conn.cursor() as cur:
-                cur.execute(
-                    "UPDATE alignments SET links_count = %s WHERE job_id = %s AND alignment = %s",
-                    (inserted, job_id, alignment))
+                cur.execute("UPDATE alignments SET links_count = %s WHERE job_id = %s AND alignment = %s",
+                            (inserted, self.job_id, self.alignment))
 
         print("Generating CSVs")
-        linksets_collection = LinksetsCollection(job_id=job_id)
-        for match in linksets_collection.matches:
-            if str(match.id) != str(alignment):
+        for match in self.linksets_collection.matches:
+            if str(match.id) != str(self.alignment):
                 continue
 
             columns = [psycopg2_sql.Identifier('source_uri'), psycopg2_sql.Identifier('target_uri')]
@@ -83,42 +102,23 @@ def run_alignment(job_id, alignment):
                 prefix = 'alignment'
                 columns.append(psycopg2_sql.Identifier('__cluster_similarity'))
 
-            filename = f'{prefix}_{hasher(job_id)}_alignment_{match.id}.csv.gz'
+            filename = f'{prefix}_{hasher(self.job_id)}_alignment_{match.id}.csv.gz'
 
             print('Creating file ' + join(CSV_ASSOCIATIONS_DIR, filename))
             with gzip.open(join(CSV_ASSOCIATIONS_DIR, filename), 'wt') as csv_file:
-                table_to_csv(f'job_{job_id}.{match.name}', columns, csv_file)
+                table_to_csv(f'job_{self.alignment}_{self.job_id}.{match.name}', columns, csv_file)
 
         print('Cleaning up.')
         print('Dropping schema.')
 
-        with db_conn() as conn:
-            with conn.cursor() as cur:
-                cur.execute(psycopg2_sql.SQL('DROP SCHEMA {} CASCADE').format(
-                    psycopg2_sql.Identifier(f'job_{job_id}')))
-                conn.commit()
+        with db_conn() as conn, conn.cursor() as cur:
+            cur.execute(psycopg2_sql.SQL('DROP SCHEMA {} CASCADE')
+                        .format(psycopg2_sql.Identifier(f'job_{self.alignment}_{self.job_id}')))
+            conn.commit()
 
-        print(f'Schema job_{job_id} dropped.')
+        print(f'Schema job_{self.job_id} dropped.')
         print('Cleanup complete.')
-        print('Job %s finished.' % job_id)
+        print('Job %s finished.' % self.job_id)
 
-        update_alignment_job(job_id, alignment, {'status': 'Finished', 'finished_at': str(datetime.datetime.now())})
-    elif converting_process.returncode == 3:
-        print('Job %s downloading.' % job_id)
-        update_alignment_job(job_id, alignment, {'status': 'Downloading'})
-    else:
-        print('Job %s failed.' % job_id)
-        update_alignment_job(job_id, alignment, {'status': 'FAILED: ' + messages_log})
-
-
-def non_block_peek(output):
-    fd = output.fileno()
-    fl = fcntl.fcntl(fd, fcntl.F_GETFL)
-    fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
-    try:
-        output_bytes = output.peek(1)
-        return output_bytes
-    except:
-        return b""
-    finally:
-        fcntl.fcntl(fd, fcntl.F_SETFL, fl)
+        update_alignment_job(self.job_id, self.alignment,
+                             {'status': 'Finished', 'finished_at': str(datetime.datetime.now())})

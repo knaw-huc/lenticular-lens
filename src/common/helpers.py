@@ -146,13 +146,11 @@ def update_alignment_job(job_id, alignment, job_data):
     n = 0
     while True:
         try:
-            with db_conn() as conn:
-                with conn.cursor() as cur:
-                    cur.execute(
-                        psycopg2_sql.SQL("UPDATE alignments SET ({}) = ROW %s WHERE job_id = %s AND alignment = %s")
-                            .format(
-                            psycopg2_sql.SQL(', '.join(job_data.keys()))),
-                        (tuple(job_data.values()), job_id, alignment))
+            with db_conn() as conn, conn.cursor() as cur:
+                cur.execute(
+                    psycopg2_sql.SQL("UPDATE alignments SET ({}) = ROW %s WHERE job_id = %s AND alignment = %s")
+                        .format(psycopg2_sql.SQL(', '.join(job_data.keys()))),
+                    (tuple(job_data.values()), job_id, alignment))
 
         except (psycopg2.InterfaceError, psycopg2.OperationalError):
             n += 1

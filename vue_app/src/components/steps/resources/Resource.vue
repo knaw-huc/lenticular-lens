@@ -246,14 +246,13 @@
             },
 
             isUsedInAlignmentResults() {
-                const alignmentsInResults = Object.keys(this.$root.alignments);
+                const alignmentsInResults = this.$root.alignments.map(alignment => alignment.alignment);
 
                 for (let i = 0; i < this.$root.matches.length; i++) {
                     const match = this.$root.matches[i];
 
-                    if (alignmentsInResults.includes(match.id.toString()) &&
-                        (match.sources.includes(this.resource.id.toString())
-                            || match.targets.includes(this.resource.id.toString()))) {
+                    if (alignmentsInResults.includes(match.id) &&
+                        (match.sources.includes(this.resource.id) || match.targets.includes(this.resource.id))) {
                         return true;
                     }
                 }

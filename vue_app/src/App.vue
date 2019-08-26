@@ -307,9 +307,7 @@
                 let hasFinished = false;
                 let hasUnfinished = false;
 
-                Object.keys(this.$root.alignments).forEach(alignmentKey => {
-                    const alignment = this.$root.alignments[alignmentKey];
-
+                this.$root.alignments.forEach(alignment => {
                     if (alignment.status === 'Finished')
                         hasFinished = true;
                     else if (!alignment.status.startsWith('FAILED'))
@@ -329,8 +327,7 @@
 
                 let hasUnfinished = false;
 
-                Object.keys(this.$root.clusterings).forEach(clusteringKey => {
-                    const clustering = this.$root.clusterings[clusteringKey];
+                this.$root.clusterings.forEach(clustering => {
                     if (clustering.status !== 'Finished' && !clustering.status.startsWith('FAILED'))
                         hasUnfinished = true;
                 });

@@ -1,14 +1,12 @@
 import re
-import sys
 import time
 import locale
 import datetime
 
-from psycopg2 import sql, extras
+from psycopg2 import sql
 
 from worker.matching.match import Match
 from worker.matching.resource import Resource
-from worker.matching.links_to_rdf import convert_link
 
 from common.config_db import db_conn
 from common.helpers import get_job_data, get_absolute_property, get_property_sql, \
@@ -18,40 +16,71 @@ locale.setlocale(locale.LC_ALL, '')
 
 
 class LinksetsCollection:
-    def __init__(self, job_id, run_match=None,
-                 sql_only=False, resources_only=False, matches_only=False, return_limit=None):
-        self.sql_only = sql_only
-        self.resources_only = resources_only
-        self.matches_only = matches_only
-        self.return_limit = return_limit or 0
-        self.results = []
+    def __init__(self, job_id, run_match, sql_only=False, resources_only=False, matches_only=False):
         self.job_id = job_id
         self.run_match = str(run_match)
 
-        self.__matches = None
-        self.__resources = None
+        self.sql_only = sql_only
+        self.resources_only = resources_only
+        self.matches_only = matches_only
+
+        self.status = 'Processing'
+        self.exception = None
 
         job_data = get_job_data(self.job_id)
-        self.data = {
-            'resources': job_data['resources'],
-            'matches': job_data['mappings'],
-        }
+        self.matches = list(map(Match, job_data['mappings']))
+        self.resources = list(map(lambda resource: Resource(resource, self), job_data['resources']))
 
-        self.run_matches = []
-        if self.run_match:
-            for match in self.matches:
-                if match.id == self.run_match:
-                    self.run_matches.append(match.name_original)
-                    self.run_matches += match.matches_dependencies
+        self.matches_to_run = []
+        self.resources_to_run = []
 
-    def __enter__(self):
-        return self
+        self.filter_matches_to_run()
+        self.filter_resources_to_run()
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        pass
+    def filter_matches_to_run(self):
+        matches_added = []
+        matches_to_add = [self.run_match]
 
-    def __del__(self):
-        pass
+        while matches_to_add:
+            match_to_add = matches_to_add[0]
+
+            if match_to_add not in matches_added:
+                for match in self.matches:
+                    if match.id == match_to_add:
+                        self.matches_to_run.insert(0, match)
+                        matches_to_add += match.matches_dependencies
+
+                        matches_to_add.remove(match_to_add)
+                        matches_added.append(match_to_add)
+            else:
+                matches_to_add.remove(match_to_add)
+
+    def filter_resources_to_run(self):
+        resources_to_add = []
+        for match in self.matches_to_run:
+            resources_to_add += [hash_string(resource) for resource in match.resources]
+
+        resources_added = []
+        while resources_to_add:
+            resource_to_add = resources_to_add[0]
+
+            if resource_to_add not in resources_added:
+                for resource in self.resources:
+                    if resource.label == resource_to_add:
+                        self.resources_to_run.append(resource)
+
+                        resources_to_add.remove(resource_to_add)
+                        resources_added.append(resource_to_add)
+            else:
+                resources_to_add.remove(resource_to_add)
+
+    @property
+    def view_name(self):
+        for match in self.matches:
+            if match.id == self.run_match:
+                return match.name
+
+        return None
 
     @property
     def has_queued_view(self):
@@ -61,84 +90,45 @@ class LinksetsCollection:
 
         return False
 
-    @property
-    def matches(self):
-        if not self.__matches:
-            self.__matches = list(map(Match, self.data['matches']))
-        return self.__matches
-
-    @property
-    def resources(self):
-        if not self.__resources:
-            self.__resources = list(map(lambda resource: Resource(resource, self), self.data['resources']))
-        return self.__resources
-
     def add_statistics(self, for_object, statistics):
         pass
 
     def generate_matches(self):
-        generated = []
+        for match in self.matches_to_run:
+            self.log('Generating linkset %s.' % match.name)
 
-        self.log(self.run_matches)
-        while (not self.run_match and len(generated) < len(self.matches)) or (self.run_match and len(generated) < len(self.run_matches)):
-            generated_this_cycle = 0
-            for match in self.matches:
-                if self.run_match and match.name_original not in self.run_matches:
-                    continue
+            result = self.process_sql(self.generate_match_sql(match), match.before_alignment)
+            self.log('Linkset %s generated. %s links created in %s.' % (
+                match.name,
+                locale.format_string('%i', result['affected'], grouping=True),
+                result['duration']
+            ))
 
-                if match.name_original not in generated and not self.get_option('skip', options=match.meta):
-                    if not all(m in generated for m in match.matches_dependencies):
-                        continue
-
-                    generated.append(match.name_original)
-                    generated_this_cycle += 1
-                    self.log('Generating linkset %s.' % match.name)
-                    result = self.process_sql(self.generate_match_sql(match), match.before_alignment)
-                    self.log('Linkset %s generated. %s links created in %s.' % (
-                        match.name, locale.format_string('%i', result['affected'], grouping=True), result['duration']))
-                    if not self.sql_only:
-                        self.add_statistics(match, result)
-            if generated_this_cycle == 0:
-                raise NameError('Invalid mappings configuration.')
+            if not self.sql_only:
+                self.add_statistics(match, result)
 
     def generate_resources(self):
-        generated = []
-        resources = self.resources
-
-        materialize = []
-        for match in self.matches:
-            if self.run_match and match.name_original not in self.run_matches:
-                continue
-
-            for resource in match.resources:
-                resource_label = hash_string(resource)
-                if resource_label not in materialize:
-                    materialize.append(resource_label)
-
         if not self.has_queued_view or self.sql_only:
-            while len(generated) < len(resources):
-                for resource in resources:
-                    if resource.label not in generated:
-                        if resource.label in materialize:
-                            self.log('Generating collection %s.' % resource.label)
-                            result = self.process_sql(self.generate_resource_sql(resource))
-                            self.log('Collection %s generated. Inserted %s records in %s' % (
-                                resource.label,
-                                locale.format_string('%i', result['affected'], grouping=True),
-                                result['duration'],
-                            ))
-                            if not self.sql_only:
-                                self.add_statistics(resource, result)
-                        generated.append(resource.label)
+            for resource in self.resources_to_run:
+                self.log('Generating collection %s.' % resource.label)
 
-    @staticmethod
-    def log(message):
-        print(message, file=sys.stderr)
+                result = self.process_sql(self.generate_resource_sql(resource))
+                self.log('Collection %s generated. Inserted %s records in %s' % (
+                    resource.label,
+                    locale.format_string('%i', result['affected'], grouping=True),
+                    result['duration']
+                ))
+
+                if not self.sql_only:
+                    self.add_statistics(resource, result)
+
+    def log(self, message):
+        self.status = message
 
     def process_sql(self, composed, inject=None):
         query_starting_time = time.time()
 
-        schema_name_sql = sql.Identifier('job_' + self.job_id)
+        schema_name_sql = sql.Identifier('job_' + self.run_match + '_' + self.job_id)
         composed = sql.Composed([
             sql.SQL('CREATE SCHEMA IF NOT EXISTS {};\n').format(schema_name_sql),
             sql.SQL('SET SEARCH_PATH TO "$user", {}, public;\n').format(schema_name_sql),
@@ -151,7 +141,7 @@ class LinksetsCollection:
             sql_string = composed.as_string(conn)
             inject = inject.as_string(conn) if inject else ''
 
-            with open('%s.sql' % self.job_id, 'a') as sql_file:
+            with open('%s_%s.sql' % (self.run_match, self.job_id), 'a') as sql_file:
                 sql_file.write(sql_string)
 
             if self.sql_only:
@@ -166,27 +156,15 @@ class LinksetsCollection:
                     if re.search(r'\S', statement):
                         if re.match(r'^\s*SELECT', statement) and not re.search(r'set_config\(', statement):
                             continue
-                            with conn.cursor(cursor_factory=extras.DictCursor, name='cursor') as named_cur:
-                                self.log('Converting linkset to RDF.')
-                                named_cur.execute(statement)
-                                for record in named_cur:
-                                    if self.return_limit > 0:
-                                        self.results.append(record)
-                                        self.return_limit -= 1
-
-                                    print(convert_link(record))
-                                    processed_count += 1
-                                    if processed_count % 100000 == 0:
-                                        self.log('%s links converted.' % locale.format_string('%i', processed_count, grouping=True))
-                            conn.commit()
-                            self.log('Linkset converted, %s links total.' % locale.format_string('%i', processed_count, grouping=True))
                         else:
                             with conn.cursor() as cur:
                                 if inject:
                                     cur.execute(inject)
                                     conn.commit()
+
                                 cur.execute(statement)
                                 conn.commit()
+
                                 if cur.rowcount > 0:
                                     affected_count += cur.rowcount
 
@@ -291,41 +269,41 @@ class LinksetsCollection:
         return True
 
     def generate_match_sql(self, match):
-    #         match_sql = sql.SQL("""
-    # DROP SEQUENCE IF EXISTS {sequence_name} CASCADE;
-    # CREATE SEQUENCE {sequence_name} MINVALUE 0 START 0;
-    #
-    # DROP MATERIALIZED VIEW IF EXISTS source CASCADE;
-    # CREATE MATERIALIZED VIEW source AS {source};
-    # ANALYZE source;
-    # CREATE INDEX ON source (uri);
-    #
-    # DROP MATERIALIZED VIEW IF EXISTS target CASCADE;
-    # CREATE MATERIALIZED VIEW target AS {target};
-    # ANALYZE target;
-    # CREATE INDEX ON target (uri);
-    #
-    # DROP MATERIALIZED VIEW IF EXISTS {view_name} CASCADE;
-    # CREATE MATERIALIZED VIEW {view_name} AS
-    # SELECT source.uri AS source_uri,
-    #        target.uri AS target_uri,
-    #        {fields}
-    # FROM source
-    # JOIN target
-    # ON (source.collection != target.collection OR source.uri > target.uri) AND nextval({sequence_name}) != 0
-    # AND ({conditions});
-    #
-    # SELECT * FROM {view_name};
-    # """).format(
-    #             fields=match.similarity_fields_sql,
-    #             source=match.source_sql,
-    #             target=match.target_sql,
-    #             view_name=sql.Identifier(match.name),
-    #             sequence_name=sql.Identifier(match.name + '_count'),
-    #             conditions=match.conditions_sql,
-    #         )
-    #
-    #         match_sql = match.index_sql + match_sql
+        #         match_sql = sql.SQL("""
+        # DROP SEQUENCE IF EXISTS {sequence_name} CASCADE;
+        # CREATE SEQUENCE {sequence_name} MINVALUE 0 START 0;
+        #
+        # DROP MATERIALIZED VIEW IF EXISTS source CASCADE;
+        # CREATE MATERIALIZED VIEW source AS {source};
+        # ANALYZE source;
+        # CREATE INDEX ON source (uri);
+        #
+        # DROP MATERIALIZED VIEW IF EXISTS target CASCADE;
+        # CREATE MATERIALIZED VIEW target AS {target};
+        # ANALYZE target;
+        # CREATE INDEX ON target (uri);
+        #
+        # DROP MATERIALIZED VIEW IF EXISTS {view_name} CASCADE;
+        # CREATE MATERIALIZED VIEW {view_name} AS
+        # SELECT source.uri AS source_uri,
+        #        target.uri AS target_uri,
+        #        {fields}
+        # FROM source
+        # JOIN target
+        # ON (source.collection != target.collection OR source.uri > target.uri) AND nextval({sequence_name}) != 0
+        # AND ({conditions});
+        #
+        # SELECT * FROM {view_name};
+        # """).format(
+        #             fields=match.similarity_fields_sql,
+        #             source=match.source_sql,
+        #             target=match.target_sql,
+        #             view_name=sql.Identifier(match.name),
+        #             sequence_name=sql.Identifier(match.name + '_count'),
+        #             conditions=match.conditions_sql,
+        #         )
+        #
+        #         match_sql = match.index_sql + match_sql
 
         match_sql = sql.SQL("""
 SELECT source.uri AS source_uri,
@@ -334,15 +312,11 @@ SELECT source.uri AS source_uri,
 FROM ({source}) AS source
 JOIN ({target}) AS target
   ON (source.collection != target.collection OR source.uri > target.uri) AND ({conditions}) and nextval({sequence_name}) != 0;
-"""
-                            )\
-            .format(
-                fields=match.similarity_fields_sql,
-                source=match.source_sql,
-                target=match.target_sql,
-                conditions=match.conditions_sql,
-                sequence_name=sql.Literal(match.name + '_count'),
-        )
+""").format(fields=match.similarity_fields_sql,
+            source=match.source_sql,
+            target=match.target_sql,
+            conditions=match.conditions_sql,
+            sequence_name=sql.Literal(match.name + '_count'))
 
         match_sql = (sql.SQL("""
 DROP SEQUENCE IF EXISTS {sequence_name} CASCADE;
@@ -357,15 +331,11 @@ CREATE SEQUENCE {sequence_name} MINVALUE 0 START 0;
 -- CREATE INDEX ON target (uri);
 DROP MATERIALIZED VIEW IF EXISTS {view_name} CASCADE;
 CREATE MATERIALIZED VIEW {view_name} AS""").format(
-                source=match.source_sql,
-                target=match.target_sql,
-                view_name=sql.Identifier(match.name),
-                sequence_name=sql.Identifier(match.name + '_count'),
-            )
-                         + match_sql + sql.SQL("""
-SELECT * FROM {view_name};
-"""
-                                               ).format(view_name=sql.Identifier(match.name)))
+            source=match.source_sql,
+            target=match.target_sql,
+            view_name=sql.Identifier(match.name),
+            sequence_name=sql.Identifier(match.name + '_count'),
+        ) + match_sql + sql.SQL("SELECT * FROM {view_name};").format(view_name=sql.Identifier(match.name)))
 
         match_sql = match.index_sql + match_sql
 
@@ -375,13 +345,8 @@ SELECT * FROM {view_name};
         sql_composed = sql.SQL("""
 DROP MATERIALIZED VIEW IF EXISTS {view_name} CASCADE;
 CREATE MATERIALIZED VIEW {view_name} AS{sub_query};
-ANALYZE {view_name};
-"""
-                               )\
-            .format(
-                view_name=sql.Identifier(resource.label),
-                sub_query=self.generate_resource_sub_query_sql(resource)
-        )
+ANALYZE {view_name};""").format(view_name=sql.Identifier(resource.label),
+                                sub_query=self.generate_resource_sub_query_sql(resource))
 
         return sql_composed
 
@@ -394,24 +359,13 @@ ANALYZE {view_name};
         return sql.SQL("""
 {pre}SELECT DISTINCT {matching_fields}
 FROM {table_name} AS {alias}{joins}{wheres}
-ORDER BY uri{limit}
-"""
-                       )\
-            .format(
-                pre=pre,
-                matching_fields=matching_fields,
-                table_name=sql.Identifier(resource.collection.table_name),
-                alias=sql.Identifier(resource.label),
-                joins=joins,
-                wheres=self.replace_sql_variables(resource.where_sql),
-                limit=resource.limit_sql,
-        )
-
-    def get_option(self, option, default=False, options=None):
-        if options is None:
-            options = self.data['options']
-
-        return options[option] if option in options else default
+ORDER BY uri{limit}""").format(pre=pre,
+                               matching_fields=matching_fields,
+                               table_name=sql.Identifier(resource.collection.table_name),
+                               alias=sql.Identifier(resource.label),
+                               joins=joins,
+                               wheres=self.replace_sql_variables(resource.where_sql),
+                               limit=resource.limit_sql)
 
     def replace_sql_variables(self, sql_template):
         return self.r_replace_sql_variables(sql_template)
@@ -459,22 +413,13 @@ ORDER BY uri{limit}
         return sql_part
 
     def run(self):
-        open('%s.sql' % self.job_id, 'w').close()
+        try:
+            open('%s_%s.sql' % (self.run_match, self.job_id), 'w').close()
 
-        # self.updateJobData({
-        #     'status': 'Processing',
-        #     'processing_at': str(datetime.datetime.now()),
-        # })
-
-        # try:
-        if not self.matches_only:
-            self.generate_resources()
-        if not self.resources_only and (not self.has_queued_view or self.sql_only):
-            self.generate_matches()
-        # except:
-            # self.updateJobData({'status': 'Error'})
-            # raise
-        # else:
-            # self.updateJobData({'status': 'Finished', 'finished_at': str(datetime.datetime.now())})
-
-        return self
+            if not self.matches_only:
+                self.generate_resources()
+            if not self.resources_only and (not self.has_queued_view or self.sql_only):
+                self.generate_matches()
+        except Exception as e:
+            self.exception = e
+            raise e
