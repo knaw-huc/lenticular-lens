@@ -1,6 +1,5 @@
 <template>
-  <div class="bg-white border p-3"
-       v-bind:class="{'mt-4': !isFirst, 'is-invalid': hasError}">
+  <div class="bg-white border p-3" v-bind:class="{'mt-4': !isFirst, 'is-invalid': hasError}">
     <div v-if="hasColumns || hasCollapse || label || hasInfo || addButton"
          class="row align-items-center justify-content-between">
       <div v-if="hasCollapse" class="col-auto">
@@ -23,7 +22,7 @@
       </div>
     </div>
 
-    <b-collapse v-if="hasCollapse" :id="id" :ref="id" :accordion="type + '-accordion'"
+    <b-collapse v-if="hasCollapse" :id="id" :ref="id" :accordion="type + '-accordion'" :visible="openCard"
                 @show="$emit('show')" @hide="$emit('hide')">
       <slot></slot>
     </b-collapse>
@@ -40,6 +39,10 @@
             type: String,
             label: String,
             addButton: String,
+            openCard: {
+                type: Boolean,
+                default: false,
+            },
             hasError: {
                 type: Boolean,
                 default: false

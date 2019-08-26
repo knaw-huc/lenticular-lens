@@ -49,16 +49,14 @@
       <div class="col-auto">
         <div class="row flex-column align-items-center">
           <div class="col-auto">
-            <button type="button" class="btn btn-sm btn-success m-1" :disabled="state"
-                    @click="$emit('accepted')">
+            <button type="button" class="btn btn-sm btn-success m-1" @click="$emit('accepted')">
               <fa-icon icon="check"/>
               Accept
             </button>
           </div>
 
           <div class="col-auto">
-            <button type="button" class="btn btn-sm btn-danger m-1" :disabled="state"
-                    @click="$emit('declined')">
+            <button type="button" class="btn btn-sm btn-danger m-1" @click="$emit('declined')">
               <fa-icon icon="times"/>
               Decline
             </button>

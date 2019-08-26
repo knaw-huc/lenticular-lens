@@ -1,6 +1,6 @@
 <template>
   <div class="border p-4 mt-4 bg-light" v-bind:class="{'is-invalid': hasError}">
-    <div class="sticky-top bg-light py-2" v-bind:class="showContent ? 'border-bottom' : {}">
+    <div class="sticky-top bg-light py-2" v-bind:class="visible ? 'border-bottom' : {}">
       <div class="row flex-nowrap align-items-center justify-content-between">
         <div class="col-auto">
           <fa-icon icon="chevron-down" size="2x" v-b-toggle="id"></fa-icon>
@@ -28,10 +28,8 @@
       </div>
     </div>
 
-    <slot name="header"></slot>
-
-    <b-collapse :id="id" :ref="id" :accordion="type + '-accordion'" v-model="showContent"
-                @show="$emit('show')" @hide="$emit('hide')">
+    <b-collapse :id="id" :ref="id" :accordion="type + '-accordion'" :visible="openCard"
+                @show="$emit('show')" @hide="$emit('hide')" @input="visible = $event">
       <slot></slot>
     </b-collapse>
   </div>
@@ -45,6 +43,10 @@
             type: String,
             label: String,
             value: String,
+            openCard: {
+                type: Boolean,
+                default: false,
+            },
             hasError: {
                 type: Boolean,
                 default: false,
@@ -58,7 +60,7 @@
             return {
                 editing: false,
                 hovering: false,
-                showContent: false
+                visible: false,
             };
         },
         computed: {

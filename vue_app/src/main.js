@@ -25,10 +25,10 @@ Vue.component('fa-icon', FontAwesomeIcon);
 import {library} from '@fortawesome/fontawesome-svg-core';
 import {faQuestionCircle, faClipboard} from '@fortawesome/free-regular-svg-icons';
 import {faChevronDown, faArrowRight, faPlus, faTrashAlt, faPencilAlt, faCheck, faTimes,
-    faInfoCircle, faAlignJustify, faProjectDiagram, faList} from '@fortawesome/free-solid-svg-icons';
+    faInfoCircle, faAlignJustify, faProjectDiagram, faList, faCog} from '@fortawesome/free-solid-svg-icons';
 
 library.add(faQuestionCircle, faClipboard, faChevronDown, faArrowRight, faPlus, faTrashAlt, faPencilAlt,
-    faCheck, faTimes, faInfoCircle, faAlignJustify, faProjectDiagram, faList);
+    faCheck, faTimes, faInfoCircle, faAlignJustify, faProjectDiagram, faList, faCog);
 
 import md5 from 'md5';
 

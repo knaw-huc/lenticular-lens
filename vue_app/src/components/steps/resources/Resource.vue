@@ -27,11 +27,11 @@
           </div>
 
           <div v-if="resource.dataset_id !== ''" class="form-group collection-input col-4">
-            <label :for="'collection_' + resource.id">Subset</label>
+            <label :for="'collection_' + resource.id">Entity type</label>
 
             <v-select v-model="resource.collection_id" :id="'collection_' + resource.id"
                       v-bind:class="{'is-invalid': errors.includes('collection')}">
-              <option value="" selected disabled>Choose a subset</option>
+              <option value="" selected disabled>Choose an entity type</option>
               <option v-for="(data, collection) in $root.datasets[resource.dataset_id].collections"
                       v-bind:value="collection">
                 {{ collection }}
@@ -39,7 +39,7 @@
             </v-select>
 
             <div class="invalid-feedback" v-show="errors.includes('collection')">
-              Please select a subset
+              Please select an entity type
             </div>
           </div>
         </div>

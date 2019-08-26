@@ -70,7 +70,7 @@
       <tab-content title="Validation">
         <tab-content-structure title="Validation" :tab_error="tab_error" :is_saved="is_saved">
           <match-validation
-              v-if="$root.alignments[match.id] && $root.alignments[match.id].status === 'Finished'"
+              v-if="$root.alignments.find(al => al.alignment === match.id && al.status === 'Finished')"
               v-for="match in $root.matches"
               :match="match"
               :key="match.id"
@@ -79,14 +79,17 @@
         </tab-content-structure>
       </tab-content>
 
+      <tab-content title="Export">
+        <tab-content-structure title="Export" :tab_error="tab_error" :is_saved="is_saved"></tab-content-structure>
+      </tab-content>
+
       <template v-if="(props.activeTabIndex === 0  && !job_id) || [1,2].includes(props.activeTabIndex)"
                 slot="next" slot-scope="props">
         <template v-if="props.activeTabIndex === 0 && !job_id">
           <wizard-button
               :style="props.fillButtonStyle"
               :disabled="props.loading || idea_form === 'existing'"
-              @click.native.prevent.stop="idea_form='existing'"
-          >
+              @click.native.prevent.stop="idea_form='existing'">
             Existing Idea
           </wizard-button>
           &nbsp;
@@ -94,8 +97,7 @@
               v-if="hasChanges"
               :style="props.fillButtonStyle"
               :disabled="props.loading || idea_form === 'new'"
-              @click.native.prevent.stop="idea_form='new'"
-          >
+              @click.native.prevent.stop="idea_form='new'">
             New Idea
           </wizard-button>
         </template>
@@ -126,7 +128,6 @@
     import Idea from './components/steps/idea/Idea';
     import Resource from './components/steps/resources/Resource';
     import Match from './components/steps/matches/Match';
-    import Links from "./components/steps/links/Links";
     import MatchValidation from './components/steps/validation/MatchValidation';
 
     import TabContentStructure from './components/structural/TabContentStructure';
@@ -141,7 +142,6 @@
             Idea,
             Resource,
             Match,
-            Links,
             MatchValidation,
         },
         data() {
@@ -154,12 +154,7 @@
                 job_description: '',
                 is_saved: true,
                 is_updating: false,
-                steps: [
-                    'idea',
-                    'collections',
-                    'alignments',
-                    'validation',
-                ],
+                steps: ['idea', 'collections', 'alignments', 'validation', 'export'],
             }
         },
         computed: {
@@ -218,19 +213,18 @@
                 }
             },
 
-            activateStep(step_name, jump = false) {
-                let step_index = this.steps.indexOf(step_name);
-
-                if (step_index < 0 || typeof this.$refs['formWizard'].tabs[step_index] === 'undefined')
+            activateStep(stepName, jump = false) {
+                const stepIndex = this.steps.indexOf(stepName);
+                if (stepIndex < 0 || typeof this.$refs.formWizard.tabs[stepIndex] === 'undefined')
                     return false;
 
-                for (let i = 0; i <= step_index; i++)
-                    this.$set(this.$refs['formWizard'].tabs[i], 'checked', true);
+                for (let i = 0; i <= stepIndex; i++)
+                    this.$set(this.$refs.formWizard.tabs[i], 'checked', true);
 
-                this.$set(this.$refs['formWizard'], 'maxStep', step_index);
+                this.$set(this.$refs.formWizard, 'maxStep', stepIndex);
 
                 if (jump)
-                    this.$refs['formWizard'].changeTab(this.$refs['formWizard'].activeTabIndex, step_index);
+                    this.$refs.formWizard.changeTab(this.$refs.formWizard.activeTabIndex, stepIndex);
             },
 
             addResource(event) {
@@ -314,8 +308,10 @@
                         hasUnfinished = true;
                 });
 
-                if (hasFinished)
+                if (hasFinished) {
                     this.activateStep('validation');
+                    this.activateStep('export');
+                }
 
                 if (hasUnfinished)
                     setTimeout(() => this.$root.loadAlignments().then(() => this.refreshAlignments()), 5000);
