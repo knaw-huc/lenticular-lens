@@ -10,6 +10,7 @@ from os.path import join
 from common.config_db import db_conn
 from common.helpers import hasher, update_alignment_job, table_to_csv
 
+from common.ll.LLData.CSV_Alignments import CSV_ALIGNMENTS_DIR
 from common.ll.LLData.CSV_Associations import CSV_ASSOCIATIONS_DIR
 
 from psycopg2 import sql as psycopg2_sql, ProgrammingError
@@ -97,15 +98,17 @@ class AlignmentJob:
 
             columns = [psycopg2_sql.Identifier('source_uri'), psycopg2_sql.Identifier('target_uri')]
             if match.is_association:
+                dir = CSV_ASSOCIATIONS_DIR
                 prefix = 'association'
             else:
+                dir = CSV_ALIGNMENTS_DIR
                 prefix = 'alignment'
                 columns.append(psycopg2_sql.Identifier('__cluster_similarity'))
 
             filename = f'{prefix}_{hasher(self.job_id)}_alignment_{match.id}.csv.gz'
 
-            print('Creating file ' + join(CSV_ASSOCIATIONS_DIR, filename))
-            with gzip.open(join(CSV_ASSOCIATIONS_DIR, filename), 'wt') as csv_file:
+            print('Creating file ' + join(dir, filename))
+            with gzip.open(join(dir, filename), 'wt') as csv_file:
                 table_to_csv(f'job_{self.alignment}_{self.job_id}.{match.name}', columns, csv_file)
 
         print('Cleaning up.')
