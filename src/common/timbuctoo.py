@@ -87,6 +87,7 @@ class Timbuctoo:
                 result["LIST"] = True
             if "referencedCollections" in column_info and len(column_info["referencedCollections"]) > 0:
                 result["LINK"] = True
+                result["REF"] = column_info["referencedCollections"]
             return result
 
         column_info = {hash_string(col_name.lower()): get_column_info(col_info)

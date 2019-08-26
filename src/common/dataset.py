@@ -31,8 +31,11 @@ class Dataset:
                         columns[column_info['name']] = {
                             'isList': column_info['LIST'],
                             'isValueType': column_info['VALUE'],
-                            'name': column_info['name']
+                            'name': column_info['name'],
                         }
+
+                        if 'REF' in column_info:
+                            columns[column_info['name']]['referencedCollections'] = column_info['REF']
 
                     datasets[table['dataset_id']]['collections'][table['collection_id']] = columns
 
