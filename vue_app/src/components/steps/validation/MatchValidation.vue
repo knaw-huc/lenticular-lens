@@ -331,19 +331,6 @@
                 return this.showClusters && this.clusterIdSelected && (this.clusterView === 'links');
             },
 
-            resources() {
-                const linkResources = Object.values(this.clusters)
-                    .flatMap(cluster => cluster.links)
-                    .flatMap(links => links)
-                    .map(res => res.substring(1, res.length - 1));
-
-                const nodeResources = Object.values(this.clusters)
-                    .flatMap(cluster => cluster.nodes)
-                    .map(res => res.substring(1, res.length - 1));
-
-                return [...new Set(linkResources.concat(nodeResources))];
-            },
-
             selectedCluster() {
                 if (!this.clusterIdSelected)
                     return null;
@@ -401,19 +388,24 @@
             },
 
             async getLinksOrClusters(hard = false) {
-                if (this.showClusters && this.clustering && (this.clustering.status === 'Finished')) {
-                    if (hard || (Object.keys(this.clusters).length === 0)) {
-                        this.loading = true;
-                        this.links = [];
-                        await this.getClusters();
-                    }
+                if (this.showClusters && this.clustering && (this.clustering.status === 'Finished')
+                    && (Object.keys(this.clusters).length === 0)) {
+                    this.loading = true;
+                    this.links = [];
+                    await this.getClusters();
                 }
-                else if (!this.showClusters || !this.clustering || !this.clusteringRunning) {
-                    if (hard || (this.links.length === 0)) {
-                        this.loading = true;
-                        this.clusters = {};
-                        await this.getLinks();
-                    }
+                else if ((!this.showClusters || !this.clustering || !this.clusteringRunning)
+                    && (this.links.length === 0)) {
+                    this.loading = true;
+                    this.clusters = {};
+                    await this.getLinks();
+                }
+
+                if (this.hasProperties && (hard || (Object.keys(this.properties).length === 0))) {
+                    this.loading = true;
+
+                    const targets = this.$root.getTargetsForMatch(this.match.id);
+                    this.properties = await this.$root.getPropertiesForAlignment(this.match.id, targets);
                 }
 
                 this.loading = false;
@@ -421,22 +413,11 @@
 
             async getLinks() {
                 this.links = await this.$root.getAlignment(this.match.id);
-
-                if (this.hasProperties) {
-                    const targets = this.$root.getTargetsForMatch(this.match.id);
-                    this.properties = await this.$root.getPropertiesForAlignment(this.match.id, targets);
-                }
             },
 
             async getClusters() {
-                if (this.clustering && this.clustering.status === 'Finished') {
+                if (this.clustering && this.clustering.status === 'Finished')
                     this.clusters = await this.$root.getClusters(this.clustering.clustering_id, this.association);
-
-                    if (this.hasProperties) {
-                        const targets = this.$root.getTargetsForMatch(this.match.id);
-                        this.properties = await this.$root.getProperties(this.resources, targets);
-                    }
-                }
             },
 
             getClusterItemProps(idx) {

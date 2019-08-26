@@ -242,10 +242,6 @@ export default {
             return callApi("/association_files");
         },
 
-        async getProperties(resources, targets) {
-            return callApi('/properties', {resources, targets});
-        },
-
         async loadDatasets() {
             if (this.datasets)
                 return;
