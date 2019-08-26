@@ -133,7 +133,8 @@ class Worker:
         self.job = ClusteringJob(job_id=self.job_data['job_id'],
                                  alignment=self.job_data['alignment'],
                                  association_file=self.job_data['association_file'],
-                                 clustering_id=self.job_data['clustering_id'])
+                                 clustering_id=self.job_data['clustering_id'],
+                                 status=self.job_data['status'])
         self.job.run()
 
 
