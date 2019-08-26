@@ -79,7 +79,7 @@ class TimbuctooJob:
                 count=self.rows_per_page,
                 columns="\n".join(columns))
 
-            query_result = Timbuctoo().fetchGraphQl(query, {'cursor': cursor})
+            query_result = Timbuctoo().fetchGraphQl(query, {'cursor': self.cursor})
             if not query_result:
                 return
 
@@ -110,7 +110,7 @@ class TimbuctooJob:
                         ) OR (
                             %(next_page)s IS NOT NULL AND next_page = %(next_page)s
                         ))
-                    ''', {'table_name': self.table_name, 'next_page': cursor})
+                    ''', {'table_name': self.table_name, 'next_page': self.cursor})
                     if cur.fetchone() != (1,):
                         print('This is weird... Someone else updated the job for table %s while I was fetching data.'
                               % self.table_name)
@@ -150,9 +150,9 @@ class TimbuctooJob:
                     ''', (query_result['nextCursor'], table_rows + len(results), self.table_name))
 
                 conn.commit()
-                cursor = query_result['nextCursor']
+                self.cursor = query_result['nextCursor']
 
-                if cursor is None:
+                if self.cursor is None:
                     print('Job for table %s finished.' % self.table_name)
                     run_query(
                         'UPDATE timbuctoo_tables SET update_finish_time = now() WHERE "table_name" = %s',
