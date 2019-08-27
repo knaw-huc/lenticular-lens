@@ -9,36 +9,41 @@
       </div>
 
       <div class="col">
-        <div class="row flex-nowrap">
+        <div class="row justify-content-center flex-nowrap">
+          <div class="property-path btn-sm read-only">
+            Source
+          </div>
+
+          <div class="property-value btn-sm read-only ml-2">
+            {{ source }}
+          </div>
+
+          <button type="button" class="property-value btn-sm read-only ml-2" @click="copySourceUriToClipboard">
+            <fa-icon :icon="['far', 'clipboard']"/>
+          </button>
+        </div>
+
+        <div class="row justify-content-center flex-nowrap">
+          <div class="property-path btn-sm read-only">
+            Target
+          </div>
+
+          <div class="property-value btn-sm read-only ml-2">
+            {{ target }}
+          </div>
+
+          <button type="button" class="property-value btn-sm read-only ml-2" @click="copyTargetUriToClipboard">
+            <fa-icon :icon="['far', 'clipboard']"/>
+          </button>
+        </div>
+
+        <div v-if="sourceProperties.length > 0 || targetProperties.length > 0"
+             class="row flex-nowrap border-top mt-2 pt-2">
           <div class="col">
-            <div class="row align-items-center m-0">
-              <div class="property-path btn-sm read-only">
-                Source
-              </div>
-
-              <div class="property-value property-value-scroll-parent btn-sm read-only ml-2">
-                <div class="property-value-scroll">
-                  {{ source }}
-                </div>
-              </div>
-            </div>
-
             <properties :properties="sourceProperties" :show-resource-info="false"/>
           </div>
 
           <div class="col">
-            <div class="row align-items-center m-0">
-              <div class="property-path btn-sm read-only">
-                Target
-              </div>
-
-              <div class="property-value property-value-scroll-parent btn-sm read-only ml-2">
-                <div class="property-value-scroll">
-                  {{ target }}
-                </div>
-              </div>
-            </div>
-
             <properties :properties="targetProperties" :show-resource-info="false"/>
           </div>
         </div>
@@ -109,6 +114,15 @@
                         values: value.values,
                     };
                 });
+            },
+        },
+        methods: {
+            async copySourceUriToClipboard() {
+                await navigator.clipboard.writeText(this.source);
+            },
+
+            async copyTargetUriToClipboard() {
+                await navigator.clipboard.writeText(this.target);
             },
         },
     };
