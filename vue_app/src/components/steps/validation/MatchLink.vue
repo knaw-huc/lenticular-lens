@@ -1,6 +1,6 @@
 <template>
   <div class="border p-3" v-bind:class="[{'mt-2': !isFirst}, ...bgColor]">
-    <div class="row align-items-center">
+    <div class="row align-items-center flex-nowrap">
       <div class="col-auto">
         <div class="btn btn-sm bg-info-light border border-info text-info read-only m-1">
           <span class="font-weight-bold">Strength</span><br>
@@ -9,41 +9,39 @@
       </div>
 
       <div class="col">
-        <div class="row align-items-center m-0">
-          <div class="property-path btn-sm read-only">
-            Source URI
+        <div class="row flex-nowrap">
+          <div class="col">
+            <div class="row align-items-center m-0">
+              <div class="property-path btn-sm read-only">
+                Source
+              </div>
+
+              <div class="property-value property-value-scroll-parent btn-sm read-only ml-2">
+                <div class="property-value-scroll">
+                  {{ source }}
+                </div>
+              </div>
+            </div>
+
+            <properties :properties="sourceProperties" :show-resource-info="false"/>
           </div>
 
-          <button type="button" class="property-value btn-sm read-only ml-2" @click="copySourceUriToClipboard">
-            <fa-icon :icon="['far', 'clipboard']"/>
-            Copy to clipboard
-          </button>
+          <div class="col">
+            <div class="row align-items-center m-0">
+              <div class="property-path btn-sm read-only">
+                Target
+              </div>
 
-          <span class="badge badge-info ml-2" ref="sourceClipboardCopyMessage" hidden>
-            Source URI copied to clipboard
-          </span>
-        </div>
+              <div class="property-value property-value-scroll-parent btn-sm read-only ml-2">
+                <div class="property-value-scroll">
+                  {{ target }}
+                </div>
+              </div>
+            </div>
 
-        <properties :properties="sourceProperties" :show-resource-info="false"/>
-      </div>
-
-      <div class="col">
-        <div class="row align-items-center m-0">
-          <div class="property-path btn-sm read-only">
-            Target URI
+            <properties :properties="targetProperties" :show-resource-info="false"/>
           </div>
-
-          <button type="button" class="property-value btn-sm read-only ml-2" @click="copyTargetUriToClipboard">
-            <fa-icon :icon="['far', 'clipboard']"/>
-            Copy to clipboard
-          </button>
-
-          <span class="badge badge-info ml-2" ref="targetClipboardCopyMessage" hidden>
-            Target URI copied to clipboard
-          </span>
         </div>
-
-        <properties :properties="targetProperties" :show-resource-info="false"/>
       </div>
 
       <div class="col-auto">
@@ -111,21 +109,6 @@
                         values: value.values,
                     };
                 });
-            },
-        },
-        methods: {
-            async copySourceUriToClipboard() {
-                await navigator.clipboard.writeText(this.source);
-
-                this.$refs.sourceClipboardCopyMessage.removeAttribute('hidden');
-                setTimeout(() => this.$refs.sourceClipboardCopyMessage.setAttribute('hidden', 'hidden'), 2000);
-            },
-
-            async copyTargetUriToClipboard() {
-                await navigator.clipboard.writeText(this.target);
-
-                this.$refs.targetClipboardCopyMessage.removeAttribute('hidden');
-                setTimeout(() => this.$refs.targetClipboardCopyMessage.setAttribute('hidden', 'hidden'), 2000);
             },
         },
     };

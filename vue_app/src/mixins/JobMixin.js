@@ -9,7 +9,7 @@ export default {
             resources: [],
             matches: [],
             datasets: null,
-        }
+        };
     },
     methods: {
         addResource() {
@@ -67,16 +67,20 @@ export default {
             return match.properties.reduce((targets, prop) => {
                 const resource = this.getResourceById(prop[0]);
 
-                let target = targets.find(t => t.graph === resource.dataset_id);
-                if (!target) {
-                    target = {graph: resource.dataset_id, data: []};
-                    targets.push(target);
+                let resourceTarget = targets.find(t => t.graph === resource.dataset_id);
+                if (!resourceTarget) {
+                    resourceTarget = {graph: resource.dataset_id, data: []};
+                    targets.push(resourceTarget);
                 }
 
-                target.data.push({
-                    entity_type: resource.collection_id,
-                    properties: [prop[1]]
-                });
+                let entityTarget = resourceTarget.data.find(d => d.entity_type === resource.collection_id);
+                if (!entityTarget) {
+                    entityTarget = {entity_type: resource.collection_id, properties: []};
+                    resourceTarget.data.push(entityTarget);
+                }
+
+                entityTarget.properties.push(prop[1]);
+                // TODO: entityTarget.properties.push(prop.slice(1));
 
                 return targets;
             }, []);

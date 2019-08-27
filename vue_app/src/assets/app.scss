@@ -146,6 +146,18 @@ div.is-invalid {
   @extend .border-info;
   @extend .bg-white;
   @extend .text-info;
+
+  user-select: text;
+
+  &.property-value-scroll-parent {
+    max-width: 80%;
+    overflow: hidden;
+
+    .property-value-scroll {
+      overflow-x: scroll;
+      margin-bottom: -15px;
+    }
+  }
 }
 
 .btn, [role="button"], .clickable {

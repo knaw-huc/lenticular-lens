@@ -102,9 +102,9 @@
           </wizard-button>
         </template>
 
-        <template v-if="[1,2].includes(props.activeTabIndex)">
+        <template v-if="[1,2,3].includes(props.activeTabIndex)">
           <wizard-button
-              v-if="hasChanges"
+              v-if="hasChanges && [1,2].includes(props.activeTabIndex)"
               :style="props.fillButtonStyle"
               :disabled="props.loading"
               @click.native.stop="validateAndSave(props.activeTabIndex)">

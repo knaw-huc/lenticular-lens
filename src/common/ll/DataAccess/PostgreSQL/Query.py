@@ -39,26 +39,55 @@ def get_node_values(uris, query_data):
             if table_info:
                 for property_name in datatype_set['properties']:
                     column_name = get_column_name(property_name)
-                    template = '''
-                    SELECT uri AS resource, {graph_name} AS dataset, {property_literal} AS property, 
-                    jsonb_array_elements_text({property_name}) AS value
-                    FROM {table_name}
-                    WHERE uri IN %(uris)s
-                    ''' if table_info[1][column_name]['LIST'] else '''
-                    SELECT uri AS resource, {graph_name} AS dataset, {property_literal} AS property, 
-                    {property_name} AS value
-                    FROM {table_name}
-                    WHERE uri IN %(uris)s
-                    '''
+                    property_selection = psycopg2_sql.SQL('jsonb_array_elements_text({column_name})'). \
+                        format(column_name=psycopg2_sql.Identifier(column_name)) \
+                        if table_info['columns'][column_name]['LIST'] \
+                        else psycopg2_sql.Identifier(column_name)
 
-                    sql = psycopg2_sql.SQL(template).format(
+                    sql = psycopg2_sql.SQL('''
+                    SELECT uri AS resource, {graph_name} AS dataset, {property} AS property, {value} AS value
+                    FROM {table_name}
+                    WHERE uri IN %(uris)s''').format(
                         graph_name=psycopg2_sql.Literal(graph_set['graph']),
-                        property_literal=psycopg2_sql.Literal(property_name),
-                        property_name=psycopg2_sql.Identifier(column_name),
-                        table_name=psycopg2_sql.Identifier(table_info[0]),
+                        property=psycopg2_sql.Literal(property_name),
+                        value=property_selection,
+                        table_name=psycopg2_sql.Identifier(table_info['table_name']),
                     )
 
                     sqls.append(sql)
+
+                    # TODO: Work in progress
+                    # for property_path in datatype_set['properties']:
+                    #     joins = []
+                    #
+                    # resource = table_info['table_name']
+                    # while len(property_path) > 1:
+                    #     property = property_path.pop(0)
+                    #     # TODO
+                    #
+                    #
+                    # property_name = property_path[0]
+                    # column_name = get_column_name(property_name)
+                    #
+                    # property_selection = psycopg2_sql.SQL('jsonb_array_elements_text({column_name})'). \
+                    #     format(column_name=psycopg2_sql.Identifier(column_name)) \
+                    #     if table_info['columns'][column_name]['LIST'] \
+                    #     else psycopg2_sql.Identifier(column_name)
+                    #
+                    # sql = psycopg2_sql.SQL('''
+                    # SELECT t.uri AS resource, {graph_name} AS dataset, {property} AS property, {value} AS value
+                    # FROM {table_name} AS t
+                    # {joins}
+                    # WHERE t.uri IN %(uris)s
+                    # ''').format(
+                    #     graph_name=psycopg2_sql.Literal(graph_set['graph']),
+                    #     property=psycopg2_sql.Literal(property_name),
+                    #     value=property_selection,
+                    #     joins=psycopg2_sql.Composable(joins),
+                    #     table_name=psycopg2_sql.Identifier(table_info['table_name']),
+                    # )
+                    #
+                    # sqls.append(sql)
 
     union_sql = psycopg2_sql.SQL('\nUNION ALL\n').join(sqls)
 
@@ -75,7 +104,7 @@ def get_table_info(dataset_id, collection_id):
         (dataset_id, collection_id)
     )
 
-    return result if result else result
+    return {'table_name': result[0], 'columns': result[1]} if result else result
 
 
 def get_column_name(property_name):

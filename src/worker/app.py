@@ -122,12 +122,14 @@ class Worker:
                                 rows_count=self.job_data['rows_count'],
                                 rows_per_page=500)
         self.job.run()
+        self.cleanup()
 
     def run_alignment_job(self):
         self.job = AlignmentJob(job_id=self.job_data['job_id'],
                                 alignment=self.job_data['alignment'],
                                 status=self.job_data['status'])
         self.job.run()
+        self.cleanup()
 
     def run_clustering_job(self):
         self.job = ClusteringJob(job_id=self.job_data['job_id'],
@@ -136,6 +138,11 @@ class Worker:
                                  clustering_id=self.job_data['clustering_id'],
                                  status=self.job_data['status'])
         self.job.run()
+        self.cleanup()
+
+    def cleanup(self):
+        self.job = None
+        self.job_data = None
 
 
 if __name__ == '__main__':
