@@ -6,7 +6,7 @@ from common.helpers import hash_string
 
 class Timbuctoo:
     def __init__(self):
-        self.graphql_uri = 'https://goldenagents.jauco.nl/v5/graphql'
+        self.graphql_uri = 'https://repository.goldenagents.org/v5/graphql'
 
     def fetchGraphQl(self, query, variables=None):
         n = 0
