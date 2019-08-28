@@ -332,6 +332,7 @@ function callApiCsv(path) {
         Papa.parse(path, {
             download: true,
             fastMode: true,
+            skipEmptyLines: true,
             delimiter: ',',
             complete: results => resolve(results.data),
             error: err => reject(err),

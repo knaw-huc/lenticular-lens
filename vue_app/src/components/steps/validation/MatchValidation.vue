@@ -364,7 +364,8 @@
                     this.showAllLinks = false;
                     this.showClusters = false;
                 }
-                else if (state !== 'open' && state !== 'close')
+
+                if (this.show !== showSomething)
                     this.show = showSomething;
 
                 if (state === 'links' && this.showClusters)
@@ -440,6 +441,7 @@
                 const link = this.showAllLinks ? this.links[idx] : this.clusterLinks[idx];
                 return {
                     props: {
+                        index: idx,
                         state: this.linkStates[this.getLinkHash(link[0], link[1])],
                         source: link[0],
                         sourceValues: this.properties[link[0]] || [],
@@ -456,10 +458,10 @@
             },
 
             getLinkHash(source, target) {
-                if (source < target)
-                    return this.$utilities.md5(source + '-' + target);
+                const obj = (source < target) ? `(<${source}>, <${target}>)` : `(<${target}>, <${source}>)`;
+                const hash = this.$utilities.md5(obj).substring(0, 15);
 
-                return this.$utilities.md5(target + '-' + source);
+                return `key_H${hash}`;
             },
 
             acceptLink(source, target) {

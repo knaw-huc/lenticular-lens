@@ -29,7 +29,7 @@
     </div>
 
     <b-collapse :id="id" :ref="id" :accordion="type + '-accordion'" :visible="openCard"
-                @show="$emit('show')" @hide="$emit('hide')" @input="visible = $event">
+                @show="$emit('show')" @hide="$emit('hide')" @input="withInput($event)">
       <slot></slot>
     </b-collapse>
   </div>
@@ -66,6 +66,12 @@
         computed: {
             isEditing() {
                 return !this.label && (this.editing || this.value === '');
+            }
+        },
+        methods: {
+            withInput(evt) {
+                this.visible = evt;
+                evt ? this.$emit('show') : this.$emit('hide');
             }
         },
         updated() {

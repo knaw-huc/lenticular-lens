@@ -1,17 +1,23 @@
 <template>
-  <div class="border p-3" v-bind:class="[{'mt-2': !isFirst}, ...bgColor]">
+  <div class="border p-3" v-bind:class="[{'mt-4': !isFirst}, ...bgColor]">
     <div class="row align-items-center flex-nowrap">
-      <div class="col-auto">
-        <div class="btn btn-sm bg-info-light border border-info text-info read-only m-1">
-          <span class="font-weight-bold">Strength</span><br>
-          {{ strength }}
+      <div class="col-auto d-flex flex-column align-items-center">
+        <div class="col-auto">
+          <span class="font-weight-bold font-italic"># {{ index + 1 }}</span>
+        </div>
+
+        <div class="col-auto">
+          <div class="btn btn-sm bg-info-light border border-info text-info read-only m-1">
+            <span class="font-weight-bold">Strength</span><br>
+            {{ strength }}
+          </div>
         </div>
       </div>
 
       <div class="col">
         <div class="row justify-content-center flex-nowrap">
           <div class="property-path btn-sm read-only">
-            Source
+            Source URI
           </div>
 
           <div class="property-value btn-sm read-only ml-2">
@@ -25,7 +31,7 @@
 
         <div class="row justify-content-center flex-nowrap">
           <div class="property-path btn-sm read-only">
-            Target
+            Target URI
           </div>
 
           <div class="property-value btn-sm read-only ml-2">
@@ -40,10 +46,14 @@
         <div v-if="sourceProperties.length > 0 || targetProperties.length > 0"
              class="row flex-nowrap border-top mt-2 pt-2">
           <div class="col">
+            <div class="font-weight-bold mb-2">Source properties:</div>
+
             <properties :properties="sourceProperties" :show-resource-info="false"/>
           </div>
 
           <div class="col">
+            <div class="font-weight-bold mb-2">Target properties:</div>
+
             <properties :properties="targetProperties" :show-resource-info="false"/>
           </div>
         </div>
@@ -79,6 +89,7 @@
             Properties
         },
         props: {
+            index: Number,
             state: String,
             source: String,
             sourceValues: Array,
