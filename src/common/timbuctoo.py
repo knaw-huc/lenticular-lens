@@ -4,6 +4,7 @@ import sys
 from time import sleep
 from common.helpers import hash_string
 
+
 class Timbuctoo:
     def __init__(self):
         self.graphql_uri = 'https://repository.goldenagents.org/v5/graphql'
@@ -15,7 +16,7 @@ class Timbuctoo:
                 response = requests.post(self.graphql_uri, json={
                     "query": query,
                     "variables": variables
-                }, timeout=60)
+                }, timeout=60, verify=False)
                 response.raise_for_status()
                 result = response.json()
                 if "errors" in result and len(result["errors"]) > 0:
