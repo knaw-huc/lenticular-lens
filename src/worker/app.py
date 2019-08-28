@@ -8,7 +8,6 @@ import signal
 from enum import Enum
 
 from common.config_db import db_conn
-from common.helpers import update_alignment_job, update_clustering_job
 
 from worker.timbuctoo import TimbuctooJob
 from worker.alignments import AlignmentJob

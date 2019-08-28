@@ -223,7 +223,7 @@
         </div>
 
         <virtual-list
-            :size="90"
+            :size="58"
             :remain="5"
             :item="clusterItem"
             :itemcount="clustering.clusters_count"
@@ -343,11 +343,14 @@
                     return [];
 
                 return this.selectedCluster.links.map(link => {
-                    return [
-                        link[0].substring(1, link[0].length - 1),
-                        link[1].substring(1, link[1].length - 1),
-                        '1'
-                    ];
+                    const source = link[0].substring(1, link[0].length - 1);
+                    const target = link[1].substring(1, link[1].length - 1);
+
+                    const hash = this.getLinkHash(source, target);
+                    const strength = this.selectedCluster.strengths.hasOwnProperty(hash)
+                        ? this.selectedCluster.strengths[hash][0] : '0';
+
+                    return [source, target, strength];
                 });
             },
         },
@@ -458,7 +461,7 @@
             },
 
             getLinkHash(source, target) {
-                const obj = (source < target) ? `(<${source}>, <${target}>)` : `(<${target}>, <${source}>)`;
+                const obj = (source < target) ? `('<${source}>', '<${target}>')` : `('<${target}>', '<${source}>')`;
                 const hash = this.$utilities.md5(obj).substring(0, 15);
 
                 return `key_H${hash}`;

@@ -111,6 +111,17 @@ class AlignmentJob:
             with gzip.open(join(dir, filename), 'wt') as csv_file:
                 table_to_csv(f'job_{self.alignment}_{self.job_id}.{match.name}', columns, csv_file)
 
+        print('Start clustering.')
+
+        with db_conn() as conn, conn.cursor() as cur:
+            query = psycopg2_sql.SQL("""INSERT INTO clusterings 
+            (job_id, alignment, clustering_type, association_file, status, requested_at) 
+            VALUES (%s, %s, %s, %s, %s, now())""")
+
+            cur.execute(query, (self.job_id, self.alignment, 'default', None, 'Requested'))
+            conn.commit()
+
+        print('Clustering job sent.')
         print('Cleaning up.')
         print('Dropping schema.')
 
