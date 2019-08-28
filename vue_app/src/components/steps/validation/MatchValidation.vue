@@ -392,6 +392,9 @@
             },
 
             async getLinksOrClusters(hard = false) {
+                if (this.loading)
+                    return;
+
                 if (this.showClusters && this.clustering && (this.clustering.status === 'Finished')
                     && (Object.keys(this.clusters).length === 0)) {
                     this.loading = true;
