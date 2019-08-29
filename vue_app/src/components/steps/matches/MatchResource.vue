@@ -1,14 +1,14 @@
 <template>
   <div class="row align-items-center">
-    <div v-if="!match_resource" class="col-auto pr-0" @mouseenter="hovering = true" @mouseleave="hovering = false">
+    <div v-if="!matchResource" class="col-auto pr-0" @mouseenter="hovering = true" @mouseleave="hovering = false">
       <v-select
-          @input="$emit('input', $event); hovering = false"
-          :value="match_resource"
-          :id="'match_' + match.id + '_resource_label_' + match_resource_id"
+          :id="'match_' + match.id + '_resource_label_' + matchResourceId"
+          :value="matchResource"
           v-bind:class="{'is-invalid': errors.includes('resource')}"
-      >
+          @input="selectResource">
         <option disabled selected value="">Choose a collection</option>
-        <option v-for="root_resource in resources" :value.number="root_resource.id">{{ root_resource.label }}
+        <option v-for="rootResource in resources" :value.number="rootResource.id">
+          {{ rootResource.label }}
         </option>
       </v-select>
 
@@ -18,11 +18,11 @@
     </div>
 
     <div v-else @mouseenter="hovering = true" @mouseleave="hovering = false" class="ml-3">
-      {{ match_resource.label }}
+      {{ matchResource.label }}
     </div>
 
-    <div class="col-auto pl-0" @mouseenter="hovering = true" @mouseleave="hovering = false">
-      <button-delete @click="$emit('remove')" size="sm" :class="'btn-sm pt-1' + showOnHover"/>
+    <div class="col-auto pl-0 ml-3" @mouseenter="hovering = true" @mouseleave="hovering = false">
+      <button-delete size="sm" class="btn-sm" v-bind:class="{'invisible': !hovering}" @click="$emit('remove')"/>
     </div>
   </div>
 </template>
@@ -36,29 +36,30 @@
         data() {
             return {
                 hovering: false,
-            }
+            };
         },
         props: {
             match: Object,
-            match_resource: Object,
-            match_resource_id: String,
-            resources_key: String,
+            matchResource: Object,
+            matchResourceId: String,
+            resourcesKey: String,
         },
         computed: {
             resources() {
                 return this.$root.resources.filter(resource => {
-                    return !this.match[this.resources_key].includes(resource.id.toString());
+                    return !this.match[this.resourcesKey].includes(resource.id.toString());
                 });
-            },
-
-            showOnHover() {
-                return this.hovering ? '' : ' invisible';
             },
         },
         methods: {
             validateResource() {
-                return this.validateField('resource', this.match_resource && this.match_resource !== '');
-            }
+                return this.validateField('resource', this.matchResource && this.matchResource !== '');
+            },
+
+            selectResource(resourceId) {
+                this.hovering = false;
+                this.$emit('input', parseInt(resourceId));
+            },
         },
-    }
+    };
 </script>

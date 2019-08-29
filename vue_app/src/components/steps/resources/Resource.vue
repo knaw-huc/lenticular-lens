@@ -2,7 +2,11 @@
   <card :id="'resource_' + resource.id" type="resources" v-model="resource.label" :hasError="errors.length > 0">
     <template v-slot:columns>
       <div class="col-auto">
-        <button-delete v-on:click="$emit('remove')" :disabled="isUsedInAlignmentResults()" title="Delete Collection"/>
+        <b-button variant="info" @click="$emit('duplicate', resource)">Duplicate</b-button>
+      </div>
+
+      <div v-if="!isUsedInAlignmentResults()" class="col-auto">
+        <button-delete v-on:click="$emit('remove')" title="Delete Collection"/>
       </div>
     </template>
 

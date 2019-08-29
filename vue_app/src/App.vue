@@ -39,7 +39,8 @@
               v-for="(resource, index) in $root.resources"
               :key="resource.id"
               :resource="resource"
-              v-on:remove="$root.resources.splice(index, 1)"
+              @duplicate="duplicateResource($event)"
+              @remove="$root.resources.splice(index, 1)"
               ref="resourceComponents"
           ></resource>
         </tab-content-structure>
@@ -235,6 +236,10 @@
             addMatch(event) {
                 if (event) event.target.blur();
                 this.$root.addMatch();
+            },
+
+            duplicateResource(resource) {
+                this.$root.duplicateResource(resource);
             },
 
             duplicateMatch(match) {

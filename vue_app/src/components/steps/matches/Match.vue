@@ -45,15 +45,15 @@
         <b-button variant="info" @click="$emit('duplicate', match)">Duplicate</b-button>
       </div>
 
-      <div class="col-auto" v-if="!alignmentRunning">
+      <div v-if="!alignmentRunning" class="col-auto">
         <b-button variant="info" @click="runAlignment">
           Run
           <template v-if="alignment">again</template>
         </b-button>
       </div>
 
-      <div class="col-auto">
-        <button-delete @click="$emit('remove')" size="2x" :disabled="!!alignment" title="Delete this Alignment"/>
+      <div v-if="!alignment" class="col-auto">
+        <button-delete @click="$emit('remove')" size="2x" title="Delete this Alignment"/>
       </div>
     </template>
 
@@ -65,15 +65,15 @@
           <match-sources-info/>
         </template>
 
-        <div class="row pl-5">
+        <div class="row pl-5 mt-2">
           <div class="col">
             <match-resource
-                v-for="(match_resource, index) in match.sources"
+                v-for="(matchResource, index) in match.sources"
                 :key="index"
-                :match_resource_id="'source_' + index"
+                :match-resource-id="'source_' + index"
                 :match="match"
-                :match_resource="$root.getResourceById(match_resource)"
-                resources_key="sources"
+                :match-resource="$root.getResourceById(matchResource)"
+                resources-key="sources"
                 @input="updateMatchResource('sources', index, $event)"
                 @remove="deleteMatchResource('sources', index)"
                 ref="sourceResourceComponents"
@@ -95,15 +95,15 @@
           <match-targets-info/>
         </template>
 
-        <div class="row pl-5">
+        <div class="row pl-5 mt-2">
           <div class="col">
             <match-resource
-                v-for="(match_resource, index) in match.targets"
+                v-for="(matchResource, index) in match.targets"
                 :key="index"
-                :match_resource_id="'target_' + index"
+                :match-resource-id="'target_' + index"
                 :match="match"
-                :match_resource="$root.getResourceById(match_resource)"
-                resources_key="targets"
+                :match-resource="$root.getResourceById(matchResource)"
+                resources-key="targets"
                 @input="updateMatchResource('targets', index, $event)"
                 @remove="deleteMatchResource('targets', index)"
                 ref="targetResourceComponents"
@@ -210,55 +210,53 @@
                 group.conditions.push({
                     method_name: '',
                     method_value: {},
-                    sources: this.match.sources.reduce((acc, from_resource) => {
-                        acc[from_resource] = [{'property': [from_resource, '']}];
+                    sources: this.match.sources.reduce((acc, resource) => {
+                        acc[resource] = [{'property': [resource, '']}];
                         return acc;
                     }, {}),
-                    targets: this.match.targets.reduce((acc, from_resource) => {
-                        acc[from_resource] = [{'property': [from_resource, '']}];
+                    targets: this.match.targets.reduce((acc, resource) => {
+                        acc[resource] = [{'property': [resource, '']}];
                         return acc;
                     }, {}),
                 });
             },
 
-            addMatchResource(resources_key, event) {
+            addMatchResource(resourcesKey, event) {
                 if (event) event.target.blur();
-                this.match[resources_key].push('');
+                this.match[resourcesKey].push('');
             },
 
-            updateMatchResource(resources_key, resource_index, value) {
+            updateMatchResource(resourcesKey, resourceIndex, value) {
                 const updateConditions = (group) => {
                     group.conditions.forEach(condition => {
-                        this.$set(condition[resources_key], value, [{'property': [value, '']}]);
-                        if (condition.conditions) {
+                        this.$set(condition[resourcesKey], value, [{'property': [value, '']}]);
+                        if (condition.conditions)
                             updateConditions(condition);
-                        }
                     });
                 };
 
-                const resourceId = this.match[resources_key][resource_index];
-                this.$set(this.match[resources_key], resource_index, value);
+                const resourceId = this.match[resourcesKey][resourceIndex];
+                this.$set(this.match[resourcesKey], resourceIndex, value);
 
                 updateConditions(this.match);
                 this.updateProperties(resourceId, value);
             },
 
-            deleteMatchResource(resources_key, resource_index) {
+            deleteMatchResource(resourcesKey, resourceIndex) {
                 const updateConditions = (group) => {
                     group.conditions.forEach(condition => {
-                        this.$delete(condition[resources_key], resourceId);
-                        if (condition.conditions) {
+                        this.$delete(condition[resourcesKey], resourceId);
+                        if (condition.conditions)
                             updateConditions(condition);
-                        }
                     });
                 };
 
-                const resourceId = this.match[resources_key][resource_index];
-                if (this.match[resources_key].length < 1)
-                    this.addMatchResource(resources_key);
+                const resourceId = this.match[resourcesKey][resourceIndex];
+                if (this.match[resourcesKey].length < 1)
+                    this.addMatchResource(resourcesKey);
 
                 updateConditions(this.match);
-                this.$delete(this.match[resources_key], resource_index);
+                this.$delete(this.match[resourcesKey], resourceIndex);
 
                 this.updateProperties(resourceId);
             },
@@ -273,10 +271,6 @@
 
                 if (newValue && !this.match.properties.find(prop => prop[0] === newValue))
                     this.match.properties.push([newValue, '']);
-            },
-
-            scrollTo(ref) {
-                this.$refs[ref].$el.parentNode.scrollIntoView({'behavior': 'smooth', 'block': 'start'});
             },
 
             async runAlignment(force = false) {

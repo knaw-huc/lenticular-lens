@@ -40,6 +40,14 @@ export default {
             });
         },
 
+        duplicateResource(resource) {
+            const duplicate = copy(resource);
+            this.resources.push({
+                ...duplicate,
+                id: findId(this.resources),
+            });
+        },
+
         duplicateMatch(match) {
             const duplicate = copy(match);
             this.matches.push({
