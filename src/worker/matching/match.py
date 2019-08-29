@@ -1,6 +1,6 @@
-from worker.matching.conditions import Conditions
-from common.helpers import hash_string
 from psycopg2 import sql as psycopg_sql
+from common.helpers import hash_string
+from worker.matching.conditions import Conditions
 
 
 class Match:
@@ -186,12 +186,10 @@ class Match:
         return psycopg_sql.SQL('    UNION ALL').join(resources_sql)
 
     def get_matching_fields(self, resources_keys=None):
-        import sys
         if not isinstance(resources_keys, list):
             resources_keys = ['sources', 'targets']
 
         # Regroup properties by resource instead of by method
-        # resources_properties = {hash_string(resource_name): {} for resource_name in getattr(self, 'sources') + getattr(self, 'targets')}
         resources_properties = {}
         for matching_function in self.conditions.matching_functions:
             for resources_key in resources_keys:
@@ -203,13 +201,4 @@ class Match:
                     resources_properties[resource_label][matching_function.field_name] = \
                         resources_properties[resource_label].get(matching_function.field_name, []) + resource_properties
 
-        # print(resources_properties, file=sys.stderr)
         return resources_properties
-
-        # resources_properties = {
-        #     'Resource label': {
-        #         'value_n': [
-        #             Property,
-        #         ],
-        #     },
-        # }

@@ -1,16 +1,18 @@
-import collections
-from common.config_db import db_conn, execute_query, run_query
+import re
+import time
+import random
 import datetime
+import psycopg2
+
 from hashlib import md5
 from os import listdir
 from os.path import join, isfile, dirname, realpath
-import psycopg2
+
 from psycopg2 import extras as psycopg2_extras, sql as psycopg2_sql
 from psycopg2.extensions import AsIs
-import random
-import re
+
+from common.config_db import db_conn, execute_query, run_query
 from common.ll.LLData.CSV_Associations import CSV_ASSOCIATIONS_DIR
-import time
 
 
 def hasher(object):
@@ -201,113 +203,3 @@ def update_job_data(job_id, job_data):
             time.sleep((2 ** n) + (random.randint(0, 1000) / 1000))
         else:
             break
-
-
-class PropertyField:
-    def __init__(self, data):
-        self.is_aggregate = False
-        self.__data = data
-        self.__hash = None
-        self.__transformers = None
-
-    @property
-    def hash(self):
-        if not self.__hash:
-            self.__hash = hash_string(get_string_from_sql(self.sql(False)))
-
-        return self.__hash
-
-    @property
-    def label(self):
-        return self.__data['label']
-
-    @property
-    def absolute_property(self):
-        return get_absolute_property(self.__data['property'])
-
-    @property
-    def resource_label(self):
-        return self.absolute_property[0]
-
-    @property
-    def prop_label(self):
-        return self.absolute_property[1]
-
-    @property
-    def transformers(self):
-        if not self.__transformers:
-            if 'transformers' in self.__data:
-                white_list = get_json_from_file("transformers.json")
-
-                self.__transformers = [transformer for transformer in self.__data['transformers'] if
-                                       transformer in white_list]
-                for transformer in self.__data['transformers']:
-                    if transformer not in white_list:
-                        raise self.TransformerUnknown('Transformer "%s" is not whitelisted.' % transformer)
-            else:
-                self.__transformers = []
-
-        return self.__transformers
-
-    def sql(self, is_list):
-        if 'property' in self.__data:
-            sql = get_extended_property_sql(get_absolute_property(self.__data['property'])) \
-                if is_list else get_property_sql(get_absolute_property(self.__data['property']))
-        elif isinstance(self.__data['value'], collections.Mapping):
-            sql_function = SqlFunction(self.__data['value'])
-            self.is_aggregate = sql_function.is_aggregate
-            sql = sql_function.sql
-        else:
-            sql = psycopg2_sql.Literal(self.__data['value'])
-
-        for transformer in self.transformers[::-1]:
-            sql = psycopg2_sql.SQL('%s({})' % transformer).format(sql)
-
-        return sql
-
-    class TransformerUnknown(ValueError):
-        """This means the transformer is not whitelisted"""
-
-
-class SqlFunction:
-    def __init__(self, function_obj, parent_label=None):
-        self.parent_label = parent_label
-        for function_name, parameters in function_obj.items():
-            self.function_name = function_name
-            self.parameters = {}
-            if isinstance(parameters, list):
-                self.parameters['list_values'] = psycopg2_sql.SQL(', ') \
-                    .join([self.get_value_sql(parameter) for parameter in parameters])
-            elif isinstance(parameters, collections.Mapping):
-                if is_property_object(parameters):
-                    self.parameters['parameter'] = \
-                        get_property_sql(get_absolute_property(parameters['property'], self.parent_label))
-                else:
-                    for key, value in parameters.items():
-                        self.parameters[key] = self.get_value_sql(value)
-            else:
-                self.parameters['parameter'] = psycopg2_sql.Literal(parameters)
-
-        self.is_aggregate = self.function_name.startswith('AGG_')
-
-        sql_functions = get_json_from_file('sql_functions.json')
-        if self.function_name in sql_functions:
-            self.sql_template = sql_functions[self.function_name]
-        else:
-            raise NameError('SQL function %s is not defined' % self.function_name)
-
-    def get_value_sql(self, value):
-        if isinstance(value, collections.Mapping):
-            if is_property_object(value):
-                return get_property_sql(get_absolute_property(value['property'], self.parent_label))
-
-            return SqlFunction(value, self.parent_label).sql
-
-        return psycopg2_sql.Literal(value)
-
-    @property
-    def sql(self):
-        template = self.sql_template
-        sql = psycopg2_sql.SQL(template).format(**self.parameters)
-
-        return sql

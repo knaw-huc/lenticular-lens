@@ -1,7 +1,7 @@
+from psycopg2 import sql as psycopg2_sql
+from common.helpers import hash_string, get_absolute_property
 from common.datasets_config import DatasetsConfig
 from worker.matching.filter_function import FilterFunction
-from common.helpers import hash_string, get_absolute_property
-from psycopg2 import sql as psycopg2_sql
 
 
 class Resource:
@@ -40,7 +40,7 @@ class Resource:
 
     @property
     def limit_sql(self):
-        random = '\nORDER BY RANDOM()' if self.__data.get('random', True) else ''
+        random = '\nORDER BY RANDOM()' if self.__data.get('random', False) else ''
         return psycopg2_sql.SQL(') AS x%s\nLIMIT %i' % (random, self.limit)) if self.limit > -1 else psycopg2_sql.SQL('')
 
     def r_get_filter_sql(self, filter_obj):

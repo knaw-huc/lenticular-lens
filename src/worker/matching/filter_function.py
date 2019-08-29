@@ -1,5 +1,5 @@
-from common.helpers import get_json_from_file, get_absolute_property, get_property_sql, get_extended_property_sql
 from psycopg2 import sql as psycopg2_sql
+from common.helpers import get_json_from_file, get_absolute_property, get_property_sql, get_extended_property_sql
 
 
 class FilterFunction:

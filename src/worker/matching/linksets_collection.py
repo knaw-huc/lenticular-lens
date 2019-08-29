@@ -90,22 +90,17 @@ class LinksetsCollection:
 
         return False
 
-    def add_statistics(self, for_object, statistics):
-        pass
+    def run(self):
+        try:
+            open('%s_%s.sql' % (self.run_match, self.job_id), 'w').close()
 
-    def generate_matches(self):
-        for match in self.matches_to_run:
-            self.log('Generating linkset %s.' % match.name)
-
-            result = self.process_sql(self.generate_match_sql(match), match.before_alignment)
-            self.log('Linkset %s generated. %s links created in %s.' % (
-                match.name,
-                locale.format_string('%i', result['affected'], grouping=True),
-                result['duration']
-            ))
-
-            if not self.sql_only:
-                self.add_statistics(match, result)
+            if not self.matches_only:
+                self.generate_resources()
+            if not self.resources_only and (not self.has_queued_view or self.sql_only):
+                self.generate_matches()
+        except Exception as e:
+            self.exception = e
+            raise e
 
     def generate_resources(self):
         if not self.has_queued_view or self.sql_only:
@@ -119,8 +114,16 @@ class LinksetsCollection:
                     result['duration']
                 ))
 
-                if not self.sql_only:
-                    self.add_statistics(resource, result)
+    def generate_matches(self):
+        for match in self.matches_to_run:
+            self.log('Generating linkset %s.' % match.name)
+
+            result = self.process_sql(self.generate_match_sql(match), match.before_alignment)
+            self.log('Linkset %s generated. %s links created in %s.' % (
+                match.name,
+                locale.format_string('%i', result['affected'], grouping=True),
+                result['duration']
+            ))
 
     def log(self, message):
         self.status = message
@@ -170,6 +173,105 @@ class LinksetsCollection:
 
             return {'processed': processed_count, 'affected': affected_count,
                     'duration': str(datetime.timedelta(seconds=time.time() - query_starting_time))}
+
+    def generate_resource_sql(self, resource):
+        sql_composed = sql.SQL("""
+DROP MATERIALIZED VIEW IF EXISTS {view_name} CASCADE;
+CREATE MATERIALIZED VIEW {view_name} AS{sub_query};
+ANALYZE {view_name};""").format(view_name=sql.Identifier(resource.label),
+                                sub_query=self.generate_resource_sub_query_sql(resource))
+
+        return sql_composed
+
+    def generate_resource_sub_query_sql(self, resource):
+        matching_fields = resource.matching_fields_sql
+        joins = self.get_join_sql(resource)
+
+        pre = sql.SQL('SELECT * FROM (') if resource.limit > -1 else sql.SQL('')
+
+        return sql.SQL("""
+{pre}SELECT DISTINCT {matching_fields}
+FROM {table_name} AS {alias}{joins}{wheres}
+ORDER BY uri{limit}""").format(pre=pre,
+                               matching_fields=matching_fields,
+                               table_name=sql.Identifier(resource.collection.table_name),
+                               alias=sql.Identifier(resource.label),
+                               joins=joins,
+                               wheres=self.replace_sql_variables(resource.where_sql),
+                               limit=resource.limit_sql)
+
+    def generate_match_sql(self, match):
+        #         match_sql = sql.SQL("""
+        # DROP SEQUENCE IF EXISTS {sequence_name} CASCADE;
+        # CREATE SEQUENCE {sequence_name} MINVALUE 0 START 0;
+        #
+        # DROP MATERIALIZED VIEW IF EXISTS source CASCADE;
+        # CREATE MATERIALIZED VIEW source AS {source};
+        # ANALYZE source;
+        # CREATE INDEX ON source (uri);
+        #
+        # DROP MATERIALIZED VIEW IF EXISTS target CASCADE;
+        # CREATE MATERIALIZED VIEW target AS {target};
+        # ANALYZE target;
+        # CREATE INDEX ON target (uri);
+        #
+        # DROP MATERIALIZED VIEW IF EXISTS {view_name} CASCADE;
+        # CREATE MATERIALIZED VIEW {view_name} AS
+        # SELECT source.uri AS source_uri,
+        #        target.uri AS target_uri,
+        #        {fields}
+        # FROM source
+        # JOIN target
+        # ON (source.collection != target.collection OR source.uri > target.uri) AND nextval({sequence_name}) != 0
+        # AND ({conditions});
+        #
+        # SELECT * FROM {view_name};
+        # """).format(
+        #             fields=match.similarity_fields_sql,
+        #             source=match.source_sql,
+        #             target=match.target_sql,
+        #             view_name=sql.Identifier(match.name),
+        #             sequence_name=sql.Identifier(match.name + '_count'),
+        #             conditions=match.conditions_sql,
+        #         )
+        #
+        #         match_sql = match.index_sql + match_sql
+
+        match_sql = sql.SQL("""
+SELECT source.uri AS source_uri,
+       target.uri AS target_uri,
+       {fields}
+FROM ({source}) AS source
+JOIN ({target}) AS target
+  ON (source.collection != target.collection OR source.uri > target.uri) AND ({conditions}) and nextval({sequence_name}) != 0;
+""").format(fields=match.similarity_fields_sql,
+            source=match.source_sql,
+            target=match.target_sql,
+            conditions=match.conditions_sql,
+            sequence_name=sql.Literal(match.name + '_count'))
+
+        match_sql = (sql.SQL("""
+DROP SEQUENCE IF EXISTS {sequence_name} CASCADE;
+CREATE SEQUENCE {sequence_name} MINVALUE 0 START 0;
+-- DROP MATERIALIZED VIEW IF EXISTS source CASCADE;
+-- CREATE MATERIALIZED VIEW source AS {{source}};
+-- ANALYZE source;
+-- CREATE INDEX ON source (uri);
+-- DROP MATERIALIZED VIEW IF EXISTS target CASCADE;
+-- CREATE MATERIALIZED VIEW target AS {{target}};
+-- ANALYZE target;
+-- CREATE INDEX ON target (uri);
+DROP MATERIALIZED VIEW IF EXISTS {view_name} CASCADE;
+CREATE MATERIALIZED VIEW {view_name} AS""").format(
+            source=match.source_sql,
+            target=match.target_sql,
+            view_name=sql.Identifier(match.name),
+            sequence_name=sql.Identifier(match.name + '_count'),
+        ) + match_sql + sql.SQL("SELECT * FROM {view_name};").format(view_name=sql.Identifier(match.name)))
+
+        match_sql = match.index_sql + match_sql
+
+        return match_sql
 
     def get_join_sql(self, resource):
         joins = []
@@ -268,105 +370,6 @@ class LinksetsCollection:
 
         return True
 
-    def generate_match_sql(self, match):
-        #         match_sql = sql.SQL("""
-        # DROP SEQUENCE IF EXISTS {sequence_name} CASCADE;
-        # CREATE SEQUENCE {sequence_name} MINVALUE 0 START 0;
-        #
-        # DROP MATERIALIZED VIEW IF EXISTS source CASCADE;
-        # CREATE MATERIALIZED VIEW source AS {source};
-        # ANALYZE source;
-        # CREATE INDEX ON source (uri);
-        #
-        # DROP MATERIALIZED VIEW IF EXISTS target CASCADE;
-        # CREATE MATERIALIZED VIEW target AS {target};
-        # ANALYZE target;
-        # CREATE INDEX ON target (uri);
-        #
-        # DROP MATERIALIZED VIEW IF EXISTS {view_name} CASCADE;
-        # CREATE MATERIALIZED VIEW {view_name} AS
-        # SELECT source.uri AS source_uri,
-        #        target.uri AS target_uri,
-        #        {fields}
-        # FROM source
-        # JOIN target
-        # ON (source.collection != target.collection OR source.uri > target.uri) AND nextval({sequence_name}) != 0
-        # AND ({conditions});
-        #
-        # SELECT * FROM {view_name};
-        # """).format(
-        #             fields=match.similarity_fields_sql,
-        #             source=match.source_sql,
-        #             target=match.target_sql,
-        #             view_name=sql.Identifier(match.name),
-        #             sequence_name=sql.Identifier(match.name + '_count'),
-        #             conditions=match.conditions_sql,
-        #         )
-        #
-        #         match_sql = match.index_sql + match_sql
-
-        match_sql = sql.SQL("""
-SELECT source.uri AS source_uri,
-       target.uri AS target_uri,
-       {fields}
-FROM ({source}) AS source
-JOIN ({target}) AS target
-  ON (source.collection != target.collection OR source.uri > target.uri) AND ({conditions}) and nextval({sequence_name}) != 0;
-""").format(fields=match.similarity_fields_sql,
-            source=match.source_sql,
-            target=match.target_sql,
-            conditions=match.conditions_sql,
-            sequence_name=sql.Literal(match.name + '_count'))
-
-        match_sql = (sql.SQL("""
-DROP SEQUENCE IF EXISTS {sequence_name} CASCADE;
-CREATE SEQUENCE {sequence_name} MINVALUE 0 START 0;
--- DROP MATERIALIZED VIEW IF EXISTS source CASCADE;
--- CREATE MATERIALIZED VIEW source AS {{source}};
--- ANALYZE source;
--- CREATE INDEX ON source (uri);
--- DROP MATERIALIZED VIEW IF EXISTS target CASCADE;
--- CREATE MATERIALIZED VIEW target AS {{target}};
--- ANALYZE target;
--- CREATE INDEX ON target (uri);
-DROP MATERIALIZED VIEW IF EXISTS {view_name} CASCADE;
-CREATE MATERIALIZED VIEW {view_name} AS""").format(
-            source=match.source_sql,
-            target=match.target_sql,
-            view_name=sql.Identifier(match.name),
-            sequence_name=sql.Identifier(match.name + '_count'),
-        ) + match_sql + sql.SQL("SELECT * FROM {view_name};").format(view_name=sql.Identifier(match.name)))
-
-        match_sql = match.index_sql + match_sql
-
-        return match_sql
-
-    def generate_resource_sql(self, resource):
-        sql_composed = sql.SQL("""
-DROP MATERIALIZED VIEW IF EXISTS {view_name} CASCADE;
-CREATE MATERIALIZED VIEW {view_name} AS{sub_query};
-ANALYZE {view_name};""").format(view_name=sql.Identifier(resource.label),
-                                sub_query=self.generate_resource_sub_query_sql(resource))
-
-        return sql_composed
-
-    def generate_resource_sub_query_sql(self, resource):
-        matching_fields = resource.matching_fields_sql
-        joins = self.get_join_sql(resource)
-
-        pre = sql.SQL('SELECT * FROM (') if resource.limit > -1 else sql.SQL('')
-
-        return sql.SQL("""
-{pre}SELECT DISTINCT {matching_fields}
-FROM {table_name} AS {alias}{joins}{wheres}
-ORDER BY uri{limit}""").format(pre=pre,
-                               matching_fields=matching_fields,
-                               table_name=sql.Identifier(resource.collection.table_name),
-                               alias=sql.Identifier(resource.label),
-                               joins=joins,
-                               wheres=self.replace_sql_variables(resource.where_sql),
-                               limit=resource.limit_sql)
-
     def replace_sql_variables(self, sql_template):
         return self.r_replace_sql_variables(sql_template)
 
@@ -411,15 +414,3 @@ ORDER BY uri{limit}""").format(pre=pre,
                     sql_part = get_property_sql(sql_part)
 
         return sql_part
-
-    def run(self):
-        try:
-            open('%s_%s.sql' % (self.run_match, self.job_id), 'w').close()
-
-            if not self.matches_only:
-                self.generate_resources()
-            if not self.resources_only and (not self.has_queued_view or self.sql_only):
-                self.generate_matches()
-        except Exception as e:
-            self.exception = e
-            raise e
