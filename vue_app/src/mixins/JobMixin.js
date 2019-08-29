@@ -159,7 +159,9 @@ export default {
                 }
                 else
                     delete resource.filter;
+            });
 
+            resources.forEach(resource => {
                 if (resource.related) {
                     resource.related.forEach(related => {
                         if (isId(related.resource))

@@ -114,12 +114,28 @@ class AlignmentJob:
         print('Start clustering.')
 
         with db_conn() as conn, conn.cursor() as cur:
-            query = psycopg2_sql.SQL("""INSERT INTO clusterings 
-            (job_id, alignment, clustering_type, association_file, status, requested_at) 
-            VALUES (%s, %s, %s, %s, %s, now())""")
+            cur.execute('SELECT * FROM clusterings WHERE job_id = %s AND alignment = %s',
+                        (self.job_id, self.alignment))
+            clustering = cur.fetchone()
 
-            cur.execute(query, (self.job_id, self.alignment, 'default', None, 'Requested'))
-            conn.commit()
+            if clustering:
+                query = psycopg2_sql.SQL("""
+                    UPDATE clusterings 
+                    SET status = %s, requested_at = now(), processing_at = null, finished_at = null
+                    WHERE job_id = %s AND alignment = %s
+                """)
+
+                cur.execute(query, ('Requested', self.job_id, self.alignment))
+                conn.commit()
+            else:
+                query = psycopg2_sql.SQL("""
+                    INSERT INTO clusterings 
+                    (job_id, alignment, clustering_type, association_file, status, requested_at) 
+                    VALUES (%s, %s, %s, %s, %s, now())
+                """)
+
+                cur.execute(query, (self.job_id, self.alignment, 'default', None, 'Requested'))
+                conn.commit()
 
         print('Clustering job sent.')
         print('Cleaning up.')

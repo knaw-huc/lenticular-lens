@@ -128,6 +128,8 @@ div.is-invalid {
   @extend .rounded-pill;
   @extend .py-0;
   @extend .my-1;
+
+  word-break: break-all;
 }
 
 .property-resource {
@@ -148,7 +150,6 @@ div.is-invalid {
   @extend .text-info;
 
   user-select: text;
-  word-break: break-all;
 }
 
 .btn, [role="button"], .clickable {

@@ -121,15 +121,16 @@ def get_values_for(resources, targets):
         row_dict = {label: row[idx] for idx, label in enumerate(result[0])}
         del row_dict['resource']
 
-        targets = response[row[res_idx]]
-        matching_targets = [target for target in targets
-                            if target['dataset'] == row_dict['dataset'] and target['property'] == row_dict['property']]
-        if matching_targets:
-            matching_targets[0]['values'].append(row_dict['value'])
-        else:
-            row_dict['values'] = [row_dict['value']]
-            del row_dict['value']
-            targets.append(row_dict)
+        if row_dict['value']:
+            targets = response[row[res_idx]]
+            matching_targets = [target for target in targets
+                                if target['dataset'] == row_dict['dataset'] and target['property'] == row_dict['property']]
+            if matching_targets:
+                matching_targets[0]['values'].append(row_dict['value'])
+            else:
+                row_dict['values'] = [row_dict['value']]
+                del row_dict['value']
+                targets.append(row_dict)
 
     return response
 
