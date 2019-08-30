@@ -1,15 +1,19 @@
-import random
-import requests
 import sys
+import random
+import urllib3
+import requests
+
 from time import sleep
 from common.helpers import hash_string
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 class Timbuctoo:
     def __init__(self):
         self.graphql_uri = 'https://repository.goldenagents.org/v5/graphql'
 
-    def fetchGraphQl(self, query, variables=None):
+    def fetch_graph_ql(self, query, variables=None):
         n = 0
         while True:
             try:
@@ -31,7 +35,7 @@ class Timbuctoo:
 
     @property
     def datasets(self):
-        datasets_data = self.fetchGraphQl("""
+        datasets_data = self.fetch_graph_ql("""
             {
                 dataSetMetadataList(promotedOnly: false, publishedOnly: false) {
                     dataSetId,

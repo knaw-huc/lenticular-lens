@@ -79,7 +79,7 @@ class TimbuctooJob:
                 count=self.rows_per_page,
                 columns="\n".join(columns))
 
-            query_result = Timbuctoo().fetchGraphQl(query, {'cursor': self.cursor})
+            query_result = Timbuctoo().fetch_graph_ql(query, {'cursor': self.cursor})
             if not query_result:
                 return
 
