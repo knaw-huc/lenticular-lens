@@ -75,7 +75,7 @@ class Match:
 
         for matching_function in self.conditions.matching_functions:
             if matching_function.function_name == 'IS_IN_SET':
-                dependencies += str(matching_function.parameters['alignment']['value'])
+                dependencies += str(matching_function.parameters['alignment'])
 
         return dependencies
 

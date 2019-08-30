@@ -138,9 +138,7 @@ export default {
                 {
                     'key': 'alignment',
                     'label': '',
-                    'type': {
-                        'type': 'matching_label',
-                    }
+                    'type': 'matching_label',
                 }
             ]
         }

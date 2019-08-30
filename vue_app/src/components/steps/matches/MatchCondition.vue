@@ -24,17 +24,15 @@
           <div v-for="(item, index) in methodValueTemplate.items" class="col">
             <div class="form-group">
               <label>
-                                <span>
-                                    {{ item.label }}
-                                </span>
+                <span>{{ item.label }}</span>
 
                 <input v-if="typeof item.type === 'number'"
                        class="form-control" type="number" step="0.1"
                        v-model.number="condition.method_value[item.key]"
                        v-bind:class="{'is-invalid': errors.includes(`method_value_${item.key}`)}">
 
-                <select v-if="item.type.hasOwnProperty('type') && item.type.type === 'matching_label'"
-                        class="form-control" v-model="condition.method_value[item.key].value"
+                <select v-if="item.type === 'matching_label'"
+                        class="form-control" v-model="condition.method_value[item.key]"
                         v-bind:class="{'is-invalid': errors.includes(`method_value_${item.key}`)}">
                   <option disabled selected value="">Select a Mapping</option>
                   <option v-for="match in $root.matches" :value="match.id">{{ match.label }}</option>
@@ -190,7 +188,7 @@
                         valueValid = false;
                     if (value_item.hasOwnProperty('choices') && !Object.values(value_item.choices).includes(value))
                         valueValid = false;
-                    if ((this.condition.method_name === 'IS_IN_SET') && (value.value === undefined || value.value === ''))
+                    if ((this.condition.method_name === 'IS_IN_SET') && (value === undefined || value === ''))
                         valueValid = false;
 
                     if (!this.validateField(`method_value_${value_item.key}`, valueValid))

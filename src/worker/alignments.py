@@ -146,9 +146,9 @@ class AlignmentJob:
                         .format(psycopg2_sql.Identifier(f'job_{self.alignment}_{self.job_id}')))
             conn.commit()
 
-        print(f'Schema job_{self.job_id} dropped.')
+        print(f'Schema job_{self.alignment}_{self.job_id} dropped.')
         print('Cleanup complete.')
-        print('Job %s finished.' % self.job_id)
+        print(f'Job {self.job_id} for alignment {self.alignment} finished.')
 
         update_alignment_job(self.job_id, self.alignment,
                              {'status': 'Finished', 'finished_at': str(datetime.datetime.now())})

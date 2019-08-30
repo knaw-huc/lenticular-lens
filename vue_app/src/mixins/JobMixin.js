@@ -154,6 +154,10 @@ export default {
                             delete condition[key][resourceId];
                         });
                     });
+
+                    if (condition.method_name === 'IS_IN_SET')
+                        condition.method_value.alignment_label =
+                            this.getMatchById(condition.method_value.alignment).label;
                 });
 
                 delete match.properties;
