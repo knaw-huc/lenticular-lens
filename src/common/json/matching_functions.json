@@ -29,7 +29,7 @@
     "index_using": "btree(get_{date_part}({target}))"
   },
   "IS_IN_SET": {
-    "sql_template": "({source} IN (SELECT source_uri FROM \"__hash({alignment_label})\") OR {source} IN (SELECT target_uri FROM \"__hash({alignment_label})\")) AND ({target} IN (SELECT source_uri FROM \"__hash({alignment_label})\") OR {target} IN (SELECT target_uri FROM \"__hash({alignment_label})\"))"
+    "sql_template": "EXISTS (SELECT * FROM \"__hash({alignment_label})\" AS in_set WHERE (in_set.source_uri = {source} OR in_set.target_uri = {source}) AND (in_set.source_uri = {target} OR in_set.target_uri = {target}))"
   },
   "LEVENSHTEIN": {
     "sql_template": "levenshtein_less_equal({source}, {target}, {max_distance}) <= {max_distance}",
