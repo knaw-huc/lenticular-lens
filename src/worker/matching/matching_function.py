@@ -7,9 +7,10 @@ from common.helpers import hash_string, get_json_from_file
 
 
 class MatchingFunction:
-    def __init__(self, function_obj):
+    def __init__(self, function_obj, config):
         self.function_obj = function_obj
         self.__data = function_obj
+        self.__config = config
         self.__sources = []
         self.__targets = []
 
@@ -89,17 +90,20 @@ class MatchingFunction:
     def format_template(self, template, **additional_params):
         if isinstance(self.parameters, dict):
             return template.format(**self.parameters, **additional_params)
+
         return template.format(*self.parameters)
 
     def get_resources(self, resources_key):
         resources = {}
         for resource_index, resource in self.__data[resources_key].items():
             resources[resource_index] = []
-            for property_field in resource:
-                # Add method's default transformers
-                property_field['transformers'] = \
-                    self.function_info.get('transformers', []) + property_field.get('transformers', [])
+            for field in resource:
+                transformers = self.function_info.get('transformers', [])
+                transformers += field.get('transformers', [])
 
-                resources[resource_index].append(PropertyField(property_field))
+                columns = self.__config.get_resource_columns(hash_string(field['property'][0]))
+                property_field = PropertyField(field['property'], columns=columns, transformers=transformers)
+
+                resources[resource_index].append(property_field)
 
         return resources

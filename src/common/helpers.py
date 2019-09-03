@@ -36,32 +36,6 @@ def table_to_csv(table_name, columns, file):
         cur.copy_expert(sql, file)
 
 
-def get_absolute_property(property_array, parent_label=None):
-    property_array[len(property_array) - 1] = property_array[len(property_array) - 1].lower()
-    property_array = list(map(hash_string, property_array))
-
-    if parent_label and len(property_array) == 1:
-        property_array.insert(0, parent_label)
-
-    return property_array
-
-
-def get_property_sql(property_array):
-    return psycopg2_sql.SQL('.').join(map(psycopg2_sql.Identifier, property_array))
-
-
-def get_extended_property_sql(property_array):
-    return get_property_sql([get_extended_property_name(property_array), 'value'])
-
-
-def get_extended_property_name(property_array):
-    return hash_string('.'.join(property_array)) + '_extended'
-
-
-def is_property_object(value):
-    return 'property' in value and len(value) == 1 and isinstance(value['property'], list)
-
-
 def get_json_from_file(filename):
     import jstyleson
 
@@ -82,18 +56,6 @@ def get_string_from_sql(sql):
 
 def hash_string(to_hash):
     return md5(to_hash.encode('utf-8')).hexdigest()
-
-
-def get_unnested_list(nest):
-    unnested = []
-
-    for element in nest:
-        if isinstance(element, list):
-            unnested += get_unnested_list(element)
-        else:
-            unnested.append(element)
-
-    return unnested
 
 
 def get_job_data(job_id):

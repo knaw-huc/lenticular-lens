@@ -1,7 +1,9 @@
 from collections import defaultdict
-from common.config_db import execute_query, run_query
 from psycopg2 import sql as psycopg2_sql
+
 from common.helpers import hash_string
+from common.config_db import execute_query, run_query
+from common.property_field import PropertyField
 
 
 def get_resource_value(resources, targets):
@@ -37,57 +39,55 @@ def get_node_values(uris, query_data):
         for datatype_set in graph_set['data']:
             table_info = get_table_info(graph_set['graph'], datatype_set['entity_type'])
             if table_info:
-                for property_name in datatype_set['properties']:
-                    column_name = get_column_name(property_name)
-                    property_selection = psycopg2_sql.SQL('jsonb_array_elements_text({column_name})'). \
-                        format(column_name=psycopg2_sql.Identifier(column_name)) \
-                        if table_info['columns'][column_name]['LIST'] \
-                        else psycopg2_sql.Identifier(column_name)
+                for property_path in datatype_set['properties']:
+                    joins = []
+                    resource = table_info['table_name']
+
+                    cur_resource = 'target'
+                    cur_columns = table_info['columns']
+                    while len(property_path) > 1:
+                        column = property_path.pop(0)
+                        target_resource = property_path.pop(0)
+
+                        next_table_info = get_table_info(graph_set['graph'], target_resource)
+                        next_resource = hash_string(cur_resource + '_' + target_resource + '_' + column)
+
+                        local_property = PropertyField(column, parent_label=cur_resource, columns=cur_columns)
+                        remote_property = PropertyField('uri', parent_label=next_resource,
+                                                        columns=next_table_info['columns'])
+
+                        if local_property.is_list:
+                            joins.append(local_property.left_join)
+
+                        lhs = local_property.sql
+                        rhs = remote_property.sql
+
+                        joins.append(psycopg2_sql.SQL('\nLEFT JOIN {target} AS {alias}\nON {lhs} = {rhs}').format(
+                            target=psycopg2_sql.Identifier(next_table_info['table_name']),
+                            alias=psycopg2_sql.Identifier(next_resource),
+                            lhs=lhs, rhs=rhs
+                        ))
+
+                        cur_resource = next_resource
+                        cur_columns = next_table_info['columns']
+
+                    property_name = property_path[0]
+                    property = PropertyField(property_name, parent_label=cur_resource, columns=cur_columns)
 
                     sql = psycopg2_sql.SQL('''
-                    SELECT uri AS resource, {graph_name} AS dataset, {property} AS property, {value} AS value
-                    FROM {table_name}
-                    WHERE uri IN %(uris)s''').format(
+                    SELECT target.uri AS resource, {graph_name} AS dataset, {property} AS property, {value} AS value
+                    FROM {table_name} AS target 
+                    {joins}
+                    WHERE target.uri IN %(uris)s
+                    ''').format(
                         graph_name=psycopg2_sql.Literal(graph_set['graph']),
                         property=psycopg2_sql.Literal(property_name),
-                        value=property_selection,
-                        table_name=psycopg2_sql.Identifier(table_info['table_name']),
+                        value=property.sql,
+                        joins=psycopg2_sql.Composed(joins),
+                        table_name=psycopg2_sql.Identifier(resource),
                     )
 
                     sqls.append(sql)
-
-                    # TODO: Work in progress
-                    # for property_path in datatype_set['properties']:
-                    #     joins = []
-                    #
-                    # resource = table_info['table_name']
-                    # while len(property_path) > 1:
-                    #     property = property_path.pop(0)
-                    #     # TODO
-                    #
-                    #
-                    # property_name = property_path[0]
-                    # column_name = get_column_name(property_name)
-                    #
-                    # property_selection = psycopg2_sql.SQL('jsonb_array_elements_text({column_name})'). \
-                    #     format(column_name=psycopg2_sql.Identifier(column_name)) \
-                    #     if table_info['columns'][column_name]['LIST'] \
-                    #     else psycopg2_sql.Identifier(column_name)
-                    #
-                    # sql = psycopg2_sql.SQL('''
-                    # SELECT t.uri AS resource, {graph_name} AS dataset, {property} AS property, {value} AS value
-                    # FROM {table_name} AS t
-                    # {joins}
-                    # WHERE t.uri IN %(uris)s
-                    # ''').format(
-                    #     graph_name=psycopg2_sql.Literal(graph_set['graph']),
-                    #     property=psycopg2_sql.Literal(property_name),
-                    #     value=property_selection,
-                    #     joins=psycopg2_sql.Composable(joins),
-                    #     table_name=psycopg2_sql.Identifier(table_info['table_name']),
-                    # )
-                    #
-                    # sqls.append(sql)
 
     union_sql = psycopg2_sql.SQL('\nUNION ALL\n').join(sqls)
 
@@ -124,7 +124,8 @@ def get_values_for(resources, targets):
         if row_dict['value']:
             targets = response[row[res_idx]]
             matching_targets = [target for target in targets
-                                if target['dataset'] == row_dict['dataset'] and target['property'] == row_dict['property']]
+                                if target['dataset'] == row_dict['dataset']
+                                and target['property'] == row_dict['property']]
             if matching_targets:
                 matching_targets[0]['values'].append(row_dict['value'])
             else:

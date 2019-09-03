@@ -157,7 +157,6 @@
             :key="idx"
             :property="property"
             :singular="false"
-            :follow-referenced-collection="false"
             :allow-delete="match.properties.findIndex(p => p[0] === property[0]) !== idx"
             @clone="match.properties.splice(idx + 1, 0, [match.properties[idx][0], ''])"
             @delete="$delete(match.properties, idx)"

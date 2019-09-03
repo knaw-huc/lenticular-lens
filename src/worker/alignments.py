@@ -57,6 +57,9 @@ class AlignmentJob:
     def watch_process(self):
         message = self.linksets_collection.status
 
+        if not message:
+            return
+
         if message.startswith('Generating linkset '):
             view_name = re.search(r'(?<=Generating linkset ).+(?=.$)', message)[0]
 

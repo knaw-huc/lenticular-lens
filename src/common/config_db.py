@@ -1,5 +1,6 @@
 import os
 import psycopg2
+
 from psycopg2 import sql as psycopg2_sql
 from typing import List, Mapping, Sequence
 
@@ -34,11 +35,11 @@ def execute_query(query_dict: Mapping, cursor_args: Mapping = None) -> List[Sequ
     if 'parameters' not in query_dict:
         setattr(query_dict, 'parameters', None)
 
-    conn = db_conn()
-    with conn, conn.cursor(**cursor_args) as cur:
+    with db_conn() as conn, conn.cursor(**cursor_args) as cur:
         cur.execute(query_dict['query'], query_dict['parameters'])
 
-        return cur.fetchall() if 'header' not in query_dict or not query_dict['header'] else [query_dict['header']] + cur.fetchall()
+        return cur.fetchall() if 'header' not in query_dict or not query_dict['header'] \
+            else [query_dict['header']] + cur.fetchall()
 
 
 def run_query(query, args=None):
@@ -52,4 +53,5 @@ def run_query(query, args=None):
 
 
 def table_exists(table_name):
-    return run_query(psycopg2_sql.SQL("SELECT to_regclass({});").format(psycopg2_sql.Literal(table_name)))[0] is not None
+    return run_query(psycopg2_sql.SQL("SELECT to_regclass({});")
+                     .format(psycopg2_sql.Literal(table_name)))[0] is not None

@@ -1,32 +1,41 @@
-import collections
-
+from inspect import cleandoc
 from psycopg2 import sql as psycopg2_sql
-from common.sql_function import SqlFunction
-from common.helpers import hash_string, get_json_from_file, \
-    get_absolute_property, get_property_sql, get_extended_property_sql, get_string_from_sql
+
+from common.helpers import hash_string, get_json_from_file, get_string_from_sql
 
 
 class PropertyField:
-    def __init__(self, data):
-        self.is_aggregate = False
+    def __init__(self, data, parent_label=None, columns=None, transformers=None):
         self.__data = data
-        self.__hash = None
-        self.__transformers = None
+        self.parent_label = parent_label
+        self.columns = columns
+
+        if transformers and len(transformers) > 0:
+            white_list = get_json_from_file("transformers.json")
+            self.transformers = [transformer for transformer in transformers if transformer in white_list]
+        else:
+            self.transformers = []
+
+        self.__hash = hash_string(get_string_from_sql(self.sql))
 
     @property
     def hash(self):
-        if not self.__hash:
-            self.__hash = hash_string(get_string_from_sql(self.sql(False)))
-
         return self.__hash
 
     @property
-    def label(self):
-        return self.__data['label']
-
-    @property
     def absolute_property(self):
-        return get_absolute_property(self.__data['property'])
+        if isinstance(self.__data, list):
+            property_array = self.__data
+        else:
+            property_array = [self.__data]
+
+        property_array[len(property_array) - 1] = property_array[len(property_array) - 1].lower()
+        property_array = list(map(hash_string, property_array))
+
+        if self.parent_label and len(property_array) == 1:
+            property_array.insert(0, self.parent_label)
+
+        return property_array
 
     @property
     def resource_label(self):
@@ -37,36 +46,37 @@ class PropertyField:
         return self.absolute_property[1]
 
     @property
-    def transformers(self):
-        if not self.__transformers:
-            if 'transformers' in self.__data:
-                white_list = get_json_from_file("transformers.json")
+    def extended_prop_label(self):
+        return hash_string('.'.join(self.absolute_property)) + '_extended'
 
-                self.__transformers = [transformer for transformer in self.__data['transformers'] if
-                                       transformer in white_list]
-                for transformer in self.__data['transformers']:
-                    if transformer not in white_list:
-                        raise self.TransformerUnknown('Transformer "%s" is not whitelisted.' % transformer)
-            else:
-                self.__transformers = []
+    @property
+    def is_list(self):
+        if self.columns and self.prop_label in self.columns:
+            return self.columns[self.prop_label]['LIST']
 
-        return self.__transformers
+        return False
 
-    def sql(self, is_list):
-        if 'property' in self.__data:
-            sql = get_extended_property_sql(get_absolute_property(self.__data['property'])) \
-                if is_list else get_property_sql(get_absolute_property(self.__data['property']))
-        elif isinstance(self.__data['value'], collections.Mapping):
-            sql_function = SqlFunction(self.__data['value'])
-            self.is_aggregate = sql_function.is_aggregate
-            sql = sql_function.sql
-        else:
-            sql = psycopg2_sql.Literal(self.__data['value'])
+    @property
+    def sql(self):
+        absolute_property = [self.extended_prop_label, 'value'] if self.is_list else self.absolute_property
+        sql = psycopg2_sql.SQL('.').join(map(psycopg2_sql.Identifier, absolute_property))
 
         for transformer in self.transformers[::-1]:
             sql = psycopg2_sql.SQL('%s({})' % transformer).format(sql)
 
         return sql
 
-    class TransformerUnknown(ValueError):
-        """This means the transformer is not whitelisted"""
+    @property
+    def left_join(self):
+        if self.is_list:
+            sql = psycopg2_sql.SQL(cleandoc(
+                """ LEFT JOIN jsonb_array_elements_text({table_name}.{column_name}) 
+                    AS {column_name_expanded} ON true"""))
+
+            return sql.format(
+                table_name=psycopg2_sql.Identifier(self.resource_label),
+                column_name=psycopg2_sql.Identifier(self.prop_label),
+                column_name_expanded=psycopg2_sql.Identifier(self.extended_prop_label)
+            )
+
+        return psycopg2_sql.SQL('')

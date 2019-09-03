@@ -87,8 +87,10 @@ export default {
                     resourceTarget.data.push(entityTarget);
                 }
 
-                entityTarget.properties.push(prop[1]);
-                // TODO: entityTarget.properties.push(prop.slice(1));
+                if (prop[prop.length - 1] === '__value__')
+                    entityTarget.properties.push(prop.slice(1, -1));
+                else
+                    entityTarget.properties.push(prop.slice(1));
 
                 return targets;
             }, []);

@@ -1,11 +1,14 @@
+from inspect import cleandoc
 from psycopg2 import sql as psycopg_sql
+
 from common.helpers import hash_string
 from worker.matching.conditions import Conditions
 
 
 class Match:
-    def __init__(self, data):
+    def __init__(self, data, config):
         self.__data = data
+        self.config = config
         self.__conditions = None
 
     @property
@@ -21,7 +24,7 @@ class Match:
     @property
     def conditions(self):
         if not self.__conditions:
-            self.__conditions = Conditions(self.__data['conditions'], self.__data['type'])
+            self.__conditions = Conditions(self.__data['conditions'], self.__data['type'], self.config)
         return self.__conditions
 
     @property
@@ -39,6 +42,7 @@ class Match:
     @property
     def index_sql(self):
         index_sqls = []
+
         for template in self.conditions.index_templates:
             if 'template' not in template:
                 continue
@@ -52,20 +56,19 @@ class Match:
             resources = matching_function.targets if len(matching_function.targets) > 0 else matching_function.sources
             for resource_name, resource in resources.items():
                 for property_field in resource:
-                    resource_field_name = matching_function.index_template['field_name'][2::]\
-                        if matching_function.index_template['field_name'].startswith('__')\
+                    resource_field_name = matching_function.index_template['field_name'][2::] \
+                        if matching_function.index_template['field_name'].startswith('__') \
                         else property_field.hash
 
-                    template =\
-                        matching_function.format_template(matching_function.index_template['template'], target='{target}')\
-                        if matching_function.parameters else\
-                        matching_function.index_template['template']
+                    template = matching_function.index_template['template']
+                    if matching_function.parameters:
+                        template = matching_function.format_template(template, target='{target}')
 
-                    template_sql = psycopg_sql.SQL(template).format(
-                        target=psycopg_sql.Identifier(resource_field_name))
+                    template_sql = psycopg_sql.SQL(template).format(target=psycopg_sql.Identifier(resource_field_name))
 
                     index_sqls.append(psycopg_sql.SQL('CREATE INDEX ON {} USING {};').format(
-                        psycopg_sql.Identifier(hash_string(resource_name)), template_sql))
+                        psycopg_sql.Identifier(hash_string(resource_name)), template_sql
+                    ))
 
         return psycopg_sql.SQL('\n').join(index_sqls)
 
@@ -103,6 +106,7 @@ class Match:
     def similarity_fields_sql(self):
         fields = []
         fields_added = []
+        cluster_field = None
 
         for matching_function in self.conditions.matching_functions:
             if matching_function.similarity_sql:
@@ -131,7 +135,10 @@ class Match:
                 cluster_field = matching_function.similarity_sql.format(field_name=field_name)
 
         # This is a temporary way to select the similarity of the last matching method for the clustering
-        fields.append(psycopg_sql.SQL('{} AS __cluster_similarity').format(cluster_field))
+        if cluster_field:
+            fields.append(psycopg_sql.SQL('{} AS __cluster_similarity').format(cluster_field))
+        else:
+            fields.append(psycopg_sql.SQL('1 AS __cluster_similarity'))
 
         return psycopg_sql.SQL(',\n       ').join(fields)
 
@@ -159,31 +166,33 @@ class Match:
         for resource_label, resource_properties in resources_properties.items():
             property_fields = []
             for property_label, resource_method_properties in resource_properties.items():
-                property_field = psycopg_sql.Identifier(resource_method_properties[0].hash)\
-                    if len(resource_method_properties) == 1\
-                    else psycopg_sql.SQL('unnest(ARRAY[{}])').format(
-                        psycopg_sql.SQL(', ').join([
-                            psycopg_sql.Identifier(resource_property.hash)
-                            for resource_property in resource_method_properties]))
-                property_fields.append(psycopg_sql.SQL('{property_field} AS {field_name}')
-                                       .format(
-                                            property_field=property_field,
-                                            field_name=psycopg_sql.Identifier(property_label)))
+                if len(resource_method_properties) == 1:
+                    property_field = psycopg_sql.Identifier(resource_method_properties[0].hash)
+                else:
+                    property_field = psycopg_sql.SQL('unnest(ARRAY[{}])').format(psycopg_sql.SQL(', ').join(
+                        [psycopg_sql.Identifier(resource_property.hash)
+                         for resource_property in resource_method_properties]
+                    ))
+
+                property_fields.append(psycopg_sql.SQL('{property_field} AS {field_name}').format(
+                    property_field=property_field,
+                    field_name=psycopg_sql.Identifier(property_label)
+                ))
 
             property_fields_sql = psycopg_sql.SQL(',\n           ').join(property_fields)
 
-            resources_sql.append(psycopg_sql.SQL("""
-    SELECT DISTINCT {collection} AS collection,
-           uri,
-           {matching_fields}
-    FROM {resource_label}
-""").format(
-                collection=psycopg_sql.Literal(resource_label),
-                matching_fields=property_fields_sql,
-                resource_label=psycopg_sql.Identifier(resource_label)
-            ))
+            resources_sql.append(
+                psycopg_sql.SQL(cleandoc(
+                    """ SELECT DISTINCT {collection} AS collection, uri, {matching_fields}
+                        FROM {resource_label}"""
+                )).format(
+                    collection=psycopg_sql.Literal(resource_label),
+                    matching_fields=property_fields_sql,
+                    resource_label=psycopg_sql.Identifier(resource_label)
+                )
+            )
 
-        return psycopg_sql.SQL('    UNION ALL').join(resources_sql)
+        return psycopg_sql.SQL('\nUNION ALL\n').join(resources_sql)
 
     def get_matching_fields(self, resources_keys=None):
         if not isinstance(resources_keys, list):

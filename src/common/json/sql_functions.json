@@ -1,7 +1,0 @@
-{
-  "AGG_MIN_VALUE": "MIN({})",
-  "IF": "CASE WHEN {condition} THEN {THEN} ELSE {ELSE} END",
-  "IS_NOT_NULL": "{parameter} IS NOT NULL",
-  "IS_URI": "substr({parameter}, 0, 5) = 'http'",
-  "MIN_VALUE": "least({list_values})"
-}

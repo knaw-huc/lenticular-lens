@@ -46,14 +46,14 @@
                v-bind:class="{'is-invalid': errors.includes('value')}">
       </div>
 
-      <div v-if="condition.type == 'appearances'" class="col-2">
+      <div v-if="condition.type === 'appearances'" class="col-2">
         <v-select v-model="condition.operator">
           <option value="<=" selected>Max.</option>
           <option value=">=" selected>Min.</option>
           <option value="=" selected>Exactly</option>
         </v-select>
       </div>
-      <div v-if="condition.type == 'appearances'" class="col-1">
+      <div v-if="condition.type === 'appearances'" class="col-1">
         <input class="form-control" type="number" min="0" step="1" v-model.number="condition.value"
                v-bind:class="{'is-invalid': errors.includes('value')}">
       </div>

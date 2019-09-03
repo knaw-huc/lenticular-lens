@@ -3,9 +3,10 @@ from worker.matching.matching_function import MatchingFunction
 
 
 class Conditions:
-    def __init__(self, data, type):
+    def __init__(self, data, type, config):
         self.__data = data
         self.__type = type
+        self.__config = config
         self.__conditions_list = None
 
     @property
@@ -14,9 +15,9 @@ class Conditions:
             self.__conditions_list = []
             for idx, item in enumerate(self.__data):
                 if 'conditions' in item and 'type' in item:
-                    self.__conditions_list.append(Conditions(item['conditions'], item['type']))
+                    self.__conditions_list.append(Conditions(item['conditions'], item['type'], self.__config))
                 else:
-                    self.__conditions_list.append(MatchingFunction(item))
+                    self.__conditions_list.append(MatchingFunction(item, self.__config))
 
         return self.__conditions_list
 
