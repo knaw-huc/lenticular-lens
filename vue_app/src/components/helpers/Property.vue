@@ -170,11 +170,15 @@
                 this.$set(this.property, index, newValue);
 
                 const collectionId = this.property.length > 2 ? this.property.slice(-2)[0] : this.resource.collection_id;
-                const referencedCollections = this.$utilities.getOrCreate(this.$set,
-                    this.dataset.collections[collectionId][this.property.slice(-1)[0]], 'referencedCollections', []);
+                const prop = this.property.slice(-1)[0];
 
-                if (this.property.slice(-1)[0] && Object.keys(referencedCollections).length > 0)
-                    this.property.push('', '');
+                if (prop) {
+                    const referencedCollections = this.$utilities.getOrCreate(
+                        this.$set, this.dataset.collections[collectionId][prop], 'referencedCollections', []);
+
+                    if (Object.keys(referencedCollections).length > 0)
+                        this.property.push('', '');
+                }
             },
         },
     };
