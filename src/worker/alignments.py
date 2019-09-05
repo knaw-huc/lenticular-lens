@@ -95,7 +95,7 @@ class AlignmentJob:
                             (inserted, self.job_id, self.alignment))
 
         print("Generating CSVs")
-        for match in self.linksets_collection.matches:
+        for match in self.linksets_collection.config.matches_to_run:
             if str(match.id) != str(self.alignment):
                 continue
 
