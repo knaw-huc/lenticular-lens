@@ -1,12 +1,12 @@
 <template>
   <div class="border p-4 mt-4 bg-light" v-bind:class="{'is-invalid': hasError}">
     <div class="sticky-top bg-light py-2" v-bind:class="visible ? 'border-bottom' : {}">
-      <div class="row flex-nowrap align-items-center justify-content-between">
+      <div class="row flex-nowrap align-items-center justify-content-start">
         <div class="col-auto">
           <fa-icon icon="chevron-down" size="2x" v-b-toggle="id"></fa-icon>
         </div>
 
-        <div class="flex-shrink-1" v-bind:class="[{'mr-auto': fillLabel}, isEditing ? 'col' : 'col-auto']">
+        <div class="flex-shrink-1 mr-auto" v-bind:class="[isEditing ? 'col' : 'col-auto']">
           <input v-if="isEditing" type="text" class="form-control border-0" :value="value" ref="editInput" required
                  @blur="editing = false" @input="$emit('input', $event.target.value)"/>
 
@@ -20,10 +20,12 @@
           </div>
 
           <div v-else class="h2" v-b-toggle="id">{{ label }}</div>
-
-          <slot name="title-extra"></slot>
         </div>
 
+        <slot name="title-columns"></slot>
+      </div>
+
+      <div v-if="hasExtraRow" class="row flex-nowrap align-items-center justify-content-between mt-4">
         <slot name="columns"></slot>
       </div>
     </div>
@@ -51,9 +53,9 @@
                 type: Boolean,
                 default: false,
             },
-            fillLabel: {
+            hasExtraRow: {
                 type: Boolean,
-                default: true,
+                default: false,
             },
         },
         data() {

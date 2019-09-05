@@ -1,6 +1,32 @@
 <template>
-  <card :id="'clusters_match_' + match.id" type="clusters-matches" :label="match.label" :fill-label="false"
-        :open-card="show" @show="updateShow('open')" @hide="updateShow('close')">
+  <card :id="'clusters_match_' + match.id" type="clusters-matches" :label="match.label"
+        :has-extra-row="true" :open-card="show" @show="updateShow('open')" @hide="updateShow('close')">
+    <template v-slot:title-columns>
+      <div class="col-auto">
+        <button v-if="clustering && !clusteringRunning" type="button" class="btn btn-info my-1"
+                @click="runClustering($event)" :disabled="association === ''"
+                :title="association === '' ? 'Choose an association first' : ''">
+          Reconcile
+        </button>
+
+        <button v-else-if="!clustering && !clusteringRunning" type="button" class="btn btn-info my-1"
+                @click="runClustering($event)">
+          Cluster
+          <template v-if="association !== ''"> &amp; Reconcile</template>
+        </button>
+      </div>
+
+      <div class="col-auto" v-if="associationFiles">
+        <select class="col-auto form-control association-select my-1" v-model="association"
+                :id="'match_' + match.id + '_association'">
+          <option value="">No association</option>
+          <option v-for="association_file_name in associationFiles" :value="association_file_name">
+            {{ association_file_name }}
+          </option>
+        </select>
+      </div>
+    </template>
+
     <template v-slot:columns>
       <div class="col-auto d-flex flex-column align-items-center ml-auto mr-auto">
         <div class="col-auto">
@@ -107,32 +133,6 @@
               </label>
             </div>
           </div>
-        </div>
-      </div>
-
-      <div class="col-auto d-flex flex-column align-items-center">
-        <div class="col-auto">
-          <button v-if="clustering && !clusteringRunning" type="button" class="btn btn-info my-1"
-                  @click="runClustering($event)" :disabled="association === ''"
-                  :title="association === '' ? 'Choose an association first' : ''">
-            Reconcile
-          </button>
-
-          <button v-else-if="!clustering && !clusteringRunning" type="button" class="btn btn-info my-1"
-                  @click="runClustering($event)">
-            Cluster
-            <template v-if="association !== ''"> &amp; Reconcile</template>
-          </button>
-        </div>
-
-        <div class="col-auto" v-if="associationFiles">
-          <select class="col-auto form-control association-select my-1" v-model="association"
-                  :id="'match_' + match.id + '_association'">
-            <option value="">No association</option>
-            <option v-for="association_file_name in associationFiles" :value="association_file_name">
-              {{ association_file_name }}
-            </option>
-          </select>
         </div>
       </div>
     </template>

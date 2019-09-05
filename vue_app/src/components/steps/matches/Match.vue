@@ -1,14 +1,20 @@
 <template>
-  <card :id="'match_' + match.id" type="matches" v-model="match.label" :hasError="errors.length > 0" :fillLabel="false">
-    <template v-slot:title-extra>
-      <div class="col form-check pl-0 mt-1">
-        <b-form-checkbox
-            :id="'match_' + match.id + '_is_association'"
-            :disabled="!!alignment"
-            v-model.boolean="match.is_association"
-            title="Check this box if this Alignment is intended for creating associations">
-          Association
-        </b-form-checkbox>
+  <card :id="'match_' + match.id" type="matches" v-model="match.label"
+        :has-error="errors.length > 0" :has-extra-row="true">
+    <template v-slot:title-columns>
+      <div class="col-auto">
+        <b-button variant="info" @click="$emit('duplicate', match)">Duplicate</b-button>
+      </div>
+
+      <div v-if="!alignmentRunning" class="col-auto">
+        <b-button variant="info" @click="runAlignment">
+          Run
+          <template v-if="alignment">again</template>
+        </b-button>
+      </div>
+
+      <div v-if="!alignment" class="col-auto">
+        <button-delete @click="$emit('remove')" size="2x" title="Delete this Alignment"/>
       </div>
     </template>
 
@@ -40,24 +46,22 @@
           </div>
         </div>
       </div>
-
-      <div class="col-auto">
-        <b-button variant="info" @click="$emit('duplicate', match)">Duplicate</b-button>
-      </div>
-
-      <div v-if="!alignmentRunning" class="col-auto">
-        <b-button variant="info" @click="runAlignment">
-          Run
-          <template v-if="alignment">again</template>
-        </b-button>
-      </div>
-
-      <div v-if="!alignment" class="col-auto">
-        <button-delete @click="$emit('remove')" size="2x" title="Delete this Alignment"/>
-      </div>
     </template>
 
     <fieldset :disabled="!!alignment">
+      <sub-card>
+        <div class="row">
+          <div class="col form-check">
+            <b-form-checkbox
+                :id="'match_' + match.id + '_is_association'"
+                v-model.boolean="match.is_association"
+                title="Check this box if this Alignment is intended for creating associations">
+              Association
+            </b-form-checkbox>
+          </div>
+        </div>
+      </sub-card>
+
       <sub-card label="Sources" :has-info="true" add-button="Add a Collection as a Source"
                 :hasError="errors.includes('sources') || errors.includes('sources_select')"
                 @add="addMatchResource('sources', $event)">

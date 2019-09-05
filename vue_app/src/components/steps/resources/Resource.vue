@@ -1,6 +1,6 @@
 <template>
-  <card :id="'resource_' + resource.id" type="resources" v-model="resource.label" :hasError="errors.length > 0">
-    <template v-slot:columns>
+  <card :id="'resource_' + resource.id" type="resources" v-model="resource.label" :has-error="errors.length > 0">
+    <template v-slot:title-columns>
       <div class="col-auto">
         <b-button variant="info" @click="$emit('duplicate', resource)">Duplicate</b-button>
       </div>
