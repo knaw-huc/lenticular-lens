@@ -7,7 +7,7 @@
         </div>
       </div>
 
-      <ul class="col-auto text-info p-0 mb-0 mt-1 ml-2">
+      <ul class="col-auto text-info text-break-all p-0 mb-0 mt-1 ml-2">
         <li v-for="value in values">
           {{ value }}
         </li>
