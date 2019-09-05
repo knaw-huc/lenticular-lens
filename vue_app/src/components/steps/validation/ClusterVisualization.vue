@@ -79,10 +79,12 @@
 
                 const properties = this.properties.map(prop => {
                     const resource = this.$root.getResourceById(prop[0]);
+                    const property = (prop[prop.length - 1] === '__value__') ? prop.slice(1, -1) : prop.slice(1);
+
                     return {
                         dataset: resource.dataset_id,
                         entity_type: resource.collection_id,
-                        property: prop[1],
+                        property,
                     };
                 });
 

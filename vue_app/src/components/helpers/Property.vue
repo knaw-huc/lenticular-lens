@@ -174,7 +174,7 @@
                     this.dataset.collections[collectionId][this.property.slice(-1)[0]], 'referencedCollections', []);
 
                 if (this.property.slice(-1)[0] && Object.keys(referencedCollections).length > 0)
-                    this.property.push('__value__', '');
+                    this.property.push('', '');
             },
         },
     };
