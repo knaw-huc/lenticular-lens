@@ -177,7 +177,7 @@ class LinksetsCollection:
                 JOIN {target_name} AS target
                 ON (source.collection != target.collection OR source.uri > target.uri)
                 AND ({conditions})
-                AND nextval({sequence_name}) != 0;
+                AND nextval({sequence}) != 0;
                 
                 ANALYZE {view_name};
                 CREATE INDEX ON {view_name} (source_uri);
@@ -195,5 +195,6 @@ class LinksetsCollection:
             view_name=sql.Identifier(match.name),
             source_name=sql.Identifier(match.name + '_source'),
             target_name=sql.Identifier(match.name + '_target'),
-            sequence_name=sql.Literal(match.name + '_count')
+            sequence_name=sql.Identifier(match.name + '_count'),
+            sequence=sql.Literal(match.name + '_count')
         )
