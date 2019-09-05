@@ -45,33 +45,38 @@ def get_node_values(uris, query_data):
 
                     cur_resource = 'target'
                     cur_columns = table_info['columns']
-                    while len(property_path) > 1:
-                        column = property_path.pop(0)
-                        target_resource = property_path.pop(0)
 
-                        next_table_info = get_table_info(graph_set['graph'], target_resource)
-                        next_resource = hash_string(cur_resource + '_' + target_resource + '_' + column)
+                    if type(property_path) is list:
+                        while len(property_path) > 1:
+                            column = property_path.pop(0)
+                            target_resource = property_path.pop(0)
 
-                        local_property = PropertyField(column, parent_label=cur_resource, columns=cur_columns)
-                        remote_property = PropertyField('uri', parent_label=next_resource,
-                                                        columns=next_table_info['columns'])
+                            next_table_info = get_table_info(graph_set['graph'], target_resource)
+                            next_resource = hash_string(cur_resource + '_' + target_resource + '_' + column)
 
-                        if local_property.is_list:
-                            joins.append(local_property.left_join)
+                            local_property = PropertyField(column, parent_label=cur_resource, columns=cur_columns)
+                            remote_property = PropertyField('uri', parent_label=next_resource,
+                                                            columns=next_table_info['columns'])
 
-                        lhs = local_property.sql
-                        rhs = remote_property.sql
+                            if local_property.is_list:
+                                joins.append(local_property.left_join)
 
-                        joins.append(psycopg2_sql.SQL('\nLEFT JOIN {target} AS {alias}\nON {lhs} = {rhs}').format(
-                            target=psycopg2_sql.Identifier(next_table_info['table_name']),
-                            alias=psycopg2_sql.Identifier(next_resource),
-                            lhs=lhs, rhs=rhs
-                        ))
+                            lhs = local_property.sql
+                            rhs = remote_property.sql
 
-                        cur_resource = next_resource
-                        cur_columns = next_table_info['columns']
+                            joins.append(psycopg2_sql.SQL('\nLEFT JOIN {target} AS {alias}\nON {lhs} = {rhs}').format(
+                                target=psycopg2_sql.Identifier(next_table_info['table_name']),
+                                alias=psycopg2_sql.Identifier(next_resource),
+                                lhs=lhs, rhs=rhs
+                            ))
 
-                    property_name = property_path[0]
+                            cur_resource = next_resource
+                            cur_columns = next_table_info['columns']
+
+                        property_name = property_path[0]
+                    else:
+                        property_name = property_path
+
                     property = PropertyField(property_name, parent_label=cur_resource, columns=cur_columns)
 
                     sql = psycopg2_sql.SQL('''
