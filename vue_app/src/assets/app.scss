@@ -122,14 +122,26 @@ div.is-invalid {
   background-color: #ffcfc4 !important;
 }
 
-.property-resource, .property-path, .property-value {
-  @extend .col-auto;
+.btn, [role="button"], .clickable {
+  &:not(.read-only) {
+    cursor: pointer;
+  }
+}
+
+.small {
+  font-size: 0.9rem;
+}
+
+.text-break-all {
+  word-break: break-all;
+}
+
+.property-resource, .property-path {
   @extend .btn;
   @extend .rounded-pill;
   @extend .py-0;
   @extend .my-1;
-
-  word-break: break-all;
+  @extend .text-break-all;
 }
 
 .property-resource {
@@ -141,23 +153,4 @@ div.is-invalid {
 .property-path {
   @extend .bg-info;
   @extend .text-white;
-}
-
-.property-value {
-  @extend .border;
-  @extend .border-info;
-  @extend .bg-white;
-  @extend .text-info;
-
-  user-select: text;
-}
-
-.btn, [role="button"], .clickable {
-  &:not(.read-only) {
-    cursor: pointer;
-  }
-}
-
-.small {
-  font-size: 0.9rem;
 }

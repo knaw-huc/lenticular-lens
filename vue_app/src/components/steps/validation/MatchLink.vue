@@ -15,30 +15,26 @@
       </div>
 
       <div class="col">
-        <div class="row justify-content-center flex-nowrap">
-          <div class="property-path btn-sm read-only">
-            Source URI
-          </div>
+        <div class="text-break-all">
+          <span class="font-weight-bold">Source URI:</span>
 
-          <div class="property-value btn-sm read-only ml-2">
+          <span class="text-info">
             {{ source }}
-          </div>
+          </span>
 
-          <button type="button" class="property-value btn-sm read-only ml-2" @click="copySourceUriToClipboard">
+          <button type="button" class="btn btn-sm ml-2" @click="copySourceUriToClipboard">
             <fa-icon :icon="['far', 'clipboard']"/>
           </button>
         </div>
 
-        <div class="row justify-content-center flex-nowrap">
-          <div class="property-path btn-sm read-only">
-            Target URI
-          </div>
+        <div class="text-break-all">
+          <span class="font-weight-bold">Target URI:</span>
 
-          <div class="property-value btn-sm read-only ml-2">
+          <span class="text-info">
             {{ target }}
-          </div>
+          </span>
 
-          <button type="button" class="property-value btn-sm read-only ml-2" @click="copyTargetUriToClipboard">
+          <button type="button" class="btn btn-sm ml-2" @click="copyTargetUriToClipboard">
             <fa-icon :icon="['far', 'clipboard']"/>
           </button>
         </div>

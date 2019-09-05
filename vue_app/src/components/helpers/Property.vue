@@ -1,12 +1,16 @@
 <template>
   <div class="row align-items-center">
     <template v-if="resourceInfo">
-      <div class="property-resource read-only" v-bind:class="{'btn-sm': small}">
-        {{ dataset.title }}
+      <div class="col-auto p-0">
+        <div class="property-resource read-only" v-bind:class="{'btn-sm': small}">
+          {{ dataset.title }}
+        </div>
       </div>
 
-      <div class="property-resource read-only mx-2" v-bind:class="{'btn-sm': small}">
-        {{ resource.collection_id }}
+      <div class="col-auto p-0">
+        <div class="property-resource read-only mx-2" v-bind:class="{'btn-sm': small}">
+          {{ resource.collection_id }}
+        </div>
       </div>
 
       <div v-if="!singular && !readOnly" class="col-auto pl-0 ml-0 my-1">
@@ -40,14 +44,18 @@
       </div>
 
       <template v-else-if="!Array.isArray(prop.resources) && prop.inPath">
-        <div v-if="readOnly" class="property-path read-only" v-bind:class="{'btn-sm': small}">
-          {{ prop.value[0] }}
+        <div v-if="readOnly" class="col-auto p-0">
+          <div class="property-path read-only" v-bind:class="{'btn-sm': small}">
+            {{ prop.value[0] }}
+          </div>
         </div>
 
-        <button v-else type="button" class="property-path" v-bind:class="{'btn-sm': small}"
-                @click="$emit('resetProperty', prop.idx)">
-          {{ prop.value[0] }}
-        </button>
+        <div v-else class="col-auto p-0">
+          <button type="button" class="property-path" v-bind:class="{'btn-sm': small}"
+                  @click="$emit('resetProperty', prop.idx)">
+            {{ prop.value[0] }}
+          </button>
+        </div>
       </template>
 
       <template v-if="prop.value[0] !== '' && prop.value[0] !== '__value__'">
@@ -65,14 +73,18 @@
           </v-select>
         </div>
 
-        <div v-else-if="readOnly" class="property-path read-only" v-bind:class="{'btn-sm': small}">
-          {{ prop.value[1] }}
+        <div v-else-if="readOnly" class="col-auto p-0">
+          <div class="property-path read-only" v-bind:class="{'btn-sm': small}">
+            {{ prop.value[1] }}
+          </div>
         </div>
 
-        <button v-else type="button" class="property-path" v-bind:class="{'btn-sm': small}"
-                @click="$emit('resetProperty', prop.idx + 1)">
-          {{ prop.value[1] }}
-        </button>
+        <div v-else class="col-auto p-0">
+          <button type="button" class="property-path" v-bind:class="{'btn-sm': small}"
+                  @click="$emit('resetProperty', prop.idx + 1)">
+            {{ prop.value[1] }}
+          </button>
+        </div>
       </template>
     </template>
   </div>
@@ -105,11 +117,7 @@
             resourceInfo: {
                 type: Boolean,
                 default: true,
-            },
-            followReferencedCollection: {
-                type: Boolean,
-                default: true
-            },
+            }
         },
         computed: {
             resource() {
@@ -130,8 +138,7 @@
                             value: this.property.slice(propertyIdx, propertyIdx + 2),
                             resources: this.getResourcesForIndex(propertyIdx),
                             properties: this.getPropertiesForIndex(propertyIdx),
-                            inPath: this.followReferencedCollection || this.readOnly
-                                || this.property[propertyIdx] !== '__value__',
+                            inPath: this.readOnly || this.property[propertyIdx] !== '__value__',
                         };
                     });
             },
@@ -166,12 +173,8 @@
                 const referencedCollections = this.$utilities.getOrCreate(this.$set,
                     this.dataset.collections[collectionId][this.property.slice(-1)[0]], 'referencedCollections', []);
 
-                if (this.property.slice(-1)[0] && Object.keys(referencedCollections).length > 0) {
-                    if (!this.followReferencedCollection)
-                        this.property.push('__value__', '');
-                    else
-                        this.property.push('', '');
-                }
+                if (this.property.slice(-1)[0] && Object.keys(referencedCollections).length > 0)
+                    this.property.push('__value__', '');
             },
         },
     };

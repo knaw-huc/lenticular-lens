@@ -179,6 +179,10 @@ class LinksetsCollection:
                 AND ({conditions})
                 AND nextval({sequence_name}) != 0;
                 
+                ANALYZE {view_name};
+                CREATE INDEX ON {view_name} (source_uri);
+                CREATE INDEX ON {view_name} (target_uri);
+                
                 SELECT * FROM {view_name};
             """
         ))

@@ -82,6 +82,7 @@
             </v-select>
           </div>
         </div>
+
         <template v-for="collection_properties in condition[resources_key]">
           <div v-for="(resource, index) in collection_properties" class="row">
             <div class="col ml-5 p-3 border-top">
