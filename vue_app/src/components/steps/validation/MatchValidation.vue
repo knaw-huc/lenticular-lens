@@ -1,136 +1,83 @@
 <template>
   <card :id="'clusters_match_' + match.id" type="clusters-matches" :label="match.label"
         :has-extra-row="true" :open-card="show" @show="updateShow('open')" @hide="updateShow('close')">
-    <template v-slot:title-columns>
-      <div class="col-auto">
-        <button v-if="clustering && !clusteringRunning" type="button" class="btn btn-info my-1"
-                @click="runClustering($event)" :disabled="association === ''"
-                :title="association === '' ? 'Choose an association first' : ''">
-          Reconcile
-        </button>
-
-        <button v-else-if="!clustering && !clusteringRunning" type="button" class="btn btn-info my-1"
-                @click="runClustering($event)">
-          Cluster
-          <template v-if="association !== ''"> &amp; Reconcile</template>
-        </button>
-      </div>
-
-      <div class="col-auto" v-if="associationFiles">
-        <select class="col-auto form-control association-select my-1" v-model="association"
-                :id="'match_' + match.id + '_association'">
-          <option value="">No association</option>
-          <option v-for="association_file_name in associationFiles" :value="association_file_name">
-            {{ association_file_name }}
-          </option>
-        </select>
-      </div>
-    </template>
-
     <template v-slot:columns>
-      <div class="col-auto d-flex flex-column align-items-center ml-auto mr-auto">
-        <div class="col-auto">
-          <div class="bg-white border small p-2">
-            <div class="row align-items-center m-0">
-              <div class="col-auto" v-if="clusteringRunning">
-                <loading :small="true"/>
+      <div class="col align-items-center">
+        <div class="bg-white border small p-2">
+          <div class="row justify-content-center">
+            <div class="col-auto">
+              <div>
+                <strong>Links: </strong>
+                {{ alignment.links_count }}
               </div>
-
-              <div class="col-auto">
-                <div>
-                  <strong>Links: </strong>
-                  {{ alignment.links_count }}
-                </div>
-                <div>
-                  <strong>Clustering request: </strong>
-                  <template v-if="clustering">{{ clustering.requested_at }}</template>
-                  <template v-else>-</template>
-                </div>
-                <div>
-                  <strong>Clustering started at: </strong>
-                  <template v-if="clustering && clustering.processing_at">{{ clustering.processing_at }}</template>
-                  <template v-else>-</template>
-                </div>
-                <div>
-                  <strong>Clustering finished at: </strong>
-                  <template v-if="clustering && clustering.finished_at">{{ clustering.finished_at }}</template>
-                  <template v-else>-</template>
-                </div>
-                <div>
-                  <strong>Status: </strong>
-                  <pre v-if="clustering" class="d-inline">{{ clustering.status }}</pre>
-                  <pre v-else class="d-inline">Not yet clustered</pre>
-                </div>
+              <div>
+                <strong>Resources in source: </strong>
+                {{ alignment.sources_count }}
               </div>
+              <div>
+                <strong>Resources in target: </strong>
+                {{ alignment.targets_count }}
+              </div>
+            </div>
 
-              <div class="col-auto">
-                <div>
-                  <strong>Clusters: </strong>
-                  <template v-if="clustering && clustering.status === 'Finished'">
-                    {{ clustering.clusters_count }}
-                  </template>
-                  <template v-else>-</template>
-                </div>
-                <div>
-                  <strong>Extended Clusters: </strong>
-                  <template v-if="clustering && clustering.status === 'Finished'">
-                    {{ clustering.extended_count || 0 }}
-                  </template>
-                  <template v-else>-</template>
-                </div>
-                <div>
-                  <strong>Clusters with Cycles: </strong>
-                  <template v-if="clustering && clustering.status === 'Finished'">
-                    {{ clustering.cycles_count || 0 }}
-                  </template>
-                  <template v-else>-</template>
-                </div>
-                <div>
-                  <strong>Clusters not Extended: </strong>
-                  <template v-if="clustering && clustering.status === 'Finished'">
-                    {{ clustering.clusters_count - clustering.extended_count }}
-                  </template>
-                  <template v-else>-</template>
-                </div>
-                <div>
-                  <strong>Clusters without Cycles: </strong>
-                  <template v-if="clustering && clustering.status === 'Finished'">
-                    {{ clustering.clusters_count - clustering.cycles_count }}
-                  </template>
-                  <template v-else>-</template>
-                </div>
+            <div v-if="clustering" class="col-auto">
+              <div>
+                <strong>Clusters: </strong>
+                <template>
+                  {{ clustering.clusters_count }}
+                </template>
+              </div>
+              <div>
+                <strong>Extended: </strong>
+
+                <strong>Yes = </strong>
+                {{ clustering.extended_count || 0 }}
+
+                <strong>No = </strong>
+                {{ clustering.clusters_count - clustering.extended_count }}
+              </div>
+              <div>
+                <strong>Cycles: </strong>
+
+                <strong>Yes = </strong>
+                {{ clustering.cycles_count || 0 }}
+
+                <strong>No = </strong>
+                {{ clustering.clusters_count - clustering.cycles_count }}
               </div>
             </div>
           </div>
-        </div>
 
-        <div class="col-auto">
-          <div class="btn-toolbar mt-2" role="toolbar" aria-label="Toolbar">
-            <div class="btn-group btn-group-toggle mr-2">
-              <label class="btn btn-secondary btn-sm" v-bind:class="{'active': showInfo}">
-                <input type="checkbox" autocomplete="off" v-model="showInfo" @change="updateShow"/>
-                <fa-icon icon="info-circle"/>
-                Alignment specs
-              </label>
+          <div class="row justify-content-center mt-4">
+            <div class="col-auto">
+              <div class="btn-toolbar" role="toolbar" aria-label="Toolbar">
+                <div class="btn-group btn-group-toggle mr-2">
+                  <label class="btn btn-secondary btn-sm" v-bind:class="{'active': showInfo}">
+                    <input type="checkbox" autocomplete="off" v-model="showInfo" @change="updateShow"/>
+                    <fa-icon icon="info-circle"/>
+                    Alignment specs
+                  </label>
 
-              <label class="btn btn-secondary btn-sm" v-bind:class="{'active': showPropertySelection}">
-                <input type="checkbox" autocomplete="off" v-model="showPropertySelection" @change="updateShow"/>
-                <fa-icon icon="cog"/>
-                Properties
-              </label>
+                  <label class="btn btn-secondary btn-sm" v-bind:class="{'active': showPropertySelection}">
+                    <input type="checkbox" autocomplete="off" v-model="showPropertySelection" @change="updateShow"/>
+                    <fa-icon icon="cog"/>
+                    Properties
+                  </label>
 
-              <label class="btn btn-secondary btn-sm" v-bind:class="{'active': showAllLinks}">
-                <input type="checkbox" autocomplete="off" v-model="showAllLinks" @change="updateShow('links')"/>
-                <fa-icon icon="list"/>
-                Links
-              </label>
+                  <label class="btn btn-secondary btn-sm" v-bind:class="{'active': showAllLinks}">
+                    <input type="checkbox" autocomplete="off" v-model="showAllLinks" @change="updateShow('links')"/>
+                    <fa-icon icon="list"/>
+                    Links
+                  </label>
 
-              <label v-if="clustering && !clusteringRunning" class="btn btn-secondary btn-sm"
-                     v-bind:class="{'active': showClusters}">
-                <input type="checkbox" autocomplete="off" v-model="showClusters" @change="updateShow('clusters')"/>
-                <fa-icon icon="list"/>
-                Clusters
-              </label>
+                  <label v-if="clustering" class="btn btn-secondary btn-sm"
+                         v-bind:class="{'active': showClusters}">
+                    <input type="checkbox" autocomplete="off" v-model="showClusters" @change="updateShow('clusters')"/>
+                    <fa-icon icon="list"/>
+                    Clusters
+                  </label>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -166,7 +113,7 @@
 
     <loading v-if="loading" class="mt-4"/>
 
-    <template v-if="!loading && showClusters && clustering && !clusteringRunning">
+    <template v-if="!loading && showClusters && clustering">
       <sub-card label="Clusters" :open-card="true" :has-collapse="true" :has-margin-auto="!!clusterIdSelected"
                 id="clusters-list" type="clusters-list">
         <template v-slot:columns>
@@ -199,7 +146,7 @@
                   Visualize compact
                 </label>
 
-                <label v-if="hasProperties && association" class="btn btn-sm btn-secondary"
+                <label v-if="hasProperties && clustering.association" class="btn btn-sm btn-secondary"
                        v-bind:class="{'active': clusterView === 'visualize-reconciled'}">
                   <input type="radio" v-model="clusterView" value="visualize-reconciled" autocomplete="off"/>
                   <fa-icon icon="project-diagram"/>
@@ -236,7 +183,7 @@
           :cluster-id="clusterIdSelected"
           :cluster-data="clusters[clusterIdSelected]"
           :properties="match.properties"
-          :association="association"/>
+          :association="clustering.association"/>
     </template>
 
     <virtual-list
@@ -290,9 +237,7 @@
                 clusterItem: Clustering,
                 clusterIdSelected: null,
                 clusterView: '',
-                association: '',
                 properties: {},
-                associationFiles: [],
                 linkStates: {},
             };
         },
@@ -313,13 +258,11 @@
             },
 
             clustering() {
-                return this.$root.clusterings.find(clustering => clustering.alignment === this.match.id);
-            },
+                const clustering = this.$root.clusterings.find(clustering => clustering.alignment === this.match.id);
+                if (clustering && clustering.status === 'Finished')
+                    return clustering;
 
-            clusteringRunning() {
-                return this.clustering &&
-                    this.clustering.status !== 'Finished' &&
-                    !this.clustering.status.startsWith('FAILED');
+                return null;
             },
 
             showLinks() {
@@ -384,24 +327,16 @@
                 await this.getLinksOrClusters(true);
             },
 
-            async runClustering() {
-                const associationFile = this.association !== '' ? this.association : null;
-                await this.$root.runClustering(this.match.id, associationFile);
-                this.$emit('refresh');
-            },
-
             async getLinksOrClusters(hard = false) {
                 if (this.loading)
                     return;
 
-                if (this.showClusters && this.clustering && (this.clustering.status === 'Finished')
-                    && (Object.keys(this.clusters).length === 0)) {
+                if (this.showClusters && this.clustering && (Object.keys(this.clusters).length === 0)) {
                     this.loading = true;
                     this.links = [];
                     await this.getClusters();
                 }
-                else if ((!this.showClusters || !this.clustering || !this.clusteringRunning)
-                    && (this.links.length === 0)) {
+                else if ((!this.showClusters || !this.clustering) && (this.links.length === 0)) {
                     this.loading = true;
                     this.clusters = {};
                     await this.getLinks();
@@ -422,8 +357,9 @@
             },
 
             async getClusters() {
-                if (this.clustering && this.clustering.status === 'Finished')
-                    this.clusters = await this.$root.getClusters(this.clustering.clustering_id, this.association);
+                if (this.clustering)
+                    this.clusters = await this.$root.getClusters(
+                        this.clustering.clustering_id, this.clustering.association);
             },
 
             getClusterItemProps(idx) {
@@ -486,15 +422,6 @@
 
                 this.$set(this.match.properties, idx, newProperty);
             },
-        },
-        async mounted() {
-            this.associationFiles = await this.$root.getAssociationFiles();
-        },
+        }
     };
 </script>
-
-<style>
-  .association-select {
-    width: 160px !important;
-  }
-</style>

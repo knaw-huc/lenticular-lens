@@ -1,6 +1,6 @@
 <template>
   <div class="border p-4 mt-4 bg-light" v-bind:class="{'is-invalid': hasError}">
-    <div class="sticky-top bg-light py-2" v-bind:class="visible ? 'border-bottom' : {}">
+    <div class="sticky-top bg-light py-2">
       <div class="row flex-nowrap align-items-center justify-content-start">
         <div class="col-auto">
           <fa-icon icon="chevron-down" size="2x" v-b-toggle="id"></fa-icon>

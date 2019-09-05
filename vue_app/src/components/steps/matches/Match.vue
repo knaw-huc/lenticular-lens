@@ -1,16 +1,40 @@
 <template>
   <card :id="'match_' + match.id" type="matches" v-model="match.label"
-        :has-error="errors.length > 0" :has-extra-row="true">
+        :has-error="errors.length > 0" :has-extra-row="!!alignment">
     <template v-slot:title-columns>
       <div class="col-auto">
         <b-button variant="info" @click="$emit('duplicate', match)">Duplicate</b-button>
       </div>
 
-      <div v-if="!alignmentRunning" class="col-auto">
+      <div v-if="!alignment || alignmentStatus === 'failed'" class="col-auto">
         <b-button variant="info" @click="runAlignment">
           Run
-          <template v-if="alignment">again</template>
+          <template v-if="alignmentStatus === 'failed'">again</template>
         </b-button>
+      </div>
+
+      <div v-if="alignmentStatus === 'done'" class="col-auto">
+        <button v-if="clustering && clustering !== 'running'" type="button" class="btn btn-info my-1"
+                @click="runClustering($event)" :disabled="association === ''"
+                :title="association === '' ? 'Choose an association first' : ''">
+          Reconcile
+        </button>
+
+        <button v-else-if="!clustering && clustering !== 'running'" type="button" class="btn btn-info my-1"
+                @click="runClustering($event)">
+          Cluster
+          <template v-if="association !== ''"> &amp; Reconcile</template>
+        </button>
+      </div>
+
+      <div v-if="alignmentStatus === 'done' && associationFiles" class="col-auto">
+        <select class="col-auto form-control association-select my-1" v-model="association"
+                :id="'match_' + match.id + '_association'">
+          <option value="">No association</option>
+          <option v-for="association_file_name in associationFiles" :value="association_file_name">
+            {{ association_file_name }}
+          </option>
+        </select>
       </div>
 
       <div v-if="!alignment" class="col-auto">
@@ -19,28 +43,135 @@
     </template>
 
     <template v-slot:columns>
-      <div class="col-auto ml-auto mr-auto">
+      <div class="col">
         <div class="bg-white border small p-2" v-if="alignment">
-          <div class="row align-items-center m-0">
-            <div class="col-auto" v-if="alignmentRunning">
+          <div class="row justify-content-center">
+            <div class="col-auto" v-if="alignmentStatus === 'running' || clusteringStatus === 'running'">
               <loading :small="true"/>
             </div>
+
             <div class="col-auto">
-              <div>
-                <strong>Request received at: </strong>{{ alignment.requested_at }}
+              <div class="row justify-content-center">
+                <div class="col-auto">
+                  <div v-if="clustering && clusteringStatus !== 'failed'">
+                    <strong>Status: </strong>
+                    Clustering {{ clusteringStatus }}
+                  </div>
+                  <div v-else-if="clusteringStatus === 'failed'">
+                    <strong>Status: </strong>
+                    {{ clustering.status }}
+                  </div>
+                  <div v-else-if="alignmentStatus !== 'failed'">
+                    <strong>Status: </strong>
+                    Alignment {{ alignmentStatus }}
+                  </div>
+                  <div v-else>
+                    <strong>Status: </strong>
+                    Alignment {{ alignment.status }}
+                  </div>
+                </div>
               </div>
-              <div v-if="alignment.processing_at">
-                <strong>Processing started at: </strong>{{ alignment.processing_at }}
+
+              <div class="row justify-content-center mt-1">
+                <div class="col-auto">
+                  <template v-if="alignmentStatus === 'waiting'">
+                    <div>
+                      <strong>Request: </strong>
+                      {{ alignment.requested_at }}
+
+                      <span class="font-italic">
+                        (<timeago :datetime="alignment.requested_at" :auto-update="1"/>)
+                      </span>
+                    </div>
+                  </template>
+
+                  <template v-else-if="alignmentStatus === 'running'">
+                    <div>
+                      <strong>Start: </strong>
+                      {{ alignment.processing_at }}
+
+                      <span class="font-italic">
+                        (<timeago :datetime="alignment.processing_at" :auto-update="1"/>)
+                      </span>
+                    </div>
+                  </template>
+
+                  <template v-else>
+                    <div>
+                      <strong>Start alignment: </strong>
+                      {{ alignment.processing_at }}
+
+                      <span class="font-italic">
+                        (<timeago :datetime="alignment.processing_at"/>)
+                      </span>
+                    </div>
+                  </template>
+                </div>
               </div>
-              <div v-if="alignment.finished_at">
-                <strong>Processing finished at: </strong>{{ alignment.finished_at }}
+
+              <div class="row justify-content-center">
+                <div class="col-auto">
+                  <template v-if="clustering && clusteringStatus === 'waiting'">
+                    <div>
+                      <strong>Request clustering: </strong>
+                      {{ clustering.requested_at }}
+
+                      <span class="font-italic">
+                        (<timeago :datetime="clustering.requested_at" :auto-update="1"/>)
+                      </span>
+                    </div>
+                  </template>
+
+                  <template v-else-if="clustering && clusteringStatus === 'running'">
+                    <div>
+                      <strong>Start clustering: </strong>
+                      {{ clustering.processing_at }}
+
+                      <span class="font-italic">
+                        (<timeago :datetime="clustering.processing_at" :auto-update="1"/>)
+                      </span>
+                    </div>
+                  </template>
+
+                  <template v-else-if="clustering">
+                    <div>
+                      <strong>Start clustering: </strong>
+                      {{ clustering.processing_at }}
+
+                      <span class="font-italic">
+                        (<timeago :datetime="clustering.processing_at"/>)
+                      </span>
+                    </div>
+                  </template>
+                </div>
               </div>
-              <div>
-                <strong>Status: </strong>
-                <pre class="d-inline">{{ alignment.status }}</pre>
-              </div>
-              <div v-if="alignment.status === 'Finished'">
-                <strong>Links found:</strong> {{ alignment.links_count || 0 }}
+
+              <div class="row justify-content-center mt-1">
+                <div class="col-auto">
+                  <div v-if="clustering">
+                    <strong>Clusters found: </strong>
+                    {{ clustering.clusters_count || 0 }}
+                    <span v-if="clusteringStatus === 'running'" class="font-italic">so far</span>
+                  </div>
+                  <div>
+                    <strong>Links found: </strong>
+                    {{ alignment.links_count || 0 }}
+                    <span v-if="alignmentStatus === 'running'" class="font-italic">so far</span>
+                  </div>
+                </div>
+
+                <div class="col-auto">
+                  <div>
+                    <strong>Resources in source: </strong>
+                    {{ alignment.sources_count || 0 }}
+                    <span v-if="alignmentStatus === 'running'" class="font-italic">so far</span>
+                  </div>
+                  <div>
+                    <strong>Resources in target: </strong>
+                    {{ alignment.targets_count || 0 }}
+                    <span v-if="alignmentStatus === 'running'" class="font-italic">so far</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -152,7 +283,7 @@
     import MatchTargetsInfo from '../../info/MatchTargetsInfo';
     import MatchMatchingMethodsInfo from '../../info/MatchMatchingMethodsInfo';
 
-    import MatchResource from './MatchResource'
+    import MatchResource from './MatchResource';
     import MatchCondition from "./MatchCondition";
 
     import ConditionsGroup from "../../helpers/ConditionsGroup";
@@ -174,18 +305,54 @@
         props: {
             match: Object,
         },
+        data() {
+            return {
+                association: '',
+                associationFiles: [],
+            };
+        },
         computed: {
             alignment() {
                 return this.$root.alignments.find(alignment => alignment.alignment === this.match.id);
             },
 
-            alignmentRunning() {
-                return this.alignment &&
-                    this.alignment.status !== 'Finished' &&
-                    !this.alignment.status.startsWith('FAILED');
+            clustering() {
+                return this.$root.clusterings.find(clustering => clustering.alignment === this.match.id);
+            },
+
+            alignmentStatus() {
+                if (!this.alignment)
+                    return 'waiting';
+
+                if (this.alignment.status === 'Finished')
+                    return 'done';
+
+                if (this.alignment.status.startsWith('FAILED'))
+                    return 'failed';
+
+                return 'running';
+            },
+
+            clusteringStatus() {
+                if (!this.clustering)
+                    return 'waiting';
+
+                if (this.clustering.status === 'Finished')
+                    return 'done';
+
+                if (this.clustering.status.startsWith('FAILED'))
+                    return 'failed';
+
+                return 'running';
             },
         },
         methods: {
+            async runClustering() {
+                const associationFile = this.association !== '' ? this.association : null;
+                await this.$root.runClustering(this.match.id, associationFile);
+                this.$emit('refresh');
+            },
+
             validateMatch() {
                 const sourcesValid = this.validateField('sources', this.match.sources.length > 0);
                 const targetsValid = this.validateField('targets', this.match.targets.length > 0);
@@ -288,12 +455,20 @@
                 this.$emit('refresh');
             },
         },
-        mounted() {
+        async mounted() {
             if (this.match.sources.length < 1)
                 this.addMatchResource('sources');
 
             if (this.match.targets.length < 1)
                 this.addMatchResource('targets');
+
+            this.associationFiles = await this.$root.getAssociationFiles();
         }
-    }
+    };
 </script>
+
+<style>
+  .association-select {
+    width: 160px !important;
+  }
+</style>

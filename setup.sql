@@ -37,6 +37,8 @@ CREATE TABLE IF NOT EXISTS alignments (
   processing_at timestamp,
   finished_at timestamp,
   links_count bigint,
+  sources_count bigint,
+  targets_count bigint,
   PRIMARY KEY (job_id, alignment)
 );
 

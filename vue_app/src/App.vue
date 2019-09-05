@@ -62,7 +62,7 @@
               @submit="submit"
               @remove="$root.matches.splice(index, 1)"
               @update:label="match.label = $event"
-              @refresh="refreshAlignments(true)"
+              @refresh="refresh(true)"
               ref="matchComponents"
           ></match>
         </tab-content-structure>
@@ -75,7 +75,6 @@
               v-for="match in $root.matches"
               :match="match"
               :key="match.id"
-              @refresh="refreshClusterings(true)"
           ></match-validation>
         </tab-content-structure>
       </tab-content>
@@ -156,7 +155,7 @@
                 is_saved: true,
                 is_updating: false,
                 steps: ['idea', 'collections', 'alignments', 'validation', 'export'],
-            }
+            };
         },
         computed: {
             hasChanges() {
@@ -293,15 +292,14 @@
                         else
                             this.activateStep('alignments');
 
-                        this.refreshAlignments();
-                        this.refreshClusterings();
+                        this.refresh();
                     }
                 }
             },
 
-            async refreshAlignments(loadAlignments = false) {
-                if (loadAlignments)
-                    await this.$root.loadAlignments();
+            async refresh(load = false) {
+                if (load)
+                    await Promise.all([this.$root.loadAlignments(), this.$root.loadClusterings()]);
 
                 let hasFinished = false;
                 let hasUnfinished = false;
@@ -313,28 +311,21 @@
                         hasUnfinished = true;
                 });
 
+                this.$root.clusterings.forEach(clustering => {
+                    if (clustering.status !== 'Finished' && !clustering.status.startsWith('FAILED'))
+                        hasUnfinished = true;
+                });
+
                 if (hasFinished) {
                     this.activateStep('validation');
                     this.activateStep('export');
                 }
 
                 if (hasUnfinished)
-                    setTimeout(() => this.$root.loadAlignments().then(() => this.refreshAlignments()), 5000);
-            },
-
-            async refreshClusterings(loadClusterings = false) {
-                if (loadClusterings)
-                    await this.$root.loadClusterings();
-
-                let hasUnfinished = false;
-
-                this.$root.clusterings.forEach(clustering => {
-                    if (clustering.status !== 'Finished' && !clustering.status.startsWith('FAILED'))
-                        hasUnfinished = true;
-                });
-
-                if (hasUnfinished)
-                    setTimeout(() => this.$root.loadClusterings().then(() => this.refreshClusterings()), 5000);
+                    setTimeout(() => {
+                        Promise.all([this.$root.loadAlignments(), this.$root.loadClusterings()])
+                            .then(() => this.refresh());
+                    }, 5000);
             },
         },
         async mounted() {

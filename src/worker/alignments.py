@@ -63,21 +63,31 @@ class AlignmentJob:
         if message.startswith('Generating linkset '):
             view_name = re.search(r'(?<=Generating linkset ).+(?=.$)', message)[0]
 
-            with db_conn() as conn, conn.cursor() as cur:
-                try:
-                    cur.execute(psycopg2_sql.SQL('SELECT last_value FROM {}.{}').format(
-                        psycopg2_sql.Identifier('job_' + self.alignment + '_' + self.job_id),
-                        psycopg2_sql.Identifier(view_name + '_count'),
-                    ))
-                except ProgrammingError:
-                    return
+            if view_name.startswith(self.linksets_collection.view_name):
+                with db_conn() as conn, conn.cursor() as cur:
+                    try:
+                        cur.execute(psycopg2_sql.SQL('SELECT last_value FROM {}.{}').format(
+                            psycopg2_sql.Identifier('job_' + self.alignment + '_' + self.job_id),
+                            psycopg2_sql.Identifier(view_name + '_count'),
+                        ))
+                    except ProgrammingError:
+                        return
 
-                inserted = cur.fetchone()[0]
-                conn.commit()
+                    inserted = cur.fetchone()[0]
+                    conn.commit()
 
-            inserted_message = '%s links found so far.' % locale.format_string('%i', inserted, grouping=True)
-            print(inserted_message)
-            update_alignment_job(self.job_id, self.alignment, {'status': inserted_message})
+                if view_name.endswith('_source'):
+                    set = 'sources'
+                elif view_name.endswith('_target'):
+                    set = 'sources'
+                else:
+                    set = 'links'
+
+                print('%s %s found so far.' % (locale.format_string('%i', inserted, grouping=True), set))
+                update_alignment_job(self.job_id, self.alignment, {set + '_count': inserted, 'status': message})
+            else:
+                print(message)
+                update_alignment_job(self.job_id, self.alignment, {'status': message})
         else:
             print(message)
             update_alignment_job(self.job_id, self.alignment, {'status': message})
@@ -88,11 +98,22 @@ class AlignmentJob:
                 cur.execute(psycopg2_sql.SQL('SELECT count(*) FROM {}.{}').format(
                     psycopg2_sql.Identifier('job_' + self.alignment + '_' + self.job_id),
                     psycopg2_sql.Identifier(self.linksets_collection.view_name)))
-                inserted = cur.fetchone()[0]
+                links = cur.fetchone()[0]
+
+                cur.execute(psycopg2_sql.SQL('SELECT count(*) FROM {}.{}').format(
+                    psycopg2_sql.Identifier('job_' + self.alignment + '_' + self.job_id),
+                    psycopg2_sql.Identifier(self.linksets_collection.view_name + '_source')))
+                sources = cur.fetchone()[0]
+
+                cur.execute(psycopg2_sql.SQL('SELECT count(*) FROM {}.{}').format(
+                    psycopg2_sql.Identifier('job_' + self.alignment + '_' + self.job_id),
+                    psycopg2_sql.Identifier(self.linksets_collection.view_name + '_target')))
+                targets = cur.fetchone()[0]
 
             with conn.cursor() as cur:
-                cur.execute("UPDATE alignments SET links_count = %s WHERE job_id = %s AND alignment = %s",
-                            (inserted, self.job_id, self.alignment))
+                cur.execute("UPDATE alignments SET links_count = %s, sources_count = %s, targets_count = %s "
+                            "WHERE job_id = %s AND alignment = %s",
+                            (links, sources, targets, self.job_id, self.alignment))
 
         print("Generating CSVs")
         for match in self.linksets_collection.config.matches_to_run:

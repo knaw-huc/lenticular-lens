@@ -155,20 +155,32 @@ class LinksetsCollection:
     @staticmethod
     def generate_match_sql(match):
         sql_composed = sql.SQL(cleandoc(
-            """ DROP SEQUENCE IF EXISTS {sequence_name} CASCADE;
-                CREATE SEQUENCE {sequence_name} MINVALUE 0 START 0;
+            """ DROP SEQUENCE IF EXISTS {source_sequence_name} CASCADE;
+                CREATE SEQUENCE {source_sequence_name} MINVALUE 0 START 0;
                 
                 DROP MATERIALIZED VIEW IF EXISTS {source_name} CASCADE;
                 CREATE MATERIALIZED VIEW {source_name} AS 
-                {source};
+                SELECT * 
+                FROM ({source}) AS x
+                WHERE nextval({source_sequence}) != 0;
+                
                 ANALYZE {source_name};
                 CREATE INDEX ON {source_name} (uri);
                 
+                DROP SEQUENCE IF EXISTS {target_sequence_name} CASCADE;
+                CREATE SEQUENCE {target_sequence_name} MINVALUE 0 START 0;
+                
                 DROP MATERIALIZED VIEW IF EXISTS {target_name} CASCADE;
                 CREATE MATERIALIZED VIEW {target_name} AS 
-                {target};
+                SELECT * 
+                FROM ({target}) AS x
+                WHERE nextval({target_sequence}) != 0;
+                
                 ANALYZE {target_name};
                 CREATE INDEX ON {target_name} (uri);
+                
+                DROP SEQUENCE IF EXISTS {sequence_name} CASCADE;
+                CREATE SEQUENCE {sequence_name} MINVALUE 0 START 0;
                 
                 DROP MATERIALIZED VIEW IF EXISTS {view_name} CASCADE;
                 CREATE MATERIALIZED VIEW {view_name} AS
@@ -196,5 +208,9 @@ class LinksetsCollection:
             source_name=sql.Identifier(match.name + '_source'),
             target_name=sql.Identifier(match.name + '_target'),
             sequence_name=sql.Identifier(match.name + '_count'),
-            sequence=sql.Literal(match.name + '_count')
+            source_sequence_name=sql.Identifier(match.name + '_source_count'),
+            target_sequence_name=sql.Identifier(match.name + '_target_count'),
+            sequence=sql.Literal(match.name + '_count'),
+            source_sequence=sql.Literal(match.name + '_source_count'),
+            target_sequence=sql.Literal(match.name + '_target_count')
         )
