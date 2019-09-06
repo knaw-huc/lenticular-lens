@@ -1347,10 +1347,9 @@ def plot_compact(specs, vis=None, root=None, map_of_labels=None, sub_clusters=No
         resource = []
         inverse_map = dict()
         for g_id, g_label in label_map.items():
-            if g_label.__contains__("http"):
-                g_label = g_label.replace("-- ", "")
-                resource.append(g_label)
-                inverse_map[g_label] = g_id
+            g_label = g_label.replace("-- ", "")
+            resource.append(g_label)
+            inverse_map[g_label] = g_id
 
         # QUERY FOR FETCHING THE LABEL
         query = Middleware.node_labels_switcher[data_store](
