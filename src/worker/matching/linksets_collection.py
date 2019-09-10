@@ -135,8 +135,11 @@ class LinksetsCollection:
             
                 CREATE MATERIALIZED VIEW {view_name} AS
                 {pre}SELECT DISTINCT {matching_fields}
-                FROM {table_name} AS {view_name}{joins}{wheres}
-                ORDER BY uri{limit};
+                FROM {table_name} AS {view_name}
+                {joins}
+                {wheres}
+                ORDER BY uri 
+                {limit};
                 
                 ANALYZE {view_name};
             """

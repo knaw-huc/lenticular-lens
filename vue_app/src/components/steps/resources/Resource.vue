@@ -6,12 +6,12 @@
         <b-button variant="info" @click="$emit('duplicate', resource)">Duplicate</b-button>
       </div>
 
-      <div v-if="!isUsedInAlignmentResults()" class="col-auto">
+      <div v-if="!isUsedInAlignmentResults" class="col-auto">
         <button-delete v-on:click="$emit('remove')" title="Delete Collection"/>
       </div>
     </template>
 
-    <fieldset :disabled="isUsedInAlignmentResults()">
+    <fieldset :disabled="isUsedInAlignmentResults">
       <sub-card :hasError="errors.includes('dataset') || errors.includes('collection')">
         <div class="row">
           <div class="form-group col-8">
@@ -25,6 +25,10 @@
                 {{ data.title }}
               </option>
             </v-select>
+
+            <small v-if="resourceDescription" class="form-text text-muted mt-2">
+              {{ resourceDescription }}
+            </small>
 
             <div class="invalid-feedback" v-show="errors.includes('dataset')">
               Please select a dataset
@@ -197,12 +201,33 @@
             'resource': Object,
         },
         computed: {
+            resourceDescription() {
+                return (this.$root.datasets.hasOwnProperty(this.resource.dataset_id)
+                    && this.$root.datasets[this.resource.dataset_id].hasOwnProperty('description')
+                    && this.$root.datasets[this.resource.dataset_id].description);
+            },
+
             autoLabel() {
                 if (this.prevDatasetId && this.prevCollectionId) {
                     const datasetTitle = this.$root.datasets[this.prevDatasetId].title;
                     return `${datasetTitle} [type: ${this.prevCollectionId}]`;
                 }
                 return 'Collection ' + (this.resource.id + 1);
+            },
+
+            isUsedInAlignmentResults() {
+                const alignmentsInResults = this.$root.alignments.map(alignment => alignment.alignment);
+
+                for (let i = 0; i < this.$root.matches.length; i++) {
+                    const match = this.$root.matches[i];
+
+                    if (alignmentsInResults.includes(match.id) &&
+                        (match.sources.includes(this.resource.id) || match.targets.includes(this.resource.id))) {
+                        return true;
+                    }
+                }
+
+                return false;
             },
         },
         methods: {
@@ -246,21 +271,6 @@
                 return collectionValid && datasetValid && limitValid && relatedValid && filtersGroupsValid;
             },
 
-            isUsedInAlignmentResults() {
-                const alignmentsInResults = this.$root.alignments.map(alignment => alignment.alignment);
-
-                for (let i = 0; i < this.$root.matches.length; i++) {
-                    const match = this.$root.matches[i];
-
-                    if (alignmentsInResults.includes(match.id) &&
-                        (match.sources.includes(this.resource.id) || match.targets.includes(this.resource.id))) {
-                        return true;
-                    }
-                }
-
-                return false;
-            },
-
             addRelation(event) {
                 if (event) event.target.blur();
 
@@ -298,5 +308,5 @@
             if (!this.resource.label)
                 this.$set(this.resource, 'label', this.autoLabel);
         },
-    }
+    };
 </script>

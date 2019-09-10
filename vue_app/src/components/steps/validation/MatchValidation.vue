@@ -99,7 +99,6 @@
       <div class="mt-4">
         <property
             v-for="(property, idx) in match.properties"
-            v-if="property[0]"
             class="mx-0"
             :key="idx"
             :property="property"
