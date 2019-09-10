@@ -1,5 +1,6 @@
 <template>
-  <card :id="'resource_' + resource.id" type="resources" v-model="resource.label" :has-error="errors.length > 0">
+  <card :id="'resource_' + resource.id" type="resources" v-model="resource.label"
+        :has-error="errors.length > 0" :has-handle="true">
     <template v-slot:title-columns>
       <div class="col-auto">
         <b-button variant="info" @click="$emit('duplicate', resource)">Duplicate</b-button>
@@ -52,6 +53,7 @@
       <sub-card v-if="resource.collection_id !== ''" label="Filter" :hasError="errors.includes('filters')">
         <conditions-group :conditions-group="resource.filter"
                           :is-root="true"
+                          group="resource-filters"
                           :uid="'resource_' + resource.id + '_filter_group_0'"
                           validate-method-name="validateFilterCondition"
                           v-slot="curCondition"

@@ -14,7 +14,7 @@ $container-max-widths: (lg: 1500px);
   }
 }
 
-.fa-chevron-down[role="button"] {
+.fa-chevron-down {
   transition: .3s transform ease-in-out;
 
   &.collapsed {
@@ -143,6 +143,7 @@ div.is-invalid {
 }
 
 .main-card {
+  @extend .position-relative;
   @extend .bg-light;
   @extend .border;
   @extend .p-4;

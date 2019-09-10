@@ -1,6 +1,6 @@
 <template>
   <card :id="'match_' + match.id" type="matches" v-model="match.label"
-        :has-error="errors.length > 0" :has-extra-row="!!alignment">
+        :has-error="errors.length > 0" :has-handle="true" :has-extra-row="!!alignment">
     <template v-slot:title-columns>
       <div class="col-auto">
         <b-button variant="info" @click="$emit('duplicate', match)">Duplicate</b-button>
@@ -261,6 +261,7 @@
         <conditions-group :conditions-group="match"
                           :is-root="true"
                           :should-have-conditions="true"
+                          group="matches-filters"
                           :uid="'match_' + match.id  + '_group_0'"
                           validate-method-name="validateMatchCondition"
                           v-slot="curCondition"

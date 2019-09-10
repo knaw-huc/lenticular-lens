@@ -13,7 +13,7 @@ export default {
     },
     methods: {
         addResource() {
-            this.resources.push({
+            this.resources.unshift({
                 dataset_id: '',
                 collection_id: '',
                 id: findId(this.resources),
@@ -28,7 +28,7 @@ export default {
         },
 
         addMatch() {
-            this.matches.push({
+            this.matches.unshift({
                 id: findId(this.matches),
                 is_association: false,
                 label: 'Alignment ' + (this.matches.length + 1),
@@ -41,16 +41,18 @@ export default {
         },
 
         duplicateResource(resource) {
+            const index = this.resources.findIndex(resource);
             const duplicate = copy(resource);
-            this.resources.push({
+            this.resources.splice(index, 0, {
                 ...duplicate,
                 id: findId(this.resources),
             });
         },
 
         duplicateMatch(match) {
+            const index = this.matches.findIndex(match);
             const duplicate = copy(match);
-            this.matches.push({
+            this.matches.splice(index, 0, {
                 ...duplicate,
                 id: findId(this.matches),
                 label: 'Alignment ' + (this.matches.length + 1),

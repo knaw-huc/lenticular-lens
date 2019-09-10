@@ -35,14 +35,15 @@
             </div>
           </template>
 
-          <resource
-              v-for="(resource, index) in $root.resources"
-              :key="resource.id"
-              :resource="resource"
-              @duplicate="duplicateResource($event)"
-              @remove="$root.resources.splice(index, 1)"
-              ref="resourceComponents"
-          ></resource>
+          <draggable v-model="$root.resources" group="resources" handle=".handle">
+            <resource
+                v-for="(resource, index) in $root.resources"
+                :key="resource.id"
+                :resource="resource"
+                @duplicate="duplicateResource($event)"
+                @remove="$root.resources.splice(index, 1)"
+                ref="resourceComponents"/>
+          </draggable>
         </tab-content-structure>
       </tab-content>
 
@@ -54,17 +55,18 @@
             </div>
           </template>
 
-          <match
-              v-for="(match, index) in $root.matches"
-              :match="match"
-              :key="match.id"
-              @duplicate="duplicateMatch($event)"
-              @submit="submit"
-              @remove="$root.matches.splice(index, 1)"
-              @update:label="match.label = $event"
-              @refresh="refresh(true)"
-              ref="matchComponents"
-          ></match>
+          <draggable v-model="$root.matches" group="matches" handle=".handle">
+            <match
+                v-for="(match, index) in $root.matches"
+                :match="match"
+                :key="match.id"
+                @duplicate="duplicateMatch($event)"
+                @submit="submit"
+                @remove="$root.matches.splice(index, 1)"
+                @update:label="match.label = $event"
+                @refresh="refresh(true)"
+                ref="matchComponents"/>
+          </draggable>
         </tab-content-structure>
       </tab-content>
 
@@ -125,19 +127,21 @@
 </template>
 
 <script>
+    import Draggable from 'vuedraggable';
+
     import Idea from './components/steps/idea/Idea';
     import Resource from './components/steps/resources/Resource';
     import Match from './components/steps/matches/Match';
     import MatchValidation from './components/steps/validation/MatchValidation';
 
-    import TabContentStructure from './components/structural/TabContentStructure';
-
     import ValidationMixin from "./mixins/ValidationMixin";
+    import TabContentStructure from './components/structural/TabContentStructure';
 
     export default {
         name: 'App',
         mixins: [ValidationMixin],
         components: {
+            Draggable,
             TabContentStructure,
             Idea,
             Resource,

@@ -1,5 +1,7 @@
 <template>
   <div class="main-card" v-bind:class="{'is-invalid': hasError}">
+    <handle v-if="hasHandle"/>
+
     <div class="sticky-top bg-light py-2">
       <div class="row flex-nowrap align-items-center justify-content-start">
         <div class="col-auto">
@@ -54,6 +56,10 @@
                 default: false,
             },
             hasExtraRow: {
+                type: Boolean,
+                default: false,
+            },
+            hasHandle: {
                 type: Boolean,
                 default: false,
             },

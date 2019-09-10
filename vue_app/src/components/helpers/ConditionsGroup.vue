@@ -1,6 +1,8 @@
 <template>
-  <div v-if="conditionsGroup.conditions" class="shadow p-3 border mt-3"
+  <div v-if="conditionsGroup.conditions" class="position-relative shadow border p-3 mt-3"
        v-bind:class="[{'is-invalid': errors.length > 0}, ...styleClass]">
+    <handle v-if="!isRoot"/>
+
     <div class="row align-items-center">
       <div class="col-auto">
         <fa-icon icon="chevron-down" size="lg" v-b-toggle="uid"></fa-icon>
@@ -37,41 +39,51 @@
     </div>
 
     <b-collapse visible :id="uid" :ref="uid">
-      <conditions-group
-          v-for="(condition, conditionIndex) in conditionsGroup.conditions"
-          :key="conditionIndex"
-          :index="conditionIndex"
-          :uid="uid + '_' + conditionIndex"
-          :conditions-group="condition"
-          :should-have-conditions="shouldHaveConditions"
-          :validate-method-name="validateMethodName"
-          @add="$emit('add', $event)"
-          @remove="removeCondition($event)"
-          @promote="promoteConditionGroup($event)"
-          @demote="demoteConditionGroup($event)"
-          v-slot="slotProps"
-          ref="conditionGroupComponents">
-        <slot v-bind="slotProps"/>
-      </conditions-group>
+      <draggable v-model="conditionsGroup.conditions" :group="group" handle=".handle">
+        <conditions-group
+            v-for="(condition, conditionIndex) in conditionsGroup.conditions"
+            :key="conditionIndex"
+            :index="conditionIndex"
+            :uid="uid + '_' + conditionIndex"
+            :group="group"
+            :conditions-group="condition"
+            :should-have-conditions="shouldHaveConditions"
+            :validate-method-name="validateMethodName"
+            @add="$emit('add', $event)"
+            @remove="removeCondition($event)"
+            @promote="promoteConditionGroup($event)"
+            @demote="demoteConditionGroup($event)"
+            v-slot="slotProps"
+            ref="conditionGroupComponents">
+          <slot v-bind="slotProps"/>
+        </conditions-group>
+      </draggable>
     </b-collapse>
   </div>
 
-  <div v-else>
+  <div v-else class="position-relative" v-bind:class="styleClass">
+    <handle/>
+
     <slot v-bind:index="index" v-bind:condition="conditionsGroup"
           v-bind:add="() => $emit('promote', index)" v-bind:remove="() => $emit('remove', index)"/>
   </div>
 </template>
 
 <script>
+    import Draggable from 'vuedraggable';
     import ValidationMixin from "../../mixins/ValidationMixin";
 
     export default {
         name: "ConditionsGroup",
+        components: {
+            Draggable,
+        },
         mixins: [ValidationMixin],
         props: {
             uid: '',
             index: 0,
             conditionsGroup: {},
+            group: String,
             validateMethodName: String,
             isRoot: {
                 type: Boolean,
@@ -89,7 +101,7 @@
                 if (this.isRoot)
                     styleClass.push('mt-3');
 
-                if (this.isRoot || this.$parent.$parent.styleClass.includes('bg-primary-light'))
+                if (this.isRoot || this.$parent.$parent.$parent.styleClass.includes('bg-primary-light'))
                     styleClass.push('bg-info-light', 'border-info');
                 else
                     styleClass.push('bg-primary-light', 'border-primary');
@@ -148,5 +160,5 @@
                 this.$set(this.conditionsGroup.conditions, index, conditionCopy);
             },
         }
-    }
+    };
 </script>

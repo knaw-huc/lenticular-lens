@@ -13,6 +13,7 @@ import ButtonDelete from './components/misc/ButtonDelete';
 import ButtonInfo from './components/misc/ButtonInfo';
 import VSelect from './components/misc/VSelect';
 import Loading from './components/misc/Loading';
+import Handle from './components/misc/Handle';
 import Property from './components/helpers/Property';
 import Card from './components/structural/Card';
 import SubCard from './components/structural/SubCard';
@@ -23,6 +24,7 @@ Vue.component('button-delete', ButtonDelete);
 Vue.component('button-info', ButtonInfo);
 Vue.component('v-select', VSelect);
 Vue.component('loading', Loading);
+Vue.component('handle', Handle);
 Vue.component('property', Property);
 Vue.component('card', Card);
 Vue.component('sub-card', SubCard);
@@ -32,11 +34,11 @@ import {library} from '@fortawesome/fontawesome-svg-core';
 import {faQuestionCircle, faClipboard} from '@fortawesome/free-regular-svg-icons';
 import {
     faChevronDown, faArrowRight, faPlus, faTrashAlt, faPencilAlt, faCheck, faTimes,
-    faInfoCircle, faAlignJustify, faProjectDiagram, faList, faCog
+    faInfoCircle, faAlignJustify, faProjectDiagram, faList, faCog, faGripHorizontal
 } from '@fortawesome/free-solid-svg-icons';
 
 library.add(faQuestionCircle, faClipboard, faChevronDown, faArrowRight, faPlus, faTrashAlt, faPencilAlt,
-    faCheck, faTimes, faInfoCircle, faAlignJustify, faProjectDiagram, faList, faCog);
+    faCheck, faTimes, faInfoCircle, faAlignJustify, faProjectDiagram, faList, faCog, faGripHorizontal);
 
 import md5 from 'md5';
 
