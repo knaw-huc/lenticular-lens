@@ -149,7 +149,7 @@ div.is-invalid {
   @extend .p-4;
   @extend .mt-4;
 
-  input[type="text"] {
+  .card-title-input {
     font-size: 2rem;
     height: 2.5rem;
     box-shadow: none;

@@ -134,12 +134,9 @@ class LinksetsCollection:
             """ DROP MATERIALIZED VIEW IF EXISTS {view_name} CASCADE;
             
                 CREATE MATERIALIZED VIEW {view_name} AS
-                {pre}SELECT DISTINCT {matching_fields}
-                FROM {table_name} AS {view_name}
-                {joins}
-                {wheres}
-                ORDER BY uri 
-                {limit};
+                {pre} SELECT DISTINCT {matching_fields}
+                FROM {table_name} AS {view_name} {joins} {wheres}
+                ORDER BY uri {limit};
                 
                 ANALYZE {view_name};
             """
@@ -217,3 +214,8 @@ class LinksetsCollection:
             source_sequence=sql.Literal(match.name + '_source_count'),
             target_sequence=sql.Literal(match.name + '_target_count')
         )
+
+
+if __name__ == "__main__":
+    linksets_collection = LinksetsCollection('9a25725c365d129797a3e335c59d1a00', 1, sql_only=True)
+    linksets_collection.run()

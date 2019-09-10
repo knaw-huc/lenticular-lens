@@ -9,8 +9,8 @@
         </div>
 
         <div class="flex-shrink-1 mr-auto" v-bind:class="[isEditing ? 'col' : 'col-auto']">
-          <input v-if="isEditing" type="text" class="form-control border-0" :value="value" ref="editInput" required
-                 @blur="editing = false" @input="$emit('input', $event.target.value)"/>
+          <input v-if="isEditing" type="text" class="form-control border-0 card-title-input" :value="value"
+                 ref="editInput" required @blur="editing = false" @input="$emit('input', $event.target.value)"/>
 
           <div v-else-if="!label" class="row" @mouseenter="hovering = true" @mouseleave="hovering = false">
             <div class="h2 col" v-b-toggle="id">{{ value }}</div>
