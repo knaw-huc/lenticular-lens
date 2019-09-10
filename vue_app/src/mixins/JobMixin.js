@@ -41,16 +41,17 @@ export default {
         },
 
         duplicateResource(resource) {
-            const index = this.resources.findIndex(resource);
+            const index = this.resources.findIndex(res => res.id === resource.id);
             const duplicate = copy(resource);
             this.resources.splice(index, 0, {
                 ...duplicate,
                 id: findId(this.resources),
+                label: undefined,
             });
         },
 
         duplicateMatch(match) {
-            const index = this.matches.findIndex(match);
+            const index = this.matches.findIndex(m => m.id === match.id);
             const duplicate = copy(match);
             this.matches.splice(index, 0, {
                 ...duplicate,
