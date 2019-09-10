@@ -44,8 +44,8 @@
 
     <template v-slot:columns>
       <div class="col">
-        <div class="bg-white border small p-2" v-if="alignment">
-          <div class="row justify-content-center">
+        <sub-card v-if="alignment" :is-first="true" class="small">
+          <div class="row align-items-center justify-content-center">
             <div class="col-auto" v-if="alignmentStatus === 'running' || clusteringStatus === 'running'">
               <loading :small="true"/>
             </div>
@@ -175,7 +175,7 @@
               </div>
             </div>
           </div>
-        </div>
+        </sub-card>
       </div>
     </template>
 
@@ -276,9 +276,6 @@
 </template>
 
 <script>
-    import Card from '../../structural/Card';
-    import SubCard from '../../structural/SubCard';
-
     import MatchSourcesInfo from '../../info/MatchSourcesInfo';
     import MatchTargetsInfo from '../../info/MatchTargetsInfo';
     import MatchMatchingMethodsInfo from '../../info/MatchMatchingMethodsInfo';
@@ -293,8 +290,6 @@
         name: "Match",
         mixins: [ValidationMixin],
         components: {
-            Card,
-            SubCard,
             MatchSourcesInfo,
             MatchTargetsInfo,
             MatchMatchingMethodsInfo,

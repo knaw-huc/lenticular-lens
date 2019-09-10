@@ -6,13 +6,11 @@
 </template>
 
 <script>
-    import SubCard from "../structural/SubCard";
     import MatchingMethodGroupInfo from "./MatchingMethodGroupInfo";
 
     export default {
         name: "MatchInfo",
         components: {
-            SubCard,
             MatchingMethodGroupInfo
         },
         props: {

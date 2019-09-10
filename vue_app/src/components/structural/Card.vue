@@ -1,5 +1,5 @@
 <template>
-  <div class="border p-4 mt-4 bg-light" v-bind:class="{'is-invalid': hasError}">
+  <div class="main-card" v-bind:class="{'is-invalid': hasError}">
     <div class="sticky-top bg-light py-2">
       <div class="row flex-nowrap align-items-center justify-content-start">
         <div class="col-auto">
@@ -82,11 +82,3 @@
         },
     };
 </script>
-
-<style scoped>
-  input[type="text"] {
-    font-size: 2rem;
-    height: 2.5rem;
-    box-shadow: none;
-  }
-</style>

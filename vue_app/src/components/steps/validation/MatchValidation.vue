@@ -2,8 +2,8 @@
   <card :id="'clusters_match_' + match.id" type="clusters-matches" :label="match.label"
         :has-extra-row="true" :open-card="show" @show="updateShow('open')" @hide="updateShow('close')">
     <template v-slot:columns>
-      <div class="col align-items-center">
-        <div class="bg-white border small p-2">
+      <div class="col">
+        <sub-card :is-first="true" class="small">
           <div class="row justify-content-center">
             <div class="col-auto">
               <div>
@@ -80,7 +80,7 @@
               </div>
             </div>
           </div>
-        </div>
+        </sub-card>
       </div>
     </template>
 
@@ -201,9 +201,6 @@
 <script>
     import VirtualList from 'vue-virtual-scroll-list';
 
-    import Card from "../../structural/Card";
-    import SubCard from "../../structural/SubCard";
-
     import MatchInfo from "../../helpers/MatchInfo";
     import Properties from "../../helpers/Properties";
 
@@ -215,8 +212,6 @@
         name: "MatchValidation",
         components: {
             VirtualList,
-            Card,
-            SubCard,
             MatchInfo,
             Properties,
             MatchLink,

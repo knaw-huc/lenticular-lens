@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-white border p-3" v-bind:class="{'mt-4': !isFirst, 'is-invalid': hasError}">
+  <div class="sub-card" v-bind:class="{'mt-4': !isFirst, 'is-invalid': hasError}">
     <div v-if="hasColumns || hasCollapse || label || hasInfo || addButton"
          class="row align-items-center justify-content-between">
       <div v-if="hasCollapse" class="col-auto">

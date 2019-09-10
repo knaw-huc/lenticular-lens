@@ -24,8 +24,6 @@
 </template>
 
 <script>
-    import SubCard from "../../structural/SubCard";
-
     import ClusterVisualizationInfo from '../../info/ClusterVisualizationInfo';
     import ClusterVisualizationCompactInfo from '../../info/ClusterVisualizationCompactInfo';
     import ClusterVisualizationReconciledInfo from '../../info/ClusterVisualizationReconciledInfo';
@@ -35,7 +33,6 @@
     export default {
         name: "ClusterVisualization",
         components: {
-            SubCard,
             ClusterVisualizationInfo,
             ClusterVisualizationCompactInfo,
             ClusterVisualizationReconciledInfo,

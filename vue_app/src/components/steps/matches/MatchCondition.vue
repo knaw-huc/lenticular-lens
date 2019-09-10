@@ -1,7 +1,7 @@
 <template>
   <div class="border border-dark p-3 mt-3">
     <div class="row align-items-start justify-content-between mb-2">
-      <div class="col-auto">
+      <div class="col-auto mr-auto">
         <div class="row">
           <label class="h4 col-auto">Method</label>
 
@@ -19,44 +19,40 @@
         </div>
       </div>
 
-      <div class="col-4">
-        <div class="row">
-          <div v-for="(item, index) in methodValueTemplate.items" class="col">
-            <div class="form-group">
-              <label>
-                <span>{{ item.label }}</span>
+      <div class="col-auto">
+        <div class="form-inline">
+          <template v-for="item in methodValueTemplate.items">
+            <label class="small mr-2" v-if="item.label" :for="item.key + '_' + index">{{ item.label }}</label>
 
-                <input v-if="typeof item.type === 'number'"
-                       class="form-control" type="number" step="0.1"
-                       v-model.number="condition.method_value[item.key]"
-                       v-bind:class="{'is-invalid': errors.includes(`method_value_${item.key}`)}">
+            <input v-if="typeof item.type === 'number'" :id="item.key + '_' + index"
+                   class="form-control form-control-sm mr-2" type="number" step="0.1"
+                   v-model.number="condition.method_value[item.key]"
+                   v-bind:class="{'is-invalid': errors.includes(`method_value_${item.key}`)}">
 
-                <select v-if="item.type === 'matching_label'"
-                        class="form-control" v-model="condition.method_value[item.key]"
-                        v-bind:class="{'is-invalid': errors.includes(`method_value_${item.key}`)}">
-                  <option disabled selected value="">Select a Mapping</option>
-                  <option v-for="match in $root.matches" :value="match.id">{{ match.label }}</option>
-                </select>
+            <select v-if="item.type === 'matching_label'" :id="item.key + '_' + index"
+                    class="form-control h-auto mr-2" v-model="condition.method_value[item.key]"
+                    v-bind:class="{'is-invalid': errors.includes(`method_value_${item.key}`)}">
+              <option disabled selected value="">Select a Mapping</option>
+              <option v-for="match in $root.matches" :value="match.id">{{ match.label }}</option>
+            </select>
 
-                <select v-if="item.choices"
-                        class="form-control" v-model="condition.method_value[item.key]"
-                        v-bind:class="{'is-invalid': errors.includes(`method_value_${item.key}`)}">
-                  <option disabled selected value="">Select an option</option>
-                  <option v-for="(choice_value, choice_label) in item.choices"
-                          :value="choice_value">{{ choice_label }}
-                  </option>
-                </select>
+            <select v-if="item.choices" :id="item.key + '_' + index"
+                    class="form-control h-auto mr-2" v-model="condition.method_value[item.key]"
+                    v-bind:class="{'is-invalid': errors.includes(`method_value_${item.key}`)}">
+              <option disabled selected value="">Select an option</option>
+              <option v-for="(choice_value, choice_label) in item.choices"
+                      :value="choice_value">{{ choice_label }}
+              </option>
+            </select>
 
-                <div class="invalid-feedback" v-show="errors.includes(`method_value_${item.key}`)">
-                  Please specify a valid value
-                </div>
-              </label>
+            <div class="invalid-feedback" v-show="errors.includes(`method_value_${item.key}`)">
+              Please specify a valid value
             </div>
-          </div>
+          </template>
         </div>
       </div>
 
-      <div class="col-auto">
+      <div class="col-auto ml-auto">
         <div class="row">
           <div class="col-auto">
             <button-delete @click="$emit('remove', index)" title="Delete this Method" class="pt-1 pr-0"/>
@@ -68,6 +64,11 @@
         </div>
       </div>
     </div>
+
+    <sub-card v-if="['=', 'LEVENSHTEIN'].includes(condition.method_name)" class="max-overflow small mb-4">
+      <exact-match-info v-if="condition.method_name === '='"/>
+      <levenshtein-info v-else-if="condition.method_name === 'LEVENSHTEIN'"/>
+    </sub-card>
 
     <div class="row pl-5 mb-3" v-for="resources_key in ['sources', 'targets']">
       <div class="col">
@@ -139,11 +140,18 @@
 </template>
 
 <script>
-    import ValidationMixin from "../../../mixins/ValidationMixin";
+    import ExactMatchInfo from "../../info/ExactMatchInfo";
+    import LevenshteinInfo from "../../info/LevenshteinInfo";
+
     import props from "../../../utils/props";
+    import ValidationMixin from "../../../mixins/ValidationMixin";
 
     export default {
         name: "MatchCondition",
+        components: {
+            ExactMatchInfo,
+            LevenshteinInfo,
+        },
         mixins: [ValidationMixin],
         data() {
             return {
@@ -235,5 +243,5 @@
                 this.$set(properties[resource_index], 'property', new_property);
             },
         },
-    }
+    };
 </script>

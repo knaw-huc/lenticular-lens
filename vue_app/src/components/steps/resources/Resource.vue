@@ -174,9 +174,6 @@
 </template>
 
 <script>
-    import Card from "../../structural/Card";
-    import SubCard from "../../structural/SubCard";
-
     import ConditionsGroup from "../../helpers/ConditionsGroup";
     import ResourceFilterCondition from "./ResourceFilterCondition";
     import ValidationMixin from "../../../mixins/ValidationMixin";
@@ -185,8 +182,6 @@
         name: "Resource",
         mixins: [ValidationMixin],
         components: {
-            Card,
-            SubCard,
             ConditionsGroup,
             ResourceFilterCondition,
         },

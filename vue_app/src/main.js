@@ -14,6 +14,8 @@ import ButtonInfo from './components/misc/ButtonInfo';
 import VSelect from './components/misc/VSelect';
 import Loading from './components/misc/Loading';
 import Property from './components/helpers/Property';
+import Card from './components/structural/Card';
+import SubCard from './components/structural/SubCard';
 import {FontAwesomeIcon} from '@fortawesome/vue-fontawesome';
 
 Vue.component('button-add', ButtonAdd);
@@ -22,6 +24,8 @@ Vue.component('button-info', ButtonInfo);
 Vue.component('v-select', VSelect);
 Vue.component('loading', Loading);
 Vue.component('property', Property);
+Vue.component('card', Card);
+Vue.component('sub-card', SubCard);
 Vue.component('fa-icon', FontAwesomeIcon);
 
 import {library} from '@fortawesome/fontawesome-svg-core';
