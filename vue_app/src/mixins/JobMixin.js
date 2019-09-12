@@ -42,12 +42,19 @@ export default {
 
         duplicateResource(resource) {
             const index = this.resources.findIndex(res => res.id === resource.id);
+            const newId = findId(this.resources);
+
             const duplicate = copy(resource);
-            this.resources.splice(index, 0, {
+            const newResource = {
                 ...duplicate,
-                id: findId(this.resources),
+                id: newId,
                 label: undefined,
-            });
+            };
+
+            getRecursiveConditions(newResource.filter.conditions)
+                .forEach(condition => condition.property[0] = newId);
+
+            this.resources.splice(index, 0, newResource);
         },
 
         duplicateMatch(match) {
