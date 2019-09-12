@@ -23,7 +23,9 @@ class AlignmentConfig:
                 for match in self.matches:
                     if match.id == match_to_add:
                         matches_to_run.insert(0, match)
-                        matches_to_add += match.matches_dependencies
+
+                        if match.match_against:
+                            matches_to_add.append(match.match_against)
 
                         matches_to_add.remove(match_to_add)
                         matches_added.append(match_to_add)
@@ -55,6 +57,13 @@ class AlignmentConfig:
                 resources_to_add.remove(resource_to_add)
 
         return resources_to_run
+
+    def get_match_by_id(self, id):
+        for match in self.matches:
+            if match.id == id:
+                return match
+
+        return None
 
     def get_resource_by_label(self, label):
         for resource in self.resources:

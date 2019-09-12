@@ -20,7 +20,7 @@ from worker.matching.linksets_collection import LinksetsCollection
 class AlignmentJob:
     def __init__(self, job_id, alignment, status):
         self.job_id = job_id
-        self.alignment = str(alignment)
+        self.alignment = alignment
         self.status = status
         self.linksets_collection = LinksetsCollection(job_id=job_id, run_match=alignment)
 
@@ -67,7 +67,7 @@ class AlignmentJob:
                 with db_conn() as conn, conn.cursor() as cur:
                     try:
                         cur.execute(psycopg2_sql.SQL('SELECT last_value FROM {}.{}').format(
-                            psycopg2_sql.Identifier('job_' + self.alignment + '_' + self.job_id),
+                            psycopg2_sql.Identifier('job_' + str(self.alignment) + '_' + self.job_id),
                             psycopg2_sql.Identifier(view_name + '_count'),
                         ))
                     except ProgrammingError:
@@ -96,17 +96,17 @@ class AlignmentJob:
         with db_conn() as conn:
             with conn.cursor() as cur:
                 cur.execute(psycopg2_sql.SQL('SELECT count(*) FROM {}.{}').format(
-                    psycopg2_sql.Identifier('job_' + self.alignment + '_' + self.job_id),
+                    psycopg2_sql.Identifier('job_' + str(self.alignment) + '_' + self.job_id),
                     psycopg2_sql.Identifier(self.linksets_collection.view_name)))
                 links = cur.fetchone()[0]
 
                 cur.execute(psycopg2_sql.SQL('SELECT count(*) FROM {}.{}').format(
-                    psycopg2_sql.Identifier('job_' + self.alignment + '_' + self.job_id),
+                    psycopg2_sql.Identifier('job_' + str(self.alignment) + '_' + self.job_id),
                     psycopg2_sql.Identifier(self.linksets_collection.view_name + '_source')))
                 sources = cur.fetchone()[0]
 
                 cur.execute(psycopg2_sql.SQL('SELECT count(*) FROM {}.{}').format(
-                    psycopg2_sql.Identifier('job_' + self.alignment + '_' + self.job_id),
+                    psycopg2_sql.Identifier('job_' + str(self.alignment) + '_' + self.job_id),
                     psycopg2_sql.Identifier(self.linksets_collection.view_name + '_target')))
                 targets = cur.fetchone()[0]
 
@@ -117,7 +117,7 @@ class AlignmentJob:
 
         print("Generating CSVs")
         for match in self.linksets_collection.config.matches_to_run:
-            if str(match.id) != str(self.alignment):
+            if match.id != self.alignment:
                 continue
 
             columns = [psycopg2_sql.Identifier('source_uri'), psycopg2_sql.Identifier('target_uri')]
@@ -167,12 +167,12 @@ class AlignmentJob:
 
         with db_conn() as conn, conn.cursor() as cur:
             cur.execute(psycopg2_sql.SQL('DROP SCHEMA {} CASCADE')
-                        .format(psycopg2_sql.Identifier(f'job_{self.alignment}_{self.job_id}')))
+                        .format(psycopg2_sql.Identifier(f'job_{str(self.alignment)}_{self.job_id}')))
             conn.commit()
 
-        print(f'Schema job_{self.alignment}_{self.job_id} dropped.')
+        print(f'Schema job_{str(self.alignment)}_{self.job_id} dropped.')
         print('Cleanup complete.')
-        print(f'Job {self.job_id} for alignment {self.alignment} finished.')
+        print(f'Job {self.job_id} for alignment {str(self.alignment)} finished.')
 
         update_alignment_job(self.job_id, self.alignment,
                              {'status': 'Finished', 'finished_at': str(datetime.datetime.now())})

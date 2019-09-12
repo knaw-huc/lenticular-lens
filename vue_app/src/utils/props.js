@@ -69,16 +69,6 @@ export default {
                 }
             ]
         },
-        'IS_IN_SET': {
-            label: 'Is a Match in Set',
-            items: [
-                {
-                    key: 'alignment',
-                    label: '',
-                    type: 'matching_label',
-                }
-            ]
-        },
         'TRIGRAM_DISTANCE': {
             label: 'Trigram distance',
             items: [

@@ -1,7 +1,7 @@
 <template>
   <sub-card class="match-info">
     <p class="font-weight-bold mb-2">Matching</p>
-    <matching-method-group-info :matching_method_group="match" :is_root="true"/>
+    <matching-method-group-info :matching_method_group="match.methods" :is_root="true"/>
   </sub-card>
 </template>
 

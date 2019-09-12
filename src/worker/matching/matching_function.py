@@ -61,15 +61,11 @@ class MatchingFunction:
 
     @property
     def sql(self):
-        def hash_match_group(match):
-            return hash_string(match.group(1))
-
         template = self.function_info['sql_template']
 
         template = re.sub(r'{source}', 'source.{{field_name}}', template)
         template = re.sub(r'{target}', 'target.{{field_name}}', template)
         template = self.format_template(template)
-        template = re.sub(r'__hash\(([^)]*)\)', hash_match_group, template)
 
         return psycopg2_sql.SQL(str(template))
 

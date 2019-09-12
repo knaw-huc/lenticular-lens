@@ -258,7 +258,23 @@
           <match-matching-methods-info/>
         </template>
 
-        <conditions-group :conditions-group="match"
+        <div class="row mt-3">
+          <div class="form-group col">
+            <label :for="'match_against_' + match.id">Match results should match results in set:</label>
+
+            <select class="form-control h-auto mr-2" v-model="match.match_against" :id="'match_against_' + match.id">
+              <option disabled selected value="">Select an alignment</option>
+              <option v-for="m in $root.matches" v-if="match.id !== m.id" :value="m.id">{{ m.label }}</option>
+            </select>
+
+            <small class="form-text text-muted mt-2">
+              When an alignment is selected, it plays the role of a filter by removing all matched pairs found
+              that are not in the selected alignment set.
+            </small>
+          </div>
+        </div>
+
+        <conditions-group :conditions-group="match.methods"
                           :is-root="true"
                           :should-have-conditions="true"
                           group="matches-filters"

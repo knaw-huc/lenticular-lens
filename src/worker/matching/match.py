@@ -24,7 +24,8 @@ class Match:
     @property
     def conditions(self):
         if not self.__conditions:
-            self.__conditions = Conditions(self.__data['conditions'], self.__data['type'], self.config)
+            methods = self.__data['methods']
+            self.__conditions = Conditions(methods['conditions'], methods['type'], self.config)
         return self.__conditions
 
     @property
@@ -33,7 +34,7 @@ class Match:
 
     @property
     def id(self):
-        return str(self.__data.get('id', ''))
+        return self.__data.get('id', '')
 
     @property
     def is_association(self):
@@ -73,14 +74,25 @@ class Match:
         return psycopg_sql.SQL('\n').join(index_sqls)
 
     @property
-    def matches_dependencies(self):
-        dependencies = []
+    def match_against(self):
+        return self.__data.get('match_against', None)
 
-        for matching_function in self.conditions.matching_functions:
-            if matching_function.function_name == 'IS_IN_SET':
-                dependencies += str(matching_function.parameters['alignment'])
+    @property
+    def match_against_sql(self):
+        if self.match_against:
+            match = self.config.get_match_by_id(self.match_against)
+            sql = psycopg_sql.SQL(cleandoc('''
+                AND EXISTS (
+                    SELECT 1
+                    FROM {match_name} AS in_set 
+                    WHERE in_set.source_uri IN (source.uri, target.uri) 
+                    AND in_set.target_uri IN (source.uri, target.uri) 
+                    LIMIT 1
+                )'''))
 
-        return dependencies
+            return sql.format(match_name=psycopg_sql.Identifier(match.name))
+
+        return psycopg_sql.SQL('')
 
     @property
     def materialize(self):
@@ -92,11 +104,7 @@ class Match:
 
     @property
     def name(self):
-        return hash_string(self.name_original)
-
-    @property
-    def name_original(self):
-        return self.__data['label']
+        return hash_string(self.__data['label'])
 
     @property
     def resources(self):

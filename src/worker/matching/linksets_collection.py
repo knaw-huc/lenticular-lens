@@ -17,7 +17,7 @@ locale.setlocale(locale.LC_ALL, '')
 class LinksetsCollection:
     def __init__(self, job_id, run_match, sql_only=False, resources_only=False, matches_only=False):
         self.job_id = job_id
-        self.run_match = str(run_match)
+        self.run_match = run_match
 
         self.sql_only = sql_only
         self.resources_only = resources_only
@@ -47,7 +47,7 @@ class LinksetsCollection:
 
     def run(self):
         try:
-            open('%s_%s.sql' % (self.run_match, self.job_id), 'w').close()
+            open('%s_%s.sql' % (str(self.run_match), self.job_id), 'w').close()
 
             if not self.matches_only:
                 self.generate_resources()
@@ -85,7 +85,7 @@ class LinksetsCollection:
     def process_sql(self, composed, inject=None):
         query_starting_time = time.time()
 
-        schema_name_sql = sql.Identifier('job_' + self.run_match + '_' + self.job_id)
+        schema_name_sql = sql.Identifier('job_' + str(self.run_match) + '_' + self.job_id)
         composed = sql.Composed([
             sql.SQL('CREATE SCHEMA IF NOT EXISTS {};\n').format(schema_name_sql),
             sql.SQL('SET SEARCH_PATH TO "$user", {}, public;\n').format(schema_name_sql),
@@ -98,7 +98,7 @@ class LinksetsCollection:
             sql_string = composed.as_string(conn)
             inject = inject.as_string(conn) if inject else ''
 
-            with open('%s_%s.sql' % (self.run_match, self.job_id), 'a') as sql_file:
+            with open('%s_%s.sql' % (str(self.run_match), self.job_id), 'a') as sql_file:
                 sql_file.write(sql_string)
 
             if not self.sql_only:
@@ -188,7 +188,7 @@ class LinksetsCollection:
                 FROM {source_name} AS source
                 JOIN {target_name} AS target
                 ON (source.collection != target.collection OR source.uri > target.uri)
-                AND ({conditions})
+                AND {conditions} {match_against}
                 AND nextval({sequence}) != 0;
                 
                 ANALYZE {view_name};
@@ -204,6 +204,7 @@ class LinksetsCollection:
             target=match.target_sql,
             fields=match.similarity_fields_sql,
             conditions=match.conditions_sql,
+            match_against=match.match_against_sql,
             view_name=sql.Identifier(match.name),
             source_name=sql.Identifier(match.name + '_source'),
             target_name=sql.Identifier(match.name + '_target'),

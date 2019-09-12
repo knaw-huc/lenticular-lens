@@ -29,13 +29,6 @@
                    v-model.number="condition.method_value[item.key]"
                    v-bind:class="{'is-invalid': errors.includes(`method_value_${item.key}`)}">
 
-            <select v-if="item.type === 'matching_label'" :id="item.key + '_' + index"
-                    class="form-control h-auto mr-2" v-model="condition.method_value[item.key]"
-                    v-bind:class="{'is-invalid': errors.includes(`method_value_${item.key}`)}">
-              <option disabled selected value="">Select a Mapping</option>
-              <option v-for="match in $root.matches" :value="match.id">{{ match.label }}</option>
-            </select>
-
             <select v-if="item.choices" :id="item.key + '_' + index"
                     class="form-control h-auto mr-2" v-model="condition.method_value[item.key]"
                     v-bind:class="{'is-invalid': errors.includes(`method_value_${item.key}`)}">

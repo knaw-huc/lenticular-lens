@@ -35,8 +35,11 @@ export default {
                 sources: [],
                 targets: [],
                 properties: [],
-                type: 'AND',
-                conditions: [],
+                match_against: null,
+                methods: {
+                    type: 'AND',
+                    conditions: [],
+                },
             });
         },
 
@@ -154,7 +157,7 @@ export default {
                     });
                 });
 
-                getRecursiveConditions(match.conditions).forEach(condition => {
+                getRecursiveConditions(match.methods.conditions).forEach(condition => {
                     ['sources', 'targets'].forEach(key => {
                         Object.keys(condition[key]).forEach(resourceId => {
                             condition[key][resourceId].forEach((property, index) => {
@@ -166,10 +169,6 @@ export default {
                             delete condition[key][resourceId];
                         });
                     });
-
-                    if (condition.method_name === 'IS_IN_SET')
-                        condition.method_value.alignment_label =
-                            this.getMatchById(condition.method_value.alignment).label;
                 });
 
                 delete match.properties;
