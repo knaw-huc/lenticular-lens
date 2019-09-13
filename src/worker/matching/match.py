@@ -167,7 +167,7 @@ class Match:
         return self.__data['targets'] if 'targets' in self.__data else []
 
     def get_combined_resources_sql(self, resources_key):
-        resources_properties = self.get_matching_fields([resources_key])
+        resources_properties = self.get_fields([resources_key])
 
         resources_sql = []
 
@@ -202,7 +202,7 @@ class Match:
 
         return psycopg_sql.SQL('\nUNION ALL\n').join(resources_sql)
 
-    def get_matching_fields(self, resources_keys=None):
+    def get_fields(self, resources_keys=None, only_matching_fields=True):
         if not isinstance(resources_keys, list):
             resources_keys = ['sources', 'targets']
 
@@ -211,11 +211,16 @@ class Match:
         for matching_function in self.conditions.matching_functions:
             for resources_key in resources_keys:
                 for resource_label, resource_properties in getattr(matching_function, resources_key).items():
-                    resource_label = hash_string(resource_label)
-                    if resource_label not in resources_properties:
-                        resources_properties[resource_label] = {}
+                    for resource_property in resource_properties:
+                        res_label = hash_string(resource_label) if only_matching_fields \
+                            else resource_property.resource_label
 
-                    resources_properties[resource_label][matching_function.field_name] = \
-                        resources_properties[resource_label].get(matching_function.field_name, []) + resource_properties
+                        if res_label not in resources_properties:
+                            resources_properties[res_label] = {}
+
+                        props = resources_properties[res_label].get(matching_function.field_name, [])
+                        props.append(resource_property)
+
+                        resources_properties[res_label][matching_function.field_name] = props
 
         return resources_properties

@@ -134,7 +134,7 @@ class LinksetsCollection:
             """ DROP MATERIALIZED VIEW IF EXISTS {view_name} CASCADE;
             
                 CREATE MATERIALIZED VIEW {view_name} AS
-                {pre} SELECT DISTINCT {matching_fields}
+                {pre}SELECT DISTINCT {matching_fields}
                 FROM {table_name} AS {view_name} {joins} {wheres}
                 ORDER BY uri {limit};
                 
@@ -218,5 +218,5 @@ class LinksetsCollection:
 
 
 if __name__ == "__main__":
-    linksets_collection = LinksetsCollection('9a25725c365d129797a3e335c59d1a00', 1, sql_only=True)
+    linksets_collection = LinksetsCollection('971518567e6b937d68b6b097bf4c0e7f', 2, sql_only=True)
     linksets_collection.run()

@@ -49,18 +49,11 @@ class Resource:
 
     @property
     def matching_fields(self):
-        matching_fields = []
-        matching_fields_hashes = []
+        return self.get_fields(only_matching_fields=True)
 
-        for match in self.config.matches_to_run:
-            match_matching_fields = match.get_matching_fields().get(self.label, {})
-            for match_matching_field_label, match_matching_field in match_matching_fields.items():
-                for match_matching_field_property in match_matching_field:
-                    if match_matching_field_property.hash not in matching_fields_hashes:
-                        matching_fields_hashes.append(match_matching_field_property.hash)
-                        matching_fields.append(match_matching_field_property)
-
-        return matching_fields
+    @property
+    def fields(self):
+        return self.get_fields(only_matching_fields=False)
 
     @property
     def matching_fields_sql(self):
@@ -78,7 +71,7 @@ class Resource:
     def joins_sql(self):
         joins = []
         joins_added = []
-        self.get_matching_fields_joins_sql(joins_added, joins)
+        self.get_fields_joins_sql(joins_added, joins)
         return psycopg2_sql.Composed(joins)
 
     @property
@@ -93,15 +86,30 @@ class Resource:
     def related(self):
         return self.__data['related'] if 'related' in self.__data else []
 
-    def get_matching_fields_joins_sql(self, joins_added, joins):
-        for property_field in self.matching_fields:
-            if property_field.resource_label == self.label and property_field.is_list \
-                    and property_field.absolute_property not in joins_added:
+    def get_fields(self, only_matching_fields=True):
+        matching_fields = []
+        matching_fields_hashes = []
+
+        for match in self.config.matches_to_run:
+            match_fields = match.get_fields(only_matching_fields=only_matching_fields)
+            match_resource_fields = match_fields.get(self.label, {})
+
+            for match_field_label, match_field in match_resource_fields.items():
+                for match_field_property in match_field:
+                    if match_field_property.hash not in matching_fields_hashes:
+                        matching_fields_hashes.append(match_field_property.hash)
+                        matching_fields.append(match_field_property)
+
+        return matching_fields
+
+    def get_fields_joins_sql(self, joins_added, joins):
+        for property_field in self.fields:
+            if property_field.is_list and property_field.absolute_property not in joins_added:
                 joins.append(property_field.left_join)
                 joins_added.append(property_field.absolute_property)
 
         for relation in self.related:
-            self.r_get_join_sql(self.label, relation, self.matching_fields, joins_added, joins)
+            self.r_get_join_sql(relation, joins_added, joins)
 
     def r_get_filter_sql(self, filter_obj):
         if filter_obj['type'] in ['AND', 'OR']:
@@ -116,20 +124,20 @@ class Resource:
 
         return FilterFunction(filter_obj, property).sql
 
-    def r_get_join_sql(self, local_resource_name, relation, matching_fields, property_join_added, joins):
+    def r_get_join_sql(self, relation, property_join_added, joins):
         if isinstance(relation, list):
             for sub_relation in relation:
-                self.r_get_join_sql(local_resource_name, sub_relation, matching_fields, property_join_added, joins)
+                self.r_get_join_sql(sub_relation, property_join_added, joins)
             return
 
         remote_resource_name = hash_string(relation['resource'])
         remote_resource = self.config.get_resource_by_label(remote_resource_name)
 
-        parent_columns = self.config.get_resource_columns(local_resource_name)
+        parent_columns = self.config.get_resource_columns(self.label)
         resource_columns = self.config.get_resource_columns(remote_resource_name)
 
         local_property = PropertyField(relation['local_property'],
-                                       parent_label=local_resource_name, columns=parent_columns)
+                                       parent_label=self.label, columns=parent_columns)
         remote_property = PropertyField(relation['remote_property'],
                                         parent_label=remote_resource_name, columns=resource_columns)
 
@@ -152,4 +160,4 @@ class Resource:
             extra_filter=extra_filter
         ))
 
-        remote_resource.get_matching_fields_joins_sql(property_join_added, joins)
+        remote_resource.get_fields_joins_sql(property_join_added, joins)
