@@ -8,15 +8,15 @@
             <div class="col-auto">
               <div>
                 <strong>Links: </strong>
-                {{ alignment.links_count }}
+                {{ alignment.links_count.toLocaleString('en') }}
               </div>
               <div>
                 <strong>Resources in source: </strong>
-                {{ alignment.sources_count }}
+                {{ alignment.sources_count.toLocaleString('en') }}
               </div>
               <div>
                 <strong>Resources in target: </strong>
-                {{ alignment.targets_count }}
+                {{ alignment.targets_count.toLocaleString('en') }}
               </div>
             </div>
 
@@ -24,26 +24,26 @@
               <div>
                 <strong>Clusters: </strong>
                 <template>
-                  {{ clustering.clusters_count }}
+                  {{ clustering.clusters_count.toLocaleString('en') }}
                 </template>
               </div>
               <div>
                 <strong>Extended: </strong>
 
                 <strong>Yes = </strong>
-                {{ clustering.extended_count || 0 }}
+                {{ clustering.extended_count ? clustering.extended_count.toLocaleString('en') : 0 }}
 
                 <strong>No = </strong>
-                {{ clustering.clusters_count - clustering.extended_count }}
+                {{ (clustering.clusters_count - clustering.extended_count).toLocaleString('en') }}
               </div>
               <div>
                 <strong>Cycles: </strong>
 
                 <strong>Yes = </strong>
-                {{ clustering.cycles_count || 0 }}
+                {{ clustering.cycles_count ? clustering.cycles_count.toLocaleString('en') : 0 }}
 
                 <strong>No = </strong>
-                {{ clustering.clusters_count - clustering.cycles_count }}
+                {{ (clustering.clusters_count - clustering.cycles_count).toLocaleString('en') }}
               </div>
             </div>
           </div>

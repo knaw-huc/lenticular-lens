@@ -46,28 +46,16 @@
       <div class="col">
         <sub-card v-if="alignment" :is-first="true" class="small">
           <div class="row align-items-center justify-content-center">
-            <div class="col-auto" v-if="alignmentStatus === 'running' || clusteringStatus === 'running'">
+            <div v-if="running" class="col-auto">
               <loading :small="true"/>
             </div>
 
             <div class="col-auto">
               <div class="row justify-content-center">
                 <div class="col-auto">
-                  <div v-if="clustering && clusteringStatus !== 'failed'">
+                  <div>
                     <strong>Status: </strong>
-                    Clustering {{ clusteringStatus }}
-                  </div>
-                  <div v-else-if="clusteringStatus === 'failed'">
-                    <strong>Status: </strong>
-                    {{ clustering.status }}
-                  </div>
-                  <div v-else-if="alignmentStatus !== 'failed'">
-                    <strong>Status: </strong>
-                    Alignment {{ alignmentStatus }}
-                  </div>
-                  <div v-else>
-                    <strong>Status: </strong>
-                    Alignment {{ alignment.status }}
+                    {{ status }}
                   </div>
                 </div>
               </div>
@@ -77,70 +65,62 @@
                   <template v-if="alignmentStatus === 'waiting'">
                     <div>
                       <strong>Request: </strong>
-                      {{ alignment.requested_at }}
+                      {{ alignment.requested_at | moment("MMMM Do YYYY, hh:mm") }}
 
                       <span class="font-italic">
-                        (<timeago :datetime="alignment.requested_at" :auto-update="1"/>)
+                        (<duration :from="alignment.requested_at"/>)
                       </span>
                     </div>
                   </template>
 
-                  <template v-else-if="alignmentStatus === 'running'">
+                  <template v-else-if="alignmentStatus === 'downloading' || alignmentStatus === 'running'">
                     <div>
                       <strong>Start: </strong>
-                      {{ alignment.processing_at }}
+                      {{ alignment.processing_at | moment("MMMM Do YYYY, hh:mm") }}
 
                       <span class="font-italic">
-                        (<timeago :datetime="alignment.processing_at" :auto-update="1"/>)
+                        (<duration :from="alignment.processing_at"/>)
                       </span>
                     </div>
                   </template>
 
                   <template v-else>
                     <div>
-                      <strong>Start alignment: </strong>
-                      {{ alignment.processing_at }}
-
-                      <span class="font-italic">
-                        (<timeago :datetime="alignment.processing_at"/>)
-                      </span>
+                      <strong>Matching duration: </strong>
+                      <duration class="font-italic" :from="alignment.processing_at" :until="alignment.finished_at"/>
                     </div>
                   </template>
                 </div>
               </div>
 
-              <div class="row justify-content-center">
+              <div v-if="clustering" class="row justify-content-center">
                 <div class="col-auto">
-                  <template v-if="clustering && clusteringStatus === 'waiting'">
+                  <template v-if="clusteringStatus === 'waiting'">
                     <div>
                       <strong>Request clustering: </strong>
-                      {{ clustering.requested_at }}
+                      {{ clustering.requested_at | moment("MMMM Do YYYY, hh:mm") }}
 
                       <span class="font-italic">
-                        (<timeago :datetime="clustering.requested_at" :auto-update="1"/>)
+                        (<duration :from="clustering.requested_at"/>)
                       </span>
                     </div>
                   </template>
 
-                  <template v-else-if="clustering && clusteringStatus === 'running'">
+                  <template v-else-if="clusteringStatus === 'running'">
                     <div>
                       <strong>Start clustering: </strong>
-                      {{ clustering.processing_at }}
+                      {{ clustering.processing_at | moment("MMMM Do YYYY, hh:mm") }}
 
                       <span class="font-italic">
-                        (<timeago :datetime="clustering.processing_at" :auto-update="1"/>)
+                        (<duration :from="clustering.processing_at"/>)
                       </span>
                     </div>
                   </template>
 
-                  <template v-else-if="clustering">
+                  <template v-else>
                     <div>
-                      <strong>Start clustering: </strong>
-                      {{ clustering.processing_at }}
-
-                      <span class="font-italic">
-                        (<timeago :datetime="clustering.processing_at"/>)
-                      </span>
+                      <strong>Clustering duration: </strong>
+                      <duration class="font-italic" :from="clustering.processing_at" :until="clustering.finished_at"/>
                     </div>
                   </template>
                 </div>
@@ -150,12 +130,12 @@
                 <div class="col-auto">
                   <div v-if="clustering">
                     <strong>Clusters found: </strong>
-                    {{ clustering.clusters_count || 0 }}
+                    {{ clustering.clusters_count ? clustering.clusters_count.toLocaleString('en') : 0 }}
                     <span v-if="clusteringStatus === 'running'" class="font-italic">so far</span>
                   </div>
                   <div>
                     <strong>Links found: </strong>
-                    {{ alignment.links_count || 0 }}
+                    {{ alignment.links_count ? alignment.links_count.toLocaleString('en') : 0 }}
                     <span v-if="alignmentStatus === 'running'" class="font-italic">so far</span>
                   </div>
                 </div>
@@ -163,12 +143,12 @@
                 <div class="col-auto">
                   <div>
                     <strong>Resources in source: </strong>
-                    {{ alignment.sources_count || 0 }}
+                    {{ alignment.sources_count ? alignment.sources_count.toLocaleString('en') : 0 }}
                     <span v-if="alignmentStatus === 'running'" class="font-italic">so far</span>
                   </div>
                   <div>
                     <strong>Resources in target: </strong>
-                    {{ alignment.targets_count || 0 }}
+                    {{ alignment.targets_count ? alignment.targets_count.toLocaleString('en') : 0 }}
                     <span v-if="alignmentStatus === 'running'" class="font-italic">so far</span>
                   </div>
                 </div>
@@ -334,10 +314,16 @@
 
             alignmentStatus() {
                 if (!this.alignment)
+                    return null;
+
+                if (this.alignment.status === 'Requested')
                     return 'waiting';
 
                 if (this.alignment.status === 'Finished')
                     return 'done';
+
+                if (this.alignment.status === 'Downloading')
+                    return 'downloading';
 
                 if (this.alignment.status.startsWith('FAILED'))
                     return 'failed';
@@ -347,6 +333,9 @@
 
             clusteringStatus() {
                 if (!this.clustering)
+                    return null;
+
+                if (this.clustering.status === 'Requested')
                     return 'waiting';
 
                 if (this.clustering.status === 'Finished')
@@ -356,6 +345,57 @@
                     return 'failed';
 
                 return 'running';
+            },
+
+            running() {
+                return this.alignmentStatus === 'downloading' ||
+                    this.alignmentStatus === 'running' ||
+                    this.clusteringStatus === 'running';
+            },
+
+            status() {
+                let alignmentStatus = null;
+                if (this.alignment) {
+                    switch (this.alignmentStatus) {
+                        case 'done':
+                            alignmentStatus = 'Matched';
+                            break;
+                        case 'failed':
+                            alignmentStatus = this.alignment.status;
+                            break;
+                        case 'waiting':
+                        case 'downloading':
+                        case 'running':
+                        default:
+                            alignmentStatus = `Matching ${this.alignmentStatus}`;
+                    }
+                }
+
+                let clusteringStatus = null;
+                let reconciliationStatus = null;
+                if (this.clustering) {
+                    switch (this.clusteringStatus) {
+                        case 'done':
+                            clusteringStatus = 'Clustered';
+                            if (this.clustering.association)
+                                reconciliationStatus = 'Reconciled';
+                            break;
+                        case 'failed':
+                            clusteringStatus = this.clustering.status;
+                            break;
+                        case 'waiting':
+                        case 'running':
+                        default:
+                            if (this.clustering.association)
+                                reconciliationStatus = `Reconciliation ${this.clusteringStatus}`;
+                            if (this.clustering.clusters_count)
+                                clusteringStatus = 'Clustered';
+                    }
+                }
+
+                return [alignmentStatus, clusteringStatus, reconciliationStatus]
+                    .filter(status => status !== null)
+                    .join(' - ');
             },
         },
         methods: {

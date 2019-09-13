@@ -10,7 +10,9 @@
         <tab-content-structure title="Idea" :tab_error="tab_error" :is_saved="is_saved">
           <template v-slot:header>
             <div class="col-auto" v-if="$root.job">
-              <span class="badge badge-info">Created {{ $root.job.created_at }}</span>
+              <span class="badge badge-info">
+                Created {{ $root.job.created_at | moment("MMMM Do YYYY, hh:mm:ss") }}
+              </span>
             </div>
           </template>
 

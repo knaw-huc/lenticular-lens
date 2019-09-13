@@ -23,7 +23,7 @@
       <div class="form-group row justify-content-end align-items-center pt-3 mb-0">
         <div class="col-auto" v-if="$root.job">
           <span class="badge badge-info" v-show="$root.job.created_at !== $root.job.updated_at">
-              Updated {{ $root.job.updated_at }}
+            Updated {{ $root.job.updated_at | moment("MMMM Do YYYY, hh:mm:ss") }}
           </span>
         </div>
 

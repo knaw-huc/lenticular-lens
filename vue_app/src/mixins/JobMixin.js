@@ -214,7 +214,10 @@ export default {
         },
 
         async loadJob(jobId) {
-            this.job = await callApi('/job/' + jobId);
+            const job = await callApi('/job/' + jobId);
+            job.created_at = new Date(job.created_at);
+            job.updated_at = new Date(job.updated_at);
+            this.job = job;
 
             if (this.job.resources_form_data)
                 this.resources = copy(this.job.resources_form_data);
@@ -226,11 +229,23 @@ export default {
         },
 
         async loadAlignments() {
-            this.alignments = await callApi(`/job/${this.job.job_id}/alignments`);
+            const alignments = await callApi(`/job/${this.job.job_id}/alignments`);
+            alignments.forEach(alignment => {
+                alignment.requested_at = new Date(alignment.requested_at);
+                alignment.processing_at = new Date(alignment.processing_at);
+                alignment.finished_at = new Date(alignment.finished_at);
+            });
+            this.alignments = alignments;
         },
 
         async loadClusterings() {
-            this.clusterings = await callApi(`/job/${this.job.job_id}/clusterings`);
+            const clusterings = await callApi(`/job/${this.job.job_id}/clusterings`);
+            clusterings.forEach(clustering => {
+                clustering.requested_at = new Date(clustering.requested_at);
+                clustering.processing_at = new Date(clustering.processing_at);
+                clustering.finished_at = new Date(clustering.finished_at);
+            });
+            this.clusterings = clusterings;
         },
 
         async createJob(inputs) {

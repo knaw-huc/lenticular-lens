@@ -2,11 +2,11 @@ import Vue from 'vue';
 
 import BootstrapVue from 'bootstrap-vue';
 import VueFormWizard from 'vue-form-wizard';
-import VueTimeago from 'vue-timeago';
+import VueMoment from 'vue-moment';
 
 Vue.use(BootstrapVue);
 Vue.use(VueFormWizard);
-Vue.use(VueTimeago, {name: 'Timeago', locale: 'en'});
+Vue.use(VueMoment);
 
 import ButtonAdd from './components/misc/ButtonAdd';
 import ButtonDelete from './components/misc/ButtonDelete';
@@ -14,6 +14,7 @@ import ButtonInfo from './components/misc/ButtonInfo';
 import VSelect from './components/misc/VSelect';
 import Loading from './components/misc/Loading';
 import Handle from './components/misc/Handle';
+import Duration from './components/misc/Duration';
 import Property from './components/helpers/Property';
 import Card from './components/structural/Card';
 import SubCard from './components/structural/SubCard';
@@ -25,6 +26,7 @@ Vue.component('button-info', ButtonInfo);
 Vue.component('v-select', VSelect);
 Vue.component('loading', Loading);
 Vue.component('handle', Handle);
+Vue.component('duration', Duration);
 Vue.component('property', Property);
 Vue.component('card', Card);
 Vue.component('sub-card', SubCard);
