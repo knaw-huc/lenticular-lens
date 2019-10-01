@@ -91,7 +91,7 @@ services:
       - postgres
       - web_server
       - timbuctoo_worker
-      - jobs_worker
+      - alignments_worker
     environment:
       - DATABASE_HOST=postgres
       - DATABASE_DB=postgres
