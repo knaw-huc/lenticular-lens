@@ -356,12 +356,14 @@
                 }
             },
 
-            acceptLink(link) {
-                link.accepted = true;
+            async acceptLink(link) {
+                link.valid = true;
+                await this.$root.validateLink(this.match.id, link.source, link.target, true);
             },
 
-            declineLink(link) {
-                link.accepted = false;
+            async declineLink(link) {
+                link.valid = false;
+                await this.$root.validateLink(this.match.id, link.source, link.target, false);
             },
 
             resetProperty(idx, property, propertyIndex) {

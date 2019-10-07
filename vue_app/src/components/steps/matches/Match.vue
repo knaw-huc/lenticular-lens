@@ -245,7 +245,8 @@
         </div>
       </sub-card>
 
-      <sub-card label="Matching Methods" :has-info="true" :hasError="errors.includes('matching-methods')">
+      <sub-card label="Matching Methods" :has-info="true"
+                :hasError="errors.includes('matching-methods') || errors.includes('match-against')">
         <template v-slot:info>
           <match-matching-methods-info/>
         </template>
@@ -254,7 +255,8 @@
           <div class="form-group col">
             <label :for="'match_against_' + match.id">Match results should match results in set:</label>
 
-            <select class="form-control h-auto mr-2" v-model="match.match_against" :id="'match_against_' + match.id">
+            <select class="form-control h-auto mr-2" v-model="match.match_against" :id="'match_against_' + match.id"
+                    v-bind:class="{'is-invalid': errors.includes('match-against')}">
               <option disabled selected value="">Select an alignment</option>
               <option v-for="m in $root.matches" v-if="match.id !== m.id" :value="m.id">{{ m.label }}</option>
             </select>
@@ -263,6 +265,10 @@
               When an alignment is selected, it plays the role of a filter by removing all matched pairs found
               that are not in the selected alignment set.
             </small>
+
+            <div class="invalid-feedback" v-show="errors.includes('match-against')">
+              You have to run the selected alignment first, before you can run this alignment
+            </div>
           </div>
         </div>
 
@@ -386,13 +392,7 @@
             },
         },
         methods: {
-            async runClustering() {
-                const associationFile = this.association !== '' ? this.association : null;
-                await this.$root.runClustering(this.match.id, associationFile);
-                this.$emit('refresh');
-            },
-
-            validateMatch() {
+            validateMatch(matchAgainstValidiation = false) {
                 const sourcesValid = this.validateField('sources', this.match.sources.length > 0);
                 const targetsValid = this.validateField('targets', this.match.targets.length > 0);
 
@@ -412,8 +412,15 @@
                     matchingMethodGroupValid = this.$refs.matchingMethodGroupComponent.validateConditionsGroup();
                 matchingMethodGroupValid = this.validateField('matching-methods', matchingMethodGroupValid);
 
+                let matchAgainstValid = true;
+                if (matchAgainstValidiation && this.match.match_against) {
+                    const alignment = this.$root.alignments
+                        .find(alignment => alignment.alignment === this.match.match_against);
+                    matchAgainstValid = this.validateField('match-against', alignment && alignment.status === 'done');
+                }
+
                 return sourcesValid && targetsValid
-                    && sourcesSelectValid && targetsSelectValid && matchingMethodGroupValid;
+                    && sourcesSelectValid && targetsSelectValid && matchingMethodGroupValid && matchAgainstValid;
             },
 
             addMatchCondition(group) {
@@ -448,7 +455,7 @@
                 const resourceId = this.match[resourcesKey][resourceIndex];
                 this.$set(this.match[resourcesKey], resourceIndex, value);
 
-                updateConditions(this.match);
+                updateConditions(this.match.methods);
                 this.updateProperties(resourceId, value);
             },
 
@@ -465,7 +472,7 @@
                 if (this.match[resourcesKey].length < 1)
                     this.addMatchResource(resourcesKey);
 
-                updateConditions(this.match);
+                updateConditions(this.match.methods);
                 this.$delete(this.match[resourcesKey], resourceIndex);
 
                 this.updateProperties(resourceId);
@@ -483,19 +490,25 @@
                     this.match.properties.push([newValue, '']);
             },
 
-            async killAlignment() {
-                await this.$root.killAlignment(this.match.id);
-                this.$emit('refresh');
-            },
-
             async runAlignment(force = false) {
-                if (!this.validateMatch())
+                if (!this.validateMatch(true))
                     return;
 
                 const data = await this.$root.runAlignment(this.match.id, force);
                 if (data.result === 'exists' && confirm('This Alignment job already exists.\nDo you want to overwrite it with the current configuration?'))
                     await this.runAlignment(true);
 
+                this.$emit('refresh');
+            },
+
+            async killAlignment() {
+                await this.$root.killAlignment(this.match.id);
+                this.$emit('refresh');
+            },
+
+            async runClustering() {
+                const associationFile = this.association !== '' ? this.association : null;
+                await this.$root.runClustering(this.match.id, associationFile);
                 this.$emit('refresh');
             },
         },

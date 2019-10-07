@@ -171,7 +171,7 @@
           </div>
 
           <div class="form-group col-1 align-self-end">
-            <button-delete v-on:click="resource.related.splice(index, 1)"/>
+            <button-delete size="" v-on:click="resource.related.splice(index, 1)"/>
           </div>
         </div>
       </sub-card>

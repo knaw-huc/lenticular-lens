@@ -108,7 +108,7 @@ def run_alignment(job_id, alignment):
     return jsonify({'result': 'ok'})
 
 
-@app.route('/job/<job_id>/kill_alignment/<alignment>')
+@app.route('/job/<job_id>/kill_alignment/<alignment>', methods=['POST'])
 def kill_alignment(job_id, alignment):
     run_query('UPDATE alignments SET kill = true WHERE job_id = %s AND alignment = %s', (job_id, alignment))
     return jsonify({'result': 'ok'})
@@ -188,6 +188,21 @@ def clusters(job_id, alignment):
         return response
 
     return jsonify(clusters)
+
+
+@app.route('/job/<job_id>/validate/<alignment>', methods=['POST'])
+def validate_link(job_id, alignment):
+    linkset_table = 'linkset_' + job_id + '_' + str(alignment)
+
+    valid = request.json.get('valid')
+    source = request.json.get('source')
+    target = request.json.get('target')
+
+    query = psycopg2_sql.SQL('UPDATE {} SET valid = %s WHERE source_uri = %s AND target_uri = %s') \
+        .format(psycopg2_sql.Identifier(linkset_table))
+    run_query(query, (valid, source, target))
+
+    return jsonify({'result': 'ok'})
 
 
 @app.route('/job/<job_id>/cluster/<alignment>/<cluster_id>/graph')

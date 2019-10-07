@@ -261,7 +261,7 @@ export default {
         },
 
         async killAlignment(alignment) {
-            return callApi(`/job/${this.job.job_id}/kill_alignment/${alignment}`);
+            return callApi(`/job/${this.job.job_id}/kill_alignment/${alignment}`, {});
         },
 
         async getAlignment(alignment, clusterId = undefined, limit = undefined, offset = 0) {
@@ -294,6 +294,10 @@ export default {
             if (getReconciliation !== undefined) params.push(`get_reconciliation=${getReconciliation}`);
 
             return callApi(`/job/${this.job.job_id}/cluster/${alignment}/${clusterId}/graph?${params.join('&')}`);
+        },
+
+        async validateLink(alignment, source, target, valid) {
+            return callApi(`/job/${this.job.job_id}/validate/${alignment}`, {source, target, valid});
         },
 
         async getAssociationFiles() {

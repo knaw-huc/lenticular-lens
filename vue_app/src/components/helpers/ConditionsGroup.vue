@@ -32,14 +32,14 @@
           </div>
 
           <div class="col-auto">
-            <button-add @click="$emit('add', conditionsGroup)" title="Add condition"/>
+            <button-add @click="addGroupWithCondition" title="Add condition"/>
           </div>
         </div>
       </div>
     </div>
 
-    <b-collapse visible :id="uid" :ref="uid">
-      <draggable v-model="conditionsGroup.conditions" :group="group" handle=".handle">
+    <b-collapse visible :id="uid" :ref="uid" v-model="isOpen">
+      <draggable v-model="conditionsGroup.conditions" :group="group" handle=".handle" @change="onMove($event)">
         <conditions-group
             v-for="(condition, conditionIndex) in conditionsGroup.conditions"
             :key="conditionIndex"
@@ -79,6 +79,11 @@
             Draggable,
         },
         mixins: [ValidationMixin],
+        data() {
+            return {
+                isOpen: true,
+            };
+        },
         props: {
             uid: '',
             index: 0,
@@ -122,8 +127,8 @@
                 else if (this.conditionsGroup.conditions && this.shouldHaveConditions)
                     conditionsValid = this.validateField('conditions', this.conditionsGroup.conditions.length > 0);
                 else if (!this.conditionsGroup.conditions && this.validateMethodName && this.$children.length > 0) {
-                    if (typeof this.$children[0][this.validateMethodName] === 'function')
-                        childrenValid = this.$children[0][this.validateMethodName]();
+                    if (typeof this.$children[1][this.validateMethodName] === 'function')
+                        childrenValid = this.$children[1][this.validateMethodName]();
                 }
 
                 conditionsValid = this.validateField('conditions', conditionsValid);
@@ -131,6 +136,16 @@
                 childrenValid = this.validateField('children', childrenValid);
 
                 return conditionsValid && groupValid && childrenValid;
+            },
+
+            onMove(event) {
+                if (event.hasOwnProperty('removed') && !this.isRoot && this.conditionsGroup.conditions.length === 1)
+                    this.$emit('demote', this.index);
+            },
+
+            addGroupWithCondition() {
+                this.$emit('add', this.conditionsGroup);
+                this.isOpen = true;
             },
 
             removeCondition(index) {

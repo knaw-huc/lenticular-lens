@@ -74,7 +74,7 @@
       <tab-content title="Validation">
         <tab-content-structure title="Validation" :tab_error="tab_error" :is_saved="is_saved">
           <match-validation
-              v-if="$root.alignments.find(al => al.alignment === match.id && al.status === 'Finished')"
+              v-if="$root.alignments.find(al => al.alignment === match.id && al.status === 'done')"
               v-for="match in $root.matches"
               :match="match"
               :key="match.id"/>
@@ -309,14 +309,14 @@
                 let hasUnfinished = false;
 
                 this.$root.alignments.forEach(alignment => {
-                    if (alignment.status === 'Finished')
+                    if (alignment.status === 'done')
                         hasFinished = true;
-                    else if (!alignment.status.startsWith('FAILED'))
+                    else if (alignment.status !== 'failed')
                         hasUnfinished = true;
                 });
 
                 this.$root.clusterings.forEach(clustering => {
-                    if (clustering.status !== 'Finished' && !clustering.status.startsWith('FAILED'))
+                    if (clustering.status !== 'done' && clustering.status !== 'failed')
                         hasUnfinished = true;
                 });
 
