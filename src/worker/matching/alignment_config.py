@@ -4,43 +4,23 @@ from worker.matching.resource import Resource
 
 
 class AlignmentConfig:
-    def __init__(self, run_match, matches_data, resources_data):
+    def __init__(self, job_id, run_match, matches_data, resources_data):
         self.columns = {}
+
+        self.job_id = job_id
         self.run_match = run_match
+
         self.matches = list(map(lambda match: Match(match, self), matches_data))
         self.resources = list(map(lambda resource: Resource(resource, self), resources_data))
 
     @property
-    def matches_to_run(self):
-        matches_added = []
-        matches_to_add = [self.run_match]
-        matches_to_run = []
-
-        while matches_to_add:
-            match_to_add = matches_to_add[0]
-
-            if match_to_add not in matches_added:
-                for match in self.matches:
-                    if match.id == match_to_add:
-                        matches_to_run.insert(0, match)
-
-                        if match.match_against:
-                            matches_to_add.append(match.match_against)
-
-                        matches_to_add.remove(match_to_add)
-                        matches_added.append(match_to_add)
-            else:
-                matches_to_add.remove(match_to_add)
-
-        return matches_to_run
+    def match_to_run(self):
+        return self.get_match_by_id(self.run_match)
 
     @property
     def resources_to_run(self):
-        resources_to_add = []
+        resources_to_add = [hash_string(resource) for resource in self.match_to_run.resources]
         resources_to_run = []
-
-        for match in self.matches_to_run:
-            resources_to_add += [hash_string(resource) for resource in match.resources]
 
         resources_added = []
         while resources_to_add:

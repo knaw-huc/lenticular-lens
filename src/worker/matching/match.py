@@ -80,7 +80,8 @@ class Match:
     @property
     def match_against_sql(self):
         if self.match_against:
-            match = self.config.get_match_by_id(self.match_against)
+            match_table = 'linkset_' + self.config.job_id + '_' + str(self.match_against)
+
             sql = psycopg_sql.SQL(cleandoc('''
                 AND EXISTS (
                     SELECT 1
@@ -90,7 +91,7 @@ class Match:
                     LIMIT 1
                 )'''))
 
-            return sql.format(match_name=psycopg_sql.Identifier(match.name))
+            return sql.format(match_name=psycopg_sql.Identifier(match_table))
 
         return psycopg_sql.SQL('')
 

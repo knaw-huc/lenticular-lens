@@ -1,7 +1,7 @@
 import os
 import psycopg2
 
-from psycopg2 import sql as psycopg2_sql
+from psycopg2 import sql as psycopg2_sql, extras as psycopg2_extras
 from typing import List, Mapping, Sequence
 
 
@@ -42,9 +42,9 @@ def execute_query(query_dict: Mapping, cursor_args: Mapping = None) -> List[Sequ
             else [query_dict['header']] + cur.fetchall()
 
 
-def run_query(query, args=None):
+def run_query(query, args=None, dict=False):
     conn = db_conn()
-    cur = conn.cursor()
+    cur = conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) if dict else conn.cursor()
     cur.execute(query, args)
     result = cur.fetchone() if cur.description else None
     conn.commit()

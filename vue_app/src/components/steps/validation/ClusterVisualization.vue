@@ -6,15 +6,15 @@
       <cluster-visualization-info v-else/>
     </template>
 
-    <template v-slot:columns>
-      <div class="col-auto ml-auto">
-        <button type="button" v-if="association" @click="getGraphData('cluster')" class="btn btn-info mr-4">
-          Load Original Clusters
-        </button>
-      </div>
-    </template>
+<!--    <template v-slot:columns>-->
+<!--      <div class="col-auto ml-auto">-->
+<!--        <button type="button" v-if="association" @click="getGraphData('cluster')" class="btn btn-info mr-4">-->
+<!--          Load Original Clusters-->
+<!--        </button>-->
+<!--      </div>-->
+<!--    </template>-->
 
-    <svg :visible="!Boolean(association)" class="plot mt-3" id="graph-cluster"></svg>
+    <svg class="plot mt-3" id="graph-cluster"></svg> <!-- :visible="!Boolean(association)" -->
 
     <b-modal id="visualization_popup" ref="visualizationPopup" title="CLUSTER DETAIL" size="xl" hide-footer
              :return-focus="$root.$children[0].$el" :static="true">
@@ -46,11 +46,8 @@
         },
         props: {
             show: String,
-            properties: Array,
-            clusterData: Object,
-            clusterId: String,
-            clusteringId: String,
-            association: String,
+            matchId: Number,
+            cluster: Object,
         },
         computed: {
             label() {
@@ -74,24 +71,8 @@
             async getGraphData(type) {
                 clear('svg#graph-cluster');
 
-                const properties = this.properties.map(prop => {
-                    const resource = this.$root.getResourceById(prop[0]);
-                    const property = (prop[prop.length - 1] === '__value__') ? prop.slice(1, -1) : prop.slice(1);
-
-                    return {
-                        dataset: resource.dataset_id,
-                        entity_type: resource.collection_id,
-                        property,
-                    };
-                });
-
-                const data = await this.$root.getClusterGraphs(this.clusteringId, this.clusterId, {
-                    cluster_data: this.clusterData,
-                    properties: properties,
-                    get_cluster: !Boolean(this.association) || type === 'cluster',
-                    get_reconciliation: this.clusterData.extended === 'yes',
-                    associations: this.clusterData.extended === 'yes' ? this.association : '',
-                });
+                const data = await this.$root.getClusterGraphs(this.matchId, this.cluster.id,
+                    type === 'cluster', this.cluster.extended === 'yes');
 
                 this.clusterGraph = data.cluster_graph;
                 this.clusterGraphCompact = data.cluster_graph_compact;
@@ -115,11 +96,11 @@
             },
         },
         mounted() {
-            if (this.clusterId)
+            if (this.cluster)
                 this.getGraphData();
         },
         watch: {
-            clusterId() {
+            cluster() {
                 this.getGraphData();
             },
 
@@ -127,7 +108,7 @@
                 this.drawShown();
             },
         },
-    }
+    };
 </script>
 
 <style scoped>

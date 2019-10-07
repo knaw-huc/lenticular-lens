@@ -1,5 +1,3 @@
-import Papa from 'papaparse';
-
 export default {
     data() {
         return {
@@ -83,9 +81,8 @@ export default {
             return matches.find(match => (isId(matchId) && match.id === parseInt(matchId)) || match.label === matchId);
         },
 
-        getTargetsForMatch(matchId) {
-            const match = this.getMatchById(matchId);
-            return match.properties.reduce((targets, prop) => {
+        createTargetsForProperties(properties) {
+            return properties.reduce((targets, prop) => {
                 const resource = this.getResourceById(prop[0]);
 
                 let resourceTarget = targets.find(t => t.graph === resource.dataset_id);
@@ -171,6 +168,7 @@ export default {
                     });
                 });
 
+                match.value_targets = this.createTargetsForProperties(match.properties);
                 delete match.properties;
             });
 
@@ -257,29 +255,41 @@ export default {
             await callApi("/job/update/", jobData);
         },
 
-        async runAlignment(matchId, restart) {
+        async runAlignment(alignment, restart) {
             await this.submit();
-            return callApi(`/job/${this.job.job_id}/run_alignment/${matchId}`, {restart});
+            return callApi(`/job/${this.job.job_id}/run_alignment/${alignment}`, {restart});
         },
 
-        async getAlignment(matchId) {
-            return callApiCsv(`/job/${this.job.job_id}/alignment/${matchId}`);
+        async getAlignment(alignment, clusterId = undefined, limit = undefined, offset = 0) {
+            const params = [];
+            if (clusterId) params.push(`cluster_id=${clusterId}`);
+            if (limit) params.push(`limit=${limit}`);
+            if (offset) params.push(`offset=${offset}`);
+
+            return callApi(`/job/${this.job.job_id}/alignment/${alignment}?${params.join('&')}`);
         },
 
-        async getPropertiesForAlignment(matchId, targets) {
-            return callApi(`/job/${this.job.job_id}/alignment/${matchId}/properties`, {targets});
-        },
+        async getClusters(alignment, association, limit = undefined, offset = 0) {
+            const params = [];
+            if (association) params.push(`association=${association}`);
+            if (limit) params.push(`limit=${limit}`);
+            if (offset) params.push(`offset=${offset}`);
 
-        async getClusters(clusteringId, association) {
-            return callApi(`/job/${this.job.job_id}/clusters/${clusteringId}?association=${association}`);
+            return callApi(`/job/${this.job.job_id}/clusters/${alignment}?${params.join('&')}`);
         },
 
         async runClustering(alignment, association_file) {
             return callApi(`/job/${this.job.job_id}/run_clustering/${alignment}`, {association_file});
         },
 
-        async getClusterGraphs(clusteringId, clusterId, graphData) {
-            return callApi(`/job/${this.job.job_id}/cluster/${clusteringId}/${clusterId}/graph`, graphData);
+        async getClusterGraphs(alignment, clusterId,
+                               getCluster = undefined, getClusterCompact = undefined, getReconciliation = undefined) {
+            const params = [];
+            if (getCluster !== undefined) params.push(`get_cluster=${getCluster}`);
+            if (getClusterCompact !== undefined) params.push(`get_cluster_compact=${getClusterCompact}`);
+            if (getReconciliation !== undefined) params.push(`get_reconciliation=${getReconciliation}`);
+
+            return callApi(`/job/${this.job.job_id}/cluster/${alignment}/${clusterId}/graph?${params.join('&')}`);
         },
 
         async getAssociationFiles() {
@@ -365,17 +375,4 @@ async function callApi(path, body) {
     const response = await fetch(path);
 
     return response.json();
-}
-
-function callApiCsv(path) {
-    return new Promise((resolve, reject) => {
-        Papa.parse(path, {
-            download: true,
-            fastMode: true,
-            skipEmptyLines: true,
-            delimiter: ',',
-            complete: results => resolve(results.data),
-            error: err => reject(err),
-        });
-    });
 }

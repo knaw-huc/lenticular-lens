@@ -90,15 +90,14 @@ class Resource:
         matching_fields = []
         matching_fields_hashes = []
 
-        for match in self.config.matches_to_run:
-            match_fields = match.get_fields(only_matching_fields=only_matching_fields)
-            match_resource_fields = match_fields.get(self.label, {})
+        match_fields = self.config.match_to_run.get_fields(only_matching_fields=only_matching_fields)
+        match_resource_fields = match_fields.get(self.label, {})
 
-            for match_field_label, match_field in match_resource_fields.items():
-                for match_field_property in match_field:
-                    if match_field_property.hash not in matching_fields_hashes:
-                        matching_fields_hashes.append(match_field_property.hash)
-                        matching_fields.append(match_field_property)
+        for match_field_label, match_field in match_resource_fields.items():
+            for match_field_property in match_field:
+                if match_field_property.hash not in matching_fields_hashes:
+                    matching_fields_hashes.append(match_field_property.hash)
+                    matching_fields.append(match_field_property)
 
         return matching_fields
 

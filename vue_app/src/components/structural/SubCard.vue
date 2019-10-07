@@ -22,6 +22,10 @@
       </div>
     </div>
 
+    <div v-if="hasExtraRow" class="row flex-nowrap align-items-center justify-content-between mt-4">
+      <slot name="row-columns"></slot>
+    </div>
+
     <b-collapse v-if="hasCollapse" :id="id" :ref="id" :accordion="type + '-accordion'" :visible="openCard"
                 @show="$emit('show')" @hide="$emit('hide')">
       <slot></slot>
@@ -60,6 +64,10 @@
                 default: false
             },
             hasColumns: {
+                type: Boolean,
+                default: false
+            },
+            hasExtraRow: {
                 type: Boolean,
                 default: false
             },

@@ -10,6 +10,13 @@
                 <strong>Links: </strong>
                 {{ alignment.links_count.toLocaleString('en') }}
               </div>
+              <div v-if="clustering">
+                <strong>Clusters: </strong>
+                {{ clustering.clusters_count.toLocaleString('en') }}
+              </div>
+            </div>
+
+            <div class="col-auto">
               <div>
                 <strong>Resources in source: </strong>
                 {{ alignment.sources_count.toLocaleString('en') }}
@@ -21,12 +28,6 @@
             </div>
 
             <div v-if="clustering" class="col-auto">
-              <div>
-                <strong>Clusters: </strong>
-                <template>
-                  {{ clustering.clusters_count.toLocaleString('en') }}
-                </template>
-              </div>
               <div>
                 <strong>Extended: </strong>
 
@@ -48,7 +49,7 @@
             </div>
           </div>
 
-          <div class="row justify-content-center mt-4">
+          <div class="row justify-content-center mt-2">
             <div class="col-auto">
               <div class="btn-toolbar" role="toolbar" aria-label="Toolbar">
                 <div class="btn-group btn-group-toggle mr-2">
@@ -81,140 +82,145 @@
             </div>
           </div>
         </sub-card>
-      </div>
-    </template>
 
-    <match-info v-if="showInfo" :match="match"/>
+        <match-info v-if="showInfo" :match="match"/>
 
-    <sub-card v-if="showPropertySelection" :id="'properties_card_' + match.id" type="properties"
-              label="Property selection" :has-margin-auto="true" :has-columns="true">
-      <template v-slot:columns>
-        <div class="col-auto ml-auto">
-          <button type="button" class="btn btn-info" @click="saveProperties">
-            Save
-          </button>
-        </div>
-      </template>
-
-      <div class="mt-4">
-        <property
-            v-for="(property, idx) in match.properties"
-            class="mx-0"
-            :key="idx"
-            :property="property"
-            :singular="false"
-            :allow-delete="match.properties.findIndex(p => p[0] === property[0]) !== idx"
-            @clone="match.properties.splice(idx + 1, 0, [match.properties[idx][0], ''])"
-            @delete="$delete(match.properties, idx)"
-            @resetProperty="resetProperty(idx, property, $event)"/>
-      </div>
-    </sub-card>
-
-    <loading v-if="loading" class="mt-4"/>
-
-    <template v-if="!loading && showClusters && clustering">
-      <sub-card label="Clusters" :open-card="true" :has-collapse="true" :has-margin-auto="!!clusterIdSelected"
-                id="clusters-list" type="clusters-list">
-        <template v-slot:columns>
-          <template v-if="clusterIdSelected">
-            <div class="col-auto small ml-auto mr-auto">
-              <strong>Selected cluster: </strong>
-              {{ clusterIdSelected }}
-            </div>
-
-            <div class="col-auto">
-              <div class="btn-group btn-group-toggle">
-                <label class="btn btn-sm btn-secondary"
-                       v-bind:class="{'active': clusterView === 'links'}">
-                  <input type="radio" v-model="clusterView" value="links" autocomplete="off"/>
-                  <fa-icon icon="align-justify"/>
-                  Show links
-                </label>
-
-                <label v-if="hasProperties" class="btn btn-sm btn-secondary"
-                       v-bind:class="{'active': clusterView === 'visualize'}">
-                  <input type="radio" v-model="clusterView" value="visualize" autocomplete="off"/>
-                  <fa-icon icon="project-diagram"/>
-                  Visualize
-                </label>
-
-                <label v-if="hasProperties" class="btn btn-sm btn-secondary"
-                       v-bind:class="{'active': clusterView === 'visualize-compact'}">
-                  <input type="radio" v-model="clusterView" value="visualize-compact" autocomplete="off"/>
-                  <fa-icon icon="project-diagram"/>
-                  Visualize compact
-                </label>
-
-                <label v-if="hasProperties && clustering.association" class="btn btn-sm btn-secondary"
-                       v-bind:class="{'active': clusterView === 'visualize-reconciled'}">
-                  <input type="radio" v-model="clusterView" value="visualize-reconciled" autocomplete="off"/>
-                  <fa-icon icon="project-diagram"/>
-                  Visualize reconciled
-                </label>
-              </div>
+        <sub-card v-if="showPropertySelection" :id="'properties_card_' + match.id" type="properties"
+                  label="Property selection" :has-margin-auto="true" :has-columns="true">
+          <template v-slot:columns>
+            <div class="col-auto ml-auto">
+              <button type="button" class="btn btn-info" @click="saveProperties">
+                Save
+              </button>
             </div>
           </template>
-        </template>
 
-        <div class="bg-white px-3 py-1 mt-4 mb-2">
-          <div class="row font-weight-bold">
-            <div class="col">Id</div>
-            <div class="col">Extended</div>
-            <div class="col">Reconciled</div>
-            <div class="col">Size</div>
-            <div class="col">Links</div>
-            <div class="col-4">Property</div>
+          <div class="mt-4">
+            <property
+                v-for="(property, idx) in match.properties"
+                class="mx-0"
+                :key="idx"
+                :property="property"
+                :singular="false"
+                :allow-delete="match.properties.findIndex(p => p[0] === property[0]) !== idx"
+                @clone="match.properties.splice(idx + 1, 0, [match.properties[idx][0], ''])"
+                @delete="$delete(match.properties, idx)"
+                @resetProperty="resetProperty(idx, property, $event)"/>
           </div>
-        </div>
+        </sub-card>
 
-        <virtual-list
-            :size="58"
-            :remain="5"
-            :item="clusterItem"
-            :itemcount="clustering.clusters_count"
-            :itemprops="getClusterItemProps"/>
-      </sub-card>
+        <sub-card v-if="showClusters && clustering" label="Clusters" id="clusters-list" type="clusters-list"
+                  :open-card="openClusters" :has-collapse="true" :has-extra-row="!!(!openClusters && clusterIdSelected)"
+                  @show="openClusters = true" @hide="openClusters = false">
+          <template v-slot:columns>
+            <template v-if="clusterIdSelected">
+              <div class="col-auto">
+                <div class="btn-group btn-group-toggle">
+                  <label class="btn btn-sm btn-secondary"
+                         v-bind:class="{'active': clusterView === 'links'}">
+                    <input type="radio" v-model="clusterView" value="links" autocomplete="off"/>
+                    <fa-icon icon="align-justify"/>
+                    Show links
+                  </label>
 
-      <cluster-visualization
-          v-if="!loading && showClusters && clusterIdSelected && hasProperties && clusterView.startsWith('visualize')"
-          :show="clusterView"
-          :clustering-id="clustering.clustering_id"
-          :cluster-id="clusterIdSelected"
-          :cluster-data="clusters[clusterIdSelected]"
-          :properties="match.properties"
-          :association="clustering.association"/>
+                  <label v-if="hasProperties" class="btn btn-sm btn-secondary"
+                         v-bind:class="{'active': clusterView === 'visualize'}">
+                    <input type="radio" v-model="clusterView" value="visualize" autocomplete="off"/>
+                    <fa-icon icon="project-diagram"/>
+                    Visualize
+                  </label>
+
+                  <label v-if="hasProperties" class="btn btn-sm btn-secondary"
+                         v-bind:class="{'active': clusterView === 'visualize-compact'}">
+                    <input type="radio" v-model="clusterView" value="visualize-compact" autocomplete="off"/>
+                    <fa-icon icon="project-diagram"/>
+                    Visualize compact
+                  </label>
+
+                  <label v-if="hasProperties && clustering.association" class="btn btn-sm btn-secondary"
+                         v-bind:class="{'active': clusterView === 'visualize-reconciled'}">
+                    <input type="radio" v-model="clusterView" value="visualize-reconciled" autocomplete="off"/>
+                    <fa-icon icon="project-diagram"/>
+                    Visualize reconciled
+                  </label>
+                </div>
+              </div>
+            </template>
+          </template>
+
+          <template v-if="!openClusters && clusterIdSelected" v-slot:row-columns>
+            <div class="col">
+              <cluster :index="0" :cluster="selectedCluster" :selected="true" :selectable="false"/>
+            </div>
+          </template>
+
+          <div class="max-overflow mt-4">
+            <cluster
+                v-for="(cluster, idx) in clusters"
+                :index="idx"
+                :cluster="cluster"
+                :selected="clusterIdSelected === cluster.id"
+                @select:clusterId="selectClusterId($event)"/>
+
+            <infinite-loading :identifier="clustersIdentifier" @infinite="getClusters">
+              <template v-slot:spinner>
+                <loading class="mt-4"/>
+              </template>
+
+              <template v-slot:no-more>
+                No more clusters
+              </template>
+            </infinite-loading>
+          </div>
+        </sub-card>
+      </div>
     </template>
 
-    <virtual-list
-        v-if="!loading && showLinks"
-        class="mt-4"
-        :size="130"
-        :remain="5"
-        :item="linkItem"
-        :pagemode="true"
-        :itemcount="showAllLinks ? links.length : clusterLinks.length"
-        :itemprops="getLinkItemProps"/>
+    <cluster-visualization
+        v-if="showClusters && clustering && clusterIdSelected && hasProperties && clusterView.startsWith('visualize')"
+        :show="clusterView"
+        :matchId="match.id"
+        :cluster="selectedCluster"/>
+
+    <template v-if="showLinks">
+      <match-link
+          v-for="(link, idx) in links"
+          :index="idx"
+          :link="link"
+          @accepted="acceptLink(link)"
+          @declined="declineLink(link)"/>
+
+      <infinite-loading :identifier="linksIdentifier" @infinite="getLinks">
+        <template v-slot:spinner>
+          <loading class="mt-4"/>
+        </template>
+
+        <template v-slot:no-more>
+          No more clusters
+        </template>
+      </infinite-loading>
+    </template>
   </card>
 </template>
 
 <script>
-    import VirtualList from 'vue-virtual-scroll-list';
+    import InfiniteLoading from 'vue-infinite-loading';
 
     import MatchInfo from "../../helpers/MatchInfo";
     import Properties from "../../helpers/Properties";
 
     import MatchLink from "./MatchLink";
-    import Clustering from "./Clustering";
+    import Cluster from "./Cluster";
     import ClusterVisualization from "./ClusterVisualization";
 
     export default {
         name: "MatchValidation",
         components: {
-            VirtualList,
+            InfiniteLoading,
             MatchInfo,
             Properties,
             MatchLink,
-            Clustering,
+            Cluster,
             ClusterVisualization,
         },
         data() {
@@ -224,25 +230,22 @@
                 showPropertySelection: false,
                 showAllLinks: false,
                 showClusters: false,
-                loading: false,
+
                 links: [],
-                linkItem: MatchLink,
-                clusters: {},
-                clusterItem: Clustering,
+                linksIdentifier: +new Date(),
+
+                clusters: [],
+                clustersIdentifier: +new Date(),
+
+                openClusters: true,
                 clusterIdSelected: null,
                 clusterView: '',
-                properties: {},
-                linkStates: {},
             };
         },
         props: {
             match: Object,
         },
         computed: {
-            clusterIds() {
-                return Object.keys(this.clusters);
-            },
-
             hasProperties() {
                 return !this.match.properties.map(res => res[1] !== '').includes(false);
             },
@@ -271,23 +274,7 @@
                 if (!this.clusterIdSelected)
                     return null;
 
-                return this.clusters[this.clusterIdSelected];
-            },
-
-            clusterLinks() {
-                if (!this.selectedCluster)
-                    return [];
-
-                return this.selectedCluster.links.map(link => {
-                    const source = link[0].substring(1, link[0].length - 1);
-                    const target = link[1].substring(1, link[1].length - 1);
-
-                    const hash = this.getLinkHash(source, target);
-                    const strength = this.selectedCluster.strengths.hasOwnProperty(hash)
-                        ? this.selectedCluster.strengths[hash][0] : '0';
-
-                    return [source, target, strength];
-                });
+                return this.clusters.find(cluster => cluster.id === this.clusterIdSelected);
             },
         },
         methods: {
@@ -313,98 +300,68 @@
                     this.showAllLinks = false;
 
                 if (this.showAllLinks || this.showClusters)
-                    this.getLinksOrClusters();
+                    this.resetLists();
+            },
+
+            resetLists() {
+                if (this.showClusters && this.clustering && this.clusters.length === 0) {
+                    this.links = [];
+                    this.linksIdentifier += 1;
+                }
+                else if ((!this.showClusters || !this.clustering) && this.links.length === 0) {
+                    this.clusters = [];
+                    this.clustersIdentifier += 1;
+                }
+            },
+
+            selectClusterId(clusterId) {
+                this.clusterIdSelected = clusterId;
+                this.openClusters = false;
+                this.links = [];
+                this.linksIdentifier += 1;
             },
 
             async saveProperties() {
                 await this.$root.submit();
-                await this.getLinksOrClusters(true);
+                this.resetLists();
             },
 
-            async getLinksOrClusters(hard = false) {
-                if (this.loading)
+            async getLinks(state) {
+                const clusterId = this.showClusterLinks ? this.clusterIdSelected : undefined;
+
+                const links = await this.$root.getAlignment(this.match.id, clusterId, 50, this.links.length);
+                this.links.push(...links);
+
+                if (state) {
+                    if (links.length > 0)
+                        state.loaded();
+                    else
+                        state.complete();
+                }
+            },
+
+            async getClusters(state) {
+                if (!this.clustering)
                     return;
 
-                if (this.showClusters && this.clustering && (Object.keys(this.clusters).length === 0)) {
-                    this.loading = true;
-                    this.links = [];
-                    await this.getClusters();
+                const clusters = await this.$root.getClusters(
+                    this.match.id, this.clustering.association, 10, this.clusters.length);
+                this.clusters.push(...clusters);
+
+                if (state) {
+                    if (clusters.length > 0)
+                        state.loaded();
+                    else
+                        state.complete();
                 }
-                else if ((!this.showClusters || !this.clustering) && (this.links.length === 0)) {
-                    this.loading = true;
-                    this.clusters = {};
-                    await this.getLinks();
-                }
-
-                if (this.hasProperties && (hard || (Object.keys(this.properties).length === 0))) {
-                    this.loading = true;
-
-                    const targets = this.$root.getTargetsForMatch(this.match.id);
-                    this.properties = await this.$root.getPropertiesForAlignment(this.match.id, targets);
-                }
-
-                this.loading = false;
             },
 
-            async getLinks() {
-                this.links = await this.$root.getAlignment(this.match.id);
+            acceptLink(link) {
+                link.accepted = true;
             },
 
-            async getClusters() {
-                if (this.clustering)
-                    this.clusters = await this.$root.getClusters(
-                        this.clustering.clustering_id, this.clustering.association);
-            },
-
-            getClusterItemProps(idx) {
-                const clusterId = this.clusterIds[idx];
-                return {
-                    props: {
-                        clusterId: clusterId,
-                        clusterData: this.clusters[clusterId],
-                        properties: this.properties,
-                        selected: this.clusterIdSelected === clusterId,
-                        isFirst: idx === 0,
-                    },
-                    on: {
-                        'select:clusterId': clusterId => this.clusterIdSelected = clusterId,
-                    }
-                };
-            },
-
-            getLinkItemProps(idx) {
-                const link = this.showAllLinks ? this.links[idx] : this.clusterLinks[idx];
-                return {
-                    props: {
-                        index: idx,
-                        state: this.linkStates[this.getLinkHash(link[0], link[1])],
-                        source: link[0],
-                        sourceValues: this.properties[link[0]] || [],
-                        target: link[1],
-                        targetValues: this.properties[link[1]] || [],
-                        strength: parseFloat(link[2]).toFixed(3),
-                        isFirst: (idx === 0),
-                    },
-                    on: {
-                        accepted: () => this.acceptLink(link[0], link[1]),
-                        declined: () => this.declineLink(link[0], link[1]),
-                    },
-                };
-            },
-
-            getLinkHash(source, target) {
-                const obj = (source < target) ? `('<${source}>', '<${target}>')` : `('<${target}>', '<${source}>')`;
-                const hash = this.$utilities.md5(obj).substring(0, 15);
-
-                return `key_H${hash}`;
-            },
-
-            acceptLink(source, target) {
-                this.$set(this.linkStates, this.getLinkHash(source, target), 'accepted');
-            },
-
-            declineLink(source, target) {
-                this.$set(this.linkStates, this.getLinkHash(source, target), 'declined');
+            declineLink(link) {
+                link.accepted = false;
             },
 
             resetProperty(idx, property, propertyIndex) {

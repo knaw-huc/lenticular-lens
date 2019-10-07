@@ -1,5 +1,5 @@
 <template>
-  <div class="border p-3" v-bind:class="[{'mt-4': !isFirst}, ...bgColor]">
+  <div class="border p-3 mb-4" v-bind:class="[bgColor]">
     <div class="row align-items-center flex-nowrap">
       <div class="col-auto d-flex flex-column align-items-center">
         <div class="col-auto">
@@ -9,7 +9,7 @@
         <div class="col-auto">
           <div class="btn btn-sm bg-info-light border border-info text-info read-only m-1">
             <span class="font-weight-bold">Strength</span><br>
-            {{ strength }}
+            {{ link.strength }}
           </div>
         </div>
       </div>
@@ -19,7 +19,7 @@
           <span class="font-weight-bold">Source URI:</span>
 
           <span class="text-info">
-            {{ source }}
+            {{ link.source }}
           </span>
 
           <button type="button" class="btn btn-sm ml-2" @click="copySourceUriToClipboard">
@@ -31,7 +31,7 @@
           <span class="font-weight-bold">Target URI:</span>
 
           <span class="text-info">
-            {{ target }}
+            {{ link.target }}
           </span>
 
           <button type="button" class="btn btn-sm ml-2" @click="copyTargetUriToClipboard">
@@ -86,27 +86,21 @@
         },
         props: {
             index: Number,
-            state: String,
-            source: String,
-            sourceValues: Array,
-            target: String,
-            targetValues: Array,
-            strength: String,
-            isFirst: Boolean,
+            link: Object,
         },
         computed: {
             bgColor() {
-                if (this.state === 'accepted')
+                if (this.link.valid === true)
                     return 'bg-success';
 
-                if (this.state === 'declined')
+                if (this.link.valid === false)
                     return 'bg-danger';
 
                 return 'bg-white';
             },
 
             sourceProperties() {
-                return this.sourceValues.map(value => {
+                return this.link.source_values.map(value => {
                     return {
                         property: [this.$root.getResourceByDatasetId(value.dataset).id, value.property],
                         values: value.values,
@@ -115,7 +109,7 @@
             },
 
             targetProperties() {
-                return this.targetValues.map(value => {
+                return this.link.target_values.map(value => {
                     return {
                         property: [this.$root.getResourceByDatasetId(value.dataset).id, value.property],
                         values: value.values,

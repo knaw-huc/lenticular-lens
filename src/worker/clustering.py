@@ -3,23 +3,24 @@ import threading
 
 from os.path import join
 
+from common.helpers import hasher
 from common.config_db import db_conn
-from common.helpers import hasher, update_clustering_job
+from common.job_alignment import update_clustering_job, get_links
 
 import common.ll.Clustering.SimpleLinkClustering as Cls
 from common.ll.Clustering.SimpleLinkClustering import simple_csv_link_clustering
 
+from psycopg2 import sql as psycopg2_sql
+
 from common.ll.LLData.CSV_Associations import CSV_ASSOCIATIONS_DIR
-from common.ll.LLData.CSV_Alignments import CSV_ALIGNMENTS_DIR
 from common.ll.LLData.Serialisation import CLUSTER_SERIALISATION_DIR
 
 
 class ClusteringJob:
-    def __init__(self, job_id, alignment, association_file, clustering_id, status):
+    def __init__(self, job_id, alignment, association_file, status):
         self.job_id = job_id
         self.alignment = alignment
         self.association_file = association_file
-        self.clustering_id = clustering_id
         self.status = status
 
     def run(self):
@@ -33,7 +34,7 @@ class ClusteringJob:
         update_clustering_job(self.job_id, self.alignment, {'status': self.status})
 
     def start_clustering(self):
-        if self.clustering_id and self.association_file:
+        if self.association_file:
             reconciliation_result = self.cluster_reconciliation_csv()
 
             with db_conn() as conn, conn.cursor() as cur:
@@ -43,35 +44,64 @@ class ClusteringJob:
                 WHERE job_id = %s AND alignment = %s
                 ''', (reconciliation_result['extended_clusters_count'], reconciliation_result['cycles_count'],
                       'Finished', self.job_id, self.alignment))
-        elif not self.clustering_id and self.association_file:
-            clustering_result = self.cluster_csv()
-            reconciliation_result = self.cluster_reconciliation_csv()
-
-            with db_conn() as conn, conn.cursor() as cur:
-                cur.execute('''
-                UPDATE clusterings
-                SET clustering_id = %s, clusters_count = %s, 
-                    extended_count = %s, cycles_count = %s, status = %s, finished_at = now()
-                WHERE job_id = %s AND alignment = %s
-                ''', (clustering_result['file_name'], clustering_result['clusters_count'],
-                      reconciliation_result['extended_clusters_count'], reconciliation_result['cycles_count'],
-                      'Finished', self.job_id, self.alignment))
         else:
-            clustering_result = self.cluster_csv()
+            clusters = self.cluster_csv()
 
             with db_conn() as conn, conn.cursor() as cur:
                 cur.execute('''
-                UPDATE clusterings
-                SET clustering_id = %s, clusters_count = %s, status = %s, finished_at = now()
-                WHERE job_id = %s AND alignment = %s
-                ''', (clustering_result['file_name'], clustering_result['clusters_count'],
-                      'Finished', self.job_id, self.alignment))
+                    UPDATE clusterings
+                    SET clusters_count = %s, status = %s, finished_at = now()
+                    WHERE job_id = %s AND alignment = %s
+                ''', (len(clusters), 'Finished', self.job_id, self.alignment))
 
     def cluster_csv(self):
-        csv_filepath = join(CSV_ALIGNMENTS_DIR, f'alignment_{hasher(self.job_id)}_alignment_{self.alignment}.csv.gz')
-        filename = f'Cluster_{hasher(self.job_id)}_{self.alignment}'
+        links = get_links(self.job_id, self.alignment)
+        clusters = simple_csv_link_clustering(links, activated=True)
 
-        return simple_csv_link_clustering(csv_filepath, CLUSTER_SERIALISATION_DIR, file_name=filename, activated=True)
+        linkset_table_name = 'linkset_' + self.job_id + '_' + str(self.alignment)
+        cluster_table_name = 'clusters_' + self.job_id + '_' + str(self.alignment)
+
+        with db_conn() as conn, conn.cursor() as cur:
+            cur.execute(psycopg2_sql.SQL('DROP TABLE IF EXISTS {} CASCADE')
+                        .format(psycopg2_sql.Identifier(cluster_table_name)))
+
+            cur.execute(psycopg2_sql.SQL("""
+                CREATE TABLE {} (
+                    id text primary key,
+                    size integer not null,
+                    links integer not null,
+                    nodes text[] not null
+                )
+            """).format(psycopg2_sql.Identifier(cluster_table_name)))
+
+            for cluster in clusters:
+                cluster_info = clusters[cluster]
+
+                cur.execute(
+                    psycopg2_sql.SQL('INSERT INTO {} (id, size, links, nodes) VALUES (%s, %s, %s, %s)')
+                        .format(psycopg2_sql.Identifier(cluster_table_name)),
+                    (cluster, len(cluster_info['nodes']), len(cluster_info['links']), cluster_info['nodes'])
+                )
+
+                updates = []
+                for link in cluster_info['links']:
+                    updates.append(psycopg2_sql.SQL('''
+                        UPDATE {linkset}
+                        SET cluster_id = {cluster_id} 
+                        WHERE (source_uri = {source} AND target_uri = {target})
+                        OR (source_uri = {target} AND target_uri = {source});
+                    ''').format(
+                        linkset=psycopg2_sql.Identifier(linkset_table_name),
+                        cluster_id=psycopg2_sql.Literal(cluster),
+                        source=psycopg2_sql.Literal(link[0].replace('<', '').replace('>', '')),
+                        target=psycopg2_sql.Literal(link[1].replace('<', '').replace('>', '')),
+                    ))
+
+                cur.execute(psycopg2_sql.Composed(updates))
+
+            conn.commit()
+
+        return clusters
 
     def cluster_reconciliation_csv(self):
         filename = f'Reconciled_{hasher(self.job_id)}_{self.alignment}_{hasher(self.association_file)}'

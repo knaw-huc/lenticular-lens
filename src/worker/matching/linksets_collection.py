@@ -9,33 +9,29 @@ from inspect import cleandoc
 from worker.matching.alignment_config import AlignmentConfig
 
 from common.config_db import db_conn
-from common.helpers import get_job_data
+from common.job_alignment import get_job_data
 
 locale.setlocale(locale.LC_ALL, '')
 
 
 class LinksetsCollection:
-    def __init__(self, job_id, run_match, sql_only=False, resources_only=False, matches_only=False):
+    def __init__(self, job_id, run_match, sql_only=False, resources_only=False, match_only=False):
         self.job_id = job_id
         self.run_match = run_match
 
         self.sql_only = sql_only
         self.resources_only = resources_only
-        self.matches_only = matches_only
+        self.match_only = match_only
 
         self.status = None
         self.exception = None
 
         job_data = get_job_data(self.job_id)
-        self.config = AlignmentConfig(self.run_match, job_data['mappings'], job_data['resources'])
+        self.config = AlignmentConfig(self.job_id, self.run_match, job_data['mappings'], job_data['resources'])
 
     @property
     def view_name(self):
-        for match in self.config.matches:
-            if match.id == self.run_match:
-                return match.name
-
-        return None
+        return self.config.match_to_run.name
 
     @property
     def has_queued_view(self):
@@ -49,10 +45,10 @@ class LinksetsCollection:
         try:
             open('%s_%s.sql' % (str(self.run_match), self.job_id), 'w').close()
 
-            if not self.matches_only:
+            if not self.match_only:
                 self.generate_resources()
             if not self.resources_only and (not self.has_queued_view or self.sql_only):
-                self.generate_matches()
+                self.generate_match()
         except Exception as e:
             self.exception = e
             raise e
@@ -70,17 +66,18 @@ class LinksetsCollection:
                     result['duration']
                 )
 
-    def generate_matches(self):
-        for match in self.config.matches_to_run:
-            self.status = 'Generating linkset %s.' % match.name
+    def generate_match(self):
+        self.status = 'Generating linkset %s.' % self.config.match_to_run.name
 
-            result = self.process_sql(self.generate_match_sql(match), match.before_alignment)
+        table_name = 'linkset_' + self.job_id + '_' + str(self.run_match)
+        result = self.process_sql(self.generate_match_sql(
+            self.config.match_to_run, table_name), self.config.match_to_run.before_alignment)
 
-            self.status = 'Linkset %s generated. %s links created in %s.' % (
-                match.name,
-                locale.format_string('%i', result['affected'], grouping=True),
-                result['duration']
-            )
+        self.status = 'Linkset %s generated. %s links created in %s.' % (
+            self.config.match_to_run.name,
+            locale.format_string('%i', result['affected'], grouping=True),
+            result['duration']
+        )
 
     def process_sql(self, composed, inject=None):
         query_starting_time = time.time()
@@ -153,7 +150,7 @@ class LinksetsCollection:
         )
 
     @staticmethod
-    def generate_match_sql(match):
+    def generate_match_sql(match, table_name):
         sql_composed = sql.SQL(cleandoc(
             """ DROP SEQUENCE IF EXISTS {source_sequence_name} CASCADE;
                 CREATE SEQUENCE {source_sequence_name} MINVALUE 0 START 0;
@@ -182,8 +179,8 @@ class LinksetsCollection:
                 DROP SEQUENCE IF EXISTS {sequence_name} CASCADE;
                 CREATE SEQUENCE {sequence_name} MINVALUE 0 START 0;
                 
-                DROP MATERIALIZED VIEW IF EXISTS {view_name} CASCADE;
-                CREATE MATERIALIZED VIEW {view_name} AS
+                DROP TABLE IF EXISTS public.{view_name} CASCADE;
+                CREATE TABLE public.{view_name} AS                
                 SELECT source.uri AS source_uri, target.uri AS target_uri, {fields}
                 FROM {source_name} AS source
                 JOIN {target_name} AS target
@@ -191,11 +188,16 @@ class LinksetsCollection:
                 AND {conditions} {match_against}
                 AND nextval({sequence}) != 0;
                 
-                ANALYZE {view_name};
-                CREATE INDEX ON {view_name} (source_uri);
-                CREATE INDEX ON {view_name} (target_uri);
-                
-                SELECT * FROM {view_name};
+                ALTER TABLE public.{view_name}
+                ADD PRIMARY KEY (source_uri, target_uri),
+                ADD COLUMN cluster_id text,
+                ADD COLUMN valid boolean;
+
+                CREATE INDEX ON public.{view_name} (source_uri);
+                CREATE INDEX ON public.{view_name} (target_uri);
+                CREATE INDEX ON public.{view_name} (cluster_id);
+
+                ANALYZE public.{view_name};
             """
         ))
 
@@ -205,7 +207,7 @@ class LinksetsCollection:
             fields=match.similarity_fields_sql,
             conditions=match.conditions_sql,
             match_against=match.match_against_sql,
-            view_name=sql.Identifier(match.name),
+            view_name=sql.Identifier(table_name),
             source_name=sql.Identifier(match.name + '_source'),
             target_name=sql.Identifier(match.name + '_target'),
             sequence_name=sql.Identifier(match.name + '_count'),

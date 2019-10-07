@@ -24,11 +24,6 @@
         },
         computed: {
             propsGrouped() {
-                return this.propsByName();
-            }
-        },
-        methods: {
-            propsByName() {
                 return this.properties.reduce((acc, propAndValues) => {
                     if (!acc.hasOwnProperty(propAndValues.property[1]))
                         acc[propAndValues.property[1]] = [];
@@ -36,7 +31,7 @@
                     acc[propAndValues.property[1]].push(...propAndValues.values);
                     return acc;
                 }, {});
-            },
+            }
         },
     };
 </script>

@@ -13,7 +13,6 @@ from common.ll.Generic.Utility import pickle_serializer, hasher, problem
 
 
 # GET PATH OF THE SERIALISED DIRECTORY
-# from common.ll.LLData.CSV_Associations import CSV_ASSOCIATIONS_DIR
 from common.ll.LLData.Serialisation import CLUSTER_SERIALISATION_DIR
 
 
@@ -30,14 +29,11 @@ _line = "--------------------------------------------------------------" \
 # *************************************************************
 
 
-def simple_csv_link_clustering(csv_path, save_in, file_name=None, key=None, activated=False):
+def simple_csv_link_clustering(links_iter, key=None, activated=False):
 
     """
-    :param csv_path: THE PATH OF THE CSV FILE
-    :param save_in:
-    :param file_name: THE NAME OF THE GRAPH TO CLUSTER WITHOUT -1 (CLUSTERS) OR -2(ROOT) OR EXTENTION
+    :param links_iter: ITERABLE LINKS
     :param key:
-    # :param serialisation_dir: THE DIRECTORY TO SAVE THE CLUSTER SERIALIZATIONS
     :param activated:
     :return:
     """
@@ -46,8 +42,7 @@ def simple_csv_link_clustering(csv_path, save_in, file_name=None, key=None, acti
         problem(text="--> THE FUNCTION [simple_csv_link_clustering] IS NOT ACTIVATED.")
         return
 
-    print("\n{:.^100}".format(" WE ARE ABOUT TO CLUSTER AND SERIALISED "))
-    print("{:.^100}".format(" FOM " + csv_path + " "))
+    print("\n{:.^100}".format(" WE ARE ABOUT TO CLUSTER AND SERIALISE "))
     print("{:.^100}".format(" *** MAYBE TIME FOR A COFFEE? *** "))
 
     """
@@ -65,7 +60,6 @@ def simple_csv_link_clustering(csv_path, save_in, file_name=None, key=None, acti
     """
 
     links = 0
-    local_key = key
 
     # THE ROOT KEEPS TRACK OF THE CLUSTER A PARTICULAR NODE BELONGS TOO
     root = dict()
@@ -258,42 +252,24 @@ def simple_csv_link_clustering(csv_path, save_in, file_name=None, key=None, acti
         standard = 1000000
         check = 1
         iteration = 1
-        file_size = Ut.file_size(csv_path)
 
         # **************************************************************************************************
-        print(F'\n1. ITERATING THROUGH THE CSV FILE OF SIZE {file_size}')
+        print(F'\n1. ITERATING THROUGH THE LINKS')
         # **************************************************************************************************
         start = time.time()
-        with gzip.open(csv_path, mode="rt", encoding="utf-8") as csv:
+        for link in links_iter:
+            subject, t_object, strength = link['source'], link['target'], link['strength']
 
-            # ITERATE THROUGH THE FILE
-            position = 0
-            for line in csv:
-                position += 1
+            # CALLING THE MAIN HELPER FUNCTION
+            # *************************************************
+            links = cluster_helper_set(links, annotate=False)
+            # *************************************************
 
-                # SPLIT THE CSV TO EXTRACT THE SUBJECT OBJECT AND STRENGTH
-                split = (line.strip()).split(sep=',')
-
-                # PRINT PROBLEM IF ANY
-                if len(split) != 3:
-                    print(F'PROBLEM WITH THE DATA AT LINE {position}')
-
-                # CLUSTER THE LINKS
-                else:
-                    # GETTING READ OF THE HEADER
-                    if position > 1:
-                        subject, t_object, strength = split[0].strip(), split[1].strip(), split[2].strip()
-
-                        # CALLING THE MAIN HELPER FUNCTION
-                        # *************************************************
-                        links = cluster_helper_set(links, annotate=False)
-                        # *************************************************
-
-                        # PRINT EVERY STANDARD (X) ITERATION THE CREATED CLUSTERS ON THE SERVER SCREEN EVERY STANDARD ITERATIONS
-                        if iteration == check:
-                            print(F"\tRESOURCE {links:>10}:   {subject:>40}    =    {t_object}")
-                            check += standard
-                        iteration += 1
+            # PRINT EVERY STANDARD (X) ITERATION THE CREATED CLUSTERS ON THE SERVER SCREEN EVERY STANDARD ITERATIONS
+            if iteration == check:
+                print(F"\tRESOURCE {links:>10}:   {subject:>40}    =    {t_object}")
+                check += standard
+            iteration += 1
 
             elapse = datetime.timedelta(seconds=time.time() - start)
             print(F"\t>>> {links} links clustered in {elapse}")
@@ -334,62 +310,22 @@ def simple_csv_link_clustering(csv_path, save_in, file_name=None, key=None, acti
             for node in data['nodes']:
                 root[node] = new_key
 
-        if file_name is None:
-            extra = F"_{local_key}" if local_key is not None else F""
-            print("extra:", local_key)
-            returned = {'clusters': new_clusters, 'node2cluster_id': root}
-            file_name = str(Ut.hasher(returned.__str__()))
-            file_name = F"Serialized_Cluster_P{file_name}" if len(extra) == 0 else F"Serialized_Cluster{extra}"
-        # else F"Serialized_Cluster{extra}_P{file_name}"
         elapse = datetime.timedelta(seconds=time.time() - start_2)
         print(F"\t>>> RE-SETTING THE CLUSTER WITH UNIQUE CLUSTER iDS in {elapse}")
         print(F"\t>>> {len(new_clusters)} NUMBER OF CLUSTER FOUND IN THE NEW CLUSTER")
 
         # **************************************************************************************************
-        print("\n3. SERIALISING THE DICTIONARIES...")
-        # **************************************************************************************************
-
-        # WRITE TO FILE ONLY IF WE HAVE MORE THAN 0 CLUSTER
-        start_3 = time.time()
-        s_file_1 = s_file_2 = ""
-        f_stat_1 = f_stat_2 = 0
-        if len(new_clusters) != 0 and len(root) != 0:
-
-            # SERIALISATION FILES
-            s_file_1 = "{}-1.txt.gz".format(file_name)
-            s_file_2 = "{}-2.txt.gz".format(file_name)
-
-            # SERIALISING THE CLUSTER DICTIONARY
-            f_stat_1 = Ut.pickle_serializer(
-                directory=save_in, data_object=new_clusters, name=s_file_1, zip_it=True)
-
-            # SERIALISING THE CLUSTER ROOT DICTIONARY
-            f_stat_2 = Ut.pickle_serializer(
-                directory=save_in, data_object=root, name=s_file_2, zip_it=True)
-
-        # f_stat_1 = round(stat(f_stat_1).st_size / (1024 * 1024 * 1024), 3)
-        f_stat_1 = Ut.file_size(f_stat_1)
-        f_stat_2 = Ut.file_size(f_stat_2)
-        elapse = datetime.timedelta(seconds=time.time() - start_3)
-        print(F"\t>>> DONE SERIALISING THE DICTIONARIES in {elapse}")
-
-        # **************************************************************************************************
-        print("\n4. SERIALISATION IS COMPLETED...")
+        print("\n4. CLUSTERING IS COMPLETED...")
         # **************************************************************************************************
         elapse = datetime.timedelta(seconds=time.time() - start)
-        text = ["CLUSTER FILE", "ROOT FILE"]
         print(F"\t\t{links} LINKS CLUSTERED AND SERIALIZED in {elapse}")
-        print(F"\tDIRECTORY : {save_in}")
-        print(F"\t\t{text[0]:<13}: {s_file_1:>30} \tSIZE: {f_stat_1:>6}")
-        print(F"\t\t{text[1]:<13}: {s_file_2:>30} \tSIZE: {f_stat_2:>6}")
         print("\n5. JOB DONE!!!\n\t>>> DATA RETURNED TO THE CLIENT SIDE TO BE PROCESSED FOR DISPLAY\n")
-        round(stat(csv_path).st_size / (1024 * 1024 * 1024), 3)
 
     except Exception as err:
         traceback.print_exc()
         print(err.__str__())
 
-    return {'file_name': file_name, 'clusters_count': len(new_clusters)}
+    return new_clusters
 
 
 # *************************************************************
