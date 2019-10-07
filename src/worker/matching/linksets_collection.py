@@ -1,7 +1,5 @@
 import re
-import time
 import locale
-import datetime
 
 from psycopg2 import sql
 from inspect import cleandoc
@@ -23,7 +21,6 @@ class LinksetsCollection:
         self.resources_only = resources_only
         self.match_only = match_only
 
-        self.status = None
         self.exception = None
 
         job_data = get_job_data(self.job_id)
@@ -56,32 +53,14 @@ class LinksetsCollection:
     def generate_resources(self):
         if not self.has_queued_view or self.sql_only:
             for resource in self.config.resources_to_run:
-                self.status = 'Generating collection %s.' % resource.label
-
-                result = self.process_sql(self.generate_resource_sql(resource))
-
-                self.status = 'Collection %s generated. Inserted %s records in %s' % (
-                    resource.label,
-                    locale.format_string('%i', result['affected'], grouping=True),
-                    result['duration']
-                )
+                self.process_sql(self.generate_resource_sql(resource))
 
     def generate_match(self):
-        self.status = 'Generating linkset %s.' % self.config.match_to_run.name
-
         table_name = 'linkset_' + self.job_id + '_' + str(self.run_match)
-        result = self.process_sql(self.generate_match_sql(
-            self.config.match_to_run, table_name), self.config.match_to_run.before_alignment)
-
-        self.status = 'Linkset %s generated. %s links created in %s.' % (
-            self.config.match_to_run.name,
-            locale.format_string('%i', result['affected'], grouping=True),
-            result['duration']
-        )
+        self.process_sql(self.generate_match_sql(self.config.match_to_run, table_name),
+                         self.config.match_to_run.before_alignment)
 
     def process_sql(self, composed, inject=None):
-        query_starting_time = time.time()
-
         schema_name_sql = sql.Identifier('job_' + str(self.run_match) + '_' + self.job_id)
         composed = sql.Composed([
             sql.SQL('CREATE SCHEMA IF NOT EXISTS {};\n').format(schema_name_sql),
@@ -89,8 +68,6 @@ class LinksetsCollection:
             composed,
         ])
 
-        processed_count = 0
-        affected_count = 0
         with db_conn() as conn:
             sql_string = composed.as_string(conn)
             inject = inject.as_string(conn) if inject else ''
@@ -116,12 +93,6 @@ class LinksetsCollection:
 
                                 cur.execute(statement)
                                 conn.commit()
-
-                                if cur.rowcount > 0:
-                                    affected_count += cur.rowcount
-
-            return {'processed': processed_count, 'affected': affected_count,
-                    'duration': str(datetime.timedelta(seconds=time.time() - query_starting_time))}
 
     @staticmethod
     def generate_resource_sql(resource):
@@ -181,7 +152,7 @@ class LinksetsCollection:
                 
                 DROP TABLE IF EXISTS public.{view_name} CASCADE;
                 CREATE TABLE public.{view_name} AS                
-                SELECT source.uri AS source_uri, target.uri AS target_uri, {fields}
+                SELECT DISTINCT source.uri AS source_uri, target.uri AS target_uri, {strength_field}
                 FROM {source_name} AS source
                 JOIN {target_name} AS target
                 ON (source.collection != target.collection OR source.uri > target.uri)
@@ -204,7 +175,7 @@ class LinksetsCollection:
         return match.index_sql + sql.SQL('\n') + sql_composed.format(
             source=match.source_sql,
             target=match.target_sql,
-            fields=match.similarity_fields_sql,
+            strength_field=match.strength_field_sql,
             conditions=match.conditions_sql,
             match_against=match.match_against_sql,
             view_name=sql.Identifier(table_name),
@@ -217,8 +188,3 @@ class LinksetsCollection:
             source_sequence=sql.Literal(match.name + '_source_count'),
             target_sequence=sql.Literal(match.name + '_target_count')
         )
-
-
-if __name__ == "__main__":
-    linksets_collection = LinksetsCollection('971518567e6b937d68b6b097bf4c0e7f', 2, sql_only=True)
-    linksets_collection.run()

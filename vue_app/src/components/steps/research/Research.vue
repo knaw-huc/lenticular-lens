@@ -1,22 +1,22 @@
 <template>
   <div>
-    <div v-if="idea_form === 'new' || job_id" class="border p-4 mt-4 bg-light">
+    <div v-if="research_form === 'new' || job_id" class="border p-4 mt-4 bg-light">
       <div class="form-group">
-        <label class="h3" for="idea">What's your idea?</label>
-        <input type="text" class="form-control" id="idea" v-model="title"
+        <label class="h3" for="research">What is your research question?</label>
+        <input type="text" class="form-control" id="research" v-model="title"
                v-bind:class="{'is-invalid': errors.includes('title')}" :disabled="is_updating">
         <div class="invalid-feedback" v-show="errors.includes('title')">
-          Please indicate a name for your idea
+          Please indicate your research question
         </div>
       </div>
 
       <div class="form-group pt-3">
-        <label class="h3" for="description">Describe your idea</label>
+        <label class="h3" for="description">What is your research about?</label>
         <textarea class="form-control" id="description" v-model="description"
                   v-bind:class="{'is-invalid': errors.includes('description')}"
                   :disabled="is_updating"></textarea>
         <div class="invalid-feedback" v-show="errors.includes('description')">
-          Please indicate a description for your idea
+          Please indicate what your research is about
         </div>
       </div>
 
@@ -28,14 +28,14 @@
         </div>
 
         <div class="col-auto">
-          <b-button @click="saveIdea" variant="info">
+          <b-button @click="saveResearch" variant="info">
             {{ job_id ? 'Update' : 'Create' }}
           </b-button>
         </div>
       </div>
     </div>
 
-    <div v-if="idea_form === 'existing' || job_id" class="bg-light border mt-4 p-4">
+    <div v-if="research_form === 'existing' || job_id" class="bg-light border mt-4 p-4">
       <div class="row justify-content-end align-items-center">
         <span class="badge badge-info" ref="clipboard_copy_message" hidden>
             Job ID copied to clipboard
@@ -71,7 +71,7 @@
     import ValidationMixin from '../../../mixins/ValidationMixin';
 
     export default {
-        name: "Idea",
+        name: "Research",
         mixins: [ValidationMixin],
         data() {
             return {
@@ -84,18 +84,18 @@
             job_id: String,
             job_title: String,
             job_description: String,
-            idea_form: String,
+            research_form: String,
             is_updating: Boolean,
         },
         methods: {
-            validateIdea() {
+            validateResearch() {
                 const ideaValid = this.validateField('title', this.title);
                 const descriptionValid = this.validateField('description', this.description);
                 return ideaValid && descriptionValid;
             },
 
-            saveIdea() {
-                if (this.validateIdea()) {
+            saveResearch() {
+                if (this.validateResearch()) {
                     const event = this.job_id ? 'update' : 'create';
                     this.$emit(event, {
                         job_id: this.job_id || undefined,

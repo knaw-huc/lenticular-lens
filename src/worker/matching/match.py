@@ -112,44 +112,19 @@ class Match:
         return self.sources + self.targets
 
     @property
-    def similarity_fields_sql(self):
-        fields = []
-        fields_added = []
+    def strength_field_sql(self):
         cluster_field = None
 
         for matching_function in self.conditions.matching_functions:
             if matching_function.similarity_sql:
                 field_name = psycopg_sql.Identifier(matching_function.field_name)
-
-                # Add source and target values; if not done already
-                if field_name not in fields_added:
-                    fields_added.append(field_name)
-
-                    fields.append(psycopg_sql.SQL('source.{field_name} AS {source_field_name}').format(
-                        field_name=field_name,
-                        source_field_name=psycopg_sql.Identifier(f'source_{matching_function.field_name}')
-                    ))
-
-                    fields.append(psycopg_sql.SQL('target.{field_name} AS {target_field_name}').format(
-                        field_name=field_name,
-                        target_field_name=psycopg_sql.Identifier(f'target_{matching_function.field_name}')
-                    ))
-
-                    # Add similarity field
-                    fields.append(psycopg_sql.SQL('{field} AS {field_name}').format(
-                        field=matching_function.similarity_sql.format(field_name=field_name),
-                        field_name=psycopg_sql.Identifier(matching_function.field_name + '_similarity')
-                    ))
-
                 cluster_field = matching_function.similarity_sql.format(field_name=field_name)
 
         # This is a temporary way to select the similarity of the last matching method for the clustering
         if cluster_field:
-            fields.append(psycopg_sql.SQL('{} AS __cluster_similarity').format(cluster_field))
-        else:
-            fields.append(psycopg_sql.SQL('1 AS __cluster_similarity'))
+            return psycopg_sql.SQL('{} AS strength').format(cluster_field)
 
-        return psycopg_sql.SQL(',\n       ').join(fields)
+        return psycopg_sql.SQL('1 AS strength')
 
     @property
     def source_sql(self):

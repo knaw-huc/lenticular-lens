@@ -52,7 +52,7 @@ def get_links(job_id, alignment, cluster_id=None, limit=None, offset=0, include_
                                 limit=limit, offset=offset)
 
     where_sql = 'WHERE cluster_id = %s' if cluster_id else ''
-    query = 'SELECT source_uri, target_uri, __cluster_similarity, cluster_id, valid FROM {} {} {}' \
+    query = 'SELECT source_uri, target_uri, strength, cluster_id, valid FROM {} {} {}' \
         .format(linkset_table, where_sql, limit_offset_sql)
 
     with db_conn() as conn, conn.cursor() as cur:
@@ -117,7 +117,7 @@ def get_clusters(job_id, alignment, limit=None, offset=0, include_props=False):
 def get_cluster(job_id, alignment, cluster_id):
     linkset_table = 'linkset_' + job_id + '_' + str(alignment)
     links = execute_query({
-        'query': f'SELECT source_uri, target_uri, __cluster_similarity FROM {linkset_table} WHERE cluster_id = %s',
+        'query': f'SELECT source_uri, target_uri, strength FROM {linkset_table} WHERE cluster_id = %s',
         'parameters': (cluster_id,)
     })
 

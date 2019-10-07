@@ -6,6 +6,12 @@
         <b-button variant="info" @click="$emit('duplicate', match)">Duplicate</b-button>
       </div>
 
+      <div v-if="alignmentStatus === 'downloading' || alignmentStatus === 'running'" class="col-auto">
+        <b-button variant="info" @click="killAlignment">
+          Kill
+        </b-button>
+      </div>
+
       <div v-if="!alignment || alignmentStatus === 'failed'" class="col-auto">
         <b-button variant="info" @click="runAlignment">
           Run
@@ -38,7 +44,7 @@
       </div>
 
       <div v-if="!alignment" class="col-auto">
-        <button-delete @click="$emit('remove')" size="2x" title="Delete this Alignment"/>
+        <button-delete @click="$emit('remove')" title="Delete this Alignment"/>
       </div>
     </template>
 
@@ -57,6 +63,12 @@
                     <strong>Status: </strong>
                     {{ status }}
                   </div>
+                </div>
+              </div>
+
+              <div v-if="alignmentStatus === 'failed'" class="row justify-content-center">
+                <div class="col-auto">
+                  <div class="font-italic">{{ alignment.failed_message }}</div>
                 </div>
               </div>
 
@@ -316,35 +328,14 @@
                 if (!this.alignment)
                     return null;
 
-                if (this.alignment.status === 'Requested')
-                    return 'waiting';
-
-                if (this.alignment.status === 'Finished')
-                    return 'done';
-
-                if (this.alignment.status === 'Downloading')
-                    return 'downloading';
-
-                if (this.alignment.status.startsWith('FAILED'))
-                    return 'failed';
-
-                return 'running';
+                return this.alignment.status;
             },
 
             clusteringStatus() {
                 if (!this.clustering)
                     return null;
 
-                if (this.clustering.status === 'Requested')
-                    return 'waiting';
-
-                if (this.clustering.status === 'Finished')
-                    return 'done';
-
-                if (this.clustering.status.startsWith('FAILED'))
-                    return 'failed';
-
-                return 'running';
+                return this.clustering.status;
             },
 
             running() {
@@ -361,8 +352,6 @@
                             alignmentStatus = 'Matched';
                             break;
                         case 'failed':
-                            alignmentStatus = this.alignment.status;
-                            break;
                         case 'waiting':
                         case 'downloading':
                         case 'running':
@@ -381,8 +370,6 @@
                                 reconciliationStatus = 'Reconciled';
                             break;
                         case 'failed':
-                            clusteringStatus = this.clustering.status;
-                            break;
                         case 'waiting':
                         case 'running':
                         default:
@@ -494,6 +481,11 @@
 
                 if (newValue && !this.match.properties.find(prop => prop[0] === newValue))
                     this.match.properties.push([newValue, '']);
+            },
+
+            async killAlignment() {
+                await this.$root.killAlignment(this.match.id);
+                this.$emit('refresh');
             },
 
             async runAlignment(force = false) {

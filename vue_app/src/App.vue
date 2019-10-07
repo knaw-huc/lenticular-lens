@@ -6,8 +6,8 @@
         color="#efc501"
         shape="square"
         ref="formWizard">
-      <tab-content title="Idea" :before-change="validateIdeaTab">
-        <tab-content-structure title="Idea" :tab_error="tab_error" :is_saved="is_saved">
+      <tab-content title="Research" :before-change="validateResearchTab">
+        <tab-content-structure title="Research" :tab_error="tab_error" :is_saved="is_saved">
           <template v-slot:header>
             <div class="col-auto" v-if="$root.job">
               <span class="badge badge-info">
@@ -16,16 +16,15 @@
             </div>
           </template>
 
-          <idea
+          <research
               :job_id="job_id"
               :job_title="job_title"
               :job_description="job_description"
-              :idea_form="idea_form"
+              :research_form="research_form"
               :is_updating="is_updating"
               @load="setJobId($event)"
               @create="createJob($event)"
-              @update="updateJob($event)"
-          ></idea>
+              @update="updateJob($event)"/>
         </tab-content-structure>
       </tab-content>
 
@@ -50,7 +49,7 @@
       </tab-content>
 
       <tab-content title="Alignments" :before-change="validateAlignmentsTab">
-        <tab-content-structure title="Alignment Specifications" :tab_error="tab_error" :is_saved="is_saved">
+        <tab-content-structure title="Alignments" :tab_error="tab_error" :is_saved="is_saved">
           <template v-slot:header>
             <div class="col-auto">
               <button-add @click="addMatch" title="Add an Alignment" size="2x"/>
@@ -78,8 +77,7 @@
               v-if="$root.alignments.find(al => al.alignment === match.id && al.status === 'Finished')"
               v-for="match in $root.matches"
               :match="match"
-              :key="match.id"
-          ></match-validation>
+              :key="match.id"/>
         </tab-content-structure>
       </tab-content>
 
@@ -92,17 +90,17 @@
         <template v-if="props.activeTabIndex === 0 && !job_id">
           <wizard-button
               :style="props.fillButtonStyle"
-              :disabled="props.loading || idea_form === 'existing'"
-              @click.native.prevent.stop="idea_form='existing'">
-            Existing Idea
+              :disabled="props.loading || research_form === 'existing'"
+              @click.native.prevent.stop="research_form='existing'">
+            Existing research
           </wizard-button>
           &nbsp;
           <wizard-button
               v-if="hasChanges"
               :style="props.fillButtonStyle"
-              :disabled="props.loading || idea_form === 'new'"
-              @click.native.prevent.stop="idea_form='new'">
-            New Idea
+              :disabled="props.loading || research_form === 'new'"
+              @click.native.prevent.stop="research_form='new'">
+            New research
           </wizard-button>
         </template>
 
@@ -131,7 +129,7 @@
 <script>
     import Draggable from 'vuedraggable';
 
-    import Idea from './components/steps/idea/Idea';
+    import Research from './components/steps/research/Research';
     import Resource from './components/steps/resources/Resource';
     import Match from './components/steps/matches/Match';
     import MatchValidation from './components/steps/validation/MatchValidation';
@@ -145,7 +143,7 @@
         components: {
             Draggable,
             TabContentStructure,
-            Idea,
+            Research,
             Resource,
             Match,
             MatchValidation,
@@ -153,14 +151,14 @@
         data() {
             return {
                 tab_error: '',
-                idea_form: '',
+                research_form: '',
                 id_to_load: '',
                 job_id: '',
                 job_title: '',
                 job_description: '',
                 is_saved: true,
                 is_updating: false,
-                steps: ['idea', 'collections', 'alignments', 'validation', 'export'],
+                steps: ['research', 'collections', 'alignments', 'validation', 'export'],
             };
         },
         computed: {
@@ -177,8 +175,8 @@
                 return !!isValid;
             },
 
-            validateIdeaTab() {
-                return this.isTabValid(this.$root.job, false, 'Please update or create your idea first!');
+            validateResearchTab() {
+                return this.isTabValid(this.$root.job, false, 'Please update or create your research first!');
             },
 
             validateCollectionsTab(alwaysSave = false) {
@@ -341,7 +339,7 @@
             const job_id = urlParams.get('job_id');
             if (job_id) {
                 this.job_id = job_id;
-                this.idea_form = 'existing';
+                this.research_form = 'existing';
                 this.getJobData();
             }
         },

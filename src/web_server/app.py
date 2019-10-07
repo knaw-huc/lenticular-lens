@@ -7,7 +7,7 @@ from psycopg2 import sql as psycopg2_sql
 from flask import Flask, jsonify, request, abort
 
 from common.config_db import run_query
-from common.helpers import get_association_files
+from common.helpers import hash_string, get_association_files
 from common.datasets_config import DatasetsConfig
 from common.job_alignment import get_job_data, get_job_alignments, get_job_clusterings, \
     get_job_clustering, update_job_data, get_links, get_clusters, get_cluster, get_value_targets
@@ -35,7 +35,6 @@ def association_files():
 @app.route('/job/create/', methods=['POST'])
 def job_create():
     job_id = hash_string(request.json['job_title'] + request.json['job_description'])
-
     update_job_data(job_id, request.json)
 
     return jsonify({'result': 'created', 'job_id': job_id})
@@ -44,7 +43,6 @@ def job_create():
 @app.route('/job/update/', methods=['POST'])
 def job_update():
     job_id = request.json['job_id']
-
     job_data = {
         'job_title': request.json['job_title'],
         'job_description': request.json['job_description'],
@@ -101,12 +99,18 @@ def run_alignment(job_id, alignment):
 
     try:
         query = psycopg2_sql.SQL(
-            "INSERT INTO alignments (job_id, alignment, status, requested_at) VALUES (%s, %s, %s, now())")
-        params = (job_id, alignment, 'Requested')
+            "INSERT INTO alignments (job_id, alignment, status, kill, requested_at) VALUES (%s, %s, %s, false, now())")
+        params = (job_id, alignment, 'waiting')
         run_query(query, params)
     except psycopg2.errors.UniqueViolation:
         return jsonify({'result': 'exists'})
 
+    return jsonify({'result': 'ok'})
+
+
+@app.route('/job/<job_id>/kill_alignment/<alignment>')
+def kill_alignment(job_id, alignment):
+    run_query('UPDATE alignments SET kill = true WHERE job_id = %s AND alignment = %s', (job_id, alignment))
     return jsonify({'result': 'ok'})
 
 
@@ -131,7 +135,7 @@ def run_clustering(job_id, alignment):
                     requested_at = now(), processing_at = null, finished_at = null
                 WHERE job_id = %s AND alignment = %s
                 """)
-            params = (request.json['association_file'], 'Requested', job_id, alignment)
+            params = (request.json['association_file'], 'waiting', job_id, alignment)
             run_query(query, params)
 
             return jsonify({'result': 'ok'})
@@ -141,7 +145,7 @@ def run_clustering(job_id, alignment):
                 VALUES (%s, %s, %s, %s, %s, now())
             """)
             params = (job_id, alignment, request.json.get('clustering_type', 'default'),
-                      request.json['association_file'], 'Requested')
+                      request.json['association_file'], 'waiting')
             run_query(query, params)
 
             return jsonify({'result': 'ok'})

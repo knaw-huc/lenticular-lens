@@ -112,7 +112,7 @@
                       </div>
                     </div>
 
-                    <div class="col-auto p-0">
+                    <div class="col-auto p-0 ml-2">
                       <button-delete @click="resource.transformers.splice(index, 1)" size="sm" class="btn-sm"/>
                     </div>
                   </div>

@@ -62,14 +62,14 @@ class Worker:
                 SELECT *
                 FROM alignments aj
                 JOIN reconciliation_jobs rj ON aj.job_id = rj.job_id
-                WHERE aj.status = 'Requested' OR aj.status = 'Downloading'
+                WHERE aj.status = 'waiting' OR aj.status = 'downloading'
                 ORDER BY aj.requested_at
                 LIMIT 1
             """
 
             update_status = lambda cur: cur.execute("""
                 UPDATE alignments
-                SET status = 'Processing', processing_at = now()
+                SET status = 'running', processing_at = now()
                 WHERE job_id = %s AND alignment = %s""", (self.job_data['job_id'], self.job_data['alignment']))
 
             self.watch_for_jobs("alignments", watch_query, update_status, self.run_alignment_job)
@@ -77,14 +77,14 @@ class Worker:
             watch_query = """
                 SELECT *
                 FROM clusterings cl
-                WHERE cl.status = 'Requested'
+                WHERE cl.status = 'waiting'
                 ORDER BY cl.requested_at
                 LIMIT 1
             """
 
             update_status = lambda cur: cur.execute("""
                 UPDATE clusterings
-                SET status = 'Processing', processing_at = now()
+                SET status = 'running', processing_at = now()
                 WHERE job_id = %s AND alignment = %s""", (self.job_data['job_id'], self.job_data['alignment']))
 
             self.watch_for_jobs("clusterings", watch_query, update_status, self.run_clustering_job)
@@ -124,17 +124,13 @@ class Worker:
         self.cleanup()
 
     def run_alignment_job(self):
-        self.job = AlignmentJob(job_id=self.job_data['job_id'],
-                                alignment=self.job_data['alignment'],
-                                status=self.job_data['status'])
+        self.job = AlignmentJob(job_id=self.job_data['job_id'], alignment=self.job_data['alignment'])
         self.job.run()
         self.cleanup()
 
     def run_clustering_job(self):
-        self.job = ClusteringJob(job_id=self.job_data['job_id'],
-                                 alignment=self.job_data['alignment'],
-                                 association_file=self.job_data['association_file'],
-                                 status=self.job_data['status'])
+        self.job = ClusteringJob(job_id=self.job_data['job_id'], alignment=self.job_data['alignment'],
+                                 association_file=self.job_data['association_file'])
         self.job.run()
         self.cleanup()
 

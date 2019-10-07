@@ -260,6 +260,10 @@ export default {
             return callApi(`/job/${this.job.job_id}/run_alignment/${alignment}`, {restart});
         },
 
+        async killAlignment(alignment) {
+            return callApi(`/job/${this.job.job_id}/kill_alignment/${alignment}`);
+        },
+
         async getAlignment(alignment, clusterId = undefined, limit = undefined, offset = 0) {
             const params = [];
             if (clusterId) params.push(`cluster_id=${clusterId}`);

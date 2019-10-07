@@ -17,11 +17,10 @@ from common.ll.LLData.Serialisation import CLUSTER_SERIALISATION_DIR
 
 
 class ClusteringJob:
-    def __init__(self, job_id, alignment, association_file, status):
+    def __init__(self, job_id, alignment, association_file):
         self.job_id = job_id
         self.alignment = alignment
         self.association_file = association_file
-        self.status = status
 
     def run(self):
         thread = threading.Thread(target=self.start_clustering)
@@ -31,7 +30,7 @@ class ClusteringJob:
             time.sleep(1)
 
     def kill(self):
-        update_clustering_job(self.job_id, self.alignment, {'status': self.status})
+        update_clustering_job(self.job_id, self.alignment, {'status': 'waiting'})
 
     def start_clustering(self):
         if self.association_file:
@@ -43,7 +42,7 @@ class ClusteringJob:
                 SET extended_count = %s, cycles_count = %s, status = %s, finished_at = now()
                 WHERE job_id = %s AND alignment = %s
                 ''', (reconciliation_result['extended_clusters_count'], reconciliation_result['cycles_count'],
-                      'Finished', self.job_id, self.alignment))
+                      'done', self.job_id, self.alignment))
         else:
             clusters = self.cluster_csv()
 
@@ -52,7 +51,7 @@ class ClusteringJob:
                     UPDATE clusterings
                     SET clusters_count = %s, status = %s, finished_at = now()
                     WHERE job_id = %s AND alignment = %s
-                ''', (len(clusters), 'Finished', self.job_id, self.alignment))
+                ''', (len(clusters), 'done', self.job_id, self.alignment))
 
     def cluster_csv(self):
         links = get_links(self.job_id, self.alignment)
