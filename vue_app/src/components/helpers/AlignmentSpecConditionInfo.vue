@@ -6,7 +6,7 @@
           <property :property="resource.property" :read-only="true" :small="true"/>
         </div>
 
-        <p class="font-weight-bold m-0" v-if="resource.transformers">
+        <p class="font-weight-bold m-0" v-if="resource.transformers && resource.transformers.length > 0">
           with transformers {{ resource.transformers.join(', ') }}
         </p>
       </div>
@@ -20,7 +20,7 @@
           <property :property="resource.property" :read-only="true" :small="true"/>
         </div>
 
-        <p class="font-weight-bold m-0" v-if="resource.transformers">
+        <p class="font-weight-bold m-0" v-if="resource.transformers && resource.transformers.length > 0">
           with transformers
           <span class="text-info">{{ resource.transformers.join(', ') }}</span>
         </p>
@@ -43,7 +43,7 @@
     import props from "../../utils/props";
 
     export default {
-        name: "MatchConditionInfo",
+        name: "AlignmentSpecConditionInfo",
         data() {
             return {
                 transformers: props.transformers,
@@ -66,9 +66,7 @@
                     .map(item => {
                         let value = this.condition.method_value[item.key];
 
-                        if (this.condition.method_name === 'IS_IN_SET')
-                            value = this.$root.matches.find(match => match.id === value.value).label;
-                        else if (item.choices)
+                        if (item.choices)
                             value = Object.keys(item.choices).find(key => item.choices[key] === value);
 
                         if (item.label)

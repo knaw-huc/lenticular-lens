@@ -83,7 +83,7 @@
           </div>
         </sub-card>
 
-        <match-info v-if="showInfo" :match="match"/>
+        <alignment-spec v-if="showInfo" :match="match"/>
 
         <sub-card v-if="showPropertySelection" :id="'properties_card_' + match.id" type="properties"
                   label="Property selection" :has-margin-auto="true" :has-columns="true">
@@ -206,8 +206,8 @@
 <script>
     import InfiniteLoading from 'vue-infinite-loading';
 
-    import MatchInfo from "../../helpers/MatchInfo";
     import Properties from "../../helpers/Properties";
+    import AlignmentSpec from "../../helpers/AlignmentSpec";
 
     import MatchLink from "./MatchLink";
     import Cluster from "./Cluster";
@@ -217,8 +217,8 @@
         name: "MatchValidation",
         components: {
             InfiniteLoading,
-            MatchInfo,
             Properties,
+            AlignmentSpec,
             MatchLink,
             Cluster,
             ClusterVisualization,
