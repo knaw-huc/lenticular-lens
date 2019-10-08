@@ -256,7 +256,7 @@
 
             clustering() {
                 const clustering = this.$root.clusterings.find(clustering => clustering.alignment === this.match.id);
-                if (clustering && clustering.status === 'Finished')
+                if (clustering && clustering.status === 'done')
                     return clustering;
 
                 return null;
