@@ -112,27 +112,31 @@ class Match:
         return self.sources + self.targets
 
     @property
-    def strength_field_sql(self):
-        cluster_field = None
+    def similarity_fields_agg_sql(self):
+        fields = []
+        fields_added = []
 
         for matching_function in self.conditions.matching_functions:
             if matching_function.similarity_sql:
                 field_name = psycopg_sql.Identifier(matching_function.field_name)
-                cluster_field = matching_function.similarity_sql.format(field_name=field_name)
 
-        # This is a temporary way to select the similarity of the last matching method for the clustering
-        if cluster_field:
-            return psycopg_sql.SQL('{} AS strength').format(cluster_field)
+                # Add source and target values; if not done already
+                if field_name not in fields_added:
+                    fields_added.append(field_name)
+                    fields.append(psycopg_sql.SQL('array_agg({})').format(
+                        matching_function.similarity_sql.format(field_name=field_name)
+                    ))
 
-        return psycopg_sql.SQL('1 AS strength')
+        return psycopg_sql.SQL(' || ').join(fields)
 
     @property
     def source_sql(self):
-        return self.get_combined_resources_sql('sources')
+        return self.get_combined_resources_sql('sources', self.name + '_source_count')
 
     @property
     def target_sql(self):
-        return self.get_combined_resources_sql('targets') if 'targets' in self.__data else self.source_sql
+        return self.get_combined_resources_sql('targets', self.name + '_target_count') \
+            if 'targets' in self.__data else self.source_sql
 
     @property
     def sources(self):
@@ -142,7 +146,7 @@ class Match:
     def targets(self):
         return self.__data['targets'] if 'targets' in self.__data else []
 
-    def get_combined_resources_sql(self, resources_key):
+    def get_combined_resources_sql(self, resources_key, sequence_key):
         resources_properties = self.get_fields([resources_key])
 
         resources_sql = []
@@ -167,12 +171,14 @@ class Match:
 
             resources_sql.append(
                 psycopg_sql.SQL(cleandoc(
-                    """ SELECT DISTINCT {collection} AS collection, uri, {matching_fields}
-                        FROM {resource_label}"""
+                    """SELECT DISTINCT {collection} AS collection, uri, {matching_fields}
+                       FROM {resource_label}
+                       WHERE nextval({sequence}) != 0"""
                 )).format(
                     collection=psycopg_sql.Literal(resource_label),
                     matching_fields=property_fields_sql,
-                    resource_label=psycopg_sql.Identifier(resource_label)
+                    resource_label=psycopg_sql.Identifier(resource_label),
+                    sequence=psycopg_sql.Literal(sequence_key)
                 )
             )
 

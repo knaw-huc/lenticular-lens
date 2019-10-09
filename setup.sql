@@ -35,17 +35,20 @@ CREATE TABLE IF NOT EXISTS timbuctoo_tables
 
 CREATE TABLE IF NOT EXISTS alignments
 (
-    job_id         text    not null,
-    alignment      int     not null,
-    status         text    not null,
-    failed_message text,
-    kill           boolean not null,
-    requested_at   timestamp,
-    processing_at  timestamp,
-    finished_at    timestamp,
-    links_count    bigint,
-    sources_count  bigint,
-    targets_count  bigint,
+    job_id                  text    not null,
+    alignment               int     not null,
+    status                  text    not null,
+    failed_message          text,
+    kill                    boolean not null,
+    requested_at            timestamp,
+    processing_at           timestamp,
+    finished_at             timestamp,
+    links_count             bigint,
+    sources_count           bigint,
+    targets_count           bigint,
+    distinct_links_count    bigint,
+    distinct_sources_count  bigint,
+    distinct_targets_count  bigint,
     PRIMARY KEY (job_id, alignment)
 );
 

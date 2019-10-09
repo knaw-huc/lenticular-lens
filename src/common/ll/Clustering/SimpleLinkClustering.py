@@ -115,7 +115,7 @@ def simple_csv_link_clustering(links_iter, key=None, activated=False):
             # THE CLUSTER COMPOSED OF NODES, LINKS AND STRENGTHS
             key_1 = "key_{}".format(str(Ut.hasher(link)).replace("-", "N"))
             clusters[parent] = {
-                'nodes': {child_1, child_2}, 'links': {link}, 'strengths': {key_1: [strength]}}
+                'nodes': {child_1, child_2}, 'links': {link}, 'strengths': {key_1: strengths}}
             # print "1",clusters[parent]
 
             # print parent, child_1, child_2
@@ -168,9 +168,9 @@ def simple_csv_link_clustering(links_iter, key=None, activated=False):
                     # link_hash = str(hash(link))
                     link_hash = "key_{}".format(str(Ut.hasher(link)).replace("-", "N"))
                     if link_hash in clusters[parent1]['strengths']:
-                        clusters[parent1]['strengths'][link_hash] += [strength]
+                        clusters[parent1]['strengths'][link_hash] += strengths
                     else:
-                        clusters[parent1]['strengths'][link_hash] = [strength]
+                        clusters[parent1]['strengths'][link_hash] = strengths
 
                     clusters.pop(parent2)
 
@@ -183,9 +183,9 @@ def simple_csv_link_clustering(links_iter, key=None, activated=False):
                 # link_hash = str(hash(link))
                 link_hash = "key_{}".format(str(Ut.hasher(link)).replace("-", "N"))
                 if link_hash in clusters[parent]['strengths']:
-                    clusters[parent]['strengths'][link_hash] += [strength]
+                    clusters[parent]['strengths'][link_hash] += strengths
                 else:
-                    clusters[parent]['strengths'][link_hash] = [strength]
+                    clusters[parent]['strengths'][link_hash] = strengths
 
                 if annotate:
                     clusters[root[child_1]][St.annotate] += "\n\tSAME PARENTS {} | {}".format(child_1, child_2)
@@ -208,9 +208,9 @@ def simple_csv_link_clustering(links_iter, key=None, activated=False):
             # link_hash = str(hash(link))
             link_hash = "key_{}".format(str(Ut.hasher(link)).replace("-", "N"))
             if link_hash in clusters[parent]['strengths']:
-                clusters[parent]['strengths'][link_hash] += [strength]
+                clusters[parent]['strengths'][link_hash] += strengths
             else:
-                clusters[parent]['strengths'][link_hash] = [strength]
+                clusters[parent]['strengths'][link_hash] = strengths
 
             if annotate:
                 clusters[parent][St.annotate] += "\n\tONLY 1 {} HAS A PARENT COMPARED TO {}".format(
@@ -234,9 +234,9 @@ def simple_csv_link_clustering(links_iter, key=None, activated=False):
             # link_hash = str(hash(link))
             link_hash = "key_{}".format(str(Ut.hasher(link)).replace("-", "N"))
             if link_hash in clusters[parent]['strengths']:
-                clusters[parent]['strengths'][link_hash] += [strength]
+                clusters[parent]['strengths'][link_hash] += strengths
             else:
-                clusters[parent]['strengths'][link_hash] = [strength]
+                clusters[parent]['strengths'][link_hash] = strengths
 
             if annotate:
                 clusters[parent][St.annotate] += "\n\tONLY 2 {} HAS A PARENT COMPARED TO {}".format(
@@ -258,7 +258,7 @@ def simple_csv_link_clustering(links_iter, key=None, activated=False):
         # **************************************************************************************************
         start = time.time()
         for link in links_iter:
-            subject, t_object, strength = link['source'], link['target'], link['strength']
+            subject, t_object, strengths = link['source'], link['target'], link['strengths']
 
             # CALLING THE MAIN HELPER FUNCTION
             # *************************************************

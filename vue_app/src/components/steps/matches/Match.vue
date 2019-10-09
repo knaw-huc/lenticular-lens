@@ -148,7 +148,14 @@
                   <div>
                     <strong>Links found: </strong>
                     {{ alignment.links_count ? alignment.links_count.toLocaleString('en') : 0 }}
-                    <span v-if="alignmentStatus === 'running'" class="font-italic">so far</span>
+
+                    <span v-if="alignmentStatus === 'running' && !alignment.distinct_links_count" class="font-italic">
+                      so far
+                    </span>
+                    <span v-else-if="alignment.links_count > alignment.distinct_links_count"
+                          class="font-italic text-info">
+                      ({{ alignment.distinct_links_count.toLocaleString('en') }} distinct links)
+                    </span>
                   </div>
                 </div>
 
@@ -156,12 +163,26 @@
                   <div>
                     <strong>Resources in source: </strong>
                     {{ alignment.sources_count ? alignment.sources_count.toLocaleString('en') : 0 }}
-                    <span v-if="alignmentStatus === 'running'" class="font-italic">so far</span>
+
+                    <span v-if="alignmentStatus === 'running' && !alignment.distinct_sources_count" class="font-italic">
+                      so far
+                    </span>
+                    <span v-else-if="alignment.sources_count > alignment.distinct_sources_count"
+                          class="font-italic text-info">
+                      ({{ alignment.distinct_sources_count.toLocaleString('en') }} distinct resources)
+                    </span>
                   </div>
                   <div>
                     <strong>Resources in target: </strong>
                     {{ alignment.targets_count ? alignment.targets_count.toLocaleString('en') : 0 }}
-                    <span v-if="alignmentStatus === 'running'" class="font-italic">so far</span>
+
+                    <span v-if="alignmentStatus === 'running' && !alignment.distinct_targets_count" class="font-italic">
+                      so far
+                    </span>
+                    <span v-else-if="alignment.targets_count > alignment.distinct_targets_count"
+                          class="font-italic text-info">
+                      ({{ alignment.distinct_targets_count.toLocaleString('en') }} distinct resources)
+                    </span>
                   </div>
                 </div>
               </div>

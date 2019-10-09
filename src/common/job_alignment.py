@@ -2,6 +2,8 @@ import time
 import random
 import psycopg2
 
+from decimal import Decimal
+
 from psycopg2 import extras as psycopg2_extras, sql as psycopg2_sql
 from psycopg2.extensions import AsIs
 
@@ -52,7 +54,7 @@ def get_links(job_id, alignment, cluster_id=None, limit=None, offset=0, include_
                                 limit=limit, offset=offset)
 
     where_sql = 'WHERE cluster_id = %s' if cluster_id else ''
-    query = 'SELECT source_uri, target_uri, strength, cluster_id, valid FROM {} {} {}' \
+    query = 'SELECT source_uri, target_uri, strengths, cluster_id, valid FROM {} {} {}' \
         .format(linkset_table, where_sql, limit_offset_sql)
 
     with db_conn() as conn, conn.cursor() as cur:
@@ -65,7 +67,7 @@ def get_links(job_id, alignment, cluster_id=None, limit=None, offset=0, include_
                 'source_values': values[link[0]] if include_props else None,
                 'target': link[1],
                 'target_values': values[link[1]] if include_props else None,
-                'strength': link[2],
+                'strengths': [float(strength) if isinstance(strength, Decimal) else strength for strength in link[2]],
                 'cluster_id': link[3],
                 'valid': link[4]
             }
@@ -117,7 +119,7 @@ def get_clusters(job_id, alignment, limit=None, offset=0, include_props=False):
 def get_cluster(job_id, alignment, cluster_id):
     linkset_table = 'linkset_' + job_id + '_' + str(alignment)
     links = execute_query({
-        'query': f'SELECT source_uri, target_uri, strength FROM {linkset_table} WHERE cluster_id = %s',
+        'query': f'SELECT source_uri, target_uri, strengths FROM {linkset_table} WHERE cluster_id = %s',
         'parameters': (cluster_id,)
     })
 
@@ -132,7 +134,7 @@ def get_cluster(job_id, alignment, cluster_id):
         link_hash = "key_{}".format(str(hasher(current_link)).replace("-", "N"))
 
         all_links.append([source, target])
-        strengths[link_hash] = [link[2]]
+        strengths[link_hash] = link[2]
 
         if source not in nodes:
             nodes.append(source)

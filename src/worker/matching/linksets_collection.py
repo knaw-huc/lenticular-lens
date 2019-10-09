@@ -128,9 +128,7 @@ class LinksetsCollection:
                 
                 DROP MATERIALIZED VIEW IF EXISTS {source_name} CASCADE;
                 CREATE MATERIALIZED VIEW {source_name} AS 
-                SELECT * 
-                FROM ({source}) AS x
-                WHERE nextval({source_sequence}) != 0;
+                {source};
                 
                 ANALYZE {source_name};
                 CREATE INDEX ON {source_name} (uri);
@@ -140,9 +138,7 @@ class LinksetsCollection:
                 
                 DROP MATERIALIZED VIEW IF EXISTS {target_name} CASCADE;
                 CREATE MATERIALIZED VIEW {target_name} AS 
-                SELECT * 
-                FROM ({target}) AS x
-                WHERE nextval({target_sequence}) != 0;
+                {target};
                 
                 ANALYZE {target_name};
                 CREATE INDEX ON {target_name} (uri);
@@ -151,13 +147,15 @@ class LinksetsCollection:
                 CREATE SEQUENCE {sequence_name} MINVALUE 0 START 0;
                 
                 DROP TABLE IF EXISTS public.{view_name} CASCADE;
-                CREATE TABLE public.{view_name} AS                
-                SELECT DISTINCT source.uri AS source_uri, target.uri AS target_uri, {strength_field}
+                CREATE TABLE public.{view_name} AS
+                SELECT source.uri AS source_uri, target.uri AS target_uri, 
+                {strengths_field} AS strengths
                 FROM {source_name} AS source
                 JOIN {target_name} AS target
                 ON (source.collection != target.collection OR source.uri > target.uri)
                 AND {conditions} {match_against}
-                AND nextval({sequence}) != 0;
+                AND nextval({sequence}) != 0
+                GROUP BY source.uri, target.uri;
                 
                 ALTER TABLE public.{view_name}
                 ADD PRIMARY KEY (source_uri, target_uri),
@@ -175,7 +173,7 @@ class LinksetsCollection:
         return match.index_sql + sql.SQL('\n') + sql_composed.format(
             source=match.source_sql,
             target=match.target_sql,
-            strength_field=match.strength_field_sql,
+            strengths_field=match.similarity_fields_agg_sql,
             conditions=match.conditions_sql,
             match_against=match.match_against_sql,
             view_name=sql.Identifier(table_name),
@@ -184,7 +182,5 @@ class LinksetsCollection:
             sequence_name=sql.Identifier(match.name + '_count'),
             source_sequence_name=sql.Identifier(match.name + '_source_count'),
             target_sequence_name=sql.Identifier(match.name + '_target_count'),
-            sequence=sql.Literal(match.name + '_count'),
-            source_sequence=sql.Literal(match.name + '_source_count'),
-            target_sequence=sql.Literal(match.name + '_target_count')
+            sequence=sql.Literal(match.name + '_count')
         )

@@ -8,8 +8,8 @@
 
         <div class="col-auto">
           <div class="btn btn-sm bg-info-light border border-info text-info read-only m-1">
-            <span class="font-weight-bold">Strength</span><br>
-            {{ link.strength }}
+            <span class="font-weight-bold">Max strength</span><br>
+            {{ Math.max(...link.strengths).toFixed(3) }}
           </div>
         </div>
       </div>

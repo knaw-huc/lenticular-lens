@@ -117,9 +117,10 @@ def kill_alignment(job_id, alignment):
 @app.route('/job/<job_id>/alignment/<alignment>')
 def alignment_result(job_id, alignment):
     cluster_id = request.args.get('cluster_id')
-    return jsonify([link for link in get_links(job_id, int(alignment), cluster_id=cluster_id, include_props=True,
-                                               limit=request.args.get('limit', type=int),
-                                               offset=request.args.get('offset', 0, type=int))])
+    links = [link for link in get_links(job_id, int(alignment), cluster_id=cluster_id, include_props=True,
+                                        limit=request.args.get('limit', type=int),
+                                        offset=request.args.get('offset', 0, type=int))]
+    return jsonify(links)
 
 
 @app.route('/job/<job_id>/run_clustering/<alignment>', methods=['POST'])

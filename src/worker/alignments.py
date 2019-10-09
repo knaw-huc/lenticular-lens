@@ -81,6 +81,8 @@ class AlignmentJob:
             self.kill(reset=False)
 
     def finish(self):
+        self.watch_process_counts()
+
         with db_conn() as conn, conn.cursor() as cur:
             cur.execute(psycopg2_sql.SQL('SELECT count(*) FROM {}').format(
                 psycopg2_sql.Identifier('linkset_' + self.job_id + '_' + str(self.alignment))))
@@ -100,8 +102,8 @@ class AlignmentJob:
                         .format(psycopg2_sql.Identifier(f'job_{str(self.alignment)}_{self.job_id}')))
 
             cur.execute("UPDATE alignments "
-                        "SET status = %s, links_count = %s, "
-                        "sources_count = %s, targets_count = %s, finished_at = now() "
+                        "SET status = %s, distinct_links_count = %s, "
+                        "distinct_sources_count = %s, distinct_targets_count = %s, finished_at = now() "
                         "WHERE job_id = %s AND alignment = %s",
                         ('done', links, sources, targets, self.job_id, self.alignment))
             conn.commit()
