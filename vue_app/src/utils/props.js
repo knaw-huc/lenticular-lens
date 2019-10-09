@@ -10,8 +10,9 @@ export default {
                 {
                     key: 'max_distance',
                     label: 'Maximum distance',
-                    type: 1,
+                    type: 0.7,
                     minValue: 0,
+                    maxValue: 1,
                 }
             ]
         },

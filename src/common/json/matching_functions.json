@@ -29,8 +29,8 @@
     "index_using": "btree(get_{date_part}({target}))"
   },
   "LEVENSHTEIN": {
-    "sql_template": "levenshtein_less_equal({source}, {target}, {max_distance}) <= {max_distance}",
-    "similarity": "levenshtein_less_equal({source}, {target}, {max_distance})"
+    "sql_template": "levenshtein_edit_distance({source}, {target}) <= {max_distance}",
+    "similarity": "levenshtein_edit_distance({source}, {target})"
   },
   "LL_SOUNDEX": {
     "sql_template": "ll_soundex({source}) = ll_soundex({target}) AND 1 - (levenshtein({source}, {target})::decimal / greatest(char_length({source}), char_length({target}))) >= {threshold}",

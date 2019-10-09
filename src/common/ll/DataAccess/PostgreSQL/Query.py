@@ -99,6 +99,8 @@ def create_query_for(table_info, graph, property_path, cluster_id=None,
     property = PropertyField(property_name, parent_label=cur_resource, columns=cur_columns)
     where_sql = psycopg2_sql.SQL('WHERE target.uri IN %(uris)s') if not linkset_table_name else psycopg2_sql.SQL('')
 
+    joins.append(property.left_join)
+
     if linkset_table_name and clusters_table_name:
         linkset = psycopg2_sql.SQL('''(
             SELECT source_uri AS uri 
