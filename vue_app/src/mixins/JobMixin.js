@@ -324,9 +324,8 @@ export default {
                             const referencedCollections = property.referencedCollections;
                             property.referencedCollections = {};
 
-                            referencedCollections
-                                .filter(name => name !== 'tim_unknown')
-                                .forEach(name => property.referencedCollections[name] = dataset.collections[name]);
+                            referencedCollections.forEach(name =>
+                                property.referencedCollections[name] = dataset.collections[name]);
                         }
                     });
                 });
