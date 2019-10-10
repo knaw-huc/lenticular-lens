@@ -1,8 +1,12 @@
 import json
 from os.path import join
 import common.ll.Tests.TestData as TestData
-from common.ll.LLData.Validation import CLUSTER_VISUALISATION_DIR
-from common.ll.Clustering.SimpleLinkClustering import cluster_vis_input as visualise, cluster_vis_input_2 as visualise_2
+from common.ll.Clustering.SimpleLinkClustering import cluster_vis_input as visualise
+
+# TODO: PATHS
+# from common.ll.LLData.Validation import CLUSTER_VISUALISATION_DIR
+CLUSTER_VISUALISATION_DIR = ''
+
 # ****************************************************
 "       FOR VISUALISING THE CLUSTERS IN D3.JS        "
 # ****************************************************
@@ -24,7 +28,7 @@ target = [
 ]
 
 from common.ll.Generic.Utility import pickle_deserializer
-from common.ll.LLData.Serialisation import CLUSTER_SERIALISATION_DIR
+# from common.ll.LLData.Serialisation import CLUSTER_SERIALISATION_DIR
 # from common.ll.LLData.CSVClusters import CSV_CLUSTER_DIR
 # from common.ll.Generic.Utility import print_object
 # print_object(TestData.targets)

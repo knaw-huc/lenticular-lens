@@ -21,8 +21,6 @@ CREATE TABLE IF NOT EXISTS timbuctoo_tables
     table_name         text primary key,
     dataset_id         text          not null,
     collection_id      text          not null,
-    title              text          not null,
-    description        text,
     columns            json          not null,
     create_time        timestamp     not null,
     update_start_time  timestamp,
@@ -168,9 +166,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION public.ll_soundex(input text) RETURNS text
-    IMMUTABLE AS
-$$
+CREATE OR REPLACE FUNCTION public.ll_soundex(input text) RETURNS text IMMUTABLE AS $$
 if input is None:
     return None
 
@@ -229,8 +225,8 @@ def helper(name_object, size):
 
     # >>> 4. IF THE SAVED LETTER'S DIGIT IS THE SAME AS THE
     # RESULTING FIRST DIGIT, REMOVE THE DIGIT (KEEP THE LETTER)
-    final_code = first_letter.upper() + ''.join(str(char) for char in adjacent_free[1:size])
-        if first_letter in consonants and consonants[first_letter] == adjacent_free[0]
+    final_code = first_letter.upper() + ''.join(str(char) for char in adjacent_free[1:size]) \
+        if first_letter in consonants and consonants[first_letter] == adjacent_free[0] \
         else first_letter.upper() + ''.join(str(char) for char in adjacent_free[:size])
 
     # if __name__ == "__main__":
@@ -241,7 +237,6 @@ def helper(name_object, size):
     return final_code
 
     # PROCESS THE INPUT AS A STRING
-
 
 if isinstance(name_object, str):
     return helper(name_object, size)

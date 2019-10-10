@@ -8,7 +8,6 @@ from os.path import join, isfile, dirname, realpath
 from psycopg2 import sql as psycopg2_sql
 
 from common.config_db import db_conn
-from common.ll.LLData.CSV_Associations import CSV_ASSOCIATIONS_DIR
 
 
 def hasher(object):
@@ -59,5 +58,4 @@ def get_pagination_sql(limit=None, offset=0):
 
 
 def get_association_files():
-    return [f for f in listdir(CSV_ASSOCIATIONS_DIR)
-            if isfile(join(CSV_ASSOCIATIONS_DIR, f)) and f.endswith(('.csv', '.csv.gz'))]
+    return []

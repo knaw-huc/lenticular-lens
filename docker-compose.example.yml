@@ -6,8 +6,10 @@ services:
       context: .
       dockerfile: Dockerfile.postgres
     image: knawhuc/postgres_reconciliation_worker:postgres-latest
+    ports:
+      - 5432:5432
     volumes:
-      - ./pgdata:/pgdata
+      - pgdata:/pgdata
     environment:
       - PGDATA=/pgdata
 
@@ -67,3 +69,22 @@ services:
       - DATABASE_PASSWORD=postgres
     ports:
       - 8000:8000
+
+  status_monitor:
+    build:
+      context: .
+      dockerfile: Dockerfile.status_monitor
+    image: knawhuc/postgres_reconciliation_worker:status_monitor-latest
+    depends_on:
+      - postgres
+      - web_server
+      - timbuctoo_worker
+      - alignments_worker
+    environment:
+      - DATABASE_HOST=postgres
+      - DATABASE_DB=postgres
+      - DATABASE_USER=postgres
+      - DATABASE_PASSWORD=postgres
+
+volumes:
+  pgdata:

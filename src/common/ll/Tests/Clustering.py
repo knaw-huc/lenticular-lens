@@ -1,11 +1,16 @@
 from os.path import join
-from common.ll.LLData.CSV_Alignments import CSV_ALIGNMENTS_DIR
-from common.ll.LLData.CSV_Clusters import CSV_CLUSTER_DIR
-from common.ll.LLData.CSV_Associations import CSV_ASSOCIATIONS_DIR
-from common.ll.LLData.Serialisation import CLUSTER_SERIALISATION_DIR
-import common.ll.Clustering.SimpleLinkClustering as Cls
-from common.ll.Generic.Utility import pickle_deserializer
 
+import common.ll.Clustering.SimpleLinkClustering as Cls
+
+# TODO: GET PATH
+# from common.ll.LLData.CSV_Alignments import CSV_ALIGNMENTS_DIR
+# from common.ll.LLData.CSV_Clusters import CSV_CLUSTER_DIR
+# from common.ll.LLData.CSV_Associations import CSV_ASSOCIATIONS_DIR
+# from common.ll.LLData.Serialisation import CLUSTER_SERIALISATION_DIR
+CSV_ALIGNMENTS_DIR = ''
+CSV_CLUSTER_DIR = ''
+CSV_ASSOCIATIONS_DIR = ''
+CLUSTER_SERIALISATION_DIR = ''
 
 # ****************************************************
 "           1. GENERATE THE ILN CLUSTERS             "

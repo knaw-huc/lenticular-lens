@@ -12,8 +12,9 @@ from os.path import join, splitext as get_file_name, basename
 from common.ll.Generic.Utility import pickle_serializer, hasher, problem
 
 
-# GET PATH OF THE SERIALISED DIRECTORY
-from common.ll.LLData.Serialisation import CLUSTER_SERIALISATION_DIR
+# TODO: GET PATH OF THE SERIALISED DIRECTORY
+# from common.ll.LLData.Serialisation import CLUSTER_SERIALISATION_DIR
+CLUSTER_SERIALISATION_DIR = ''
 
 
 _format = "It is %a %b %d %Y %H:%M:%S"

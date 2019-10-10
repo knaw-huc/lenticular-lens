@@ -12,8 +12,11 @@ from common.ll.Clustering.SimpleLinkClustering import simple_csv_link_clustering
 
 from psycopg2 import sql as psycopg2_sql
 
-from common.ll.LLData.CSV_Associations import CSV_ASSOCIATIONS_DIR
-from common.ll.LLData.Serialisation import CLUSTER_SERIALISATION_DIR
+# TODO: Paths
+# from common.ll.LLData.CSV_Associations import CSV_ASSOCIATIONS_DIR
+# from common.ll.LLData.Serialisation import CLUSTER_SERIALISATION_DIR
+CSV_ASSOCIATIONS_DIR = ''
+CLUSTER_SERIALISATION_DIR = ''
 
 
 class ClusteringJob:

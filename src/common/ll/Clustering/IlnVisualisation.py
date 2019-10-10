@@ -18,11 +18,13 @@ from common.ll.Clustering.Iln_eQ import sigmoid
 from common.ll.Generic.Utility import pickle_deserializer, to_nt_format, print_heading, completed, \
     get_uri_local_name_plus, undo_nt_format,  print_object, get_key, hasher, hash_number, problem
 
-
-# GET PATH OF THE SERIALISED DIRECTORY
-from common.ll.LLData.CSV_Associations import CSV_ASSOCIATIONS_DIR
-from common.ll.LLData.Serialisation import CLUSTER_SERIALISATION_DIR
 import common.ll.DataAccess.Stardog.Query as Stardog
+
+# TODO: GET PATH OF THE SERIALISED DIRECTORY
+# from common.ll.LLData.CSV_Associations import CSV_ASSOCIATIONS_DIR
+# from common.ll.LLData.Serialisation import CLUSTER_SERIALISATION_DIR
+CSV_ASSOCIATIONS_DIR = ''
+CLUSTER_SERIALISATION_DIR = ''
 
 label_prefix = '-- '
 related_distance = 550

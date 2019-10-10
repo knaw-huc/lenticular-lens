@@ -103,7 +103,8 @@ def get_cluster_node(ser_name, cluster_position=1, cluster_id=None):
 
     count = 0
     cluster = None
-    from common.ll.LLData.Serialisation import CLUSTER_SERIALISATION_DIR
+    # from common.ll.LLData.Serialisation import CLUSTER_SERIALISATION_DIR
+    CLUSTER_SERIALISATION_DIR = ''
     CLUSTERS = pickle_deserializer(
         serialised_folder=CLUSTER_SERIALISATION_DIR, name="{}-1.txt".format(ser_name))
     if CLUSTERS:
