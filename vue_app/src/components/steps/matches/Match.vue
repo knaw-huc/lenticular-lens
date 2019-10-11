@@ -490,7 +490,7 @@
                 if (this.match[resourcesKey].length < 1)
                     this.addMatchResource(resourcesKey);
 
-                this.updateConditions(this.match.methods, resourcesKey, resourceIndex, false);
+                this.updateConditions(this.match.methods, resourcesKey, resourceId, false);
                 this.$delete(this.match[resourcesKey], resourceIndex);
 
                 this.updateProperties(resourceId);
