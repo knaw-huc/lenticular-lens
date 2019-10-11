@@ -8,8 +8,8 @@ export default {
             label: 'Approximated Levenshtein distance',
             items: [
                 {
-                    key: 'max_distance',
-                    label: 'Maximum distance',
+                    key: 'min_distance',
+                    label: 'Minimum distance',
                     type: 0.7,
                     minValue: 0,
                     maxValue: 1,

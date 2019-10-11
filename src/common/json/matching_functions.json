@@ -29,7 +29,7 @@
     "index_using": "btree(get_{date_part}({target}))"
   },
   "LEVENSHTEIN": {
-    "sql_template": "levenshtein_edit_distance({source}, {target}) <= {max_distance}",
+    "sql_template": "levenshtein_edit_distance({source}, {target}) >= {min_distance}",
     "similarity": "levenshtein_edit_distance({source}, {target})"
   },
   "LL_SOUNDEX": {

@@ -464,36 +464,33 @@
                 this.match[resourcesKey].push('');
             },
 
-            updateMatchResource(resourcesKey, resourceIndex, value) {
-                const updateConditions = (group) => {
-                    group.conditions.forEach(condition => {
+            updateConditions(group, resourcesKey, value, isInsert) {
+                group.conditions.forEach(condition => {
+                    if (isInsert)
                         this.$set(condition[resourcesKey], value, [{'property': [value, '']}]);
-                        if (condition.conditions)
-                            updateConditions(condition);
-                    });
-                };
+                    else
+                        this.$delete(condition[resourcesKey], value);
 
+                    if (condition.conditions)
+                        this.updateConditions(condition, resourcesKey, value, isInsert);
+                });
+            },
+
+            updateMatchResource(resourcesKey, resourceIndex, value) {
                 const resourceId = this.match[resourcesKey][resourceIndex];
-                this.$set(this.match[resourcesKey], resourceIndex, value);
 
-                updateConditions(this.match.methods);
+                this.$set(this.match[resourcesKey], resourceIndex, value);
+                this.updateConditions(this.match.methods, resourcesKey, value, true);
+
                 this.updateProperties(resourceId, value);
             },
 
             deleteMatchResource(resourcesKey, resourceIndex) {
-                const updateConditions = (group) => {
-                    group.conditions.forEach(condition => {
-                        this.$delete(condition[resourcesKey], resourceId);
-                        if (condition.conditions)
-                            updateConditions(condition);
-                    });
-                };
-
                 const resourceId = this.match[resourcesKey][resourceIndex];
                 if (this.match[resourcesKey].length < 1)
                     this.addMatchResource(resourcesKey);
 
-                updateConditions(this.match.methods);
+                this.updateConditions(this.match.methods, resourcesKey, resourceIndex, false);
                 this.$delete(this.match[resourcesKey], resourceIndex);
 
                 this.updateProperties(resourceId);
