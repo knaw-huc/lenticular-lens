@@ -1,13 +1,13 @@
 <template>
   <div>
-    <div class="row m-0" v-for="(values, property) in propsGrouped">
-      <div class="col-auto p-0">
+    <div class="row flex-nowrap m-0" v-for="(values, property) in propsGrouped">
+      <div class="col-auto">
         <div class="property-path btn-sm read-only">
           {{ property }}
         </div>
       </div>
 
-      <ul class="col-auto text-info text-break-all p-0 mb-0 mt-1 ml-2">
+      <ul class="col-auto text-info flex-shrink-1 p-0 mb-0 mt-1">
         <li v-for="value in values">
           {{ value }}
         </li>
@@ -37,7 +37,14 @@
 </script>
 
 <style scoped>
-  ul {
+  ul li {
     list-style: none;
+    float: left;
+  }
+
+  ul li:not(:first-child):before {
+    content: '•';
+    margin: 0 0.5em;
+    color: black;
   }
 </style>

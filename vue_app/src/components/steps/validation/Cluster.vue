@@ -4,28 +4,32 @@
        @click="selectable && $emit('select:clusterId', cluster.id)">
     <div class="row">
       <div class="col">
-        <div>
+        <div class="text-info">
           <strong>{{ cluster.id }}</strong>
         </div>
 
-        <div>
-          <strong>Size: </strong>
-          {{ cluster.size.toLocaleString('en') }}
+        <div class="row">
+          <div class="col">
+            <strong>Size: </strong>
+            {{ cluster.size.toLocaleString('en') }}
+          </div>
 
-          <span class="px-4">&bull;</span>
-
-          <strong>Links: </strong>
-          {{ cluster.links.toLocaleString('en') }}
+          <div class="col">
+            <strong>Extended: </strong>
+            <span v-bind:class="'ext_' + cluster.extended">{{ cluster.extended }}</span>
+          </div>
         </div>
 
-        <div>
-          <strong>Extended: </strong>
-          <span v-bind:class="'ext_' + cluster.extended">{{ cluster.extended }} </span>
+        <div class="row">
+          <div class="col">
+            <strong>Links: </strong>
+            {{ cluster.links.toLocaleString('en') }}
+          </div>
 
-          <span class="px-4">&bull;</span>
-
-          <strong>Reconciled: </strong>
-          <span v-bind:class="'ext_' + cluster.reconciled">{{ cluster.reconciled }} </span>
+          <div class="col">
+            <strong>Reconciled: </strong>
+            <span v-bind:class="'ext_' + cluster.reconciled">{{ cluster.reconciled }}</span>
+          </div>
         </div>
       </div>
 
