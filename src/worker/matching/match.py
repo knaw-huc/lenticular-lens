@@ -123,7 +123,7 @@ class Match:
                 # Add source and target values; if not done already
                 if field_name not in fields_added:
                     fields_added.append(field_name)
-                    fields.append(psycopg_sql.SQL('array_agg({})').format(
+                    fields.append(psycopg_sql.SQL('array_agg({})::numeric[]').format(
                         matching_function.similarity_sql.format(field_name=field_name)
                     ))
 
