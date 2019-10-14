@@ -173,7 +173,7 @@ class Match:
                 psycopg_sql.SQL(cleandoc(
                     """SELECT DISTINCT {collection} AS collection, uri, {matching_fields}
                        FROM {resource_label}
-                       WHERE nextval({sequence}) != 0"""
+                       WHERE increment_counter({sequence})"""
                 )).format(
                     collection=psycopg_sql.Literal(resource_label),
                     matching_fields=property_fields_sql,

@@ -66,6 +66,12 @@ CREATE TABLE IF NOT EXISTS clusterings
     PRIMARY KEY (job_id, alignment)
 );
 
+CREATE OR REPLACE FUNCTION increment_counter(sequence_name text) RETURNS boolean COST 10000 VOLATILE AS $$
+BEGIN
+    RETURN nextval(sequence_name) != 0;
+END;
+$$ LANGUAGE plpgsql;
+
 CREATE OR REPLACE FUNCTION public.ecartico_full_name(text) RETURNS text
     IMMUTABLE AS
 $$
@@ -575,7 +581,7 @@ if len(result) > 2:
 return result
 $$ LANGUAGE plpython3u;
 
-CREATE OR REPLACE FUNCTION public.levenshtein_edit_distance(source text, target text) RETURNS decimal IMMUTABLE AS $$
+CREATE OR REPLACE FUNCTION public.levenshtein_edit_distance(source text, target text) RETURNS decimal IMMUTABLE COST 1 AS $$
 try:
     if not source or not target:
         return None

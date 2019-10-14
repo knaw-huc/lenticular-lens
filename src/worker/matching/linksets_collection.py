@@ -154,7 +154,7 @@ class LinksetsCollection:
                 JOIN {target_name} AS target
                 ON (source.collection != target.collection OR source.uri > target.uri)
                 AND {conditions} {match_against}
-                AND nextval({sequence}) != 0
+                AND increment_counter({sequence})
                 GROUP BY source.uri, target.uri;
                 
                 ALTER TABLE public.{view_name}
