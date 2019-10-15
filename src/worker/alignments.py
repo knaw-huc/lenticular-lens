@@ -100,6 +100,11 @@ class AlignmentJob:
             cur.execute(psycopg2_sql.SQL('DROP SCHEMA {} CASCADE')
                         .format(psycopg2_sql.Identifier(f'job_{str(self.alignment)}_{self.job_id}')))
 
+            if links == 0:
+                cur.execute(psycopg2_sql.SQL('DROP TABLE {} CASCADE')
+                            .format(psycopg2_sql.Identifier(f'linkset_{self.job_id}_{str(self.alignment)}')))
+                conn.commit()
+
             cur.execute("UPDATE alignments "
                         "SET status = %s, distinct_links_count = %s, "
                         "distinct_sources_count = %s, distinct_targets_count = %s, finished_at = now() "

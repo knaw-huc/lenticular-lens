@@ -67,41 +67,42 @@ class ClusteringJob:
             cur.execute(psycopg2_sql.SQL('DROP TABLE IF EXISTS {} CASCADE')
                         .format(psycopg2_sql.Identifier(cluster_table_name)))
 
-            cur.execute(psycopg2_sql.SQL("""
-                CREATE TABLE {} (
-                    id text primary key,
-                    size integer not null,
-                    links integer not null,
-                    nodes text[] not null
-                )
-            """).format(psycopg2_sql.Identifier(cluster_table_name)))
+            if len(clusters) > 0:
+                cur.execute(psycopg2_sql.SQL("""
+                    CREATE TABLE {} (
+                        id text primary key,
+                        size integer not null,
+                        links integer not null,
+                        nodes text[] not null
+                    )
+                """).format(psycopg2_sql.Identifier(cluster_table_name)))
 
-            for cluster in clusters:
-                cluster_info = clusters[cluster]
+                for cluster in clusters:
+                    cluster_info = clusters[cluster]
 
-                cur.execute(
-                    psycopg2_sql.SQL('INSERT INTO {} (id, size, links, nodes) VALUES (%s, %s, %s, %s)')
-                        .format(psycopg2_sql.Identifier(cluster_table_name)),
-                    (cluster, len(cluster_info['nodes']), len(cluster_info['links']), cluster_info['nodes'])
-                )
+                    cur.execute(
+                        psycopg2_sql.SQL('INSERT INTO {} (id, size, links, nodes) VALUES (%s, %s, %s, %s)')
+                            .format(psycopg2_sql.Identifier(cluster_table_name)),
+                        (cluster, len(cluster_info['nodes']), len(cluster_info['links']), cluster_info['nodes'])
+                    )
 
-                link_sqls = []
-                for link in cluster_info['links']:
-                    link_sqls.append(psycopg2_sql.SQL('(source_uri = {source} AND target_uri = {target})').format(
-                        source=psycopg2_sql.Literal(link[0].replace('<', '').replace('>', '')),
-                        target=psycopg2_sql.Literal(link[1].replace('<', '').replace('>', ''))
+                    link_sqls = []
+                    for link in cluster_info['links']:
+                        link_sqls.append(psycopg2_sql.SQL('(source_uri = {source} AND target_uri = {target})').format(
+                            source=psycopg2_sql.Literal(link[0].replace('<', '').replace('>', '')),
+                            target=psycopg2_sql.Literal(link[1].replace('<', '').replace('>', ''))
+                        ))
+
+                        link_sqls.append(psycopg2_sql.SQL('(source_uri = {target} AND target_uri = {source})').format(
+                            source=psycopg2_sql.Literal(link[0].replace('<', '').replace('>', '')),
+                            target=psycopg2_sql.Literal(link[1].replace('<', '').replace('>', ''))
+                        ))
+
+                    cur.execute(psycopg2_sql.SQL('UPDATE {linkset} SET cluster_id = {cluster_id} WHERE {links}').format(
+                        linkset=psycopg2_sql.Identifier(linkset_table_name),
+                        cluster_id=psycopg2_sql.Literal(cluster),
+                        links=psycopg2_sql.SQL(' OR ').join(link_sqls)
                     ))
-
-                    link_sqls.append(psycopg2_sql.SQL('(source_uri = {target} AND target_uri = {source})').format(
-                        source=psycopg2_sql.Literal(link[0].replace('<', '').replace('>', '')),
-                        target=psycopg2_sql.Literal(link[1].replace('<', '').replace('>', ''))
-                    ))
-
-                cur.execute(psycopg2_sql.SQL('UPDATE {linkset} SET cluster_id = {cluster_id} WHERE {links}').format(
-                    linkset=psycopg2_sql.Identifier(linkset_table_name),
-                    cluster_id=psycopg2_sql.Literal(cluster),
-                    links=psycopg2_sql.SQL(' OR ').join(link_sqls)
-                ))
 
             conn.commit()
 

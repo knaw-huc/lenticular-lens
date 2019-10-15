@@ -74,8 +74,7 @@
       <tab-content title="Validation">
         <tab-content-structure title="Validation" :tab_error="tab_error" :is_saved="is_saved">
           <match-validation
-              v-if="$root.alignments.find(al => al.alignment === match.id && al.status === 'done')"
-              v-for="match in $root.matches"
+              v-for="match in matchesWithResults"
               :match="match"
               :key="match.id"/>
         </tab-content-structure>
@@ -166,6 +165,14 @@
                 return !Boolean(this.$root.job)
                     || JSON.stringify(this.$root.resources) !== JSON.stringify(this.$root.job['resources_form_data'])
                     || JSON.stringify(this.$root.matches) !== JSON.stringify(this.$root.job['mappings_form_data']);
+            },
+
+            matchesWithResults() {
+                return this.$root.matches.filter(match => {
+                    return this.$root.alignments.find(al => {
+                        return al.alignment === match.id && al.status === 'done' && al.distinct_links_count > 0;
+                    });
+                });
             },
         },
         methods: {
@@ -309,9 +316,9 @@
                 let hasUnfinished = false;
 
                 this.$root.alignments.forEach(alignment => {
-                    if (alignment.status === 'done')
+                    if (alignment.status === 'done' && alignment.distinct_links_count > 0)
                         hasFinished = true;
-                    else if (alignment.status !== 'failed')
+                    else if (alignment.status !== 'done' && alignment.status !== 'failed')
                         hasUnfinished = true;
                 });
 
