@@ -31,10 +31,12 @@ class AlignmentJob:
         if self.linksets_collection.has_queued_view:
             print('Job %s downloading.' % self.job_id)
             update_alignment_job(self.job_id, self.alignment, {'status': 'downloading'})
+            self.cleanup()
         elif self.linksets_collection.exception:
             print('Job %s failed.' % self.job_id)
             err_message = str(self.linksets_collection.exception)
             update_alignment_job(self.job_id, self.alignment, {'status': 'failed', 'failed_message': err_message})
+            self.cleanup()
         else:
             self.finish()
 
@@ -44,10 +46,7 @@ class AlignmentJob:
         job_data = {'status': 'waiting'} if reset else {'status': 'failed', 'failed_message': 'Killed manually'}
         update_alignment_job(self.job_id, self.alignment, job_data)
 
-        with db_conn() as conn, conn.cursor() as cur:
-            cur.execute(psycopg2_sql.SQL('DROP SCHEMA {} CASCADE')
-                        .format(psycopg2_sql.Identifier(f'job_{self.alignment}_{self.job_id}')))
-            conn.commit()
+        self.cleanup()
 
     def watch_process_counts(self):
         with db_conn() as conn, conn.cursor() as cur:
@@ -130,3 +129,9 @@ class AlignmentJob:
 
                 cur.execute(query, (self.job_id, self.alignment, 'default', None, 'waiting'))
                 conn.commit()
+
+    def cleanup(self):
+        with db_conn() as conn, conn.cursor() as cur:
+            cur.execute(psycopg2_sql.SQL('DROP SCHEMA {} CASCADE')
+                        .format(psycopg2_sql.Identifier(f'job_{self.alignment}_{self.job_id}')))
+            conn.commit()

@@ -504,7 +504,7 @@
                 if ((oldValueIndex >= 0) && !sourcesHasValue && !targetsHasValue)
                     this.match.properties.splice(oldValueIndex, 1);
 
-                if (newValue && !this.match.properties.find(prop => prop[0] === newValue))
+                if ((newValue !== undefined) && !this.match.properties.find(prop => prop[0] === newValue))
                     this.match.properties.push([newValue, '']);
             },
 

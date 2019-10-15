@@ -66,9 +66,11 @@ def create_query_for(table_info, graph, property_path, cluster_id=None,
     cur_columns = table_info['columns']
 
     if type(property_path) is list:
-        while len(property_path) > 1:
-            column = property_path.pop(0)
-            target_resource = property_path.pop(0)
+        property_path_copy = property_path.copy()
+
+        while len(property_path_copy) > 1:
+            column = property_path_copy.pop(0)
+            target_resource = property_path_copy.pop(0)
 
             next_table_info = get_table_info(graph, target_resource)
             next_resource = hash_string(cur_resource + '_' + target_resource + '_' + column)
@@ -91,7 +93,7 @@ def create_query_for(table_info, graph, property_path, cluster_id=None,
             cur_resource = next_resource
             cur_columns = next_table_info['columns']
 
-        property_name = property_path[0]
+        property_name = property_path_copy[0]
     else:
         property_name = property_path
 
