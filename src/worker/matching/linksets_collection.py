@@ -162,8 +162,6 @@ class LinksetsCollection:
                 ADD COLUMN cluster_id text,
                 ADD COLUMN valid boolean;
 
-                CREATE INDEX ON public.{view_name} (source_uri);
-                CREATE INDEX ON public.{view_name} (target_uri);
                 CREATE INDEX ON public.{view_name} (cluster_id);
 
                 ANALYZE public.{view_name};
