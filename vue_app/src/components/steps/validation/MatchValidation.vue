@@ -64,30 +64,32 @@
           <div class="row justify-content-center mt-2">
             <div class="col-auto">
               <div class="btn-toolbar" role="toolbar" aria-label="Toolbar">
-                <div class="btn-group btn-group-toggle mr-2">
-                  <label class="btn btn-secondary btn-sm" v-bind:class="{'active': showInfo}">
+                <div class="btn-group btn-group-toggle mr-4">
+                  <label class="btn btn-secondary btn-sm border" v-bind:class="{'active': showInfo}">
                     <input type="checkbox" autocomplete="off" v-model="showInfo" @change="updateShow"/>
                     <fa-icon icon="info-circle"/>
-                    Alignment specs
+                    Show alignment specs
                   </label>
 
-                  <label class="btn btn-secondary btn-sm" v-bind:class="{'active': showPropertySelection}">
+                  <label class="btn btn-secondary btn-sm border" v-bind:class="{'active': showPropertySelection}">
                     <input type="checkbox" autocomplete="off" v-model="showPropertySelection" @change="updateShow"/>
                     <fa-icon icon="cog"/>
-                    Properties
+                    Show property config
                   </label>
+                </div>
 
-                  <label class="btn btn-secondary btn-sm" v-bind:class="{'active': showAllLinks}">
+                <div class="btn-group btn-group-toggle">
+                  <label class="btn btn-secondary btn-sm border" v-bind:class="{'active': showAllLinks}">
                     <input type="checkbox" autocomplete="off" v-model="showAllLinks" @change="updateShow('links')"/>
                     <fa-icon icon="list"/>
-                    Links
+                    Overview of all links
                   </label>
 
-                  <label v-if="clustering" class="btn btn-secondary btn-sm"
+                  <label v-if="clustering" class="btn btn-secondary btn-sm border"
                          v-bind:class="{'active': showClusters}">
                     <input type="checkbox" autocomplete="off" v-model="showClusters" @change="updateShow('clusters')"/>
                     <fa-icon icon="list"/>
-                    Clusters
+                    Overview of all clusters
                   </label>
                 </div>
               </div>
@@ -122,45 +124,62 @@
         </sub-card>
 
         <sub-card v-if="showClusters && clustering" label="Clusters" id="clusters-list" type="clusters-list"
-                  :open-card="openClusters" :has-collapse="true" :has-extra-row="!!(!openClusters && clusterIdSelected)"
+                  class="mt-2" :open-card="openClusters" :is-first="true" :has-collapse="true"
+                  :has-extra-row="!!(!openClusters && clusterIdSelected && showSelectedCluster)"
                   @show="openClusters = true" @hide="openClusters = false">
           <template v-slot:columns>
             <template v-if="clusterIdSelected">
+              <div class="col-auto small ml-auto mr-auto">
+                <strong>Selected cluster: </strong>
+                {{ clusterIdSelected }}
+              </div>
+
               <div class="col-auto">
-                <div class="btn-group btn-group-toggle">
-                  <label class="btn btn-sm btn-secondary"
-                         v-bind:class="{'active': clusterView === 'links'}">
-                    <input type="radio" v-model="clusterView" value="links" autocomplete="off"/>
-                    <fa-icon icon="align-justify"/>
-                    Show links
-                  </label>
+                <div class="btn-toolbar" role="toolbar" aria-label="Toolbar">
+                  <div class="btn-group btn-group-toggle mr-2">
+                    <label v-if="showClusters" class="btn btn-secondary btn-sm border"
+                           v-bind:class="{'active': showSelectedCluster}">
+                      <input type="checkbox" autocomplete="off" v-model="showSelectedCluster" @change="updateShow"/>
+                      <fa-icon icon="project-diagram"/>
+                      Show selected cluster spec
+                    </label>
+                  </div>
 
-                  <label v-if="hasProperties" class="btn btn-sm btn-secondary"
-                         v-bind:class="{'active': clusterView === 'visualize'}">
-                    <input type="radio" v-model="clusterView" value="visualize" autocomplete="off"/>
-                    <fa-icon icon="project-diagram"/>
-                    Visualize
-                  </label>
+                  <div class="btn-group btn-group-toggle">
+                    <label class="btn btn-sm btn-secondary border"
+                           v-bind:class="{'active': clusterView === 'links'}">
+                      <input type="radio" v-model="clusterView" value="links" autocomplete="off"/>
+                      <fa-icon icon="align-justify"/>
+                      Show links
+                    </label>
 
-                  <label v-if="hasProperties" class="btn btn-sm btn-secondary"
-                         v-bind:class="{'active': clusterView === 'visualize-compact'}">
-                    <input type="radio" v-model="clusterView" value="visualize-compact" autocomplete="off"/>
-                    <fa-icon icon="project-diagram"/>
-                    Visualize compact
-                  </label>
+                    <label v-if="hasProperties" class="btn btn-sm btn-secondary border"
+                           v-bind:class="{'active': clusterView === 'visualize'}">
+                      <input type="radio" v-model="clusterView" value="visualize" autocomplete="off"/>
+                      <fa-icon icon="project-diagram"/>
+                      Visualize
+                    </label>
 
-                  <label v-if="hasProperties && clustering.association" class="btn btn-sm btn-secondary"
-                         v-bind:class="{'active': clusterView === 'visualize-reconciled'}">
-                    <input type="radio" v-model="clusterView" value="visualize-reconciled" autocomplete="off"/>
-                    <fa-icon icon="project-diagram"/>
-                    Visualize reconciled
-                  </label>
+                    <label v-if="hasProperties" class="btn btn-sm btn-secondary border"
+                           v-bind:class="{'active': clusterView === 'visualize-compact'}">
+                      <input type="radio" v-model="clusterView" value="visualize-compact" autocomplete="off"/>
+                      <fa-icon icon="project-diagram"/>
+                      Visualize compact
+                    </label>
+
+                    <label v-if="hasProperties && clustering.association" class="btn btn-sm btn-secondary border"
+                           v-bind:class="{'active': clusterView === 'visualize-reconciled'}">
+                      <input type="radio" v-model="clusterView" value="visualize-reconciled" autocomplete="off"/>
+                      <fa-icon icon="project-diagram"/>
+                      Visualize reconciled
+                    </label>
+                  </div>
                 </div>
               </div>
             </template>
           </template>
 
-          <template v-if="!openClusters && clusterIdSelected" v-slot:row-columns>
+          <template v-if="!openClusters && clusterIdSelected && showSelectedCluster" v-slot:row-columns>
             <div class="col">
               <cluster :index="0" :cluster="selectedCluster" :selected="true" :selectable="false"/>
             </div>
@@ -240,6 +259,8 @@
                 show: false,
                 showInfo: false,
                 showPropertySelection: false,
+                showSelectedCluster: false,
+
                 showAllLinks: false,
                 showClusters: false,
 
@@ -299,6 +320,8 @@
                 else if (state === 'close' && showSomething) {
                     this.showInfo = false;
                     this.showPropertySelection = false;
+                    this.showSelectedCluster = false;
+
                     this.showAllLinks = false;
                     this.showClusters = false;
                 }
@@ -306,10 +329,14 @@
                 if (this.show !== showSomething)
                     this.show = showSomething;
 
-                if (state === 'links' && this.showClusters)
+                if (state === 'links' && this.showClusters) {
+                    this.showSelectedCluster = false;
                     this.showClusters = false;
-                else if (state === 'clusters' && this.showAllLinks)
+                }
+                else if (state === 'clusters' && this.showAllLinks) {
+                    this.showSelectedCluster = true;
                     this.showAllLinks = false;
+                }
 
                 if (this.showAllLinks || this.showClusters)
                     this.resetLists();
@@ -357,7 +384,7 @@
                     return;
 
                 const clusters = await this.$root.getClusters(
-                    this.match.id, this.clustering.association, 10, this.clusters.length);
+                    this.match.id, this.clustering.association, 5, this.clusters.length);
                 this.clusters.push(...clusters);
 
                 if (state) {

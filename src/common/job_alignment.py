@@ -91,18 +91,29 @@ def get_clusters(job_id, alignment, limit=None, offset=0, include_props=False):
 
         for cluster in cur:
             cluster_values = {}
+            cluster_keys = {}
+
             if include_props:
                 for uri, uri_values in values.items():
                     if '<' + uri + '>' in cluster[3]:
                         for prop_value in uri_values:
                             key = prop_value['dataset'] + '_' + prop_value['property']
+
                             if key not in cluster_values:
                                 cluster_values[key] = {
                                     'dataset': prop_value['dataset'],
                                     'property': prop_value['property'],
                                     'values': set()
                                 }
-                            cluster_values[key]['values'].update(prop_value['values'])
+
+                            if key not in cluster_keys:
+                                cluster_keys[key] = 0
+
+                            cluster_prop_values = prop_value['values'][:5]
+                            cluster_keys[key] = cluster_keys[key] + len(cluster_prop_values)
+
+                            if cluster_keys[key] < 5:
+                                cluster_values[key]['values'].update(cluster_prop_values)
 
             yield {
                 'id': cluster[0],
