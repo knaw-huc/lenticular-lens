@@ -581,7 +581,7 @@ if len(result) > 2:
 return result
 $$ LANGUAGE plpython3u;
 
-CREATE OR REPLACE FUNCTION public.levenshtein_edit_distance(source text, target text) RETURNS decimal IMMUTABLE COST 1 AS $$
+CREATE OR REPLACE FUNCTION public.levenshtein_edit_distance(source text, target text) RETURNS decimal IMMUTABLE AS $$
 try:
     if not source or not target:
         return None
