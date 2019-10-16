@@ -20,5 +20,7 @@ ENV LANGUAGE en_US.UTF-8
 COPY ./src /app
 
 ENV FLASK_APP=/app/web_server/app.py
+ENV FLASK_ENV=development
+ENV FLASK_DEBUG=1
 
 CMD ["gunicorn", "-b", ":8000", "-t", "60", "web_server.app:app"]

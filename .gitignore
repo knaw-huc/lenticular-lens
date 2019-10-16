@@ -3,3 +3,5 @@ venv
 node_modules
 .idea
 *.iml
+pgdata
+**/__pycache__/**

@@ -17,6 +17,10 @@ from common.job_alignment import ExportLinks, get_job_data, get_job_alignments, 
 from common.ll.Clustering.IlnVisualisation import plot, plot_compact, plot_reconciliation
 
 app = Flask(__name__)
+# app.config['ENV'] = 'development'
+app.config['ENV'] = 'production'
+app.config['DEBUG'] = True
+app.config['TESTING'] = True
 
 
 @app.route('/')
@@ -278,3 +282,7 @@ def export_to_csv(job_id, alignment):
     output.headers['Content-Type'] = 'text/csv'
 
     return output
+
+
+if __name__ == '__main__':
+    app.run()
