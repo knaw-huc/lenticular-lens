@@ -59,20 +59,22 @@ class AlignmentJob:
                         psycopg2_sql.Identifier('job_' + str(self.alignment) + '_' + self.job_id),
                         psycopg2_sql.Identifier(sequence_name),
                     ))
+
+                    inserted = cur.fetchone()[0]
+                    if inserted:
+                        if suffix == '_source_count':
+                            counts['sources_count'] = inserted
+                        elif suffix == '_target_count':
+                            counts['targets_count'] = inserted
+                        else:
+                            counts['links_count'] = inserted
                 except ProgrammingError:
-                    return
+                    pass
+                finally:
+                    conn.commit()
 
-                inserted = cur.fetchone()[0]
-                conn.commit()
-
-                if suffix == '_source_count':
-                    counts['sources_count'] = inserted
-                elif suffix == '_target_count':
-                    counts['targets_count'] = inserted
-                else:
-                    counts['links_count'] = inserted
-
-        update_alignment_job(self.job_id, self.alignment, counts)
+        if len(counts) > 0:
+            update_alignment_job(self.job_id, self.alignment, counts)
 
     def watch_kill(self):
         alignment_job = get_job_alignment(self.job_id, self.alignment)

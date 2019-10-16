@@ -213,8 +213,8 @@ export default {
 
         async loadJob(jobId) {
             const job = await callApi('/job/' + jobId);
-            job.created_at = new Date(job.created_at);
-            job.updated_at = new Date(job.updated_at);
+            job.created_at = job.created_at ? new Date(job.created_at) : null;
+            job.updated_at = job.updated_at ? new Date(job.updated_at) : null;
             this.job = job;
 
             if (this.job.resources_form_data)
@@ -229,9 +229,9 @@ export default {
         async loadAlignments() {
             const alignments = await callApi(`/job/${this.job.job_id}/alignments`);
             alignments.forEach(alignment => {
-                alignment.requested_at = new Date(alignment.requested_at);
-                alignment.processing_at = new Date(alignment.processing_at);
-                alignment.finished_at = new Date(alignment.finished_at);
+                alignment.requested_at = alignment.requested_at ? new Date(alignment.requested_at) : null;
+                alignment.processing_at = alignment.processing_at ? new Date(alignment.processing_at) : null;
+                alignment.finished_at = alignment.finished_at ? new Date(alignment.finished_at) : null;
             });
             this.alignments = alignments;
         },
@@ -239,9 +239,9 @@ export default {
         async loadClusterings() {
             const clusterings = await callApi(`/job/${this.job.job_id}/clusterings`);
             clusterings.forEach(clustering => {
-                clustering.requested_at = new Date(clustering.requested_at);
-                clustering.processing_at = new Date(clustering.processing_at);
-                clustering.finished_at = new Date(clustering.finished_at);
+                clustering.requested_at = clustering.requested_at ? new Date(clustering.requested_at) : null;
+                clustering.processing_at = clustering.processing_at ? new Date(clustering.processing_at) : null;
+                clustering.finished_at = clustering.finished_at ? new Date(clustering.finished_at) : null;
             });
             this.clusterings = clusterings;
         },

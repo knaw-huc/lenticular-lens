@@ -1,6 +1,6 @@
 <template>
-  <span v-if="until">{{ from | duration('add', until) | duration('humanize') }}</span>
-  <span v-else>{{ from | duration('add', now) | duration('humanize', true) }}</span>
+  <span v-if="until">{{ from.getTime() | duration('subtract', until.getTime()) | duration('humanize') }}</span>
+  <span v-else>{{ from.getTime() | duration('subtract', now.getTime()) | duration('humanize', true) }}</span>
 </template>
 
 <script>
