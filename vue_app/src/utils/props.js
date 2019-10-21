@@ -133,5 +133,5 @@ export default {
             ]
         }
     },
-    transformers: ['ecartico_full_name', 'to_date_immutable']
+    transformers: ['to_date_immutable']
 };
