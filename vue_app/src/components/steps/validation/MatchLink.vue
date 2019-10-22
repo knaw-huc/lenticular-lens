@@ -100,6 +100,9 @@
             },
 
             sourceProperties() {
+                if (!this.link.source_values)
+                    return [];
+
                 return this.link.source_values.map(value => {
                     return {
                         property: [this.$root.getResourceByDatasetId(value.dataset).id, value.property],
@@ -109,6 +112,9 @@
             },
 
             targetProperties() {
+                if (!this.link.target_values)
+                    return [];
+
                 return this.link.target_values.map(value => {
                     return {
                         property: [this.$root.getResourceByDatasetId(value.dataset).id, value.property],

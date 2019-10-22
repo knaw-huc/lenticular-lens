@@ -83,6 +83,9 @@ export default {
 
         createTargetsForProperties(properties) {
             return properties.reduce((targets, prop) => {
+                if (prop.length === 2 && prop[1] === '')
+                    return targets;
+
                 const resource = this.getResourceById(prop[0]);
 
                 let resourceTarget = targets.find(t => t.graph === resource.dataset_id);

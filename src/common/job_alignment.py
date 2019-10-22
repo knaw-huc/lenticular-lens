@@ -40,7 +40,7 @@ def get_job_clustering(job_id, alignment):
 
 def get_value_targets(job_id, alignment):
     job_data = get_job_data(job_id)
-    return next((mapping['value_targets'] for mapping in job_data['mappings'] if mapping['id'] == alignment), [])
+    return next((mapping['value_targets'] for mapping in job_data['mappings'] if mapping['id'] == alignment))
 
 
 def get_links(job_id, alignment, cluster_id=None, limit=None, offset=0, include_props=False):
@@ -50,8 +50,9 @@ def get_links(job_id, alignment, cluster_id=None, limit=None, offset=0, include_
     values = None
     if include_props:
         targets = get_value_targets(job_id, alignment)
-        values = get_values_for(targets, linkset_table_name=linkset_table, cluster_id=cluster_id,
-                                limit=limit, offset=offset)
+        if targets:
+            values = get_values_for(targets, linkset_table_name=linkset_table, cluster_id=cluster_id,
+                                    limit=limit, offset=offset)
 
     where_sql = 'WHERE cluster_id = %s' if cluster_id else ''
     query = 'SELECT source_uri, target_uri, strengths, cluster_id, valid FROM {} {} {}' \
@@ -64,9 +65,9 @@ def get_links(job_id, alignment, cluster_id=None, limit=None, offset=0, include_
         for link in cur:
             yield {
                 'source': link[0],
-                'source_values': values[link[0]] if include_props else None,
+                'source_values': values[link[0]] if values else None,
                 'target': link[1],
-                'target_values': values[link[1]] if include_props else None,
+                'target_values': values[link[1]] if values else None,
                 'strengths': [float(strength) if isinstance(strength, Decimal) else strength for strength in link[2]],
                 'cluster_id': link[3],
                 'valid': link[4]
@@ -81,8 +82,9 @@ def get_clusters(job_id, alignment, limit=None, offset=0, include_props=False):
     values = None
     if include_props:
         targets = get_value_targets(job_id, alignment)
-        values = get_values_for(targets, linkset_table_name=linkset_table, clusters_table_name=clusters_table,
-                                limit=limit, offset=offset)
+        if targets:
+            values = get_values_for(targets, linkset_table_name=linkset_table, clusters_table_name=clusters_table,
+                                    limit=limit, offset=offset)
 
     with db_conn() as conn, conn.cursor() as cur:
         cur.itersize = 10000
@@ -93,7 +95,7 @@ def get_clusters(job_id, alignment, limit=None, offset=0, include_props=False):
             cluster_values = {}
             cluster_keys = {}
 
-            if include_props:
+            if values:
                 for uri, uri_values in values.items():
                     if '<' + uri + '>' in cluster[3]:
                         for prop_value in uri_values:
@@ -123,7 +125,7 @@ def get_clusters(job_id, alignment, limit=None, offset=0, include_props=False):
                     'dataset': cluster_value['dataset'],
                     'property': cluster_value['property'],
                     'values': list(cluster_value['values'])
-                } for key, cluster_value in cluster_values.items()] if include_props else None
+                } for key, cluster_value in cluster_values.items()] if values else None
             }
 
 

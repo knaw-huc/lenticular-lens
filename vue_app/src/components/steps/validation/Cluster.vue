@@ -59,6 +59,9 @@
         },
         computed: {
             props() {
+                if (!this.cluster.values)
+                    return [];
+
                 return this.cluster.values.map(value => {
                     return {
                         property: [this.$root.getResourceByDatasetId(value.dataset).id, value.property],
