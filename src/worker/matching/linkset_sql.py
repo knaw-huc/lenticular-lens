@@ -7,37 +7,45 @@ locale.setlocale(locale.LC_ALL, '')
 
 
 class LinksetSql:
-    def __init__(self, config, resources_only=False, match_only=False):
+    def __init__(self, config):
         self.config = config
-        self.resources_only = resources_only
-        self.match_only = match_only
+
+    def generate_schema(self):
+        schema_name_sql = sql.Identifier(self.config.linkset_schema_name)
+
+        return sql.Composed([
+            sql.SQL('CREATE SCHEMA IF NOT EXISTS {};\n').format(schema_name_sql),
+            sql.SQL('SET SEARCH_PATH TO "$user", {}, public;\n').format(schema_name_sql),
+        ])
 
     def generate_resources(self):
-        return sql.Composed([self.generate_resource_sql(resource) for resource in self.config.resources_to_run])
+        resources_sql = []
+        for resource in self.config.resources_to_run:
+            pre = sql.SQL('SELECT * FROM (') if resource.limit > -1 else sql.SQL('')
 
-    @staticmethod
-    def generate_resource_sql(resource):
-        pre = sql.SQL('SELECT * FROM (') if resource.limit > -1 else sql.SQL('')
-
-        return sql.SQL(cleandoc(
-            """ DROP MATERIALIZED VIEW IF EXISTS {view_name} CASCADE;
-            
-                CREATE MATERIALIZED VIEW {view_name} AS
-                {pre}SELECT DISTINCT {matching_fields}
-                FROM {table_name} AS {view_name} {joins} {wheres}
-                ORDER BY uri {limit};
+            resource_sql = sql.SQL(cleandoc(
+                """ DROP MATERIALIZED VIEW IF EXISTS {view_name} CASCADE;
                 
-                ANALYZE {view_name};
-            """
-        )).format(
-            pre=pre,
-            view_name=sql.Identifier(resource.label),
-            matching_fields=resource.matching_fields_sql,
-            table_name=sql.Identifier(resource.collection.table_name),
-            joins=resource.joins_sql,
-            wheres=resource.where_sql,
-            limit=resource.limit_sql,
-        )
+                    CREATE MATERIALIZED VIEW {view_name} AS
+                    {pre}SELECT DISTINCT {matching_fields}
+                    FROM {table_name} AS {view_name} {joins} {wheres}
+                    ORDER BY uri {limit};
+                    
+                    ANALYZE {view_name};
+                """
+            )).format(
+                pre=pre,
+                view_name=sql.Identifier(resource.label),
+                matching_fields=resource.matching_fields_sql,
+                table_name=sql.Identifier(resource.collection.table_name),
+                joins=resource.joins_sql,
+                wheres=resource.where_sql,
+                limit=resource.limit_sql,
+            )
+
+            resources_sql.append(resource_sql)
+
+        return sql.Composed(resources_sql)
 
     def generate_match_index_sql(self):
         return self.config.match_to_run.index_sql
@@ -112,3 +120,13 @@ class LinksetSql:
             sequence_name=sql.Identifier(self.config.match_to_run.name + '_count'),
             sequence=sql.Literal(self.config.match_to_run.name + '_count')
         )
+
+    def sql_string(self, conn):
+        sql_str = self.generate_schema().as_string(conn)
+        sql_str += self.generate_resources().as_string(conn)
+        sql_str += self.generate_match_index_sql().as_string(conn)
+        sql_str += self.generate_match_source_sql().as_string(conn)
+        sql_str += self.generate_match_target_sql().as_string(conn)
+        sql_str += self.generate_match_linkset_sql().as_string(conn)
+
+        return sql_str

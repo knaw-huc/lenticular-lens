@@ -60,29 +60,25 @@ class AlignmentJob:
             self.db_conn = db_conn()
 
             if not self.killed:
-                schema_name_sql = psycopg2_sql.Identifier(self.config.linkset_schema_name)
-                self.process_sql(psycopg2_sql.Composed([
-                    psycopg2_sql.SQL('CREATE SCHEMA IF NOT EXISTS {};\n').format(schema_name_sql),
-                    psycopg2_sql.SQL('SET SEARCH_PATH TO "$user", {}, public;\n').format(schema_name_sql),
-                ]))
+                self.process_sql(self.linkset_sql.generate_schema())
 
-            if not self.killed and not self.linkset_sql.match_only:
+            if not self.killed:
                 self.status = 'Generating resources'
                 self.process_sql(self.linkset_sql.generate_resources())
 
-            if not self.killed and not self.linkset_sql.resources_only:
+            if not self.killed:
                 self.status = 'Generating indexes'
                 self.process_sql(self.linkset_sql.generate_match_index_sql())
 
-            if not self.killed and not self.linkset_sql.resources_only:
+            if not self.killed:
                 self.status = 'Generating source resources'
                 self.process_sql(self.linkset_sql.generate_match_source_sql())
 
-            if not self.killed and not self.linkset_sql.resources_only:
+            if not self.killed:
                 self.status = 'Generating target resources'
                 self.process_sql(self.linkset_sql.generate_match_target_sql())
 
-            if not self.killed and not self.linkset_sql.resources_only:
+            if not self.killed:
                 self.status = 'Looking for links'
                 self.process_sql(self.linkset_sql.generate_match_linkset_sql())
         except Exception as e:
@@ -114,9 +110,6 @@ class AlignmentJob:
 
         if self.db_conn and not self.db_conn.closed:
             self.db_conn.cancel()
-            # with db_conn() as conn, conn.cursor() as cur:
-            #     cur.execute("SELECT pg_terminate_backend(%s)", (self.db_conn.get_backend_pid(),))
-            #     conn.commit()
 
         self.cleanup()
 

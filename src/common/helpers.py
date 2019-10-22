@@ -1,10 +1,9 @@
 import re
 import datetime
+import jstyleson
 
 from hashlib import md5
-from os import listdir
-from os.path import join, isfile, dirname, realpath
-
+from os.path import join, dirname, realpath
 from psycopg2 import sql as psycopg2_sql
 
 from common.config_db import db_conn
@@ -32,8 +31,6 @@ def table_to_csv(table_name, columns, file):
 
 
 def get_json_from_file(filename):
-    import jstyleson
-
     json_file = open(join(dirname(realpath(__file__)), 'json', filename), 'r')
     json_config = jstyleson.load(json_file)
     json_file.close()
