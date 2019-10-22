@@ -66,9 +66,9 @@
                 </div>
               </div>
 
-              <div v-if="alignmentStatus === 'failed'" class="row justify-content-center">
+              <div v-if="alignmentStatus === 'failed' && alignment.status_message" class="row justify-content-center">
                 <div class="col-auto">
-                  <div class="font-italic">{{ alignment.failed_message }}</div>
+                  <div class="font-italic">{{ alignment.status_message }}</div>
                 </div>
               </div>
 
@@ -143,16 +143,12 @@
                   <div v-if="clustering">
                     <strong>Clusters found: </strong>
                     {{ clustering.clusters_count ? clustering.clusters_count.toLocaleString('en') : 0 }}
-                    <span v-if="clusteringStatus === 'running'" class="font-italic">so far</span>
                   </div>
                   <div>
                     <strong>Links found: </strong>
                     {{ alignment.links_count ? alignment.links_count.toLocaleString('en') : 0 }}
 
-                    <span v-if="alignmentStatus === 'running' && alignment.distinct_links_count === null" class="font-italic">
-                      so far
-                    </span>
-                    <span v-else-if="alignment.links_count && alignment.distinct_links_count && alignment.links_count > alignment.distinct_links_count"
+                    <span v-if="alignment.links_count && alignment.distinct_links_count && alignment.links_count > alignment.distinct_links_count"
                           class="font-italic text-info">
                       ({{ alignment.distinct_links_count.toLocaleString('en') }} distinct links)
                     </span>
@@ -164,11 +160,7 @@
                     <strong>Resources in source: </strong>
                     {{ alignment.sources_count ? alignment.sources_count.toLocaleString('en') : 0 }}
 
-                    <span v-if="alignmentStatus === 'running' && alignment.distinct_sources_count === null && alignment.targets_count === null"
-                          class="font-italic">
-                      so far
-                    </span>
-                    <span v-else-if="alignment.sources_count && alignment.distinct_sources_count && alignment.sources_count > alignment.distinct_sources_count"
+                    <span v-if="alignment.sources_count && alignment.distinct_sources_count && alignment.sources_count > alignment.distinct_sources_count"
                           class="font-italic text-info">
                       ({{ alignment.distinct_sources_count.toLocaleString('en') }} distinct resources)
                     </span>
@@ -177,11 +169,7 @@
                     <strong>Resources in target: </strong>
                     {{ alignment.targets_count ? alignment.targets_count.toLocaleString('en') : 0 }}
 
-                    <span v-if="alignmentStatus === 'running' && alignment.distinct_targets_count === null  && alignment.links_count === null"
-                          class="font-italic">
-                      so far
-                    </span>
-                    <span v-else-if="alignment.targets_count && alignment.distinct_targets_count && alignment.targets_count > alignment.distinct_targets_count"
+                    <span v-if="alignment.targets_count && alignment.distinct_targets_count && alignment.targets_count > alignment.distinct_targets_count"
                           class="font-italic text-info">
                       ({{ alignment.distinct_targets_count.toLocaleString('en') }} distinct resources)
                     </span>
@@ -386,6 +374,8 @@
                         case 'running':
                         default:
                             alignmentStatus = `Matching ${this.alignmentStatus}`;
+                            if (this.alignmentStatus !== 'failed' && this.alignment.status_message)
+                                alignmentStatus += ` (${this.alignment.status_message})`
                     }
                 }
 

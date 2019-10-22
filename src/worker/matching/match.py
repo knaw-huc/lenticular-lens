@@ -12,16 +12,6 @@ class Match:
         self.__conditions = None
 
     @property
-    def before_alignment(self):
-        sqls = []
-
-        for matching_function in self.conditions.matching_functions:
-            if matching_function.before_alignment:
-                sqls.append(psycopg_sql.SQL(matching_function.before_alignment))
-
-        return psycopg_sql.SQL('\n').join(sqls)
-
-    @property
     def conditions(self):
         if not self.__conditions:
             methods = self.__data['methods']

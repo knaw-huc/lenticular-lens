@@ -9,9 +9,9 @@ def soundex(input):
         try:
             result.append(soundex_word(word, 3))
         except:
-            return None
+            pass
 
-    return '_'.join(result)
+    return '_'.join(result) if len(result) > 0 else None
 
 
 def soundex_word(word, size):

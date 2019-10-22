@@ -14,6 +14,14 @@ class AlignmentConfig:
         self.resources = list(map(lambda resource: Resource(resource, self), resources_data))
 
     @property
+    def linkset_schema_name(self):
+        return 'job_' + str(self.run_match) + '_' + self.job_id
+
+    @property
+    def linkset_table_name(self):
+        return 'linkset_' + self.job_id + '_' + str(self.run_match)
+
+    @property
     def match_to_run(self):
         return self.get_match_by_id(self.run_match)
 
@@ -37,6 +45,14 @@ class AlignmentConfig:
                 resources_to_add.remove(resource_to_add)
 
         return resources_to_run
+
+    @property
+    def has_queued_resources(self):
+        for resource in self.resources:
+            if resource.view_queued:
+                return True
+
+        return False
 
     def get_match_by_id(self, id):
         for match in self.matches:
