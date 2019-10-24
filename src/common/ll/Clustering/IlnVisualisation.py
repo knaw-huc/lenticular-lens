@@ -775,7 +775,7 @@ def plot(specs, visualisation_obj=None, resources_obj=None,
                 }
 
                 if investigated is True:
-                    node_dict['investigated'] = str(investigated).lower()
+                    node_dict['investigated'] = investigated
                     node_dict["size"] = 8
 
                 vis_data["nodes"].append(node_dict)
@@ -806,7 +806,7 @@ def plot(specs, visualisation_obj=None, resources_obj=None,
                 }
 
                 if investigated is True:
-                    node_dict['investigated'] = str(investigated).lower()
+                    node_dict['investigated'] = investigated
                     node_dict["size"] = 8
 
                 vis_data["nodes"].append(node_dict)
@@ -2383,7 +2383,7 @@ def compact_node(node_id: str, group_size: int, strength: float, missing_links: 
         'strength': strength,
         'group': group_color,
         'missing_links': missing_links,
-        'investigated': str(investigated).lower(),
+        'investigated': investigated,
     }
 
     if child:
@@ -2403,7 +2403,7 @@ def vis_node(node_id, uri, group_color, investigated):
     }
 
     if investigated is True:
-        node_dict['investigated'] = str(investigated).lower()
+        node_dict['investigated'] = investigated
         node_dict["size"] = 8
 
     return node_dict
@@ -2506,7 +2506,7 @@ def get_compact_child(key, child, properties, data_store):
                 }
 
                 if investigated is True:
-                    node_dict['investigated'] = str(investigated).lower()
+                    node_dict['investigated'] = investigated
                     node_dict["size"] = 8
 
                 # print("node--> ", node_dict)
@@ -2532,7 +2532,7 @@ def get_compact_child(key, child, properties, data_store):
             }
 
             if investigated is True:
-                node_dict['investigated'] = str(investigated).lower()
+                node_dict['investigated'] = investigated
                 node_dict["size"] = 8
 
             vis_data["nodes"].append(node_dict)
@@ -2599,7 +2599,7 @@ def plot_compact_child(children):
             }
 
             if investigated is True:
-                node_dict['investigated'] = str(investigated).lower()
+                node_dict['investigated'] = investigated
                 node_dict["size"] = 8
 
             vis_data["nodes"].append(node_dict)

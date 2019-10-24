@@ -124,7 +124,7 @@
         </sub-card>
 
         <sub-card v-if="showClusters && clustering" label="Clusters" id="clusters-list" type="clusters-list"
-                  class="mt-2" :open-card="openClusters" :is-first="true" :has-collapse="true"
+                  :open-card="openClusters" :has-collapse="true"
                   :has-extra-row="!!(!openClusters && clusterIdSelected && showSelectedCluster)"
                   @show="openClusters = true" @hide="openClusters = false">
           <template v-slot:columns>
@@ -146,33 +146,23 @@
                   </div>
 
                   <div class="btn-group btn-group-toggle">
-                    <label class="btn btn-sm btn-secondary border"
-                           v-bind:class="{'active': clusterView === 'links'}">
-                      <input type="radio" v-model="clusterView" value="links" autocomplete="off"/>
-                      <fa-icon icon="align-justify"/>
-                      Show links
-                    </label>
-
-                    <label v-if="hasProperties" class="btn btn-sm btn-secondary border"
-                           v-bind:class="{'active': clusterView === 'visualize'}">
-                      <input type="radio" v-model="clusterView" value="visualize" autocomplete="off"/>
+                    <button v-if="hasProperties" type="button" class="btn btn-sm btn-secondary border"
+                            @click="showVisualization('visualize')">
                       <fa-icon icon="project-diagram"/>
                       Visualize
-                    </label>
+                    </button>
 
-                    <label v-if="hasProperties" class="btn btn-sm btn-secondary border"
-                           v-bind:class="{'active': clusterView === 'visualize-compact'}">
-                      <input type="radio" v-model="clusterView" value="visualize-compact" autocomplete="off"/>
+                    <button v-if="hasProperties" type="button" class="btn btn-sm btn-secondary border"
+                            @click="showVisualization('visualize-compact')">
                       <fa-icon icon="project-diagram"/>
                       Visualize compact
-                    </label>
+                    </button>
 
-                    <label v-if="hasProperties && clustering.association" class="btn btn-sm btn-secondary border"
-                           v-bind:class="{'active': clusterView === 'visualize-reconciled'}">
-                      <input type="radio" v-model="clusterView" value="visualize-reconciled" autocomplete="off"/>
+                    <button v-if="hasProperties && clustering.association" type="button"
+                            class="btn btn-sm btn-secondary border" @click="showVisualization('visualize-reconciled')">
                       <fa-icon icon="project-diagram"/>
                       Visualize reconciled
-                    </label>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -208,10 +198,10 @@
     </template>
 
     <cluster-visualization
-        v-if="showClusters && clustering && clusterIdSelected && hasProperties && clusterView.startsWith('visualize')"
-        :show="clusterView"
+        v-if="showClusters && clustering && clusterIdSelected && hasProperties"
         :matchId="match.id"
-        :cluster="selectedCluster"/>
+        :cluster="selectedCluster"
+        ref="visualization"/>
 
     <template v-if="showLinks">
       <match-link
@@ -300,7 +290,7 @@
             },
 
             showClusterLinks() {
-                return this.showClusters && this.clusterIdSelected && (this.clusterView === 'links');
+                return this.showClusters && this.clusterIdSelected;
             },
 
             selectedCluster() {
@@ -358,6 +348,10 @@
                 this.openClusters = false;
                 this.links = [];
                 this.linksIdentifier += 1;
+            },
+
+            showVisualization(show) {
+                this.$refs.visualization.showVisualization(show);
             },
 
             async saveProperties() {

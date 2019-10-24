@@ -91,13 +91,6 @@ div#app::before {
   }
 }
 
-.modal-dialog {
-  .modal-header {
-    color: $primary !important;
-    background-color: $info !important;
-  }
-}
-
 .align-items-center {
   h2, h3, h4, h5,
   .h2, .h3, .h4, .h5 {
@@ -183,4 +176,18 @@ div.is-invalid {
 .property-path {
   @extend .bg-info;
   @extend .text-white;
+}
+
+.modal-full-size {
+  max-width: 100%;
+  margin-left: 1.75rem;
+  margin-right: 1.75rem;
+
+  .modal-content {
+    height: calc(100vh - 3.5rem);
+  }
+
+  .modal-body {
+    padding: 0;
+  }
 }
