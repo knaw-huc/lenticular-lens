@@ -102,6 +102,8 @@ export default {
 
                 if (prop[prop.length - 1] === '__value__')
                     entityTarget.properties.push(prop.slice(1, -1));
+                else if (prop[prop.length - 2] === '__value__')
+                    entityTarget.properties.push(prop.slice(1, -2));
                 else
                     entityTarget.properties.push(prop.slice(1));
 
