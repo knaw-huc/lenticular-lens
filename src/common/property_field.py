@@ -52,7 +52,7 @@ class PropertyField:
     @property
     def is_list(self):
         if self.columns and self.prop_label in self.columns:
-            return self.columns[self.prop_label]['LIST']
+            return self.columns[self.prop_label]['isList']
 
         return False
 
@@ -70,7 +70,7 @@ class PropertyField:
     def left_join(self):
         if self.is_list:
             sql = psycopg2_sql.SQL(cleandoc(
-                """ LEFT JOIN jsonb_array_elements_text({table_name}.{column_name}) 
+                """ LEFT JOIN unnest({table_name}.{column_name}) 
                     AS {column_name_expanded} ON true""") + '\n')
 
             return sql.format(

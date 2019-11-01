@@ -339,10 +339,15 @@
                     }, 5000);
             },
         },
-        async mounted() {
-            await this.$root.loadDatasets();
-
+        mounted() {
             const urlParams = new URLSearchParams(window.location.search);
+
+            const hsid = urlParams.get('hsid');
+            if (hsid) {
+                window.opener.postMessage({'timbuctoo-hsid': hsid});
+                return;
+            }
+
             const job_id = urlParams.get('job_id');
             if (job_id) {
                 this.job_id = job_id;

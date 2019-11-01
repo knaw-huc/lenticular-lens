@@ -114,6 +114,8 @@ class Worker:
 
     def run_timbuctoo_job(self):
         self.job = TimbuctooJob(table_name=self.job_data['table_name'],
+                                graphql_endpoint=self.job_data['graphql_endpoint'],
+                                hsid=self.job_data['hsid'],
                                 dataset_id=self.job_data['dataset_id'],
                                 collection_id=self.job_data['collection_id'],
                                 columns=self.job_data['columns'],

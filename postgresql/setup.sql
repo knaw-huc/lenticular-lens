@@ -19,8 +19,14 @@ CREATE TABLE IF NOT EXISTS reconciliation_jobs
 CREATE TABLE IF NOT EXISTS timbuctoo_tables
 (
     table_name         text primary key,
+    graphql_endpoint   text          not null,
+    hsid               text          null,
     dataset_id         text          not null,
     collection_id      text          not null,
+    dataset_name       text          not null,
+    title              text          not null,
+    description        text,
+    total              int           not null,
     columns            json          not null,
     create_time        timestamp     not null,
     update_start_time  timestamp,
@@ -28,7 +34,7 @@ CREATE TABLE IF NOT EXISTS timbuctoo_tables
     rows_count         int default 0 not null,
     last_push_time     timestamp,
     update_finish_time timestamp,
-    UNIQUE (dataset_id, collection_id)
+    UNIQUE (graphql_endpoint, hsid, dataset_id, collection_id)
 );
 
 CREATE TABLE IF NOT EXISTS alignments

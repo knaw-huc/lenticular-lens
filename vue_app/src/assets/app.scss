@@ -7,6 +7,8 @@ $container-max-widths: (lg: 1500px);
 
 @import '~bootstrap/scss/bootstrap.scss';
 @import '~bootstrap-vue/src/index.scss';
+@import "~vue-select/src/scss/vue-select.scss";
+@import '~vue-form-wizard/dist/vue-form-wizard.min.css';
 
 .vue-form-wizard {
   .wizard-btn {
@@ -42,6 +44,14 @@ div#app::before {
 
 .bg-info-light {
   background-color: #c8eae4 !important;
+}
+
+.sticky-top {
+  z-index: 50;
+}
+
+.vs__dropdown-menu {
+  width: auto !important;
 }
 
 .vue-form-wizard {

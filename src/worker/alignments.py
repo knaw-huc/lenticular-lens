@@ -63,7 +63,7 @@ class AlignmentJob:
                 self.process_sql(self.linkset_sql.generate_schema())
 
             if not self.killed:
-                self.status = 'Generating resources'
+                self.status = 'Generating collections'
                 self.process_sql(self.linkset_sql.generate_resources())
 
             if not self.killed:

@@ -12,7 +12,11 @@ class Resource:
         self.__data = resource_data
         self.config = config
 
-        self.collection = DatasetsConfig().dataset(self.dataset_id).collection(self.collection_id)
+        hsid = resource_data['dataset']['timbuctoo_hsid'] if not resource_data['dataset']['published'] else None
+
+        self.collection = DatasetsConfig(resource_data['dataset']['timbuctoo_graphql'], hsid) \
+            .dataset(self.dataset_id) \
+            .collection(self.collection_id)
         self.view_queued = self.collection.rows_downloaded > -1 \
                            and (self.limit < 0 or self.limit > self.collection.rows_downloaded)
 
@@ -22,11 +26,11 @@ class Resource:
 
     @property
     def dataset_id(self):
-        return self.__data['dataset_id']
+        return self.__data['dataset']['dataset_id']
 
     @property
     def collection_id(self):
-        return self.__data['collection_id']
+        return self.__data['dataset']['collection_id']
 
     @property
     def filter_sql(self):

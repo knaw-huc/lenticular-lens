@@ -19,7 +19,8 @@
     "vue-moment": "^4.0.0",
     "vue-template-compiler": "^2.6.10",
     "vuedraggable": "^2.23.2",
-    "vue-infinite-loading": "^2.4.4"
+    "vue-infinite-loading": "^2.4.4",
+    "vue-select": "^3.2.0"
   },
   "devDependencies": {
     "node-sass": "^4.12.0",

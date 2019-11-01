@@ -9,10 +9,10 @@
       </div>
 
       <div v-if="conditionsGroup.conditions.length > 0" class="col">
-        <v-select v-model="conditionsGroup.type">
+        <select-box v-model="conditionsGroup.type">
           <option value="AND">All conditions must be met (AND)</option>
           <option value="OR">At least one of the conditions must be met (OR)</option>
-        </v-select>
+        </select-box>
       </div>
 
       <div v-if="conditionsGroup.conditions.length < 1" class="col font-italic">

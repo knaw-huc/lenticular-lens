@@ -6,11 +6,11 @@
           <label class="h4 col-auto">Method</label>
 
           <div class="col-auto">
-            <v-select v-model="condition.method_name" @input="handleMethodIndexChange"
-                      v-bind:class="{'is-invalid': errors.includes('method_name')}">
+            <select-box v-model="condition.method_name" @input="handleMethodIndexChange"
+                        v-bind:class="{'is-invalid': errors.includes('method_name')}">
               <option disabled selected value="">Select a method</option>
               <option v-for="(method, name) in matchingMethods" :value="name">{{ method.label }}</option>
-            </v-select>
+            </select-box>
 
             <div class="invalid-feedback" v-show="errors.includes('method_name')">
               Please specify a matching method
@@ -68,12 +68,12 @@
         <div class="row">
           <div class="h4 col-auto">{{ resources_key | capitalize }} properties</div>
           <div v-if="unusedResources[resources_key].length > 0" class="col-auto form-group">
-            <v-select @input="condition[resources_key][$event].push({'property': [$event, '']})">
+            <select-box @input="condition[resources_key][$event].push({'property': [$event, '']})">
               <option value="" disabled selected>Add property for Collection:</option>
               <option v-for="resource in unusedResources[resources_key]" :value="resource">
                 {{ $root.getResourceById(resource).label }}
               </option>
-            </v-select>
+            </select-box>
           </div>
         </div>
 
@@ -93,19 +93,19 @@
                 <div class="col-auto h5">Transformers</div>
 
                 <div class="col-auto p-0">
-                  <button-add @click="$utilities.getOrCreate($set, resource, 'transformers', []).push('')"
-                              size="sm" title="Add Transformer" class="btn-sm"/>
+                  <button-add @click="addTransformer(resource)" size="sm" title="Add Transformer" class="btn-sm"/>
                 </div>
 
                 <div v-for="(_, index) in resource.transformers" class="col-auto">
                   <div class="row align-items-center">
                     <div class="col-auto pr-0">
-                      <v-select v-model="resource.transformers[index]"
-                                v-bind:class="{'is-invalid': errors.includes(`${resources_key}_transformers`)}">
+                      <select-box v-model="resource.transformers[index]"
+                                  v-bind:class="{'is-invalid': errors.includes(`${resources_key}_transformers`)}">
                         <option value="" selected disabled>Select a function</option>
-                        <option v-for="av_transformer in transformers" :value="av_transformer">{{ av_transformer }}
+                        <option v-for="av_transformer in transformers" :value="av_transformer">
+                          {{ av_transformer }}
                         </option>
-                      </v-select>
+                      </select-box>
 
                       <div class="invalid-feedback" v-show="errors.includes(`${resources_key}_transformers`)">
                         Please specify a transformer or remove the transformer
@@ -223,6 +223,13 @@
                 this.methodValueTemplate.items.forEach(value_item => {
                     this.condition.method_value[value_item.key] = value_item.type;
                 });
+            },
+
+            addTransformer(resource) {
+                if (!resource.hasOwnProperty('transformers'))
+                    resource.transformers = [];
+
+                resource.transformers.push('')
             },
 
             resetProperty(properties, resource_index, property_index) {

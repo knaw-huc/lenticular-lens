@@ -1,5 +1,4 @@
 import time
-import json
 import threading
 
 from psycopg2 import sql as psycopg2_sql
@@ -10,8 +9,11 @@ from common.config_db import db_conn, run_query
 
 
 class TimbuctooJob:
-    def __init__(self, table_name, dataset_id, collection_id, columns, cursor, rows_count, rows_per_page):
+    def __init__(self, table_name, graphql_endpoint, hsid, dataset_id, collection_id,
+                 columns, cursor, rows_count, rows_per_page):
         self.table_name = table_name
+        self.graphql_endpoint = graphql_endpoint
+        self.hsid = hsid
         self.dataset_id = dataset_id
         self.collection_id = collection_id
         self.columns = columns
@@ -21,28 +23,34 @@ class TimbuctooJob:
 
     @staticmethod
     def format_query(column_info):
-        result = ""
-        if column_info["URI"]:
-            return ""
-        else:
-            if column_info["VALUE"]:
-                result = "... on Value { value type } "
-            if column_info["LINK"]:
-                result += "... on Entity { uri }"  # It might be both a value and a link
-            if column_info["LIST"]:
-                result = "items { " + result + " }"
-            return "{ " + result + " }"
+        if column_info['name'] == 'uri':
+            return ''
+
+        result = ''
+        if column_info['isValueType']:
+            result = '... on Value { value } '
+        if column_info['isLink']:
+            result += '... on Entity { uri }'  # It might be both a value and a link
+        if column_info['isList']:
+            result = 'items { ' + result + ' }'
+
+        return '{ ' + result + ' }'
 
     @staticmethod
     def extract_value(value):
-        if isinstance(value, str) or value == None:
+        if not value or isinstance(value, str):
             return value
-        if "items" in value and value["items"] != None:
-            return json.dumps([TimbuctooJob.extract_value(item) for item in value["items"]])
-        if "value" in value:
-            return value["value"]
-        if "uri" in value:
-            return value["uri"]
+
+        if 'items' in value and value['items']:
+            return [TimbuctooJob.extract_value(item) for item in value['items']]
+
+        if 'value' in value:
+            return value['value']
+
+        if 'uri' in value:
+            return value['uri']
+
+        return None
 
     def run(self):
         thread = threading.Thread(target=self.download)
@@ -79,14 +87,14 @@ class TimbuctooJob:
                 count=self.rows_per_page,
                 columns="\n".join(columns))
 
-            query_result = Timbuctoo().fetch_graph_ql(query, {'cursor': self.cursor})
+            query_result = Timbuctoo(self.graphql_endpoint, self.hsid).fetch_graph_ql(query, {'cursor': self.cursor})
             if not query_result:
                 return
 
-            query_result = query_result["dataSets"][self.dataset_id][self.collection_id + 'List']
+            query_result = query_result['dataSets'][self.dataset_id][self.collection_id + 'List']
 
             results = []
-            for item in query_result["items"]:
+            for item in query_result['items']:
                 # Property names can be too long for column names in Postgres, so make them shorter
                 # We use hashing, because that keeps the column names unique and uniform
                 result = {hash_string(name.lower()): self.extract_value(item[name]) for name in item}

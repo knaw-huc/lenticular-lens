@@ -1,3 +1,5 @@
+import md5 from 'md5';
+
 export default {
     data() {
         return {
@@ -6,15 +8,25 @@ export default {
             clusterings: [],
             resources: [],
             matches: [],
-            datasets: null,
+            datasets: {},
         };
     },
     methods: {
+        getDatasets(graphqlEndpoint, hsid) {
+            const id = graphqlEndpoint && hsid ? graphqlEndpoint + ':' + hsid : graphqlEndpoint;
+            return this.datasets.hasOwnProperty(id) ? this.datasets[id] : {};
+        },
+
         addResource() {
             this.resources.unshift({
-                dataset_id: '',
-                collection_id: '',
                 id: findId(this.resources),
+                dataset: {
+                    timbuctoo_graphql: 'https://repository.goldenagents.org/v5/graphql',
+                    timbuctoo_hsid: null,
+                    dataset_id: '',
+                    collection_id: '',
+                    published: true,
+                },
                 filter: {
                     type: 'AND',
                     conditions: [],
@@ -74,7 +86,7 @@ export default {
         },
 
         getResourceByDatasetId(datasetId, resources = this.resources) {
-            return resources.find(res => res.dataset_id === datasetId);
+            return resources.find(res => res.dataset.dataset_id === datasetId);
         },
 
         getMatchById(matchId, matches = this.matches) {
@@ -88,15 +100,15 @@ export default {
 
                 const resource = this.getResourceById(prop[0]);
 
-                let resourceTarget = targets.find(t => t.graph === resource.dataset_id);
+                let resourceTarget = targets.find(t => t.graph === resource.dataset.dataset_id);
                 if (!resourceTarget) {
-                    resourceTarget = {graph: resource.dataset_id, data: []};
+                    resourceTarget = {graph: resource.dataset.dataset_id, data: []};
                     targets.push(resourceTarget);
                 }
 
-                let entityTarget = resourceTarget.data.find(d => d.entity_type === resource.collection_id);
+                let entityTarget = resourceTarget.data.find(d => d.entity_type === resource.dataset.collection_id);
                 if (!entityTarget) {
-                    entityTarget = {entity_type: resource.collection_id, properties: []};
+                    entityTarget = {entity_type: resource.dataset.collection_id, properties: []};
                     resourceTarget.data.push(entityTarget);
                 }
 
@@ -122,9 +134,14 @@ export default {
                 return property.slice(0, 2);
 
             const referencedResource = {
-                label: this.$utilities.md5(property[0] + property[1] + property[2]),
-                collection_id: property[2],
-                dataset_id: baseReferencedResource.dataset_id,
+                label: md5(property[0] + property[1] + property[2]),
+                dataset: {
+                    timbuctoo_graphql: baseReferencedResource.dataset.timbuctoo_graphql,
+                    timbuctoo_hsid: baseReferencedResource.dataset.timbuctoo_hsid,
+                    dataset_id: baseReferencedResource.dataset.dataset_id,
+                    collection_id: property[2],
+                    published: baseReferencedResource.dataset.published,
+                },
                 related: []
             };
 
@@ -222,8 +239,36 @@ export default {
             job.updated_at = job.updated_at ? new Date(job.updated_at) : null;
             this.job = job;
 
-            if (this.job.resources_form_data)
-                this.resources = copy(this.job.resources_form_data);
+            if (this.job.resources_form_data) {
+                this.job.resources_form_data.forEach(res => {
+                    if (res.hasOwnProperty('dataset_id') && res.hasOwnProperty('collection_id')) {
+                        res.dataset = {
+                            timbuctoo_graphql: 'https://repository.goldenagents.org/v5/graphql',
+                            timbuctoo_hsid: null,
+                            dataset_id: res.dataset_id,
+                            collection_id: res.collection_id,
+                            published: true
+                        };
+
+                        delete res.dataset_id;
+                        delete res.collection_id;
+                    }
+                });
+
+                const resources = copy(this.job.resources_form_data);
+
+                const graphQlEndpoints = resources
+                    .map(res => ({endpoint: res.dataset.timbuctoo_graphql, hsid: res.dataset.timbuctoo_hsid}))
+                    .sort((dataA, dataB) => {
+                        if (dataA.hsid && !dataB.hsid) return -1;
+                        if (dataB.hsid && !dataA.hsid) return 1;
+                        return 0;
+                    })
+                    .filter((data, idx, filtered) => filtered.find(d => d.endpoint === data.endpoint));
+                await Promise.all(graphQlEndpoints.map(data => this.loadDatasets(data.endpoint, data.hsid)));
+
+                this.resources = resources;
+            }
 
             if (this.job.mappings_form_data)
                 this.matches = copy(this.job.mappings_form_data);
@@ -252,12 +297,12 @@ export default {
         },
 
         async createJob(inputs) {
-            const data = await callApi("/job/create/", inputs);
+            const data = await callApi('/job/create/', inputs);
             return data.job_id;
         },
 
         async updateJob(jobData) {
-            await callApi("/job/update/", jobData);
+            await callApi('/job/update/', jobData);
         },
 
         async runAlignment(alignment, restart) {
@@ -309,34 +354,27 @@ export default {
             return callApi("/association_files");
         },
 
-        async loadDatasets() {
-            if (this.datasets)
+        async loadDatasets(graphqlEndpoint, hsid) {
+            const id = graphqlEndpoint && hsid ? graphqlEndpoint + ':' + hsid : graphqlEndpoint;
+            if (!id || this.datasets.hasOwnProperty(id))
                 return;
 
-            const datasets = await callApi("/datasets");
+            const params = [`endpoint=${graphqlEndpoint}`];
+            if (hsid) params.push(`hsid=${hsid}`);
 
-            // Make internal references for referenced collections
-            Object.keys(datasets).forEach(datasetName => {
-                const dataset = datasets[datasetName];
+            this.datasets[id] = await callApi(`/datasets?${params.join('&')}`);
 
-                Object.keys(dataset.collections).forEach(collectionName => {
-                    const collection = dataset.collections[collectionName];
+            if (hsid) {
+                const datasetsPublished = {};
 
-                    Object.keys(collection).forEach(propertyName => {
-                        const property = collection[propertyName];
-
-                        if (property.hasOwnProperty('referencedCollections')) {
-                            const referencedCollections = property.referencedCollections;
-                            property.referencedCollections = {};
-
-                            referencedCollections.forEach(name =>
-                                property.referencedCollections[name] = dataset.collections[name]);
-                        }
-                    });
+                Object.keys(this.datasets[id]).forEach(datasetName => {
+                    const dataset = this.datasets[id][datasetName];
+                    if (dataset.published)
+                        datasetsPublished[datasetName] = dataset;
                 });
-            });
 
-            this.datasets = datasets;
+                this.datasets[graphqlEndpoint] = datasetsPublished;
+            }
         },
     },
 };

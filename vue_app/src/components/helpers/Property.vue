@@ -9,7 +9,7 @@
 
       <div class="col-auto p-0">
         <div class="property-resource read-only mx-2" v-bind:class="{'btn-sm': small}">
-          {{ resource.collection_id }}
+          {{ resource.dataset.collection_id }}
         </div>
       </div>
 
@@ -25,8 +25,8 @@
       </div>
 
       <div v-if="prop.value[0] === '' && !readOnly" :value="prop.value[0]" class="col-auto p-0 my-1">
-        <v-select @input="updateProperty($event, prop.idx)"
-                  v-bind:class="{'is-invalid': errors.includes(`value_${prop.idx}`), 'form-control-sm': small}">
+        <select-box @input="updateProperty($event, prop.idx)"
+                    v-bind:class="{'is-invalid': errors.includes(`value_${prop.idx}`), 'form-control-sm': small}">
           <template v-if="Array.isArray(prop.resources)">
             <option v-for="collection in prop.resources" :key="collection.id" :value="collection.id">
               {{ collection.label }}
@@ -36,11 +36,11 @@
           <template v-else>
             <option value="" disabled selected>Choose a referenced collection</option>
             <option value="__value__">Value (do not follow reference)</option>
-            <option v-for="collection in Object.keys(prop.resources)" :key="collection" :value="collection">
+            <option v-for="collection in Object.keys(prop.resources).sort()" :key="collection" :value="collection">
               {{ collection }}
             </option>
           </template>
-        </v-select>
+        </select-box>
       </div>
 
       <template v-else-if="!Array.isArray(prop.resources) && prop.inPath">
@@ -64,13 +64,13 @@
         </div>
 
         <div v-if="!prop.value[1] && !readOnly" class="col-auto p-0 my-1">
-          <v-select :value="prop.value[1]" @input="updateProperty($event, prop.idx + 1)"
-                    v-bind:class="{'is-invalid': errors.includes(`value_${prop.idx}`), 'form-control-sm': small}">
+          <select-box :value="prop.value[1]" @input="updateProperty($event, prop.idx + 1)"
+                      v-bind:class="{'is-invalid': errors.includes(`value_${prop.idx}`), 'form-control-sm': small}">
             <option value="" selected disabled>Choose a property</option>
-            <option v-for="propertyOpt in Object.keys(prop.properties)" :value="propertyOpt">
+            <option v-for="propertyOpt in Object.keys(prop.properties).sort()" :value="propertyOpt">
               {{ propertyOpt }}
             </option>
-          </v-select>
+          </select-box>
         </div>
 
         <div v-else-if="readOnly" class="col-auto p-0">
@@ -125,7 +125,9 @@
             },
 
             dataset() {
-                return this.$root.datasets[this.resource.dataset_id];
+                const datasets = this.$root.getDatasets(
+                    this.resource.dataset.timbuctoo_graphql, this.resource.dataset.timbuctoo_hsid);
+                return datasets[this.resource.dataset.dataset_id];
             },
 
             props() {
@@ -153,32 +155,43 @@
                 }).includes(false);
             },
 
+            getReferencedCollections(referencedCollections) {
+                const collections = {};
+                referencedCollections.forEach(collectionId =>
+                    collections[collectionId] = this.dataset.collections[collectionId]);
+                return collections;
+            },
+
+            getPropertiesForCollection(collectionId) {
+                return this.dataset.collections.hasOwnProperty(collectionId)
+                    ? this.dataset.collections[collectionId].properties : {};
+            },
+
             getResourcesForIndex(index) {
                 if (index === 0)
                     return this.$root.resources;
 
-                const collectionId = index > 2 ? this.property[index - 2] : this.resource.collection_id;
-                return this.dataset.collections[collectionId][this.property[index - 1]].referencedCollections;
+                const collectionId = index > 2 ? this.property[index - 2] : this.resource.dataset.collection_id;
+                const property = this.getPropertiesForCollection(collectionId)[this.property[index - 1]];
+                return this.getReferencedCollections(property.referencedCollections);
             },
 
             getPropertiesForIndex(index) {
-                const property = index === 0 ? this.resource.collection_id : this.property[index];
-                return this.dataset.collections[property];
+                const collectionId = index === 0 ? this.resource.dataset.collection_id : this.property[index];
+                return this.getPropertiesForCollection(collectionId);
             },
 
             updateProperty(newValue, index) {
                 this.$set(this.property, index, newValue);
 
-                const collectionId = this.property.length > 2 ? this.property.slice(-2)[0] : this.resource.collection_id;
+                const collectionId = this.property.length > 2
+                    ? this.property.slice(-2)[0]
+                    : this.resource.dataset.collection_id;
+
                 const prop = this.property.slice(-1)[0];
-
-                if (prop) {
-                    const referencedCollections = this.$utilities.getOrCreate(
-                        this.$set, this.dataset.collections[collectionId][prop], 'referencedCollections', []);
-
-                    if (Object.keys(referencedCollections).length > 0)
-                        this.property.push('', '');
-                }
+                const properties = prop ? this.getPropertiesForCollection(collectionId)[prop] : null;
+                if (properties && properties.referencedCollections.length > 0)
+                    this.property.push('', '');
             },
         },
     };

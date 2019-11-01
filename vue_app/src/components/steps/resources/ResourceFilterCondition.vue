@@ -30,7 +30,7 @@
 
     <div class="form-row align-items-center">
       <div class="col-3">
-        <v-select v-model="condition.type" v-bind:class="{'is-invalid': errors.includes('condition')}">
+        <select-box v-model="condition.type" v-bind:class="{'is-invalid': errors.includes('condition')}">
           <option value="" disabled selected>Choose a filter type</option>
           <option value="=">Equal to</option>
           <option value="!=">Not equal to</option>
@@ -38,7 +38,7 @@
           <option value="date_is_within">date is within</option>
           <option value="appearances">appearances of property</option>
           <option value="ilike">Contains (use % for wildcard)</option>
-        </v-select>
+        </select-box>
       </div>
 
       <div v-if="['=', '!=', 'date_is_within', 'ilike'].indexOf(condition.type) > -1" class="col-3">
@@ -47,11 +47,11 @@
       </div>
 
       <div v-if="condition.type === 'appearances'" class="col-2">
-        <v-select v-model="condition.operator">
+        <select-box v-model="condition.operator">
           <option value="<=" selected>Max.</option>
           <option value=">=" selected>Min.</option>
           <option value="=" selected>Exactly</option>
-        </v-select>
+        </select-box>
       </div>
       <div v-if="condition.type === 'appearances'" class="col-1">
         <input class="form-control" type="number" min="0" step="1" v-model.number="condition.value"

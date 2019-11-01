@@ -24,7 +24,7 @@ def index():
 
 @app.route('/datasets')
 def datasets():
-    return jsonify(DatasetsConfig().data)
+    return jsonify(DatasetsConfig(request.args.get('endpoint'), request.args.get('hsid')).datasets)
 
 
 @app.route('/association_files')

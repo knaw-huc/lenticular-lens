@@ -1,54 +1,51 @@
 import sys
-import random
 import urllib3
 import requests
-
-from time import sleep
-from common.helpers import hash_string
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 class Timbuctoo:
-    def __init__(self):
-        self.graphql_uri = 'https://repository.goldenagents.org/v5/graphql'
+    def __init__(self, graphql_uri, hsid):
+        self.graphql_uri = graphql_uri
+        self.hsid = hsid
 
     def fetch_graph_ql(self, query, variables=None):
-        n = 0
-        while True:
-            try:
-                response = requests.post(self.graphql_uri, json={
-                    "query": query,
-                    "variables": variables
-                }, timeout=60, verify=False)
-                response.raise_for_status()
-                result = response.json()
-                if "errors" in result and len(result["errors"]) > 0:
-                    raise RuntimeError('Graphql query returned an error: ', result["errors"])
-                return result["data"]
-            except requests.exceptions.ConnectionError as e:
-                n += 1
-                print(e, file=sys.stderr)
-                print('Waiting to retry...', file=sys.stderr)
-                sleep((2 ** n) + (random.randint(0, 1000) / 1000))
-                print('Retry %i' % n, file=sys.stderr)
+        try:
+            response = requests.post(self.graphql_uri, json={
+                'query': query,
+                'variables': variables
+            }, headers={'Authorization': self.hsid} if self.hsid else {}, timeout=60, verify=False)
+            response.raise_for_status()
+
+            result = response.json()
+            if 'errors' in result and len(result['errors']) > 0:
+                raise RuntimeError('Graphql query returned an error: ', result['errors'])
+
+            return result["data"]
+        except requests.exceptions.ConnectionError as e:
+            print(e, file=sys.stderr)
 
     @property
     def datasets(self):
         datasets_data = self.fetch_graph_ql("""
             {
                 dataSetMetadataList(promotedOnly: false, publishedOnly: false) {
-                    dataSetId,
-                    title { value },
-                    description { value },
+                    dataSetId
+                    dataSetName
+                    published
+                    title { value }
+                    description { value }
                     collectionList {
                         items {
-                            collectionId,
+                            collectionId
+                            total
                             properties {
                                 items {
                                     name
-                                    isValueType
                                     isList
+                                    isValueType
+                                    density
                                     referencedCollections {
                                         items
                                     }
@@ -62,55 +59,54 @@ class Timbuctoo:
         datasets = {}
         for dataset in datasets_data['dataSetMetadataList']:
             dataset_id = dataset['dataSetId']
+            dataset_name = dataset['dataSetName']
 
             dataset_title = dataset['title']['value'] \
-                if dataset['title'] and dataset['title']['value'] \
-                else dataset_id.split('__')[1]
+                if dataset['title'] and dataset['title']['value'] else dataset_name
 
             dataset_description = dataset['description']['value'] \
-                if dataset['description'] and dataset['description']['value'] \
-                else None
+                if dataset['description'] and dataset['description']['value'] else None
 
-            datasets[dataset_id] = {"title": dataset_title, "description": dataset_description, "collections": {}}
+            datasets[dataset_id] = {
+                'published': dataset['published'],
+                'name': dataset_name,
+                'title': dataset_title,
+                'description': dataset_description,
+                'collections': {},
+            }
+
             for collection in dataset['collectionList']['items']:
                 collection_id = collection['collectionId']
-                datasets[dataset_id]['collections'][collection_id] = {}
+                if collection_id != 'tim_unknown':
+                    datasets[dataset_id]['collections'][collection_id] = {
+                        'total': collection['total'],
+                        'downloaded': False,
+                        'properties': {
+                            'uri': {
+                                'name': 'uri',
+                                'isList': False,
+                                'isValueType': False,
+                                'isLink': False,
+                                'density': 100,
+                                'referencedCollections': []
+                            }
+                        }
+                    }
 
-                collection['properties']['items'] += [
-                    {"name": "uri", 'isValueType': False, 'isList': False},
-                    {"name": "title", 'isValueType': True, 'isList': False},
-                    {"name": "description", 'isValueType': True, 'isList': False},
-                    {"name": "image", 'isValueType': True, 'isList': False}
-                ]
+                    for collection_property in collection['properties']['items']:
+                        property_name = collection_property['name']
 
-                for collection_property in collection['properties']['items']:
-                    property_name = collection_property['name']
-                    datasets[dataset_id]['collections'][collection_id][property_name] = {}
+                        referenced_collections = collection_property['referencedCollections']['items']
+                        referenced_collections_filtered = \
+                            list(filter(lambda ref_col: ref_col != 'tim_unknown', referenced_collections))
 
-                    for property_property_key, property_property_value in collection_property.items():
-                        if property_property_key == 'referencedCollections':
-                            property_property_value = property_property_value['items']
-
-                        datasets[dataset_id]['collections'][collection_id][property_name][property_property_key] \
-                            = property_property_value
+                        datasets[dataset_id]['collections'][collection_id]['properties'][property_name] = {
+                            'name': property_name,
+                            'isList': collection_property['isList'],
+                            'isValueType': collection_property['isValueType'],
+                            'isLink': len(referenced_collections) > 0,
+                            'density': collection_property['density'],
+                            'referencedCollections': referenced_collections_filtered,
+                        }
 
         return datasets
-
-    @staticmethod
-    def columns(datasets):
-        def get_column_info(column_info):
-            result = {"name": column_info["name"], "VALUE": False, "LIST": False, "LINK": False, "URI": False}
-            if column_info["isValueType"]:
-                result["VALUE"] = True
-            if column_info["isList"]:
-                result["LIST"] = True
-            if "referencedCollections" in column_info and len(column_info["referencedCollections"]) > 0:
-                result["LINK"] = True
-                result["REF"] = column_info["referencedCollections"]
-            return result
-
-        column_info = {hash_string(col_name.lower()): get_column_info(col_info)
-                       for col_name, col_info in datasets.items()}
-        column_info[hash_string('uri')]['URI'] = True
-
-        return column_info

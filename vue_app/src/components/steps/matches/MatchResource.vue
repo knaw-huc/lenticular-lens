@@ -1,7 +1,7 @@
 <template>
   <div class="row align-items-center">
     <div v-if="!matchResource" class="col-auto pr-0" @mouseenter="hovering = true" @mouseleave="hovering = false">
-      <v-select
+      <select-box
           :id="'match_' + match.id + '_resource_label_' + matchResourceId"
           :value="matchResource"
           v-bind:class="{'is-invalid': errors.includes('resource')}"
@@ -10,7 +10,7 @@
         <option v-for="rootResource in resources" :value.number="rootResource.id">
           {{ rootResource.label }}
         </option>
-      </v-select>
+      </select-box>
 
       <div class="invalid-feedback" v-show="errors.includes('resource')">
         Please select a collection

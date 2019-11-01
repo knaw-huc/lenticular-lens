@@ -12,22 +12,58 @@
     </template>
 
     <fieldset :disabled="isUsedInAlignmentResults">
-      <sub-card :hasError="errors.includes('dataset') || errors.includes('collection')">
-        <div class="row">
+      <sub-card label="Dataset" :hasError="errors.includes('dataset') || errors.includes('collection')">
+        <div class="row form-group align-items-end mt-3">
+          <label class="col-auto" :for="'timbuctoo_' + resource.id">
+            Timbuctoo GraphQL endpoint:
+          </label>
+
+          <div class="col-5">
+            <input type="text" v-model="resource.dataset.timbuctoo_graphql" class="form-control"
+                   :id="'timbuctoo_' + resource.id" @input="resetDatasets"
+                   v-bind:class="{'is-invalid': errors.includes('graphql_endpoint')}"/>
+          </div>
+
+          <div v-if="!resource.dataset.timbuctoo_hsid || !datasetsLoaded" class="col-4">
+            <form v-if="!resource.dataset.timbuctoo_hsid" class="d-inline-block" :id="'login_' + resource.id"
+                  method="post" action="https://secure.huygens.knaw.nl/saml2/login" target="loginWindow">
+              <input type="hidden" name="hsurl" :value="hsurl()"/>
+              <button class="btn btn-primary" v-bind:class="{'mr-2': !datasetsLoaded}" @click="login">
+                {{ !datasetsLoaded ? 'Login and load datasets' : 'Login and reload datasets'}}
+              </button>
+            </form>
+
+            <button v-if="!datasetsLoaded" class="btn btn-primary" @click="loadDatasets">Load datasets</button>
+          </div>
+
+          <div class="invalid-feedback" v-show="errors.includes('graphql_endpoint')">
+            Please provide a valid Timbuctoo GraphQL endpoint
+          </div>
+        </div>
+
+        <div v-if="datasetsLoaded" class="row">
           <div class="form-group col-8">
             <label :for="'dataset_' + resource.id">Dataset</label>
 
-            <v-select v-model="resource.dataset_id" :id="'dataset_' + resource.id"
-                      v-on:change="resource.collection_id = ''"
-                      v-bind:class="{'is-invalid': errors.includes('dataset')}">
-              <option value="" selected disabled>Choose a dataset</option>
-              <option v-for="(data, dataset) in $root.datasets" v-bind:value="dataset">
-                {{ data.title }}
-              </option>
+            <v-select :id="'dataset_' + resource.id" :value="selectedDataset"
+                      label="title" :options="datasetsList" :clearable="false" autocomplete="off"
+                      @input="updateDataset">
+              <template slot="option" slot-scope="option">
+                <div>
+                  <div>
+                    <span class="font-weight-bold pr-2">{{ option.title }}</span>
+                    <span class="text-wrap text-muted small">{{ option.name }}</span>
+                  </div>
+
+                  <div v-if="option.description" class="text-wrap font-italic small pt-2">
+                    {{ option.description }}
+                  </div>
+                </div>
+              </template>
             </v-select>
 
-            <small v-if="resourceDescription" class="form-text text-muted mt-2">
-              {{ resourceDescription }}
+            <small v-if="selectedDataset" class="form-text text-muted mt-2">
+              {{ selectedDataset.description }}
             </small>
 
             <div class="invalid-feedback" v-show="errors.includes('dataset')">
@@ -35,16 +71,18 @@
             </div>
           </div>
 
-          <div v-if="resource.dataset_id !== ''" class="form-group collection-input col-4">
+          <div v-if="resource.dataset.dataset_id !== ''" class="form-group collection-input col-4">
             <label :for="'collection_' + resource.id">Entity type</label>
 
-            <v-select v-model="resource.collection_id" :id="'collection_' + resource.id"
-                      v-bind:class="{'is-invalid': errors.includes('collection')}">
-              <option value="" selected disabled>Choose an entity type</option>
-              <option v-for="(data, collection) in $root.datasets[resource.dataset_id].collections"
-                      v-bind:value="collection">
-                {{ collection }}
-              </option>
+            <v-select :id="'collection_' + resource.id" :value="selectedCollection"
+                      label="id" :options="collectionsList" :clearable="false" autocomplete="off"
+                      @input="resource.dataset.collection_id = $event.id">
+              <template slot="option" slot-scope="option">
+                <div>
+                  <span class="pr-2">{{ option.id }}</span>
+                  <span class="font-italic text-muted small">{{ option.total }}</span>
+                </div>
+              </template>
             </v-select>
 
             <div class="invalid-feedback" v-show="errors.includes('collection')">
@@ -54,7 +92,7 @@
         </div>
       </sub-card>
 
-      <sub-card v-if="resource.collection_id !== ''" label="Filter" :hasError="errors.includes('filters')">
+      <sub-card v-if="resource.dataset.collection_id !== ''" label="Filter" :hasError="errors.includes('filters')">
         <conditions-group :conditions-group="resource.filter"
                           :is-root="true"
                           group="resource-filters"
@@ -73,7 +111,7 @@
         </conditions-group>
       </sub-card>
 
-      <sub-card v-if="resource.collection_id !== ''" label="Sample" :hasError="errors.includes('limit')">
+      <sub-card v-if="resource.dataset.collection_id !== ''" label="Sample" :hasError="errors.includes('limit')">
         <div class="form-group row align-items-end mt-3">
           <label class="col-auto" :for="'resource_' + resource.id + '_limit'">
             Only use a sample of this amount of records (-1 is no limit):
@@ -96,7 +134,7 @@
         </div>
       </sub-card>
 
-      <sub-card v-if="resource.collection_id !== ''" label="Relations" add-button="Add Relation"
+      <sub-card v-if="resource.dataset.collection_id !== ''" label="Relations" add-button="Add Relation"
                 :hasError="errors.find(err => err.startsWith('relations_'))" @add="addRelation">
         <div v-if="resource.related.length === 0" class="font-italic mt-3">
           No relations
@@ -117,15 +155,15 @@
               Related collection
             </label>
 
-            <v-select v-model="relation.resource"
-                      :id="'resource_' + resource.id + '_related_' + relation.id + '_resource'"
-                      v-bind:class="{'is-invalid': errors.includes(`relations_resource_${index}`)}">
+            <select-box v-model="relation.resource"
+                        :id="'resource_' + resource.id + '_related_' + relation.id + '_resource'"
+                        v-bind:class="{'is-invalid': errors.includes(`relations_resource_${index}`)}">
               <option disabled selected value="">Choose a collection</option>
               <option v-for="root_resource in $root.resources" :value="root_resource.id"
                       v-if="root_resource.id !== resource.id">
                 {{ root_resource.label }}
               </option>
-            </v-select>
+            </select-box>
 
             <div class="invalid-feedback" v-show="errors.includes(`relations_resource_${index}`)">
               Please provide a related collection
@@ -137,15 +175,13 @@
               Local property
             </label>
 
-            <v-select v-model="relation.local_property"
-                      v-bind:class="{'is-invalid': errors.includes(`relations_local_prop_${index}`)}">
+            <select-box v-model="relation.local_property"
+                        v-bind:class="{'is-invalid': errors.includes(`relations_local_prop_${index}`)}">
               <option value="" selected disabled>Select local property</option>
-              <option
-                  v-for="(_, property) in $root.datasets[resource.dataset_id]['collections'][resource.collection_id]"
-                  :value="property">
+              <option v-for="(_, property) in selectedCollection['properties']" :value="property">
                 {{ property }}
               </option>
-            </v-select>
+            </select-box>
 
             <div class="invalid-feedback" v-show="errors.includes(`relations_local_prop_${index}`)">
               Please provide a local property
@@ -157,13 +193,13 @@
               Remote property
             </label>
 
-            <v-select v-model="relation.remote_property"
-                      v-bind:class="{'is-invalid': errors.includes(`relations_remote_prop_${index}`)}">
+            <select-box v-model="relation.remote_property"
+                        v-bind:class="{'is-invalid': errors.includes(`relations_remote_prop_${index}`)}">
               <option value="" selected disabled>Select remote property</option>
               <option v-for="(_, property) in getPropertiesForResource(relation.resource)" :value="property">
                 {{ property }}
               </option>
-            </v-select>
+            </select-box>
 
             <div class="invalid-feedback" v-show="errors.includes(`relations_remote_prop_${index}`)">
               Please provide a remote property
@@ -193,24 +229,48 @@
         },
         data() {
             return {
-                prevDatasetId: '',
-                prevCollectionId: '',
+                prevAutoLabel: '',
+                datasetsLoaded: true,
             };
         },
         props: {
             'resource': Object,
         },
         computed: {
-            resourceDescription() {
-                return (this.$root.datasets.hasOwnProperty(this.resource.dataset_id)
-                    && this.$root.datasets[this.resource.dataset_id].hasOwnProperty('description')
-                    && this.$root.datasets[this.resource.dataset_id].description);
+            datasets() {
+                return this.datasetsLoaded ? this.$root.getDatasets(
+                    this.resource.dataset.timbuctoo_graphql, this.resource.dataset.timbuctoo_hsid) : {};
+            },
+
+            collections() {
+                return this.resource.dataset.dataset_id
+                    ? this.datasets[this.resource.dataset.dataset_id].collections : {};
+            },
+
+            datasetsList() {
+                return Object.entries(this.datasets)
+                    .map(([id, data]) => ({id, ...data}))
+                    .sort((dsA, dsB) => dsA.title.localeCompare(dsB.title));
+            },
+
+            collectionsList() {
+                return Object.entries(this.collections)
+                    .map(([id, data]) => ({id, ...data}))
+                    .sort((collA, collB) => collA.id.localeCompare(collB.id));
+            },
+
+            selectedDataset() {
+                return this.datasetsList.find(dataset => dataset.id === this.resource.dataset.dataset_id);
+            },
+
+            selectedCollection() {
+                return this.collectionsList.find(collection => collection.id === this.resource.dataset.collection_id);
             },
 
             autoLabel() {
-                if (this.prevDatasetId && this.prevCollectionId) {
-                    const datasetTitle = this.$root.datasets[this.prevDatasetId].title;
-                    return `${datasetTitle} [type: ${this.prevCollectionId}]`;
+                if (this.datasetsLoaded && this.resource.dataset.dataset_id && this.resource.dataset.collection_id) {
+                    const datasetTitle = this.selectedDataset.title;
+                    return `${datasetTitle} [type: ${this.resource.dataset.collection_id}]`;
                 }
                 return 'Collection ' + (this.resource.id + 1);
             },
@@ -231,14 +291,18 @@
             },
         },
         methods: {
+            hsurl() {
+                return window.location.origin;
+            },
+
             validateResource() {
                 const datasetValid = this.validateField('dataset',
-                    this.resource.dataset_id && this.$root.datasets.hasOwnProperty(this.resource.dataset_id));
+                    this.resource.dataset.dataset_id && this.datasets.hasOwnProperty(this.resource.dataset.dataset_id));
 
-                const datasets = this.$root.datasets[this.resource.dataset_id];
+                const dataset = this.datasets[this.resource.dataset.dataset_id];
                 const collectionValid = this.validateField('collection',
-                    this.resource.collection_id &&
-                    datasets && datasets.collections.hasOwnProperty(this.resource.collection_id));
+                    this.resource.dataset.collection_id &&
+                    dataset && dataset.collections.hasOwnProperty(this.resource.dataset.collection_id));
 
                 const limit = parseInt(this.resource.limit);
                 const limitValid = this.validateField('limit', !isNaN(limit) && (limit === -1 || limit > 0));
@@ -250,14 +314,17 @@
                     const resourceValid = this.validateField(`relations_resource_${idx}`,
                         related.resource && remoteResource);
 
-                    const localProperties = datasets && datasets.collections[this.resource.collection_id];
+                    const localProperties = dataset && dataset.collections
+                        [this.resource.dataset.collection_id].properties;
                     const localPropValid = this.validateField(`relations_local_prop_${idx}`,
                         related.local_property && localProperties && localProperties.hasOwnProperty(related.local_property));
 
-                    const remoteDatasets = remoteResource && this.$root.datasets[remoteResource.dataset_id];
-                    const remoteProperties = remoteDatasets && remoteDatasets.collections[remoteResource.collection_id];
+                    const remoteDatasets = remoteResource && ds[remoteResource.dataset.dataset_id];
+                    const remoteProperties = remoteDatasets && remoteDatasets.collections
+                        [remoteResource.dataset.collection_id].properties;
                     const remotePropValid = this.validateField(`relations_remote_prop_${idx}`,
-                        related.remote_property && remoteProperties && remoteProperties.hasOwnProperty(related.remote_property));
+                        related.remote_property && remoteProperties &&
+                        remoteProperties.hasOwnProperty(related.remote_property));
 
                     if (!(resourceValid && localPropValid && remotePropValid))
                         relatedValid = false;
@@ -269,6 +336,12 @@
                 filtersGroupsValid = this.validateField('filters', filtersGroupsValid);
 
                 return collectionValid && datasetValid && limitValid && relatedValid && filtersGroupsValid;
+            },
+
+            updateDataset(dataset) {
+                this.resource.dataset.dataset_id = dataset.id;
+                this.resource.dataset.collection_id = '';
+                this.resource.dataset.published = dataset.published;
             },
 
             addRelation(event) {
@@ -290,23 +363,53 @@
 
             getPropertiesForResource(resourceId) {
                 const resource = this.$root.getResourceById(resourceId);
-                return this.$root.datasets[resource.dataset_id]['collections'][resource.collection_id];
+                return this.datasets[resource.dataset.dataset_id]['collections']
+                    [resource.dataset.collection_id]['properties'];
+            },
+
+            resetDatasets() {
+                this.datasetsLoaded = false;
+                this.resource.dataset.dataset_id = '';
+                this.resource.dataset.collection_id = '';
+            },
+
+            login() {
+                this.resetDatasets();
+
+                const loginWindow = window.open('', 'loginWindow');
+                window.addEventListener('message', event => {
+                    if (event.origin !== window.location.origin || !event.data.hasOwnProperty('timbuctoo-hsid'))
+                        return;
+
+                    this.resource.dataset.timbuctoo_hsid = event.data['timbuctoo-hsid'];
+
+                    loginWindow.close();
+                    this.loadDatasets();
+                }, false);
+
+                document.getElementById('login_' + this.resource.id).submit();
+            },
+
+            async loadDatasets() {
+                await this.$root.loadDatasets(
+                    this.resource.dataset.timbuctoo_graphql, this.resource.dataset.timbuctoo_hsid);
+                this.datasetsLoaded = true;
             },
         },
         updated() {
-            if (this.resource.label === this.autoLabel) {
-                this.prevDatasetId = this.resource.dataset_id;
-                this.prevCollectionId = this.resource.collection_id;
-
+            if (this.resource.label === this.prevAutoLabel) {
+                this.prevAutoLabel = this.autoLabel;
                 this.$set(this.resource, 'label', this.autoLabel);
             }
         },
         mounted() {
-            this.prevDatasetId = this.resource.dataset_id;
-            this.prevCollectionId = this.resource.collection_id;
-
-            if (!this.resource.label)
+            if (!this.resource.label || this.resource.label === this.autoLabel) {
+                this.prevAutoLabel = this.autoLabel;
                 this.$set(this.resource, 'label', this.autoLabel);
+            }
+
+            if (this.datasetsList.length === 0)
+                this.datasetsLoaded = false;
         },
     };
 </script>
