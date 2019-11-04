@@ -81,7 +81,7 @@ class Collection:
                             dataset_name, title, description, total, columns, create_time)
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, now())
                     ''', (self.table_name, self.graphql_endpoint, self.hsid, self.dataset_id, self.collection_id,
-                          self.dataset_name, self.title, self.description, self.total, dumps(self.properties)))
+                          self.dataset_name, self.title, self.description, self.total, dumps(self.columns)))
 
                 conn.commit()
 
