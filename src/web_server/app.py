@@ -251,10 +251,10 @@ def get_cluster_graph_data(job_id, alignment, cluster_id):
     }
 
     return jsonify({
-        'cluster_graph': plot(specs=specifications, activated=True) \
-            if request.args.get('get_cluster', True) else None,
-        'cluster_graph_compact': plot_compact(specs=specifications, community_only=True, activated=True) \
-            if request.args.get('get_cluster_compact', True) else None,
+        'cluster_graph': plot(specs=specifications, activated=True) if request.args.get('get_cluster', True) else None,
+        'cluster_graph_compact': plot_compact(specs=specifications, community_only=True,
+                                              activated=True) if request.args.get('get_cluster_compact',
+                                                                                  True) else None,
         'reconciliation_graph': plot_reconciliation(specs=specifications, activated=True)[1] \
             if clustering['association_file'] and request.args.get('get_reconciliation', True) else None,
     })
