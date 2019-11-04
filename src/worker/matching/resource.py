@@ -2,7 +2,7 @@ from psycopg2 import sql as psycopg2_sql
 
 from common.helpers import hash_string
 from common.property_field import PropertyField
-from common.datasets_config import DatasetsConfig
+from common.timbuctoo_datasets import TimbuctooDatasets
 
 from worker.matching.filter_function import FilterFunction
 
@@ -12,25 +12,22 @@ class Resource:
         self.__data = resource_data
         self.config = config
 
-        hsid = resource_data['dataset']['timbuctoo_hsid'] if not resource_data['dataset']['published'] else None
+        if 'type' not in resource_data['dataset'] or resource_data['dataset']['type'] == 'timbuctoo':
+            hsid = resource_data['dataset']['timbuctoo_hsid'] if not resource_data['dataset']['published'] else None
+            timbuctoo_datasets = TimbuctooDatasets(resource_data['dataset']['timbuctoo_graphql'], hsid)
+            collection = timbuctoo_datasets.collection(
+                self.__data['dataset']['dataset_id'], self.__data['dataset']['collection_id'])
 
-        self.collection = DatasetsConfig(resource_data['dataset']['timbuctoo_graphql'], hsid) \
-            .dataset(self.dataset_id) \
-            .collection(self.collection_id)
-        self.view_queued = self.collection.rows_downloaded > -1 \
-                           and (self.limit < 0 or self.limit > self.collection.rows_downloaded)
+            self.table_name = collection.table_name
+            self.columns = collection.table_data['columns']
+            self.view_queued = self.collection.rows_downloaded > -1 \
+                               and (self.limit < 0 or self.limit > self.collection.rows_downloaded)
+        elif resource_data['dataset']['type'] == 'csv':
+            self.csv = 'to-do'
 
     @property
     def label(self):
         return hash_string(self.__data['label'])
-
-    @property
-    def dataset_id(self):
-        return self.__data['dataset']['dataset_id']
-
-    @property
-    def collection_id(self):
-        return self.__data['dataset']['collection_id']
 
     @property
     def filter_sql(self):
@@ -122,8 +119,7 @@ class Resource:
             filter_sqls = map(self.r_get_filter_sql, filter_obj['conditions'])
             return psycopg2_sql.SQL('({})').format(psycopg2_sql.SQL('\n %s ' % filter_obj['type']).join(filter_sqls))
 
-        columns = self.config.get_resource_columns(self.label)
-        property = PropertyField(filter_obj['property'], parent_label=self.label, columns=columns)
+        property = PropertyField(filter_obj['property'], parent_label=self.label, columns=self.columns)
 
         return FilterFunction(filter_obj, property).sql
 
@@ -136,13 +132,10 @@ class Resource:
         remote_resource_name = hash_string(relation['resource'])
         remote_resource = self.config.get_resource_by_label(remote_resource_name)
 
-        parent_columns = self.config.get_resource_columns(self.label)
-        resource_columns = self.config.get_resource_columns(remote_resource_name)
-
         local_property = PropertyField(relation['local_property'],
-                                       parent_label=self.label, columns=parent_columns)
+                                       parent_label=self.label, columns=self.columns)
         remote_property = PropertyField(relation['remote_property'],
-                                        parent_label=remote_resource_name, columns=resource_columns)
+                                        parent_label=remote_resource_name, columns=remote_resource.columns)
 
         if local_property.is_list and local_property.absolute_property not in property_join_added:
             joins.append(psycopg2_sql.SQL('\n'))
@@ -157,7 +150,7 @@ class Resource:
             extra_filter = psycopg2_sql.SQL('\nAND ({resource_filter})').format(resource_filter=extra_filter)
 
         joins.append(psycopg2_sql.SQL('\nLEFT JOIN {resource_view} AS {alias}\nON {lhs} = {rhs}{extra_filter}').format(
-            resource_view=psycopg2_sql.Identifier(remote_resource.collection.table_name),
+            resource_view=psycopg2_sql.Identifier(remote_resource.table_name),
             alias=psycopg2_sql.Identifier(remote_resource_name),
             lhs=lhs, rhs=rhs,
             extra_filter=extra_filter

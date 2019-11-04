@@ -93,7 +93,7 @@ class MatchingFunction:
                 transformers = self.function_info.get('transformers', [])
                 transformers += field.get('transformers', [])
 
-                columns = self.__config.get_resource_columns(hash_string(field['property'][0]))
+                columns = self.__config.get_resource_by_label(hash_string(field['property'][0])).columns
                 property_field = PropertyField(field['property'], columns=columns, transformers=transformers)
 
                 resources[resource_index].append(property_field)

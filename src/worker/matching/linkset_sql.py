@@ -37,7 +37,7 @@ class LinksetSql:
                 pre=pre,
                 view_name=sql.Identifier(resource.label),
                 matching_fields=resource.matching_fields_sql,
-                table_name=sql.Identifier(resource.collection.table_name),
+                table_name=sql.Identifier(resource.table_name),
                 joins=resource.joins_sql,
                 wheres=resource.where_sql,
                 limit=resource.limit_sql,

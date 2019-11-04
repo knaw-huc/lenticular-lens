@@ -7,7 +7,7 @@ import psycopg2
 from psycopg2 import extras as psycopg2_extras
 
 
-class DatasetsConfig:
+class TimbuctooDatasets:
     def __init__(self, graphql_uri, hsid):
         self.graphql_uri = graphql_uri
         self.hsid = hsid
@@ -39,6 +39,10 @@ class DatasetsConfig:
         dataset_info = self.__datasets[dataset_id]
         return Dataset(self.graphql_uri, self.hsid, dataset_id, dataset_info['name'], dataset_info['title'],
                        dataset_info['description'], dataset_info['collections'])
+
+    def collection(self, dataset_id, collection_id):
+        dataset = self.dataset(dataset_id)
+        return dataset.collection(collection_id)
 
     def datasets_from_database(self):
         datasets = {}

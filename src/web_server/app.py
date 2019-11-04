@@ -8,7 +8,7 @@ from flask import Flask, jsonify, request, abort
 
 from common.config_db import run_query
 from common.helpers import hash_string, get_association_files
-from common.datasets_config import DatasetsConfig
+from common.timbuctoo_datasets import TimbuctooDatasets
 from common.job_alignment import get_job_data, get_job_alignments, get_job_clusterings, \
     get_job_clustering, update_job_data, get_links, get_clusters, get_cluster, get_value_targets
 
@@ -24,7 +24,7 @@ def index():
 
 @app.route('/datasets')
 def datasets():
-    return jsonify(DatasetsConfig(request.args.get('endpoint'), request.args.get('hsid')).datasets)
+    return jsonify(TimbuctooDatasets(request.args.get('endpoint'), request.args.get('hsid')).datasets)
 
 
 @app.route('/association_files')

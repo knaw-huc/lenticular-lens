@@ -5,8 +5,6 @@ from worker.matching.resource import Resource
 
 class AlignmentConfig:
     def __init__(self, job_id, run_match, matches_data, resources_data):
-        self.columns = {}
-
         self.job_id = job_id
         self.run_match = run_match
 
@@ -67,10 +65,3 @@ class AlignmentConfig:
                 return resource
 
         return None
-
-    def get_resource_columns(self, label):
-        if label not in self.columns:
-            resource = self.get_resource_by_label(label)
-            self.columns[label] = resource.collection.table_data['columns']
-
-        return self.columns[label]

@@ -62,7 +62,6 @@ class Collection:
 
         with db_conn() as conn:
             with conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) as cur:
-                cur.execute("LOCK TABLE timbuctoo_tables IN ACCESS EXCLUSIVE MODE;")
                 cur.execute('SELECT * FROM timbuctoo_tables '
                             'WHERE graphql_endpoint = %s AND dataset_id = %s AND collection_id = %s',
                             (self.graphql_endpoint, self.dataset_id, self.collection_id))
