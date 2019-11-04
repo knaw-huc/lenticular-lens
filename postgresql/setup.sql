@@ -82,7 +82,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION to_date_immutable(text) RETURNS date
-    STRICT IMMUTABLE AS
+    STRICT IMMUTABLE PARALLEL SAFE AS
 $$
 BEGIN
     RETURN to_date($1, 'YYYY-MM-DD');
@@ -95,7 +95,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION get_year(text) RETURNS int
-    STRICT IMMUTABLE AS
+    STRICT IMMUTABLE PARALLEL SAFE AS
 $$
 DECLARE
     year text;
@@ -110,7 +110,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION get_month(text) RETURNS int
-    STRICT IMMUTABLE AS
+    STRICT IMMUTABLE PARALLEL SAFE AS
 $$
 DECLARE
     month text;
@@ -125,7 +125,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION get_year_month(text) RETURNS text
-    STRICT IMMUTABLE AS
+    STRICT IMMUTABLE PARALLEL SAFE AS
 $$
 DECLARE
     month int;
@@ -143,7 +143,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION levenshtein_distance(source text, target text) RETURNS integer
-    STRICT IMMUTABLE AS
+    STRICT IMMUTABLE PARALLEL SAFE AS
 $$
 import Levenshtein
 
@@ -151,7 +151,7 @@ return Levenshtein.distance(source, target)
 $$ LANGUAGE plpython3u;
 
 CREATE OR REPLACE FUNCTION levenshtein_similarity(source text, target text) RETURNS decimal
-    STRICT IMMUTABLE AS
+    STRICT IMMUTABLE PARALLEL SAFE AS
 $$
 DECLARE
     longest int;
@@ -162,7 +162,7 @@ END
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION ll_soundex(input text) RETURNS text
-    STRICT IMMUTABLE AS
+    STRICT IMMUTABLE PARALLEL SAFE AS
 $$
 from functions import soundex
 
@@ -170,7 +170,7 @@ return soundex(input)
 $$ LANGUAGE plpython3u;
 
 CREATE OR REPLACE FUNCTION bloothooft(input text, type text) RETURNS text
-    STRICT IMMUTABLE AS
+    STRICT IMMUTABLE PARALLEL SAFE AS
 $$
 from functions import bloothooft_reduct
 

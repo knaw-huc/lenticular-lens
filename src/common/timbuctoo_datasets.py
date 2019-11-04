@@ -21,7 +21,7 @@ class TimbuctooDatasets:
                 if dataset not in combined:
                     combined[dataset] = dataset_data.copy()
                 else:
-                    for collection, dataset_data in dataset_data['collections'].items():
+                    for collection, collection_data in dataset_data['collections'].items():
                         if collection not in combined[dataset]['collections']:
                             combined[dataset]['collections'][collection] = database_data.copy()
                         else:
