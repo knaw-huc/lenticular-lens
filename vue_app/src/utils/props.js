@@ -5,13 +5,25 @@ export default {
             items: []
         },
         'LEVENSHTEIN': {
-            label: 'Approximated Levenshtein distance',
+            label: 'Levenshtein distance',
             items: [
                 {
                     key: 'max_distance',
                     label: 'Maximum distance',
                     type: 1,
                     minValue: 0,
+                }
+            ]
+        },
+        'LEVENSHTEIN_APPROX': {
+            label: 'Approximated Levenshtein',
+            items: [
+                {
+                    key: 'threshold',
+                    label: 'Similarity threshold',
+                    type: 0.7,
+                    minValue: 0,
+                    maxValue: 1,
                 }
             ]
         },

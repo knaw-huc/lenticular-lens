@@ -32,6 +32,10 @@
     "sql_template": "levenshtein_distance({source}, {target}) <= {max_distance}",
     "similarity": "levenshtein_similarity({source}, {target})"
   },
+  "LEVENSHTEIN_APPROX": {
+    "sql_template": "levenshtein_similarity({source}, {target}) >= {threshold}",
+    "similarity": "levenshtein_similarity({source}, {target})"
+  },
   "LL_SOUNDEX": {
     "sql_template": "ll_soundex({source}) = ll_soundex({target}) AND levenshtein_similarity({source}, {target}) >= {threshold}",
     "similarity": "levenshtein_similarity({source}, {target})",
