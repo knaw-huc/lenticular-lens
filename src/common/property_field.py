@@ -58,7 +58,7 @@ class PropertyField:
 
     @property
     def sql(self):
-        absolute_property = [self.extended_prop_label, 'value'] if self.is_list else self.absolute_property
+        absolute_property = [self.extended_prop_label] if self.is_list else self.absolute_property
         sql = psycopg2_sql.SQL('.').join(map(psycopg2_sql.Identifier, absolute_property))
 
         for transformer in self.transformers[::-1]:

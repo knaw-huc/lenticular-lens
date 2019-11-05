@@ -130,3 +130,15 @@ class LinksetSql:
         sql_str += self.generate_match_linkset_sql().as_string(conn)
 
         return sql_str
+
+
+if __name__ == '__main__':
+    from common.config_db import db_conn
+    from common.job_alignment import get_job_data
+    from worker.matching.alignment_config import AlignmentConfig
+
+    job_data = get_job_data('workshop_1_1')
+    config = AlignmentConfig('workshop_1_1', 7, job_data['mappings'], job_data['resources'])
+    linkset_sql = LinksetSql(config)
+
+    print(linkset_sql.sql_string(db_conn()))
