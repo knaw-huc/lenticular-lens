@@ -20,8 +20,8 @@ class Resource:
 
             self.table_name = collection.table_name
             self.columns = collection.table_data['columns']
-            self.view_queued = self.collection.rows_downloaded > -1 \
-                               and (self.limit < 0 or self.limit > self.collection.rows_downloaded)
+            self.view_queued = collection.rows_downloaded > -1 \
+                               and (self.limit < 0 or self.limit > collection.rows_downloaded)
         elif resource_data['dataset']['type'] == 'csv':
             self.csv = 'to-do'
 
