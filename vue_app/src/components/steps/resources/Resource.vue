@@ -25,15 +25,15 @@
           </div>
 
           <div v-if="!resource.dataset.timbuctoo_hsid || !datasetsLoaded" class="col-4">
+            <button v-if="!datasetsLoaded" class="btn btn-primary" @click="loadDatasets">Load datasets</button>
+
             <form v-if="!resource.dataset.timbuctoo_hsid" class="d-inline-block" :id="'login_' + resource.id"
                   method="post" action="https://secure.huygens.knaw.nl/saml2/login" target="loginWindow">
               <input type="hidden" name="hsurl" :value="hsurl()"/>
-              <button class="btn btn-primary" v-bind:class="{'mr-2': !datasetsLoaded}" @click="login">
+              <button class="btn btn-primary" v-bind:class="{'ml-2': !datasetsLoaded}" @click="login">
                 {{ !datasetsLoaded ? 'Login and load datasets' : 'Login and reload datasets'}}
               </button>
             </form>
-
-            <button v-if="!datasetsLoaded" class="btn btn-primary" @click="loadDatasets">Load datasets</button>
           </div>
 
           <div class="invalid-feedback" v-show="errors.includes('graphql_endpoint')">
@@ -45,21 +45,20 @@
           <div class="form-group col-8">
             <label :for="'dataset_' + resource.id">Dataset</label>
 
-            <v-select :id="'dataset_' + resource.id" :value="selectedDataset"
-                      label="title" :options="datasetsList" :clearable="false" autocomplete="off"
-                      @input="updateDataset">
-              <template slot="option" slot-scope="option">
+            <v-select :id="'dataset_' + resource.id" :value="selectedDataset" label="title" :options="datasetsList"
+                      :clearable="false" :disabled="isUsedInAlignmentResults" autocomplete="off"
+                      placeholder="Type to search for a dataset" @input="updateDataset"
+                      v-bind:class="{'is-invalid': errors.includes('dataset')}">
+              <div slot="option" slot-scope="option">
                 <div>
-                  <div>
-                    <span class="font-weight-bold pr-2">{{ option.title }}</span>
-                    <span class="text-wrap text-muted small">{{ option.name }}</span>
-                  </div>
-
-                  <div v-if="option.description" class="text-wrap font-italic small pt-2">
-                    {{ option.description }}
-                  </div>
+                  <span class="font-weight-bold pr-2">{{ option.title }}</span>
+                  <span class="text-wrap text-muted small">{{ option.name }}</span>
                 </div>
-              </template>
+
+                <div v-if="option.description" class="text-wrap font-italic small pt-2">
+                  {{ option.description }}
+                </div>
+              </div>
             </v-select>
 
             <small v-if="selectedDataset" class="form-text text-muted mt-2">
@@ -74,15 +73,15 @@
           <div v-if="resource.dataset.dataset_id !== ''" class="form-group collection-input col-4">
             <label :for="'collection_' + resource.id">Entity type</label>
 
-            <v-select :id="'collection_' + resource.id" :value="selectedCollection"
-                      label="id" :options="collectionsList" :clearable="false" autocomplete="off"
-                      @input="resource.dataset.collection_id = $event.id">
-              <template slot="option" slot-scope="option">
-                <div>
-                  <span class="pr-2">{{ option.id }}</span>
-                  <span class="font-italic text-muted small">{{ option.total }}</span>
-                </div>
-              </template>
+            <v-select :id="'collection_' + resource.id" :value="selectedCollection" label="id"
+                      :options="collectionsList" :clearable="false" :disabled="isUsedInAlignmentResults"
+                      autocomplete="off" placeholder="Type to search for an entity type"
+                      @input="resource.dataset.collection_id = $event.id"
+                      v-bind:class="{'is-invalid': errors.includes('collection')}">
+              <div slot="option" slot-scope="option">
+                <span class="pr-2">{{ option.id }}</span>
+                <span class="font-italic text-muted small">{{ option.total }}</span>
+              </div>
             </v-select>
 
             <div class="invalid-feedback" v-show="errors.includes('collection')">

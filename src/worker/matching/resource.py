@@ -22,8 +22,6 @@ class Resource:
             self.columns = collection.table_data['columns']
             self.view_queued = collection.rows_downloaded > -1 \
                                and (self.limit < 0 or self.limit > collection.rows_downloaded)
-        elif resource_data['dataset']['type'] == 'csv':
-            self.csv = 'to-do'
 
     @property
     def label(self):

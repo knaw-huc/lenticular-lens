@@ -4,6 +4,7 @@ $info: #0c8c75;
 $light: #eff1f3;
 $border-color: #adb5bd;
 $container-max-widths: (lg: 1500px);
+$vs-component-placeholder-color: lightgrey;
 
 @import '~bootstrap/scss/bootstrap.scss';
 @import '~bootstrap-vue/src/index.scss';
@@ -52,6 +53,10 @@ div#app::before {
 
 .vs__dropdown-menu {
   width: auto !important;
+}
+
+.vs__dropdown-toggle {
+  background-color: white;
 }
 
 .vue-form-wizard {
@@ -108,10 +113,16 @@ div#app::before {
   }
 }
 
+.is-invalid {
+  &:not(.v-select) {
+    @extend .border;
+    @extend .border-danger;
+  }
 
-div.is-invalid {
-  @extend .border;
-  @extend .border-danger;
+  &.v-select .vs__dropdown-toggle {
+    @extend .border;
+    @extend .border-danger;
+  }
 
   &.bg-white {
     background-color: mix($danger, $light, 10%) !important;
