@@ -23,7 +23,7 @@
           </span>
 
           <button type="button" class="btn btn-sm ml-2" @click="copySourceUriToClipboard">
-            <fa-icon :icon="['far', 'clipboard']"/>
+            <fa-icon icon="copy"/>
           </button>
         </div>
 
@@ -35,7 +35,7 @@
           </span>
 
           <button type="button" class="btn btn-sm ml-2" @click="copyTargetUriToClipboard">
-            <fa-icon :icon="['far', 'clipboard']"/>
+            <fa-icon icon="copy"/>
           </button>
         </div>
 

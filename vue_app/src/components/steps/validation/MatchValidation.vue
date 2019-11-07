@@ -65,13 +65,13 @@
             <div class="col-auto">
               <div class="btn-toolbar" role="toolbar" aria-label="Toolbar">
                 <div class="btn-group btn-group-toggle mr-4">
-                  <label class="btn btn-secondary btn-sm border" v-bind:class="{'active': showInfo}">
+                  <label class="btn btn-secondary btn-sm" v-bind:class="{'active': showInfo}">
                     <input type="checkbox" autocomplete="off" v-model="showInfo" @change="updateShow"/>
                     <fa-icon icon="info-circle"/>
                     Show alignment specs
                   </label>
 
-                  <label class="btn btn-secondary btn-sm border" v-bind:class="{'active': showPropertySelection}">
+                  <label class="btn btn-secondary btn-sm" v-bind:class="{'active': showPropertySelection}">
                     <input type="checkbox" autocomplete="off" v-model="showPropertySelection" @change="updateShow"/>
                     <fa-icon icon="cog"/>
                     Show property config
@@ -79,13 +79,13 @@
                 </div>
 
                 <div class="btn-group btn-group-toggle">
-                  <label class="btn btn-secondary btn-sm border" v-bind:class="{'active': showAllLinks}">
+                  <label class="btn btn-secondary btn-sm" v-bind:class="{'active': showAllLinks}">
                     <input type="checkbox" autocomplete="off" v-model="showAllLinks" @change="updateShow('links')"/>
                     <fa-icon icon="list"/>
                     Overview of all links
                   </label>
 
-                  <label v-if="clustering" class="btn btn-secondary btn-sm border"
+                  <label v-if="clustering" class="btn btn-secondary btn-sm"
                          v-bind:class="{'active': showClusters}">
                     <input type="checkbox" autocomplete="off" v-model="showClusters" @change="updateShow('clusters')"/>
                     <fa-icon icon="list"/>
@@ -137,7 +137,7 @@
               <div class="col-auto">
                 <div class="btn-toolbar" role="toolbar" aria-label="Toolbar">
                   <div class="btn-group btn-group-toggle mr-2">
-                    <label v-if="showClusters" class="btn btn-secondary btn-sm border"
+                    <label v-if="showClusters" class="btn btn-secondary btn-sm"
                            v-bind:class="{'active': showSelectedCluster}">
                       <input type="checkbox" autocomplete="off" v-model="showSelectedCluster" @change="updateShow"/>
                       <fa-icon icon="project-diagram"/>
@@ -146,20 +146,20 @@
                   </div>
 
                   <div class="btn-group btn-group-toggle">
-                    <button v-if="hasProperties" type="button" class="btn btn-sm btn-secondary border"
+                    <button v-if="hasProperties" type="button" class="btn btn-sm btn-secondary"
                             @click="showVisualization('visualize')">
                       <fa-icon icon="project-diagram"/>
                       Visualize
                     </button>
 
-                    <button v-if="hasProperties" type="button" class="btn btn-sm btn-secondary border"
+                    <button v-if="hasProperties" type="button" class="btn btn-sm btn-secondary"
                             @click="showVisualization('visualize-compact')">
                       <fa-icon icon="project-diagram"/>
                       Visualize compact
                     </button>
 
                     <button v-if="hasProperties && clustering.association" type="button"
-                            class="btn btn-sm btn-secondary border" @click="showVisualization('visualize-reconciled')">
+                            class="btn btn-sm btn-secondary" @click="showVisualization('visualize-reconciled')">
                       <fa-icon icon="project-diagram"/>
                       Visualize reconciled
                     </button>

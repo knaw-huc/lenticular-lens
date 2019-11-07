@@ -46,7 +46,7 @@ class AlignmentConfig:
 
     @property
     def has_queued_resources(self):
-        for resource in self.resources:
+        for resource in self.resources_to_run:
             if resource.view_queued:
                 return True
 

@@ -44,12 +44,13 @@
         <template v-if="job_id">
           <label class="h3 col-auto" for="job_id_copy">Job ID</label>
 
-          <input type="text" class="col-md-3 col-auto" id="job_id_copy" ref="job_id_copy" disabled v-model="job_id"/>
+          <input type="text" class="form-control col-md-3 col-auto" id="job_id_copy"
+                 ref="job_id_copy" disabled v-model="job_id"/>
 
           <div class="col-auto">
-            <b-button @click="copyToClipboard()">
-              <fa-icon :icon="['far', 'clipboard']"/>
-            </b-button>
+            <button class="btn btn-secondary" @click="copyToClipboard()">
+              <fa-icon icon="copy"/>
+            </button>
           </div>
         </template>
 
