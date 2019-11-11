@@ -11,6 +11,14 @@
       </div>
     </template>
 
+    <sub-card label="Description">
+      <input type="text" class="form-control mt-3" :id="'description_' + resource.id" v-model="resource.description"/>
+
+      <small class="form-text text-muted mt-2">
+        Provide a description for this collection
+      </small>
+    </sub-card>
+
     <fieldset :disabled="isUsedInAlignmentResults">
       <sub-card label="Dataset" :hasError="errors.includes('dataset') || errors.includes('collection')">
         <div class="row form-group align-items-end mt-3">
@@ -76,7 +84,7 @@
             <v-select :id="'collection_' + resource.id" :value="selectedCollection" label="id"
                       :options="collectionsList" :clearable="false" :disabled="isUsedInAlignmentResults"
                       autocomplete="off" placeholder="Type to search for an entity type"
-                      @input="resource.dataset.collection_id = $event.id"
+                      @input="updateCollection"
                       v-bind:class="{'is-invalid': errors.includes('collection')}">
               <div slot="option" slot-scope="option">
                 <span class="pr-2">{{ option.id }}</span>
@@ -337,10 +345,24 @@
                 return collectionValid && datasetValid && limitValid && relatedValid && filtersGroupsValid;
             },
 
+            clearFilter() {
+                this.resource.filter = {
+                    type: 'AND',
+                    conditions: [],
+                };
+            },
+
             updateDataset(dataset) {
                 this.resource.dataset.dataset_id = dataset.id;
                 this.resource.dataset.collection_id = '';
                 this.resource.dataset.published = dataset.published;
+
+                this.clearFilter();
+            },
+
+            updateCollection(collection) {
+                this.resource.dataset.collection_id = collection.id;
+                this.clearFilter();
             },
 
             addRelation(event) {
@@ -370,6 +392,8 @@
                 this.datasetsLoaded = false;
                 this.resource.dataset.dataset_id = '';
                 this.resource.dataset.collection_id = '';
+
+                this.clearFilter();
             },
 
             login() {

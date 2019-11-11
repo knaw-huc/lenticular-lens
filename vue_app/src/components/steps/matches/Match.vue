@@ -7,8 +7,8 @@
       </div>
 
       <div v-if="alignmentStatus === 'downloading' || alignmentStatus === 'running'" class="col-auto">
-        <b-button variant="info" @click="killAlignment">
-          Kill
+        <b-button variant="danger" @click="killAlignment">
+          Stop
         </b-button>
       </div>
 
@@ -182,19 +182,27 @@
       </div>
     </template>
 
+    <sub-card label="Description">
+      <input type="text" class="form-control mt-3" :id="'description_' + match.id" v-model="match.description"/>
+
+      <small class="form-text text-muted mt-2">
+        Provide a description for this alignment
+      </small>
+    </sub-card>
+
     <fieldset :disabled="!!alignment">
-      <sub-card>
-        <div class="row">
-          <div class="col form-check">
-            <b-form-checkbox
-                :id="'match_' + match.id + '_is_association'"
-                v-model.boolean="match.is_association"
-                title="Check this box if this Alignment is intended for creating associations">
-              Association
-            </b-form-checkbox>
-          </div>
-        </div>
-      </sub-card>
+<!--      <sub-card>-->
+<!--        <div class="row">-->
+<!--          <div class="col form-check">-->
+<!--            <b-form-checkbox-->
+<!--                :id="'match_' + match.id + '_is_association'"-->
+<!--                v-model.boolean="match.is_association"-->
+<!--                title="Check this box if this Alignment is intended for creating associations">-->
+<!--              Association-->
+<!--            </b-form-checkbox>-->
+<!--          </div>-->
+<!--        </div>-->
+<!--      </sub-card>-->
 
       <sub-card label="Sources" :has-info="true" add-button="Add a Collection as a Source"
                 :hasError="errors.includes('sources') || errors.includes('sources_select')"

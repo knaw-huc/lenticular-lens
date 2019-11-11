@@ -46,6 +46,7 @@ def job_update():
     job_data = {
         'job_title': request.json['job_title'],
         'job_description': request.json['job_description'],
+        'job_link': request.json['job_link'],
     }
 
     if 'resources_original' in request.json:

@@ -20,6 +20,7 @@ export default {
         addResource() {
             this.resources.unshift({
                 id: findId(this.resources),
+                description: '',
                 dataset: {
                     timbuctoo_graphql: 'https://repository.goldenagents.org/v5/graphql',
                     timbuctoo_hsid: null,
@@ -40,6 +41,7 @@ export default {
         addMatch() {
             this.matches.unshift({
                 id: findId(this.matches),
+                description: '',
                 is_association: false,
                 label: 'Alignment ' + (this.matches.length + 1),
                 sources: [],
@@ -226,6 +228,7 @@ export default {
                 job_id: this.job.job_id,
                 job_title: this.job.job_title,
                 job_description: this.job.job_description,
+                job_link: this.job.job_link,
                 resources: resources,
                 matches: matches,
                 resources_original: this.resources,

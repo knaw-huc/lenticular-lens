@@ -10,13 +10,13 @@
 
     <slot></slot>
 
-    <b-alert :show="is_saved && tab_error !== ''" variant="warning" class="mt-4 mb-0">
+    <b-alert :show="isSaved && tabError !== ''" variant="warning" class="mt-4 mb-0">
       Successfully saved, but with errors:
-      {{ tab_error }}
+      {{ tabError }}
     </b-alert>
 
-    <b-alert :show="!is_saved && tab_error !== ''" variant="danger" class="mt-4 mb-0">
-      {{ tab_error }}
+    <b-alert :show="!isSaved && tabError !== ''" variant="danger" class="mt-4 mb-0">
+      {{ tabError }}
     </b-alert>
   </div>
 </template>
@@ -26,8 +26,8 @@
         name: 'TabContentStructure',
         props: {
             title: String,
-            tab_error: String,
-            is_saved: Boolean,
+            tabError: String,
+            isSaved: Boolean,
         },
     };
 </script>

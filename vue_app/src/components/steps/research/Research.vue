@@ -1,23 +1,37 @@
 <template>
   <div>
-    <div v-if="research_form === 'new' || job_id" class="border p-4 mt-4 bg-light">
+    <div v-if="researchForm === 'new' || jobId" class="border p-4 mt-4 bg-light">
       <div class="form-group">
-        <label class="h3" for="research">What is your research question?</label>
+        <label class="h3" for="research">Research Question</label>
         <input type="text" class="form-control" id="research" v-model="title"
-               v-bind:class="{'is-invalid': errors.includes('title')}" :disabled="is_updating">
+               v-bind:class="{'is-invalid': errors.includes('title')}" :disabled="isUpdating">
+        <small class="form-text text-muted mt-2">
+          Write here your main research question
+        </small>
         <div class="invalid-feedback" v-show="errors.includes('title')">
           Please indicate your research question
         </div>
       </div>
 
-      <div class="form-group pt-3">
-        <label class="h3" for="description">What is your research about?</label>
+      <div class="form-group">
+        <label class="h3" for="description">Hypothesis</label>
         <textarea class="form-control" id="description" v-model="description"
                   v-bind:class="{'is-invalid': errors.includes('description')}"
-                  :disabled="is_updating"></textarea>
+                  :disabled="isUpdating"></textarea>
+        <small class="form-text text-muted mt-2">
+          Describe here your expectations and possibly your sub-research questions
+        </small>
         <div class="invalid-feedback" v-show="errors.includes('description')">
           Please indicate what your research is about
         </div>
+      </div>
+
+      <div class="form-group">
+        <label class="h3" for="link">Link</label>
+        <input type="text" class="form-control" id="link" v-model="link" :disabled="isUpdating">
+        <small class="form-text text-muted mt-2">
+          Provide a link to the paper if this work gets published
+        </small>
       </div>
 
       <div class="form-group row justify-content-end align-items-center pt-3 mb-0">
@@ -29,23 +43,23 @@
 
         <div class="col-auto">
           <b-button @click="saveResearch" variant="info">
-            {{ job_id ? 'Update' : 'Create' }}
+            {{ jobId ? 'Update' : 'Create' }}
           </b-button>
         </div>
       </div>
     </div>
 
-    <div v-if="research_form === 'existing' || job_id" class="bg-light border mt-4 p-4">
+    <div v-if="researchForm === 'existing' || jobId" class="bg-light border mt-4 p-4">
       <div class="row justify-content-end align-items-center">
-        <span class="badge badge-info" ref="clipboard_copy_message" hidden>
-            Job ID copied to clipboard
+        <span class="badge badge-info" ref="clipboardCopyMessage" hidden>
+          Job ID copied to clipboard
         </span>
 
-        <template v-if="job_id">
-          <label class="h3 col-auto" for="job_id_copy">Job ID</label>
+        <template v-if="jobId">
+          <label class="h3 col-auto" for="jobIdCopy">Job ID</label>
 
-          <input type="text" class="form-control col-md-3 col-auto" id="job_id_copy"
-                 ref="job_id_copy" disabled v-model="job_id"/>
+          <input type="text" class="form-control col-md-3 col-auto" id="jobIdCopy"
+                 ref="jobIdCopy" disabled v-model="jobId"/>
 
           <div class="col-auto">
             <button class="btn btn-secondary" @click="copyToClipboard()">
@@ -57,10 +71,11 @@
         <template v-else>
           <label class="h3 col-auto" for="id_to_load">Existing Job ID</label>
 
-          <input type="text" class="col-md-3 col-auto" id="id_to_load" v-model="id_to_load"/>
+          <input type="text" class="col-md-3 col-auto" id="id_to_load" v-model="idToLoad"
+                 v-on:keyup.enter="$emit('load', idToLoad)"/>
 
           <div class="col-auto">
-            <b-button @click="$emit('load', id_to_load)" variant="info">Load</b-button>
+            <b-button @click="$emit('load', idToLoad)" variant="info">Load</b-button>
           </div>
         </template>
       </div>
@@ -76,17 +91,19 @@
         mixins: [ValidationMixin],
         data() {
             return {
-                id_to_load: '',
+                idToLoad: '',
                 title: '',
                 description: '',
+                link: '',
             };
         },
         props: {
-            job_id: String,
-            job_title: String,
-            job_description: String,
-            research_form: String,
-            is_updating: Boolean,
+            jobId: String,
+            jobTitle: String,
+            jobDescription: String,
+            jobLink: String,
+            researchForm: String,
+            isUpdating: Boolean,
         },
         methods: {
             validateResearch() {
@@ -97,17 +114,18 @@
 
             saveResearch() {
                 if (this.validateResearch()) {
-                    const event = this.job_id ? 'update' : 'create';
+                    const event = this.jobId ? 'update' : 'create';
                     this.$emit(event, {
-                        job_id: this.job_id || undefined,
+                        job_id: this.jobId || undefined,
                         job_title: this.title,
-                        job_description: this.description
+                        job_description: this.description,
+                        job_link: this.link,
                     });
                 }
             },
 
             copyToClipboard() {
-                const el = this.$refs.job_id_copy;
+                const el = this.$refs.jobIdCopy;
                 const disabled = el.hasAttribute('disabled');
                 if (disabled)
                     el.removeAttribute('disabled');
@@ -124,19 +142,24 @@
                 if (disabled)
                     el.setAttribute('disabled', 'disabled');
 
-                this.$refs.clipboard_copy_message.removeAttribute('hidden');
-                setTimeout(() => this.$refs.clipboard_copy_message.setAttribute('hidden', 'hidden'), 2000);
+                this.$refs.clipboardCopyMessage.removeAttribute('hidden');
+                setTimeout(() => this.$refs.clipboardCopyMessage.setAttribute('hidden', 'hidden'), 2000);
             },
         },
         watch: {
-            job_title() {
-                if (this.job_title)
-                    this.title = this.job_title;
+            jobTitle() {
+                if (this.jobTitle)
+                    this.title = this.jobTitle;
             },
 
-            job_description() {
-                if (this.job_description)
-                    this.description = this.job_description;
+            jobDescription() {
+                if (this.jobDescription)
+                    this.description = this.jobDescription;
+            },
+
+            jobLink() {
+                if (this.jobLink)
+                    this.link = this.jobLink;
             },
         },
     };

@@ -25,10 +25,4 @@ class FilterFunction:
     @property
     def sql(self):
         template = self.function_info['sql_template']
-
-        if self.parameters.get('invert', False):
-            template = 'NOT ' + template
-
-        sql = psycopg2_sql.SQL(template).format(**self.parameters)
-
-        return sql
+        return psycopg2_sql.SQL(template).format(**self.parameters)

@@ -7,7 +7,7 @@
         shape="square"
         ref="formWizard">
       <tab-content title="Research" :before-change="validateResearchTab">
-        <tab-content-structure title="Research" :tab_error="tab_error" :is_saved="is_saved">
+        <tab-content-structure title="Research" :tab-error="tabError" :is-saved="isSaved">
           <template v-slot:header>
             <div class="col-auto" v-if="$root.job">
               <span class="badge badge-info">
@@ -17,11 +17,12 @@
           </template>
 
           <research
-              :job_id="job_id"
-              :job_title="job_title"
-              :job_description="job_description"
-              :research_form="research_form"
-              :is_updating="is_updating"
+              :job-id="jobId"
+              :job-title="jobTitle"
+              :job-description="jobDescription"
+              :job-link="jobLink"
+              :research-form="researchForm"
+              :is-updating="isUpdating"
               @load="setJobId($event)"
               @create="createJob($event)"
               @update="updateJob($event)"/>
@@ -29,7 +30,7 @@
       </tab-content>
 
       <tab-content title="Collections" :before-change="validateCollectionsTab">
-        <tab-content-structure title="Collections" :tab_error="tab_error" :is_saved="is_saved">
+        <tab-content-structure title="Collections" :tab-error="tabError" :is-saved="isSaved">
           <template v-slot:header>
             <div class="col-auto">
               <button-add @click="addResource" title="Add a Collection" size="2x"/>
@@ -49,7 +50,7 @@
       </tab-content>
 
       <tab-content title="Alignments" :before-change="validateAlignmentsTab">
-        <tab-content-structure title="Alignments" :tab_error="tab_error" :is_saved="is_saved">
+        <tab-content-structure title="Alignments" :tab-error="tabError" :is-saved="isSaved">
           <template v-slot:header>
             <div class="col-auto">
               <button-add @click="addMatch" title="Add an Alignment" size="2x"/>
@@ -72,7 +73,7 @@
       </tab-content>
 
       <tab-content title="Validation">
-        <tab-content-structure title="Validation" :tab_error="tab_error" :is_saved="is_saved">
+        <tab-content-structure title="Validation" :tab-error="tabError" :is-saved="isSaved">
           <match-validation
               v-for="match in matchesWithResults"
               :match="match"
@@ -81,24 +82,24 @@
       </tab-content>
 
       <tab-content title="Export">
-        <tab-content-structure title="Export" :tab_error="tab_error" :is_saved="is_saved"></tab-content-structure>
+        <tab-content-structure title="Export" :tab-error="tabError" :is-saved="isSaved"></tab-content-structure>
       </tab-content>
 
-      <template v-if="(props.activeTabIndex === 0  && !job_id) || [1,2].includes(props.activeTabIndex)"
+      <template v-if="(props.activeTabIndex === 0  && !jobId) || [1,2].includes(props.activeTabIndex)"
                 slot="next" slot-scope="props">
-        <template v-if="props.activeTabIndex === 0 && !job_id">
+        <template v-if="props.activeTabIndex === 0 && !jobId">
           <wizard-button
               :style="props.fillButtonStyle"
-              :disabled="props.loading || research_form === 'existing'"
-              @click.native.prevent.stop="research_form='existing'">
+              :disabled="props.loading || researchForm === 'existing'"
+              @click.native.prevent.stop="researchForm='existing'">
             Existing research
           </wizard-button>
           &nbsp;
           <wizard-button
               v-if="hasChanges"
               :style="props.fillButtonStyle"
-              :disabled="props.loading || research_form === 'new'"
-              @click.native.prevent.stop="research_form='new'">
+              :disabled="props.loading || researchForm === 'new'"
+              @click.native.prevent.stop="researchForm='new'">
             New research
           </wizard-button>
         </template>
@@ -149,14 +150,15 @@
         },
         data() {
             return {
-                tab_error: '',
-                research_form: '',
-                id_to_load: '',
-                job_id: '',
-                job_title: '',
-                job_description: '',
-                is_saved: true,
-                is_updating: false,
+                tabError: '',
+                researchForm: '',
+                idToLoad: '',
+                jobId: '',
+                jobTitle: '',
+                jobDescription: '',
+                jobLink: '',
+                isSaved: true,
+                isUpdating: false,
                 steps: ['research', 'collections', 'alignments', 'validation', 'export'],
             };
         },
@@ -177,8 +179,8 @@
         },
         methods: {
             isTabValid(isValid, isSaved, message) {
-                this.tab_error = isValid ? '' : message;
-                this.is_saved = isSaved;
+                this.tabError = isValid ? '' : message;
+                this.isSaved = isSaved;
                 return !!isValid;
             },
 
@@ -262,19 +264,19 @@
             },
 
             async updateJob(job_data) {
-                this.is_updating = true;
+                this.isUpdating = true;
 
                 await this.$root.updateJob(job_data);
                 await this.getJobData();
 
-                this.is_updating = false;
+                this.isUpdating = false;
             },
 
-            async setJobId(job_id) {
-                this.$set(this, 'job_id', job_id);
+            async setJobId(jobId) {
+                this.jobId = jobId;
 
-                let parsedUrl = new URL(window.location.href);
-                parsedUrl.searchParams.set('job_id', job_id);
+                const parsedUrl = new URL(window.location.href);
+                parsedUrl.searchParams.set('job_id', jobId);
                 window.history.pushState(null, null, parsedUrl.href);
 
                 await this.getJobData();
@@ -286,12 +288,13 @@
             },
 
             async getJobData() {
-                if (this.job_id !== '') {
-                    await this.$root.loadJob(this.job_id);
+                if (this.jobId !== '') {
+                    await this.$root.loadJob(this.jobId);
 
                     if (this.$root.job) {
-                        this.job_title = this.$root.job.job_title;
-                        this.job_description = this.$root.job.job_description;
+                        this.jobTitle = this.$root.job.job_title;
+                        this.jobDescription = this.$root.job.job_description;
+                        this.jobLink = this.$root.job.job_link;
 
                         this.activateStep('collections');
 
@@ -348,10 +351,10 @@
                 return;
             }
 
-            const job_id = urlParams.get('job_id');
-            if (job_id) {
-                this.job_id = job_id;
-                this.research_form = 'existing';
+            const jobId = urlParams.get('job_id');
+            if (jobId) {
+                this.jobId = jobId;
+                this.researchForm = 'existing';
                 this.getJobData();
             }
         },

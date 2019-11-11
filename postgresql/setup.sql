@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS reconciliation_jobs
     job_id              text primary key,
     job_title           text                    not null,
     job_description     text                    not null,
+    job_link            text,
     resources_form_data json,
     mappings_form_data  json,
     resources           json,
@@ -82,7 +83,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION to_date_immutable(text) RETURNS date
-    STRICT IMMUTABLE PARALLEL SAFE AS
+    STRICT IMMUTABLE AS
 $$
 BEGIN
     RETURN to_date($1, 'YYYY-MM-DD');
@@ -139,6 +140,22 @@ BEGIN
     ELSE
         RETURN year::text || '-' || month::text;
     END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION ecartico_full_name(text) RETURNS text
+    STRICT IMMUTABLE PARALLEL SAFE AS
+$$
+DECLARE
+    first_name  text;
+    infix       text;
+    family_name text;
+BEGIN
+    first_name = coalesce(trim(substring($1 from ', ([^[]*)')), '');
+    infix = coalesce(trim(substring($1 from '\[(.*)\]')), '');
+    family_name = coalesce(trim(substring($1 from '^[^,]*')), '');
+
+    RETURN first_name || ' ' || CASE WHEN infix != '' THEN infix || ' ' ELSE '' END || family_name;
 END;
 $$ LANGUAGE plpgsql;
 

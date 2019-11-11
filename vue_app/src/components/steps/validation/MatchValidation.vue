@@ -390,13 +390,17 @@
             },
 
             async acceptLink(link) {
-                link.valid = true;
-                await this.$root.validateLink(this.match.id, link.source, link.target, true);
+                const accepted = link.valid === true ? null : true;
+
+                link.valid = accepted;
+                await this.$root.validateLink(this.match.id, link.source, link.target, accepted);
             },
 
             async declineLink(link) {
-                link.valid = false;
-                await this.$root.validateLink(this.match.id, link.source, link.target, false);
+                const declined = link.valid === false ? null : false;
+
+                link.valid = declined;
+                await this.$root.validateLink(this.match.id, link.source, link.target, declined);
             },
 
             resetProperty(idx, property, propertyIndex) {

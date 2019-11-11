@@ -34,14 +34,17 @@
           <option value="" disabled selected>Choose a filter type</option>
           <option value="=">Equal to</option>
           <option value="!=">Not equal to</option>
-          <option value="not_null">Is not null</option>
-          <option value="date_is_within">date is within</option>
-          <option value="appearances">appearances of property</option>
+          <option value="is_null">Has no value</option>
+          <option value="not_null">Has a value</option>
+          <option value="date_is_within">Date is within</option>
+          <option value="date_is_not_within">Date is not within</option>
           <option value="ilike">Contains (use % for wildcard)</option>
+          <option value="not_ilike">Does not contain (use % for wildcard)</option>
+          <option value="appearances">Appearances of property</option>
         </select-box>
       </div>
 
-      <div v-if="['=', '!=', 'date_is_within', 'ilike'].indexOf(condition.type) > -1" class="col-3">
+      <div v-if="requiresValue" class="col-3">
         <input class="form-control" type="text" v-model="condition.value" placeholder="Enter a value"
                v-bind:class="{'is-invalid': errors.includes('value')}">
       </div>
@@ -53,16 +56,10 @@
           <option value="=" selected>Exactly</option>
         </select-box>
       </div>
+
       <div v-if="condition.type === 'appearances'" class="col-1">
         <input class="form-control" type="number" min="0" step="1" v-model.number="condition.value"
                v-bind:class="{'is-invalid': errors.includes('value')}">
-      </div>
-
-      <div class="form-check">
-        <input v-model.boolean="condition.invert" type="checkbox" class="form-check-input"
-               :id="'resource_' + resource.id + '_condition_' + index + '_invert'">
-        <label class="form-check-label"
-               :for="'resource_' + resource.id + '_condition_' + index + '_invert'">Invert</label>
       </div>
     </div>
 
@@ -97,13 +94,19 @@
         name: "ResourceFilterCondition",
         mixins: [ValidationMixin],
         props: ['resource', 'condition', 'index'],
+        computed: {
+            requiresValue() {
+                return ['=', '!=', 'date_is_within', 'date_is_not_within', 'ilike', 'not_ilike']
+                    .includes(this.condition.type);
+            },
+        },
         methods: {
             validateFilterCondition() {
                 const propertyValid = this.validateField('property', this.$refs.propertyComponent.validateProperty());
                 const conditionValid = this.validateField('condition', this.condition.type);
 
                 let valueValid = false;
-                if (['=', '!=', 'date_is_within', 'ilike'].includes(this.condition.type))
+                if (this.requiresValue)
                     valueValid = this.validateField('value', this.condition.value);
                 else if (this.condition.type === 'appearances')
                     valueValid = this.validateField('value', !isNaN(parseInt(this.condition.value))

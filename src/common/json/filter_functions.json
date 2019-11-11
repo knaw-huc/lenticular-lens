@@ -1,21 +1,30 @@
 {
-  "date_is_within": {
-    "sql_template": "{property} LIKE rtrim({value}, '*') || '%'"
-  },
-  "appearances": {
-    "sql_template": "{property} NOT IN\n   (SELECT {property__1}\n   FROM {property__0__original_view}\n   WHERE {property__1} IS NOT NULL\n   GROUP BY {property__1}\n   HAVING count(*) > {value})",
-    "sql_template_remote": "{__relation__remote_property} IN\n   (SELECT {property__0__original_view}.{__relation__remote_property__1}\n   FROM {property__0__original_view}\n   WHERE {property__0__original_view}.{property__1} IN\n     (SELECT {property__0__original_view}.{property__1}\n     FROM {property__0__original_view}\n     WHERE {property__0__original_view}.{property__1} IS NOT NULL\n     GROUP BY {property__0__original_view}.{property__1}\n     HAVING count(*) {operator} {value}))"
-  },
   "=": {
     "sql_template": "{property} = {value}"
   },
   "!=": {
     "sql_template": "{property} != {value}"
   },
-  "ilike": {
-    "sql_template": "{property} ILIKE {value}"
+  "is_null": {
+    "sql_template": "{property} IS NULL"
   },
   "not_null": {
     "sql_template": "{property} IS NOT NULL"
+  },
+  "date_is_within": {
+    "sql_template": "{property} LIKE rtrim({value}, '*') || '%'"
+  },
+  "date_is_not_within": {
+    "sql_template": "{property} NOT LIKE rtrim({value}, '*') || '%'"
+  },
+  "ilike": {
+    "sql_template": "{property} ILIKE {value}"
+  },
+  "not_ilike": {
+    "sql_template": "{property} NOT ILIKE {value}"
+  },
+  "appearances": {
+    "sql_template": "{property} NOT IN\n   (SELECT {property__1}\n   FROM {property__0__original_view}\n   WHERE {property__1} IS NOT NULL\n   GROUP BY {property__1}\n   HAVING count(*) > {value})",
+    "sql_template_remote": "{__relation__remote_property} IN\n   (SELECT {property__0__original_view}.{__relation__remote_property__1}\n   FROM {property__0__original_view}\n   WHERE {property__0__original_view}.{property__1} IN\n     (SELECT {property__0__original_view}.{property__1}\n     FROM {property__0__original_view}\n     WHERE {property__0__original_view}.{property__1} IS NOT NULL\n     GROUP BY {property__0__original_view}.{property__1}\n     HAVING count(*) {operator} {value}))"
   }
 }
