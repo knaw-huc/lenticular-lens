@@ -16,15 +16,16 @@
         },
         computed: {
             momentDuration() {
-                return this.until
-                    ? this.$moment.duration(this.until.getTime()).subtract(this.from.getTime())
-                    : this.$moment.duration(this.now.getTime()).subtract(this.from.getTime());
+                const from = this.$moment(this.from.getTime());
+                const until = this.$moment(this.until ? this.until.getTime() : this.now.getTime());
+
+                return this.$moment.duration(from.diff(until));
             },
 
             exactDuration() {
-                const hours = this.momentDuration.hours();
-                const minutes = this.momentDuration.minutes();
-                const seconds = this.momentDuration.seconds();
+                const hours = Math.abs(this.momentDuration.hours());
+                const minutes = Math.abs(this.momentDuration.minutes());
+                const seconds = Math.abs(this.momentDuration.seconds());
 
                 const hoursStr = String(hours).padStart(2, '0');
                 const minutesStr = String(minutes).padStart(2, '0');
