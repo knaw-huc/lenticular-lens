@@ -59,48 +59,51 @@
             <div class="col-auto">
               <div class="row justify-content-center">
                 <div class="col-auto">
-                  <div>
-                    <strong>Status: </strong>
-                    {{ status }}
-                  </div>
+                  <strong>Status: </strong>
+                  {{ status }}
                 </div>
               </div>
 
               <div v-if="alignmentStatus === 'failed' && alignment.status_message" class="row justify-content-center">
-                <div class="col-auto">
-                  <div class="font-italic">{{ alignment.status_message }}</div>
+                <div class="col-auto text-info font-italic">
+                  {{ alignment.status_message }}
+                </div>
+              </div>
+
+              <div v-if="downloads.length > 0" class="row justify-content-center">
+                <div class="col-auto clearfix">
+                  <ul v-for="download in downloads" class="font-italic text-info inline-list px-0">
+                    <li>
+                      {{ download.collection_id }}:
+                      <download-progress :dataset-id="download.dataset_id" :collection-id="download.collection_id"/>
+                    </li>
+                  </ul>
                 </div>
               </div>
 
               <div class="row justify-content-center mt-1">
                 <div class="col-auto">
                   <template v-if="alignmentStatus === 'waiting'">
-                    <div>
-                      <strong>Request: </strong>
-                      {{ alignment.requested_at | moment("MMMM Do YYYY, hh:mm") }}
+                    <strong>Request: </strong>
+                    {{ alignment.requested_at | moment("MMMM Do YYYY, hh:mm") }}
 
-                      <span class="font-italic">
-                        (<duration :from="alignment.requested_at"/>)
-                      </span>
-                    </div>
+                    <span class="font-italic">
+                      (<duration :from="alignment.requested_at"/>)
+                    </span>
                   </template>
 
                   <template v-else-if="alignmentStatus === 'downloading' || alignmentStatus === 'running'">
-                    <div>
-                      <strong>Start: </strong>
-                      {{ alignment.processing_at | moment("MMMM Do YYYY, hh:mm") }}
+                    <strong>Start: </strong>
+                    {{ alignment.processing_at | moment("MMMM Do YYYY, hh:mm") }}
 
-                      <span class="font-italic">
-                        (<duration :from="alignment.processing_at"/>)
-                      </span>
-                    </div>
+                    <span class="font-italic">
+                      (<duration :from="alignment.processing_at"/>)
+                    </span>
                   </template>
 
                   <template v-else-if="alignment.finished_at">
-                    <div>
-                      <strong>Matching duration: </strong>
-                      <duration class="font-italic" :from="alignment.processing_at" :until="alignment.finished_at"/>
-                    </div>
+                    <strong>Matching duration: </strong>
+                    <duration class="font-italic" :from="alignment.processing_at" :until="alignment.finished_at"/>
                   </template>
                 </div>
               </div>
@@ -108,32 +111,26 @@
               <div v-if="clustering" class="row justify-content-center">
                 <div class="col-auto">
                   <template v-if="clusteringStatus === 'waiting'">
-                    <div>
-                      <strong>Request clustering: </strong>
-                      {{ clustering.requested_at | moment("MMMM Do YYYY, hh:mm") }}
+                    <strong>Request clustering: </strong>
+                    {{ clustering.requested_at | moment("MMMM Do YYYY, hh:mm") }}
 
-                      <span class="font-italic">
-                        (<duration :from="clustering.requested_at"/>)
-                      </span>
-                    </div>
+                    <span class="font-italic">
+                      (<duration :from="clustering.requested_at"/>)
+                    </span>
                   </template>
 
                   <template v-else-if="clusteringStatus === 'running'">
-                    <div>
-                      <strong>Start clustering: </strong>
-                      {{ clustering.processing_at | moment("MMMM Do YYYY, hh:mm") }}
+                    <strong>Start clustering: </strong>
+                    {{ clustering.processing_at | moment("MMMM Do YYYY, hh:mm") }}
 
-                      <span class="font-italic">
-                        (<duration :from="clustering.processing_at"/>)
-                      </span>
-                    </div>
+                    <span class="font-italic">
+                      (<duration :from="clustering.processing_at"/>)
+                    </span>
                   </template>
 
                   <template v-else-if="clustering.finished_at">
-                    <div>
-                      <strong>Clustering duration: </strong>
-                      <duration class="font-italic" :from="clustering.processing_at" :until="clustering.finished_at"/>
-                    </div>
+                    <strong>Clustering duration: </strong>
+                    <duration class="font-italic" :from="clustering.processing_at" :until="clustering.finished_at"/>
                   </template>
                 </div>
               </div>
@@ -144,12 +141,14 @@
                     <strong>Clusters found: </strong>
                     {{ clustering.clusters_count ? clustering.clusters_count.toLocaleString('en') : 0 }}
                   </div>
+
                   <div>
                     <strong>Links found: </strong>
                     {{ alignment.links_count ? alignment.links_count.toLocaleString('en') : 0 }}
 
-                    <span v-if="alignment.links_count && alignment.distinct_links_count && alignment.links_count > alignment.distinct_links_count"
-                          class="font-italic text-info">
+                    <span
+                        v-if="alignment.links_count && alignment.distinct_links_count && alignment.links_count > alignment.distinct_links_count"
+                        class="font-italic text-info">
                       ({{ alignment.distinct_links_count.toLocaleString('en') }} distinct links)
                     </span>
                   </div>
@@ -160,17 +159,20 @@
                     <strong>Resources in source: </strong>
                     {{ alignment.sources_count ? alignment.sources_count.toLocaleString('en') : 0 }}
 
-                    <span v-if="alignment.sources_count && alignment.distinct_sources_count && alignment.sources_count > alignment.distinct_sources_count"
-                          class="font-italic text-info">
+                    <span
+                        v-if="alignment.sources_count && alignment.distinct_sources_count && alignment.sources_count > alignment.distinct_sources_count"
+                        class="font-italic text-info">
                       ({{ alignment.distinct_sources_count.toLocaleString('en') }} distinct resources)
                     </span>
                   </div>
+
                   <div>
                     <strong>Resources in target: </strong>
                     {{ alignment.targets_count ? alignment.targets_count.toLocaleString('en') : 0 }}
 
-                    <span v-if="alignment.targets_count && alignment.distinct_targets_count && alignment.targets_count > alignment.distinct_targets_count"
-                          class="font-italic text-info">
+                    <span
+                        v-if="alignment.targets_count && alignment.distinct_targets_count && alignment.targets_count > alignment.distinct_targets_count"
+                        class="font-italic text-info">
                       ({{ alignment.distinct_targets_count.toLocaleString('en') }} distinct resources)
                     </span>
                   </div>
@@ -191,18 +193,18 @@
     </sub-card>
 
     <fieldset :disabled="!!alignment">
-<!--      <sub-card>-->
-<!--        <div class="row">-->
-<!--          <div class="col form-check">-->
-<!--            <b-form-checkbox-->
-<!--                :id="'match_' + match.id + '_is_association'"-->
-<!--                v-model.boolean="match.is_association"-->
-<!--                title="Check this box if this Alignment is intended for creating associations">-->
-<!--              Association-->
-<!--            </b-form-checkbox>-->
-<!--          </div>-->
-<!--        </div>-->
-<!--      </sub-card>-->
+      <!--      <sub-card>-->
+      <!--        <div class="row">-->
+      <!--          <div class="col form-check">-->
+      <!--            <b-form-checkbox-->
+      <!--                :id="'match_' + match.id + '_is_association'"-->
+      <!--                v-model.boolean="match.is_association"-->
+      <!--                title="Check this box if this Alignment is intended for creating associations">-->
+      <!--              Association-->
+      <!--            </b-form-checkbox>-->
+      <!--          </div>-->
+      <!--        </div>-->
+      <!--      </sub-card>-->
 
       <sub-card label="Sources" :has-info="true" add-button="Add a Collection as a Source"
                 :hasError="errors.includes('sources') || errors.includes('sources_select')"
@@ -274,11 +276,11 @@
           <div class="form-group col">
             <label :for="'match_against_' + match.id">Match results should match results in set:</label>
 
-            <select class="form-control h-auto mr-2" v-model="match.match_against" :id="'match_against_' + match.id"
-                    v-bind:class="{'is-invalid': errors.includes('match-against')}">
+            <select-box class="mr-2" v-model="match.match_against" :id="'match_against_' + match.id"
+                        v-bind:class="{'is-invalid': errors.includes('match-against')}">
               <option disabled selected value="">Select an alignment</option>
               <option v-for="m in $root.matches" v-if="match.id !== m.id" :value="m.id">{{ m.label }}</option>
-            </select>
+            </select-box>
 
             <small class="form-text text-muted mt-2">
               When an alignment is selected, it plays the role of a filter by removing all matched pairs found
@@ -338,6 +340,7 @@
             return {
                 association: '',
                 associationFiles: [],
+                refreshDownloadsInProgress: false,
             };
         },
         computed: {
@@ -410,6 +413,26 @@
                 return [alignmentStatus, clusteringStatus, reconciliationStatus]
                     .filter(status => status !== null)
                     .join(' - ');
+            },
+
+            downloads() {
+                if (this.alignmentStatus !== 'downloading')
+                    return [];
+
+                if (!this.refreshDownloadsInProgress) {
+                    this.refreshDownloadsInProgress = true;
+                    this.$emit('refreshDownloadsInProgress');
+                }
+
+                const datasets = [];
+                [...this.match.sources, ...this.match.targets].forEach(resourceId => {
+                    const resource = this.$root.getResourceById(resourceId);
+                    const datasetId = resource.dataset.dataset_id;
+                    if (!datasets.includes(datasetId))
+                        datasets.push(datasetId);
+                });
+
+                return this.$root.downloading.filter(collection => datasets.includes(collection.dataset_id));
             },
         },
         methods: {
@@ -538,7 +561,7 @@
                 this.addMatchResource('targets');
 
             this.associationFiles = await this.$root.getAssociationFiles();
-        }
+        },
     };
 </script>
 

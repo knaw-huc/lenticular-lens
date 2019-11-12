@@ -67,6 +67,7 @@
                 @remove="$root.matches.splice(index, 1)"
                 @update:label="match.label = $event"
                 @refresh="refresh(true)"
+                @refreshDownloadsInProgress="refreshDownloadsInProgress(true)"
                 ref="matchComponents"/>
           </draggable>
         </tab-content-structure>
@@ -159,6 +160,7 @@
                 jobLink: '',
                 isSaved: true,
                 isUpdating: false,
+                isDownloading: false,
                 steps: ['research', 'collections', 'alignments', 'validation', 'export'],
             };
         },
@@ -339,7 +341,20 @@
                     setTimeout(() => {
                         Promise.all([this.$root.loadAlignments(), this.$root.loadClusterings()])
                             .then(() => this.refresh());
-                    }, 5000);
+                    }, 2000);
+            },
+
+            async refreshDownloadsInProgress(externalTrigger = false) {
+                if (externalTrigger && this.isDownloading)
+                    return;
+
+                this.isDownloading = true;
+                await this.$root.loadDownloadsInProgress();
+
+                if (this.$root.downloading.length > 0)
+                    setTimeout(_ => this.refreshDownloadsInProgress(), 2000);
+                else
+                    this.isDownloading = false;
             },
         },
         mounted() {
@@ -357,6 +372,8 @@
                 this.researchForm = 'existing';
                 this.getJobData();
             }
+
+            this.refreshDownloadsInProgress();
         },
     };
 </script>

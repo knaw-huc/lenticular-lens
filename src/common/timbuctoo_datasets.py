@@ -24,8 +24,6 @@ class TimbuctooDatasets:
                     for collection, collection_data in dataset_data['collections'].items():
                         if collection not in combined[dataset]['collections']:
                             combined[dataset]['collections'][collection] = database_data.copy()
-                        else:
-                            combined[dataset]['collections'][collection]['downloaded'] = True
 
             self.__datasets = combined
         except (psycopg2.InterfaceError, psycopg2.OperationalError):
@@ -61,7 +59,6 @@ class TimbuctooDatasets:
 
                 datasets[table['dataset_id']]['collections'][table['collection_id']] = {
                     'total': table['total'],
-                    'downloaded': True,
                     'properties': {
                         column_info['name']: {
                             'isList': column_info['isList'],

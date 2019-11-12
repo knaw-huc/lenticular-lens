@@ -7,7 +7,7 @@
         </div>
       </div>
 
-      <ul class="col-auto text-info flex-shrink-1 p-0 mb-0 mt-1">
+      <ul class="col-auto text-info inline-list flex-shrink-1 p-0 mb-0 mt-1">
         <li v-for="value in values">
           {{ value }}
         </li>
@@ -35,16 +35,3 @@
         },
     };
 </script>
-
-<style scoped>
-  ul li {
-    list-style: none;
-    float: left;
-  }
-
-  ul li:not(:first-child):before {
-    content: '•';
-    margin: 0 0.5em;
-    color: black;
-  }
-</style>

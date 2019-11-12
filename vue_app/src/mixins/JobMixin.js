@@ -9,6 +9,8 @@ export default {
             resources: [],
             matches: [],
             datasets: {},
+            downloaded: [],
+            downloading: [],
         };
     },
     methods: {
@@ -378,6 +380,12 @@ export default {
 
                 this.datasets[graphqlEndpoint] = datasetsPublished;
             }
+        },
+
+        async loadDownloadsInProgress() {
+            const downloads = await callApi('/downloads');
+            this.downloaded = downloads.downloaded;
+            this.downloading = downloads.downloading;
         },
     },
 };

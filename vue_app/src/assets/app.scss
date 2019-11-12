@@ -1,9 +1,11 @@
 $primary: #efc501;
 $secondary: #0c8c75;
-$info: #0c8c75;
+$info: $secondary;
 $light: #eff1f3;
 $border-color: #adb5bd;
 $container-max-widths: (lg: 1500px);
+$vs-state-active-bg: inherit;
+$vs-state-active-color: inherit;
 $vs-component-placeholder-color: lightgrey;
 
 @import '~bootstrap/scss/bootstrap.scss';
@@ -49,6 +51,10 @@ div#app::before {
 
 .sticky-top {
   z-index: 50;
+}
+
+.v-select {
+  min-width: 250px;
 }
 
 .vs__dropdown-menu {
@@ -154,6 +160,22 @@ div#app::before {
 .max-overflow {
   max-height: 300px;
   overflow: auto;
+}
+
+.striped-container .striped:nth-of-type(odd),
+.vs__dropdown-menu .vs__dropdown-option:nth-of-type(odd) {
+  background-color: rgba(0, 0, 0, .05);
+}
+
+ul.inline-list li {
+  list-style: none;
+  float: left;
+}
+
+ul.inline-list li:not(:first-child):before {
+  content: '•';
+  margin: 0 0.5em;
+  color: black;
 }
 
 .main-card {

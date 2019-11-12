@@ -88,3 +88,25 @@ class Collection:
                 return self.table_data
 
         return self._table_data
+
+    @staticmethod
+    def download_status():
+        collections = {'downloaded': [], 'downloading': []}
+
+        with db_conn() as conn, conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) as cur:
+            cur.execute('SELECT dataset_id, collection_id, total, rows_count FROM timbuctoo_tables')
+
+            for table in cur:
+                data_info = {
+                    'dataset_id': table['dataset_id'],
+                    'collection_id': table['collection_id'],
+                    'total': table['total'],
+                    'rows_count': table['rows_count'],
+                }
+
+                if table['total'] == table['rows_count']:
+                    collections['downloaded'].append(data_info)
+                else:
+                    collections['downloading'].append(data_info)
+
+        return collections

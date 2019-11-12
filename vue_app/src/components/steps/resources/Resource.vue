@@ -84,11 +84,16 @@
             <v-select :id="'collection_' + resource.id" :value="selectedCollection" label="id"
                       :options="collectionsList" :clearable="false" :disabled="isUsedInAlignmentResults"
                       autocomplete="off" placeholder="Type to search for an entity type"
-                      @input="updateCollection"
-                      v-bind:class="{'is-invalid': errors.includes('collection')}">
+                      @input="updateCollection" v-bind:class="{'is-invalid': errors.includes('collection')}">
               <div slot="option" slot-scope="option">
-                <span class="pr-2">{{ option.id }}</span>
-                <span class="font-italic text-muted small">{{ option.total }}</span>
+                <div>
+                  <span class="pr-2">{{ option.id }}</span>
+                  <span class="font-italic text-muted small">{{ option.total }}</span>
+                </div>
+
+                <div class="small pt-1">
+                  <download-progress :dataset-id="resource.dataset.dataset_id" :collection-id="option.id"/>
+                </div>
               </div>
             </v-select>
 

@@ -25,22 +25,28 @@
       </div>
 
       <div v-if="prop.value[0] === '' && !readOnly" :value="prop.value[0]" class="col-auto p-0 my-1">
-        <select-box @input="updateProperty($event, prop.idx)"
-                    v-bind:class="{'is-invalid': errors.includes(`value_${prop.idx}`), 'form-control-sm': small}">
-          <template v-if="Array.isArray(prop.resources)">
-            <option v-for="collection in prop.resources" :key="collection.id" :value="collection.id">
-              {{ collection.label }}
-            </option>
-          </template>
+        <v-select :clearable="false" autocomplete="off" placeholder="Choose a referenced collection"
+                  :options="['__value__', ...Object.keys(prop.resources).sort()]"
+                  @input="updateProperty($event, prop.idx)"
+                  v-bind:class="{'is-invalid': errors.includes(`value_${prop.idx}`)}">
+          <div slot="option" slot-scope="option">
+            <div v-if="option.label === '__value__'">
+              <span class="text-success pr-2">Value</span>
+              <span class="font-italic text-muted small">Do not follow reference</span>
+            </div>
 
-          <template v-else>
-            <option value="" disabled selected>Choose a referenced collection</option>
-            <option value="__value__">Value (do not follow reference)</option>
-            <option v-for="collection in Object.keys(prop.resources).sort()" :key="collection" :value="collection">
-              {{ collection }}
-            </option>
-          </template>
-        </select-box>
+            <template v-else>
+              <div>
+                <span class="pr-2">{{ option.label }}</span>
+                <span class="font-italic text-muted small">{{ prop.resources[option.label].total }}</span>
+              </div>
+
+              <div class="small pt-1">
+                <download-progress :dataset-id="resource.dataset.dataset_id" :collection-id="option.label"/>
+              </div>
+            </template>
+          </div>
+        </v-select>
       </div>
 
       <template v-else-if="!Array.isArray(prop.resources) && prop.inPath">
@@ -64,13 +70,21 @@
         </div>
 
         <div v-if="!prop.value[1] && !readOnly" class="col-auto p-0 my-1">
-          <select-box :value="prop.value[1]" @input="updateProperty($event, prop.idx + 1)"
-                      v-bind:class="{'is-invalid': errors.includes(`value_${prop.idx}`), 'form-control-sm': small}">
-            <option value="" selected disabled>Choose a property</option>
-            <option v-for="propertyOpt in Object.keys(prop.properties).sort()" :value="propertyOpt">
-              {{ propertyOpt }}
-            </option>
-          </select-box>
+          <v-select :clearable="false" autocomplete="off" placeholder="Choose a property"
+                    :options="Object.keys(prop.properties).sort()" @input="updateProperty($event, prop.idx + 1)"
+                    v-bind:class="{'is-invalid': errors.includes(`value_${prop.idx}`)}">
+            <div slot="option" slot-scope="option">
+              <div>{{ option.label }}</div>
+
+              <div class="clearfix">
+                <ul class="small font-italic text-info inline-list px-0 pt-1">
+                  <li>Density: {{ prop.properties[option.label].density }}&percnt;</li>
+                  <li v-if="prop.properties[option.label].isValueType">Has values</li>
+                  <li v-if="prop.properties[option.label].isLink">Has links to another collection</li>
+                </ul>
+              </div>
+            </div>
+          </v-select>
         </div>
 
         <div v-else-if="readOnly" class="col-auto p-0">

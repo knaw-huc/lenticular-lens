@@ -1,18 +1,9 @@
 <template>
   <div class="border border-dark p-3 mt-3">
-    <div class="row align-items-center justify-content-between mb-2">
-      <div class="col-auto">
-        Property:
-      </div>
-
+    <div class="row align-items-center justify-content-between m-0 mb-2">
       <div class="col">
-        <property
-            :property="condition.property"
-            :singular="true"
-            :resource-info="false"
-            @resetProperty="resetProperty(condition.property, $event)"
-            ref="propertyComponent"
-        />
+        <property :property="condition.property" :singular="true" :resource-info="false"
+                  @resetProperty="resetProperty(condition.property, $event)" ref="propertyComponent"/>
       </div>
 
       <div class="col-auto">
@@ -30,7 +21,8 @@
 
     <div class="form-row align-items-center">
       <div class="col-3">
-        <select-box v-model="condition.type" v-bind:class="{'is-invalid': errors.includes('condition')}">
+        <select-box :auto-height="false" v-model="condition.type"
+                    v-bind:class="{'is-invalid': errors.includes('condition')}">
           <option value="" disabled selected>Choose a filter type</option>
           <option value="=">Equal to</option>
           <option value="!=">Not equal to</option>
@@ -45,12 +37,12 @@
       </div>
 
       <div v-if="requiresValue" class="col-3">
-        <input class="form-control" type="text" v-model="condition.value" placeholder="Enter a value"
+        <input class="form-control form-control-sm" type="text" v-model="condition.value" placeholder="Enter a value"
                v-bind:class="{'is-invalid': errors.includes('value')}">
       </div>
 
       <div v-if="condition.type === 'appearances'" class="col-2">
-        <select-box v-model="condition.operator">
+        <select-box :auto-height="false" v-model="condition.operator">
           <option value="<=" selected>Max.</option>
           <option value=">=" selected>Min.</option>
           <option value="=" selected>Exactly</option>
@@ -58,7 +50,7 @@
       </div>
 
       <div v-if="condition.type === 'appearances'" class="col-1">
-        <input class="form-control" type="number" min="0" step="1" v-model.number="condition.value"
+        <input class="form-control form-control-sm" type="number" min="0" step="1" v-model.number="condition.value"
                v-bind:class="{'is-invalid': errors.includes('value')}">
       </div>
     </div>

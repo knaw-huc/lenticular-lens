@@ -22,6 +22,7 @@ import Loading from './components/misc/Loading';
 import Handle from './components/misc/Handle';
 import Duration from './components/misc/Duration';
 import Property from './components/helpers/Property';
+import DownloadProgress from './components/helpers/DownloadProgress';
 import Card from './components/structural/Card';
 import SubCard from './components/structural/SubCard';
 
@@ -33,6 +34,7 @@ Vue.component('loading', Loading);
 Vue.component('handle', Handle);
 Vue.component('duration', Duration);
 Vue.component('property', Property);
+Vue.component('download-progress', DownloadProgress);
 Vue.component('card', Card);
 Vue.component('sub-card', SubCard);
 
