@@ -1,4 +1,14 @@
-[
-  "ecartico_full_name",
-  "to_date_immutable"
-]
+{
+  "ECARTICO_FULL_NAME": {
+    "sql_template": "ecartico_full_name({property})"
+  },
+  "PARSE_DATE": {
+    "sql_template": "to_date_immutable({property}, {format})"
+  },
+  "PREFIX": {
+    "sql_template": "{prefix} || {property}"
+  },
+  "SUFFIX": {
+    "sql_template": "{property} || {suffix}"
+  }
+}

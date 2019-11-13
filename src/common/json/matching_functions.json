@@ -21,8 +21,7 @@
   },
   "TIME_DELTA": {
     "sql_template": "{source} IS NOT NULL AND {target} IS NOT NULL AND {source} - {target} BETWEEN -({days} * {multiplier}) AND ({days} * {multiplier})",
-    "similarity": "{source} - {target}",
-    "transformers": ["to_date_immutable"]
+    "similarity": "{source} - {target}"
   },
   "SAME_YEAR_MONTH": {
     "sql_template": "get_{date_part}({source}) = get_{date_part}({target})",

@@ -38,7 +38,7 @@ class Match:
             if 'template' not in template:
                 continue
             if 'before_index' in template and template['before_index']:
-                index_sqls.append(psycopg_sql.SQL(template['before_index']))
+                index_sqls.append(template['before_index'])
 
         for matching_function in self.conditions.matching_functions:
             if 'template' not in matching_function.index_template:

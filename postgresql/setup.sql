@@ -82,11 +82,11 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION to_date_immutable(text) RETURNS date
+CREATE OR REPLACE FUNCTION to_date_immutable(text, text) RETURNS date
     STRICT IMMUTABLE AS
 $$
 BEGIN
-    RETURN to_date($1, 'YYYY-MM-DD');
+    RETURN to_date($1, $2);
 EXCEPTION
     WHEN SQLSTATE '22008' THEN
         RETURN NULL;

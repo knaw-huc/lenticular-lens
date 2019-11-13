@@ -1,7 +1,7 @@
 from inspect import cleandoc
 from psycopg2 import sql as psycopg2_sql
 
-from common.helpers import hash_string, get_json_from_file, get_string_from_sql
+from common.helpers import hash_string, get_string_from_sql
 
 
 class PropertyField:
@@ -9,12 +9,7 @@ class PropertyField:
         self.__data = data
         self.parent_label = parent_label
         self.columns = columns
-
-        if transformers and len(transformers) > 0:
-            white_list = get_json_from_file("transformers.json")
-            self.transformers = [transformer for transformer in transformers if transformer in white_list]
-        else:
-            self.transformers = []
+        self.transformers = transformers if transformers else []
 
         self.__hash = hash_string(get_string_from_sql(self.sql))
 
@@ -61,8 +56,10 @@ class PropertyField:
         absolute_property = [self.extended_prop_label] if self.is_list else self.absolute_property
         sql = psycopg2_sql.SQL('.').join(map(psycopg2_sql.Identifier, absolute_property))
 
-        for transformer in self.transformers[::-1]:
-            sql = psycopg2_sql.SQL('%s({})' % transformer).format(sql)
+        for transformer in self.transformers:
+            template_sql = psycopg2_sql.SQL(transformer['transformer_info']['sql_template'])
+            sql_parameters = {key: psycopg2_sql.Literal(value) for (key, value) in transformer['parameters'].items()}
+            sql = template_sql.format(property=sql, **sql_parameters)
 
         return sql
 

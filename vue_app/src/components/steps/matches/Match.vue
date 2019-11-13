@@ -472,11 +472,11 @@
                     method_name: '',
                     method_value: {},
                     sources: this.match.sources.reduce((acc, resource) => {
-                        acc[resource] = [{'property': [resource, '']}];
+                        acc[resource] = [{property: [resource, ''], transformers: []}];
                         return acc;
                     }, {}),
                     targets: this.match.targets.reduce((acc, resource) => {
-                        acc[resource] = [{'property': [resource, '']}];
+                        acc[resource] = [{property: [resource, ''], transformers: []}];
                         return acc;
                     }, {}),
                 });
@@ -490,7 +490,7 @@
             updateConditions(group, resourcesKey, value, isInsert) {
                 group.conditions.forEach(condition => {
                     if (isInsert)
-                        this.$set(condition[resourcesKey], value, [{'property': [value, '']}]);
+                        this.$set(condition[resourcesKey], value, [{property: [value, ''], transformers: []}]);
                     else
                         this.$delete(condition[resourcesKey], value);
 

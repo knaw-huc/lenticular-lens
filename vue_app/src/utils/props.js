@@ -95,6 +95,7 @@ export default {
         },
         'TIME_DELTA': {
             label: 'Time Delta',
+            transformers: ['PARSE_DATE'],
             items: [
                 {
                     key: 'days',
@@ -145,5 +146,34 @@ export default {
             ]
         }
     },
-    transformers: ['ecartico_full_name', 'to_date_immutable']
+    transformers: {
+        'ECARTICO_FULL_NAME': {
+            label: 'Ecartico full name',
+            items: []
+        },
+        'PARSE_DATE': {
+            label: 'Parse date',
+            items: [{
+                key: 'format',
+                label: 'Date format',
+                type: 'YYYY-MM-DD'
+            }]
+        },
+        'PREFIX': {
+            label: 'Prefix',
+            items: [{
+                key: 'prefix',
+                label: 'Prefix with',
+                type: ''
+            }]
+        },
+        'SUFFIX': {
+            label: 'Suffix',
+            items: [{
+                key: 'suffix',
+                label: 'Suffix with',
+                type: ''
+            }]
+        }
+    }
 };

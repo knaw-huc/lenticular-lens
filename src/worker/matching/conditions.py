@@ -26,7 +26,8 @@ class Conditions:
         filter_sqls = []
         for condition in self.__conditions_list:
             if isinstance(condition, MatchingFunction):
-                filter_sqls.append(condition.sql.format(field_name=psycopg2_sql.Identifier(condition.field_name)))
+                filter_sqls.append(condition.sql.format(
+                    field_name=psycopg2_sql.Identifier(condition.field_name), **condition.sql_parameters))
             else:
                 filter_sqls.append(condition.conditions_sql)
 

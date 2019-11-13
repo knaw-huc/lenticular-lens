@@ -63,56 +63,72 @@
       <levenshtein-info v-else-if="condition.method_name === 'LEVENSHTEIN'"/>
     </sub-card>
 
-    <div class="row pl-5 mb-3" v-for="resources_key in ['sources', 'targets']">
+    <div class="row pl-5 mb-3" v-for="resourcesKey in ['sources', 'targets']">
       <div class="col">
         <div class="row">
-          <div class="h4 col-auto">{{ resources_key | capitalize }} properties</div>
-          <div v-if="unusedResources[resources_key].length > 0" class="col-auto form-group">
-            <select-box @input="condition[resources_key][$event].push({'property': [$event, '']})">
+          <div class="h4 col-auto">{{ resourcesKey | capitalize }} properties</div>
+          <div v-if="unusedResources[resourcesKey].length > 0" class="col-auto form-group">
+            <select-box @input="condition[resourcesKey][$event].push({'property': [$event, '']})">
               <option value="" disabled selected>Add property for Collection:</option>
-              <option v-for="resource in unusedResources[resources_key]" :value="resource">
+              <option v-for="resource in unusedResources[resourcesKey]" :value="resource">
                 {{ $root.getResourceById(resource).label }}
               </option>
             </select-box>
           </div>
         </div>
 
-        <template v-for="collection_properties in condition[resources_key]">
-          <div v-for="(resource, index) in collection_properties" class="row">
+        <template v-for="collectionProperties in condition[resourcesKey]">
+          <div v-for="(resource, index) in collectionProperties" class="row">
             <div class="col ml-5 p-3 border-top">
               <property
                   v-if="resource.property"
                   :property="resource.property"
-                  @clone="collection_properties.splice(index + 1, 0, {'property': [collection_properties[index]['property'][0], '']})"
-                  @delete="$delete(collection_properties, index)"
-                  @resetProperty="resetProperty(collection_properties, index, $event)"
-                  ref="propertyComponents"
-              />
+                  @clone="collectionProperties.splice(index + 1, 0, {property: [collectionProperties[index]['property'][0], ''], transformers: []})"
+                  @delete="$delete(collectionProperties, index)"
+                  @resetProperty="resetProperty(collectionProperties, index, $event)"
+                  ref="propertyComponents"/>
 
-              <div class="row align-items-center">
+              <div class="row align-items-top mt-2">
                 <div class="col-auto h5">Transformers</div>
 
-                <div class="col-auto p-0">
+                <div class="col-auto p-0 pb-1">
                   <button-add @click="addTransformer(resource)" size="sm" title="Add Transformer" class="btn-sm"/>
                 </div>
 
-                <div v-for="(_, index) in resource.transformers" class="col-auto">
-                  <div class="row align-items-center">
-                    <div class="col-auto pr-0">
-                      <select-box v-model="resource.transformers[index]"
-                                  v-bind:class="{'is-invalid': errors.includes(`${resources_key}_transformers`)}">
-                        <option value="" selected disabled>Select a function</option>
-                        <option v-for="av_transformer in transformers" :value="av_transformer">
-                          {{ av_transformer }}
-                        </option>
+                <div class="col-auto">
+                  <div v-for="transformer in resource.transformers" class="row align-items-center mb-1">
+                    <div class="col-auto pr-0 form-inline">
+                      <select-box v-model="transformer.name" @input="handleTransformerIndexChange(transformer)"
+                                  v-bind:class="{'is-invalid': errors.includes(`transformer_${resourcesKey}_${index}`)}">
+                        <option disabled selected value="">Select a transformer</option>
+                        <option v-for="(obj, name) in transformers" :value="name">{{ obj.label }}</option>
                       </select-box>
 
-                      <div class="invalid-feedback" v-show="errors.includes(`${resources_key}_transformers`)">
+                      <div class="invalid-feedback inline-feedback ml-2"
+                           v-show="errors.includes(`transformer_${resourcesKey}_${index}`)">
                         Please specify a transformer or remove the transformer
                       </div>
                     </div>
 
-                    <div class="col-auto p-0 ml-2">
+                    <div v-if="getTransformerTemplate(transformer).items.length > 0" class="col-auto pr-0 form-inline">
+                      <template v-for="item in getTransformerTemplate(transformer).items">
+                        <label class="small mr-2" v-if="item.label"
+                               :for="`transformer_${resourcesKey}_${index}_${item.key}`">
+                          {{ item.label }}
+                        </label>
+
+                        <input :id="`transformer_${resourcesKey}_${index}_${item.key}`"
+                               class="form-control form-control-sm mr-2" v-model="transformer.parameters[item.key]"
+                               v-bind:class="{'is-invalid': errors.includes(`transformer_value_${resourcesKey}_${index}_${item.key}`)}">
+
+                        <div class="invalid-feedback inline-feedback"
+                             v-show="errors.includes(`transformer_value_${resourcesKey}_${index}_${item.key}`)">
+                          Please specify a valid value
+                        </div>
+                      </template>
+                    </div>
+
+                    <div class="col-auto p-0 pb-1 ml-2">
                       <button-delete @click="resource.transformers.splice(index, 1)" size="sm" class="btn-sm"/>
                     </div>
                   </div>
@@ -123,7 +139,7 @@
         </template>
 
         <div class="invalid-feedback d-block">
-          <template v-if="errors.includes(resources_key)">
+          <template v-if="errors.includes(resourcesKey)">
             Please specify at least one property
           </template>
         </div>
@@ -162,16 +178,16 @@
             },
 
             unusedResources() {
-                let resource_keys = ['sources', 'targets'];
-                let unused_resources = {};
+                const resourceKeys = ['sources', 'targets'];
+                const unusedResources = {};
 
-                resource_keys.forEach(resource_key => {
-                    unused_resources[resource_key] = Object.keys(this.condition[resource_key]).filter(
-                        resource_id => this.condition[resource_key][resource_id].length < 1
+                resourceKeys.forEach(resourceKey => {
+                    unusedResources[resourceKey] = Object.keys(this.condition[resourceKey]).filter(
+                        resource_id => this.condition[resourceKey][resource_id].length < 1
                     );
                 });
 
-                return unused_resources;
+                return unusedResources;
             },
         },
         methods: {
@@ -180,20 +196,20 @@
 
                 let methodValueValid = true;
                 this.errors = this.errors.filter(err => !err.startsWith('method_value_'));
-                this.methodValueTemplate.items.forEach(value_item => {
-                    const value = this.condition.method_value[value_item.key];
+                this.methodValueTemplate.items.forEach(valueItem => {
+                    const value = this.condition.method_value[valueItem.key];
 
                     let valueValid = true;
-                    if (value_item.hasOwnProperty('minValue') && (isNaN(parseFloat(value)) || (parseFloat(value) < value_item.minValue)))
+                    if (valueItem.hasOwnProperty('minValue') && (isNaN(parseFloat(value)) || (parseFloat(value) < valueItem.minValue)))
                         valueValid = false;
-                    if (value_item.hasOwnProperty('maxValue') && (isNaN(parseFloat(value)) || (parseFloat(value) > value_item.maxValue)))
+                    if (valueItem.hasOwnProperty('maxValue') && (isNaN(parseFloat(value)) || (parseFloat(value) > valueItem.maxValue)))
                         valueValid = false;
-                    if (value_item.hasOwnProperty('choices') && !Object.values(value_item.choices).includes(value))
+                    if (valueItem.hasOwnProperty('choices') && !Object.values(valueItem.choices).includes(value))
                         valueValid = false;
                     if ((this.condition.method_name === 'IS_IN_SET') && (value === undefined || value === ''))
                         valueValid = false;
 
-                    if (!this.validateField(`method_value_${value_item.key}`, valueValid))
+                    if (!this.validateField(`method_value_${valueItem.key}`, valueValid))
                         methodValueValid = false;
                 });
 
@@ -202,15 +218,29 @@
                     .includes(false);
 
                 let sourcesTargetsValid = true;
-                ['sources', 'targets'].forEach(resources_key => {
-                    Object.keys(this.condition[resources_key]).forEach(resource_id => {
-                        if (!this.validateField(resources_key, this.condition[resources_key][resource_id].length > 0))
+                this.errors = this.errors.filter(err => !err.startsWith('transformer_'));
+                ['sources', 'targets'].forEach(resourcesKey => {
+                    Object.keys(this.condition[resourcesKey]).forEach(resourceId => {
+                        if (!this.validateField(resourcesKey, this.condition[resourcesKey][resourceId].length > 0))
                             sourcesTargetsValid = false;
 
-                        this.condition[resources_key][resource_id].forEach(values => {
-                            if (values.hasOwnProperty('transformers') && !this.validateField(
-                                `${resources_key}_transformers`, !values.transformers.includes('')))
-                                sourcesTargetsValid = false;
+                        this.condition[resourcesKey][resourceId].forEach(values => {
+                            if (values.hasOwnProperty('transformers')) {
+                                values.transformers.forEach(transformer => {
+                                    if (!this.validateField(`transformer_${resourcesKey}_${resourceId}`,
+                                        transformer.name && transformer.name.length > 0)) {
+                                        sourcesTargetsValid = false;
+                                    }
+                                    else {
+                                        this.getTransformerTemplate(transformer).items.forEach(transformerItem => {
+                                            const field = `transformer_value_${resourcesKey}_${resourceId}_${transformerItem.key}`;
+                                            const value = transformer.parameters[transformerItem.key];
+                                            if (!this.validateField(field, value && value.length > 0))
+                                                sourcesTargetsValid = false;
+                                        });
+                                    }
+                                });
+                            }
                         });
                     });
                 });
@@ -220,8 +250,8 @@
 
             handleMethodIndexChange() {
                 this.condition.method_value = {};
-                this.methodValueTemplate.items.forEach(value_item => {
-                    this.condition.method_value[value_item.key] = value_item.type;
+                this.methodValueTemplate.items.forEach(valueItem => {
+                    this.condition.method_value[valueItem.key] = valueItem.type;
                 });
             },
 
@@ -229,18 +259,35 @@
                 if (!resource.hasOwnProperty('transformers'))
                     resource.transformers = [];
 
-                resource.transformers.push('')
+                resource.transformers.push({
+                    name: '',
+                    parameters: {},
+                })
             },
 
-            resetProperty(properties, resource_index, property_index) {
-                let property = properties[resource_index].property;
-                let new_property = property.slice(0, property_index);
-                new_property.push('');
-                if (new_property.length % 2 > 0) {
-                    new_property.push('');
-                }
+            getTransformerTemplate(transformer) {
+                if (this.transformers.hasOwnProperty(transformer.name))
+                    return this.transformers[transformer.name];
 
-                this.$set(properties[resource_index], 'property', new_property);
+                return {label: '', items: []};
+            },
+
+            handleTransformerIndexChange(transformer) {
+                transformer.parameters = {};
+                this.getTransformerTemplate(transformer).items.forEach(valueItem => {
+                    transformer.parameters[valueItem.key] = valueItem.type;
+                });
+            },
+
+            resetProperty(properties, resourceIndex, propertyIndex) {
+                const property = properties[resourceIndex].property;
+                const newProperty = property.slice(0, propertyIndex);
+
+                newProperty.push('');
+                if (newProperty.length % 2 > 0)
+                    newProperty.push('');
+
+                this.$set(properties[resourceIndex], 'property', newProperty);
             },
         },
     };

@@ -162,6 +162,11 @@ div#app::before {
   overflow: auto;
 }
 
+.invalid-feedback.inline-feedback {
+  width: auto;
+  margin-top: 0;
+}
+
 .striped-container .striped:nth-of-type(odd),
 .vs__dropdown-menu .vs__dropdown-option:nth-of-type(odd) {
   background-color: rgba(0, 0, 0, .05);

@@ -7,6 +7,9 @@ from common.helpers import hash_string, get_json_from_file
 
 
 class MatchingFunction:
+    transformers = get_json_from_file('transformers.json')
+    matching_functions = get_json_from_file('matching_functions.json')
+
     def __init__(self, function_obj, config):
         self.function_obj = function_obj
         self.__data = function_obj
@@ -19,9 +22,8 @@ class MatchingFunction:
         self.function_name = function_obj['method_name']
         self.parameters = function_obj['method_value']
 
-        matching_functions = get_json_from_file('matching_functions.json')
-        if self.function_name in matching_functions:
-            self.function_info = matching_functions[self.function_name]
+        if self.function_name in self.matching_functions:
+            self.function_info = self.matching_functions[self.function_name]
             if 'similarity' in function_obj:
                 self.function_info['similarity'] = function_obj['similarity']
         else:
@@ -34,7 +36,7 @@ class MatchingFunction:
 
         before_index = self.function_info.get('before_index', None)
         if before_index:
-            before_index = self.format_template(before_index)
+            before_index = psycopg2_sql.SQL(before_index)
 
         return {
             'template': self.function_info['index_using'],
@@ -49,21 +51,22 @@ class MatchingFunction:
 
         template = self.function_info['similarity']
         if isinstance(self.function_info['similarity'], str):
-            template = re.sub(r'{source}', 'source.{{field_name}}', template)
-            template = re.sub(r'{target}', 'target.{{field_name}}', template)
-            template = self.format_template(template)
+            template = re.sub(r'{source}', 'source.{field_name}', template)
+            template = re.sub(r'{target}', 'target.{field_name}', template)
 
-        return psycopg2_sql.SQL(str(template))
+        return psycopg2_sql.SQL(template)
 
     @property
     def sql(self):
         template = self.function_info['sql_template']
+        template = re.sub(r'{source}', 'source.{field_name}', template)
+        template = re.sub(r'{target}', 'target.{field_name}', template)
 
-        template = re.sub(r'{source}', 'source.{{field_name}}', template)
-        template = re.sub(r'{target}', 'target.{{field_name}}', template)
-        template = self.format_template(template)
+        return psycopg2_sql.SQL(template)
 
-        return psycopg2_sql.SQL(str(template))
+    @property
+    def sql_parameters(self):
+        return {key: psycopg2_sql.Literal(value) for (key, value) in self.parameters.items()}
 
     @property
     def sources(self):
@@ -79,22 +82,21 @@ class MatchingFunction:
 
         return self.__targets
 
-    def format_template(self, template, **additional_params):
-        if isinstance(self.parameters, dict):
-            return template.format(**self.parameters, **additional_params)
-
-        return template.format(*self.parameters)
-
     def get_resources(self, resources_key):
         resources = {}
         for resource_index, resource in self.__data[resources_key].items():
             resources[resource_index] = []
             for field in resource:
-                transformers = self.function_info.get('transformers', [])
-                transformers += field.get('transformers', [])
+                field_transformers = field.get('transformers', [])
+
+                for transformer in field_transformers:
+                    if transformer['name'] in self.transformers:
+                        transformer['transformer_info'] = self.transformers[transformer['name']]
+                    else:
+                        raise NameError('Transformer %s is not defined' % transformer['name'])
 
                 columns = self.__config.get_resource_by_label(hash_string(field['property'][0])).columns
-                property_field = PropertyField(field['property'], columns=columns, transformers=transformers)
+                property_field = PropertyField(field['property'], columns=columns, transformers=field_transformers)
 
                 resources[resource_index].append(property_field)
 
