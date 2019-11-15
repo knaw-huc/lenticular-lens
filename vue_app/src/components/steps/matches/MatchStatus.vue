@@ -6,7 +6,9 @@
       </div>
 
       <div v-if="failed" class="col-auto">
-        <failed size="3x"/>
+        <div class="d-flex justify-content-center text-danger">
+          <fa-icon icon="times" size="3x"/>
+        </div>
       </div>
 
       <div class="col-auto">
@@ -143,8 +145,6 @@
 </template>
 
 <script>
-    import {EventBus} from '../../../eventbus.js';
-
     export default {
         name: "MatchStatus",
         props: ['match'],
@@ -202,7 +202,7 @@
 
                 if (!this.refreshDownloadsInProgress) {
                     this.refreshDownloadsInProgress = true;
-                    EventBus.$emit('refreshDownloadsInProgress');
+                    this.$emit('refreshDownloadsInProgress');
                 }
 
                 const datasets = [];
