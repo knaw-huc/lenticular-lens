@@ -1,14 +1,13 @@
-import time
-import threading
-
 from psycopg2 import sql as psycopg2_sql
 
 from common.helpers import hash_string
 from common.timbuctoo import Timbuctoo
 from common.config_db import db_conn, run_query
 
+from worker.job import Job
 
-class TimbuctooJob:
+
+class TimbuctooJob(Job):
     def __init__(self, table_name, graphql_endpoint, hsid, dataset_id, collection_id,
                  columns, cursor, rows_count, rows_per_page):
         self.table_name = table_name
@@ -20,6 +19,8 @@ class TimbuctooJob:
         self.cursor = cursor
         self.rows_count = rows_count
         self.rows_per_page = rows_per_page
+
+        super().__init__(self.download)
 
     @staticmethod
     def format_query(column_info):
@@ -52,20 +53,10 @@ class TimbuctooJob:
 
         return None
 
-    def run(self):
-        thread = threading.Thread(target=self.download)
-        thread.start()
-
-        while thread.is_alive():
-            time.sleep(1)
-
-    def kill(self):
-        return
-
     def download(self):
         total_insert = 0
 
-        while True:
+        while total_insert == 0 or self.cursor:
             columns = [self.columns[name]['name'] + self.format_query(self.columns[name]) for name in self.columns]
 
             query = """
@@ -85,7 +76,8 @@ class TimbuctooJob:
                 dataset=self.dataset_id,
                 list_id=self.collection_id + 'List',
                 count=self.rows_per_page,
-                columns="\n".join(columns))
+                columns="\n".join(columns)
+            )
 
             query_result = Timbuctoo(self.graphql_endpoint, self.hsid).fetch_graph_ql(query, {'cursor': self.cursor})
             if not query_result:
@@ -103,67 +95,70 @@ class TimbuctooJob:
 
                 results.append(result)
 
-            with db_conn() as conn:
-                with conn.cursor() as cur:
-                    cur.execute("LOCK TABLE timbuctoo_tables IN ACCESS EXCLUSIVE MODE;")
+            with self.db_conn.cursor() as cur:
+                cur.execute("LOCK TABLE timbuctoo_tables IN ACCESS EXCLUSIVE MODE;")
 
-                    # Check if the data we have is still the data that is expected to be inserted
-                    cur.execute('''
-                        SELECT 1
-                        FROM timbuctoo_tables
-                        WHERE "table_name" = %(table_name)s
-                        AND ((
-                            %(next_page)s IS NULL AND next_page IS NULL
-                            AND (update_finish_time IS NULL OR update_finish_time < update_start_time)
-                        ) OR (
-                            %(next_page)s IS NOT NULL AND next_page = %(next_page)s
-                        ))
-                    ''', {'table_name': self.table_name, 'next_page': self.cursor})
-                    if cur.fetchone() != (1,):
-                        print('This is weird... Someone else updated the job for table %s while I was fetching data.'
-                              % self.table_name)
-                        conn.commit()
-                        return
+                # Check if the data we have is still the data that is expected to be inserted
+                cur.execute('''
+                    SELECT 1
+                    FROM timbuctoo_tables
+                    WHERE "table_name" = %(table_name)s
+                    AND ((
+                        %(next_page)s IS NULL AND next_page IS NULL
+                        AND (update_finish_time IS NULL OR update_finish_time < update_start_time)
+                    ) OR (
+                        %(next_page)s IS NOT NULL AND next_page = %(next_page)s
+                    ))
+                ''', {'table_name': self.table_name, 'next_page': self.cursor})
 
-                # Check rows count
-                with conn.cursor() as cur:
-                    cur.execute(psycopg2_sql.SQL('SELECT count(*) FROM {}')
-                                .format(psycopg2_sql.Identifier(self.table_name)))
-                    table_rows = cur.fetchone()[0]
+                if cur.fetchone() != (1,):
+                    raise Exception('This is weird... '
+                                    'Someone else updated the job for table %s '
+                                    'while I was fetching data.' % self.table_name)
+
+                cur.execute(psycopg2_sql.SQL('SELECT count(*) FROM {}')
+                            .format(psycopg2_sql.Identifier(self.table_name)))
+                table_rows = cur.fetchone()[0]
 
                 if table_rows != self.rows_count + total_insert:
-                    print('ERROR: Table %s has %i rows, expected %i. Quitting job.' % (
-                        self.table_name, table_rows, self.rows_count + total_insert))
-                    conn.commit()
-                    return
+                    raise Exception('Table %s has %i rows, expected %i. Quitting job.'
+                                    % (self.table_name, table_rows, self.rows_count + total_insert))
 
                 if len(results) > 0:
                     columns_sql = psycopg2_sql.SQL(', ').join(
                         [psycopg2_sql.Identifier(key) for key in results[0].keys()])
+
                     for result in results:
-                        with conn.cursor() as cur:
-                            cur.execute(psycopg2_sql.SQL('INSERT INTO {} ({}) VALUES %s').format(
-                                psycopg2_sql.Identifier(self.table_name),
-                                columns_sql,
-                            ), (tuple(result.values()),))
+                        cur.execute(psycopg2_sql.SQL('INSERT INTO {} ({}) VALUES %s').format(
+                            psycopg2_sql.Identifier(self.table_name),
+                            columns_sql,
+                        ), (tuple(result.values()),))
 
-                total_insert += len(results)
-                print('Inserted %i new rows into table %s.' % (total_insert, self.table_name))
+                    total_insert += len(results)
 
-                with conn.cursor() as cur:
                     cur.execute('''
-                    UPDATE timbuctoo_tables
-                    SET last_push_time = now(), next_page = %s, rows_count = %s
-                    WHERE "table_name" = %s
+                        UPDATE timbuctoo_tables
+                        SET last_push_time = now(), next_page = %s, rows_count = %s
+                        WHERE "table_name" = %s
                     ''', (query_result['nextCursor'], table_rows + len(results), self.table_name))
 
-                conn.commit()
-                self.cursor = query_result['nextCursor']
+                self.db_conn.commit()
 
-                if self.cursor is None:
-                    print('Job for table %s finished.' % self.table_name)
-                    run_query(
-                        'UPDATE timbuctoo_tables SET update_finish_time = now() WHERE "table_name" = %s',
-                        (self.table_name,)
-                    )
-                    return
+            self.cursor = query_result['nextCursor']
+
+    def on_finish(self):
+        if self.cursor is None:
+            run_query('UPDATE timbuctoo_tables SET update_finish_time = now() WHERE "table_name" = %s',
+                      (self.table_name,))
+
+    def watch_process(self):
+        pass
+
+    def watch_kill(self):
+        pass
+
+    def on_kill(self, reset):
+        pass
+
+    def on_exception(self):
+        pass

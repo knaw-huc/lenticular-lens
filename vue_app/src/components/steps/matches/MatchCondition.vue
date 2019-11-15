@@ -7,13 +7,18 @@
 
           <div class="col-auto">
             <select-box v-model="condition.method_name" @input="handleMethodIndexChange"
-                        v-bind:class="{'is-invalid': errors.includes('method_name')}">
+                        v-bind:class="{'is-invalid': errors.includes('method_name') || errors.includes('transformers')}">
               <option disabled selected value="">Select a method</option>
               <option v-for="(method, name) in matchingMethods" :value="name">{{ method.label }}</option>
             </select-box>
 
             <div class="invalid-feedback" v-show="errors.includes('method_name')">
               Please specify a matching method
+            </div>
+
+            <div class="invalid-feedback" v-show="errors.includes('transformers')">
+              Matching method '{{ methodValueTemplate.label }}' requires that all properties apply the transformer(s):
+              {{ requiredTransformers.join(', ') }}
             </div>
           </div>
         </div>
@@ -63,7 +68,7 @@
       <levenshtein-info v-else-if="condition.method_name === 'LEVENSHTEIN'"/>
     </sub-card>
 
-    <div class="row pl-5 mb-3" v-for="resourcesKey in ['sources', 'targets']">
+    <div v-for="resourcesKey in ['sources', 'targets']" class="row pl-5">
       <div class="col">
         <div class="row">
           <div class="h4 col-auto">{{ resourcesKey | capitalize }} properties</div>
@@ -77,71 +82,14 @@
           </div>
         </div>
 
-        <template v-for="collectionProperties in condition[resourcesKey]">
-          <div v-for="(resource, index) in collectionProperties" class="row">
-            <div class="col ml-5 p-3 border-top">
-              <property
-                  v-if="resource.property"
-                  :property="resource.property"
-                  @clone="collectionProperties.splice(index + 1, 0, {property: [collectionProperties[index]['property'][0], ''], transformers: []})"
-                  @delete="$delete(collectionProperties, index)"
-                  @resetProperty="resetProperty(collectionProperties, index, $event)"
-                  ref="propertyComponents"/>
+        <match-condition-property v-for="(conditionProperty, index) in conditionPropertiesFor(resourcesKey)"
+                                  :key="index" :condition-property="conditionProperty"
+                                  @clone="cloneProperty(resourcesKey, index, conditionProperty)"
+                                  @delete="condition[resourcesKey].splice(index, 1)"
+                                  ref="matchConditionProperties"/>
 
-              <div class="row align-items-top mt-2">
-                <div class="col-auto h5">Transformers</div>
-
-                <div class="col-auto p-0 pb-1">
-                  <button-add @click="addTransformer(resource)" size="sm" title="Add Transformer" class="btn-sm"/>
-                </div>
-
-                <div class="col-auto">
-                  <div v-for="transformer in resource.transformers" class="row align-items-center mb-1">
-                    <div class="col-auto pr-0 form-inline">
-                      <select-box v-model="transformer.name" @input="handleTransformerIndexChange(transformer)"
-                                  v-bind:class="{'is-invalid': errors.includes(`transformer_${resourcesKey}_${index}`)}">
-                        <option disabled selected value="">Select a transformer</option>
-                        <option v-for="(obj, name) in transformers" :value="name">{{ obj.label }}</option>
-                      </select-box>
-
-                      <div class="invalid-feedback inline-feedback ml-2"
-                           v-show="errors.includes(`transformer_${resourcesKey}_${index}`)">
-                        Please specify a transformer or remove the transformer
-                      </div>
-                    </div>
-
-                    <div v-if="getTransformerTemplate(transformer).items.length > 0" class="col-auto pr-0 form-inline">
-                      <template v-for="item in getTransformerTemplate(transformer).items">
-                        <label class="small mr-2" v-if="item.label"
-                               :for="`transformer_${resourcesKey}_${index}_${item.key}`">
-                          {{ item.label }}
-                        </label>
-
-                        <input :id="`transformer_${resourcesKey}_${index}_${item.key}`"
-                               class="form-control form-control-sm mr-2" v-model="transformer.parameters[item.key]"
-                               v-bind:class="{'is-invalid': errors.includes(`transformer_value_${resourcesKey}_${index}_${item.key}`)}">
-
-                        <div class="invalid-feedback inline-feedback"
-                             v-show="errors.includes(`transformer_value_${resourcesKey}_${index}_${item.key}`)">
-                          Please specify a valid value
-                        </div>
-                      </template>
-                    </div>
-
-                    <div class="col-auto p-0 pb-1 ml-2">
-                      <button-delete @click="resource.transformers.splice(index, 1)" size="sm" class="btn-sm"/>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </template>
-
-        <div class="invalid-feedback d-block">
-          <template v-if="errors.includes(resourcesKey)">
-            Please specify at least one property
-          </template>
+        <div class="invalid-feedback mb-2" v-bind:class="{'is-invalid': errors.includes(resourcesKey)}">
+          Please specify at least one property
         </div>
       </div>
     </div>
@@ -155,11 +103,14 @@
     import props from "../../../utils/props";
     import ValidationMixin from "../../../mixins/ValidationMixin";
 
+    import MatchConditionProperty from "./MatchConditionProperty";
+
     export default {
         name: "MatchCondition",
         components: {
             ExactMatchInfo,
             LevenshteinInfo,
+            MatchConditionProperty,
         },
         mixins: [ValidationMixin],
         data() {
@@ -189,8 +140,29 @@
 
                 return unusedResources;
             },
+
+            conditionProperties() {
+                return [...this.conditionPropertiesFor('sources'), ...this.conditionPropertiesFor('targets')];
+            },
+
+            requiredTransformers() {
+                if (!this.methodValueTemplate.hasOwnProperty('transformers'))
+                    return [];
+
+                return Object.entries(this.transformers)
+                    .filter(([key]) => this.methodValueTemplate.transformers.includes(key))
+                    .map(([_, transformer]) => transformer.label);
+            },
         },
         methods: {
+            // TODO: this.condition[resourcesKey];
+            conditionPropertiesFor(resourcesKey) {
+                if (!Array.isArray(this.condition[resourcesKey]))
+                    this.condition[resourcesKey] = Object.values(this.condition[resourcesKey]).flat();
+
+                return this.condition[resourcesKey];
+            },
+
             validateMatchCondition() {
                 const methodNameValid = this.validateField('method_name', this.condition.method_name.length > 0);
 
@@ -213,39 +185,27 @@
                         methodValueValid = false;
                 });
 
-                const propertiesValid = !this.$refs.propertyComponents
-                    .map(propertyComponent => propertyComponent.validateProperty())
+                const sourcesValid = this.validateField('sources', this.condition.sources.length > 0);
+                const targetsValid = this.validateField('targets', this.condition.targets.length > 0);
+
+                const matchConditionPropertiesValid = !this.$refs.matchConditionProperties
+                    .map(propertyComponent => propertyComponent.validateMatchConditionProperty())
                     .includes(false);
 
-                let sourcesTargetsValid = true;
-                this.errors = this.errors.filter(err => !err.startsWith('transformer_'));
-                ['sources', 'targets'].forEach(resourcesKey => {
-                    Object.keys(this.condition[resourcesKey]).forEach(resourceId => {
-                        if (!this.validateField(resourcesKey, this.condition[resourcesKey][resourceId].length > 0))
-                            sourcesTargetsValid = false;
-
-                        this.condition[resourcesKey][resourceId].forEach(values => {
-                            if (values.hasOwnProperty('transformers')) {
-                                values.transformers.forEach(transformer => {
-                                    if (!this.validateField(`transformer_${resourcesKey}_${resourceId}`,
-                                        transformer.name && transformer.name.length > 0)) {
-                                        sourcesTargetsValid = false;
-                                    }
-                                    else {
-                                        this.getTransformerTemplate(transformer).items.forEach(transformerItem => {
-                                            const field = `transformer_value_${resourcesKey}_${resourceId}_${transformerItem.key}`;
-                                            const value = transformer.parameters[transformerItem.key];
-                                            if (!this.validateField(field, value && value.length > 0))
-                                                sourcesTargetsValid = false;
-                                        });
-                                    }
-                                });
-                            }
+                let transformersValid = true;
+                if (this.methodValueTemplate.hasOwnProperty('transformers')) {
+                    this.conditionProperties.forEach(conditionProperty => {
+                        const transformers = conditionProperty.transformers.map(transformer => transformer.name);
+                        this.methodValueTemplate.transformers.forEach(transformer => {
+                            if (!transformers.includes(transformer))
+                                transformersValid = false;
                         });
                     });
-                });
+                }
+                this.validateField('transformers', transformersValid);
 
-                return methodNameValid && methodValueValid && propertiesValid && sourcesTargetsValid;
+                return methodNameValid && methodValueValid && sourcesValid && targetsValid
+                    && matchConditionPropertiesValid && transformersValid;
             },
 
             handleMethodIndexChange() {
@@ -253,41 +213,47 @@
                 this.methodValueTemplate.items.forEach(valueItem => {
                     this.condition.method_value[valueItem.key] = valueItem.type;
                 });
+
+                if (this.methodValueTemplate.hasOwnProperty('transformers')) {
+                    this.methodValueTemplate.transformers.forEach(transformer => {
+                        this.conditionProperties.forEach(conditionProp => {
+                            if (!conditionProp.hasOwnProperty('transformers'))
+                                conditionProp.transformers = [];
+
+                            if (!conditionProp.transformers.find(obj => obj.name === transformer))
+                                conditionProp.transformers.push({
+                                    name: transformer,
+                                    parameters: this.getParametersForTransformer(transformer)
+                                });
+                        });
+                    });
+                }
             },
 
-            addTransformer(resource) {
-                if (!resource.hasOwnProperty('transformers'))
-                    resource.transformers = [];
+            getParametersForTransformer(transformer) {
+                if (this.transformers.hasOwnProperty(transformer))
+                    return this.transformers[transformer].items.reduce((acc, item) => {
+                        acc[item.key] = item.type;
+                        return acc;
+                    }, {});
 
-                resource.transformers.push({
-                    name: '',
-                    parameters: {},
-                })
+                return {};
             },
 
-            getTransformerTemplate(transformer) {
-                if (this.transformers.hasOwnProperty(transformer.name))
-                    return this.transformers[transformer.name];
+            cloneProperty(resourcesKey, index, conditionProperty) {
+                const transformers = [];
+                if (this.methodValueTemplate.hasOwnProperty('transformers'))
+                    this.methodValueTemplate.transformers.forEach(transformer => {
+                        transformers.push({
+                            name: transformer,
+                            parameters: this.getParametersForTransformer(transformer)
+                        });
+                    });
 
-                return {label: '', items: []};
-            },
-
-            handleTransformerIndexChange(transformer) {
-                transformer.parameters = {};
-                this.getTransformerTemplate(transformer).items.forEach(valueItem => {
-                    transformer.parameters[valueItem.key] = valueItem.type;
+                this.condition[resourcesKey].splice(index + 1, 0, {
+                    property: [conditionProperty.property[0], ''],
+                    transformers
                 });
-            },
-
-            resetProperty(properties, resourceIndex, propertyIndex) {
-                const property = properties[resourceIndex].property;
-                const newProperty = property.slice(0, propertyIndex);
-
-                newProperty.push('');
-                if (newProperty.length % 2 > 0)
-                    newProperty.push('');
-
-                this.$set(properties[resourceIndex], 'property', newProperty);
             },
         },
     };

@@ -12,6 +12,12 @@
         </b-button>
       </div>
 
+      <div v-if="clusteringStatus === 'running'" class="col-auto">
+        <b-button variant="danger" @click="killClustering">
+          Stop
+        </b-button>
+      </div>
+
       <div v-if="!alignment || alignmentStatus === 'failed'" class="col-auto">
         <b-button variant="info" @click="runAlignment">
           Run
@@ -24,12 +30,14 @@
                 @click="runClustering($event)" :disabled="association === ''"
                 :title="association === '' ? 'Choose an association first' : ''">
           Reconcile
+          <template v-if="clusteringStatus === 'failed'">again</template>
         </button>
 
         <button v-else-if="!clustering && clustering !== 'running'" type="button" class="btn btn-info my-1"
                 @click="runClustering($event)">
           Cluster
           <template v-if="association !== ''"> &amp; Reconcile</template>
+          <template v-if="clusteringStatus === 'failed'">again</template>
         </button>
       </div>
 
@@ -37,8 +45,8 @@
         <select class="col-auto form-control association-select my-1" v-model="association"
                 :id="'match_' + match.id + '_association'">
           <option value="">No association</option>
-          <option v-for="association_file_name in associationFiles" :value="association_file_name">
-            {{ association_file_name }}
+          <option v-for="associationFileName in associationFiles" :value="associationFileName">
+            {{ associationFileName }}
           </option>
         </select>
       </div>
@@ -49,143 +57,14 @@
     </template>
 
     <template v-slot:columns>
-      <div class="col">
-        <sub-card v-if="alignment" :is-first="true" class="small">
-          <div class="row align-items-center justify-content-center">
-            <div v-if="running" class="col-auto">
-              <loading :small="true"/>
-            </div>
-
-            <div class="col-auto">
-              <div class="row justify-content-center">
-                <div class="col-auto">
-                  <strong>Status: </strong>
-                  {{ status }}
-                </div>
-              </div>
-
-              <div v-if="alignmentStatus === 'failed' && alignment.status_message" class="row justify-content-center">
-                <div class="col-auto text-info font-italic">
-                  {{ alignment.status_message }}
-                </div>
-              </div>
-
-              <div v-if="downloads.length > 0" class="row justify-content-center">
-                <div class="col-auto clearfix">
-                  <ul v-for="download in downloads" class="font-italic text-info inline-list px-0">
-                    <li>
-                      {{ download.collection_id }}:
-                      <download-progress :dataset-id="download.dataset_id" :collection-id="download.collection_id"/>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-
-              <div class="row justify-content-center mt-1">
-                <div class="col-auto">
-                  <template v-if="alignmentStatus === 'waiting'">
-                    <strong>Request: </strong>
-                    {{ alignment.requested_at | moment("MMMM Do YYYY, hh:mm") }}
-
-                    <span class="font-italic">
-                      (<duration :from="alignment.requested_at"/>)
-                    </span>
-                  </template>
-
-                  <template v-else-if="alignmentStatus === 'downloading' || alignmentStatus === 'running'">
-                    <strong>Start: </strong>
-                    {{ alignment.processing_at | moment("MMMM Do YYYY, hh:mm") }}
-
-                    <span class="font-italic">
-                      (<duration :from="alignment.processing_at"/>)
-                    </span>
-                  </template>
-
-                  <template v-else-if="alignment.finished_at">
-                    <strong>Matching duration: </strong>
-                    <duration class="font-italic" :from="alignment.processing_at" :until="alignment.finished_at"/>
-                  </template>
-                </div>
-              </div>
-
-              <div v-if="clustering" class="row justify-content-center">
-                <div class="col-auto">
-                  <template v-if="clusteringStatus === 'waiting'">
-                    <strong>Request clustering: </strong>
-                    {{ clustering.requested_at | moment("MMMM Do YYYY, hh:mm") }}
-
-                    <span class="font-italic">
-                      (<duration :from="clustering.requested_at"/>)
-                    </span>
-                  </template>
-
-                  <template v-else-if="clusteringStatus === 'running'">
-                    <strong>Start clustering: </strong>
-                    {{ clustering.processing_at | moment("MMMM Do YYYY, hh:mm") }}
-
-                    <span class="font-italic">
-                      (<duration :from="clustering.processing_at"/>)
-                    </span>
-                  </template>
-
-                  <template v-else-if="clustering.finished_at">
-                    <strong>Clustering duration: </strong>
-                    <duration class="font-italic" :from="clustering.processing_at" :until="clustering.finished_at"/>
-                  </template>
-                </div>
-              </div>
-
-              <div class="row justify-content-center mt-1">
-                <div class="col-auto">
-                  <div v-if="clustering">
-                    <strong>Clusters found: </strong>
-                    {{ clustering.clusters_count ? clustering.clusters_count.toLocaleString('en') : 0 }}
-                  </div>
-
-                  <div>
-                    <strong>Links found: </strong>
-                    {{ alignment.links_count ? alignment.links_count.toLocaleString('en') : 0 }}
-
-                    <span
-                        v-if="alignment.links_count && alignment.distinct_links_count && alignment.links_count > alignment.distinct_links_count"
-                        class="font-italic text-info">
-                      ({{ alignment.distinct_links_count.toLocaleString('en') }} distinct links)
-                    </span>
-                  </div>
-                </div>
-
-                <div class="col-auto">
-                  <div>
-                    <strong>Resources in source: </strong>
-                    {{ alignment.sources_count ? alignment.sources_count.toLocaleString('en') : 0 }}
-
-                    <span
-                        v-if="alignment.sources_count && alignment.distinct_sources_count && alignment.sources_count > alignment.distinct_sources_count"
-                        class="font-italic text-info">
-                      ({{ alignment.distinct_sources_count.toLocaleString('en') }} distinct resources)
-                    </span>
-                  </div>
-
-                  <div>
-                    <strong>Resources in target: </strong>
-                    {{ alignment.targets_count ? alignment.targets_count.toLocaleString('en') : 0 }}
-
-                    <span
-                        v-if="alignment.targets_count && alignment.distinct_targets_count && alignment.targets_count > alignment.distinct_targets_count"
-                        class="font-italic text-info">
-                      ({{ alignment.distinct_targets_count.toLocaleString('en') }} distinct resources)
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </sub-card>
+      <div v-if="alignment" class="col">
+        <match-status :match="match"/>
       </div>
     </template>
 
     <sub-card label="Description">
-      <input type="text" class="form-control mt-3" :id="'description_' + match.id" v-model="match.description"/>
+      <textarea class="form-control mt-3" :id="'description_' + match.id" v-model="match.description">
+      </textarea>
 
       <small class="form-text text-muted mt-2">
         Provide a description for this alignment
@@ -193,19 +72,6 @@
     </sub-card>
 
     <fieldset :disabled="!!alignment">
-      <!--      <sub-card>-->
-      <!--        <div class="row">-->
-      <!--          <div class="col form-check">-->
-      <!--            <b-form-checkbox-->
-      <!--                :id="'match_' + match.id + '_is_association'"-->
-      <!--                v-model.boolean="match.is_association"-->
-      <!--                title="Check this box if this Alignment is intended for creating associations">-->
-      <!--              Association-->
-      <!--            </b-form-checkbox>-->
-      <!--          </div>-->
-      <!--        </div>-->
-      <!--      </sub-card>-->
-
       <sub-card label="Sources" :has-info="true" add-button="Add a Collection as a Source"
                 :hasError="errors.includes('sources') || errors.includes('sources_select')"
                 @add="addMatchResource('sources', $event)">
@@ -224,13 +90,10 @@
                 resources-key="sources"
                 @input="updateMatchResource('sources', index, $event)"
                 @remove="deleteMatchResource('sources', index)"
-                ref="sourceResourceComponents"
-            ></match-resource>
+                ref="sourceResourceComponents"/>
 
-            <div class="invalid-feedback d-block">
-              <template v-if="errors.includes('sources')">
-                Please provide at least one source
-              </template>
+            <div class="invalid-feedback" v-bind:class="{'is-invalid': errors.includes('sources')}">
+              Please provide at least one source
             </div>
           </div>
         </div>
@@ -254,13 +117,10 @@
                 resources-key="targets"
                 @input="updateMatchResource('targets', index, $event)"
                 @remove="deleteMatchResource('targets', index)"
-                ref="targetResourceComponents"
-            ></match-resource>
+                ref="targetResourceComponents"/>
 
-            <div class="invalid-feedback d-block">
-              <template v-if="errors.includes('targets')">
-                Please provide at least one target
-              </template>
+            <div class="invalid-feedback" v-bind:class="{'is-invalid': errors.includes('targets')}">
+              Please provide at least one target
             </div>
           </div>
         </div>
@@ -316,7 +176,8 @@
     import MatchTargetsInfo from '../../info/MatchTargetsInfo';
     import MatchMatchingMethodsInfo from '../../info/MatchMatchingMethodsInfo';
 
-    import MatchResource from './MatchResource';
+    import MatchStatus from "./MatchStatus";
+    import MatchResource from "./MatchResource";
     import MatchCondition from "./MatchCondition";
 
     import ConditionsGroup from "../../helpers/ConditionsGroup";
@@ -329,6 +190,7 @@
             MatchSourcesInfo,
             MatchTargetsInfo,
             MatchMatchingMethodsInfo,
+            MatchStatus,
             MatchResource,
             MatchCondition,
             ConditionsGroup
@@ -340,7 +202,6 @@
             return {
                 association: '',
                 associationFiles: [],
-                refreshDownloadsInProgress: false,
             };
         },
         computed: {
@@ -353,86 +214,11 @@
             },
 
             alignmentStatus() {
-                if (!this.alignment)
-                    return null;
-
-                return this.alignment.status;
+                return this.alignment ? this.alignment.status : null;
             },
 
             clusteringStatus() {
-                if (!this.clustering)
-                    return null;
-
-                return this.clustering.status;
-            },
-
-            running() {
-                return this.alignmentStatus === 'downloading' ||
-                    this.alignmentStatus === 'running' ||
-                    this.clusteringStatus === 'running';
-            },
-
-            status() {
-                let alignmentStatus = null;
-                if (this.alignment) {
-                    switch (this.alignmentStatus) {
-                        case 'done':
-                            alignmentStatus = 'Matched';
-                            break;
-                        case 'failed':
-                        case 'waiting':
-                        case 'downloading':
-                        case 'running':
-                        default:
-                            alignmentStatus = `Matching ${this.alignmentStatus}`;
-                            if (this.alignmentStatus !== 'failed' && this.alignment.status_message)
-                                alignmentStatus += ` (${this.alignment.status_message})`
-                    }
-                }
-
-                let clusteringStatus = null;
-                let reconciliationStatus = null;
-                if (this.clustering) {
-                    switch (this.clusteringStatus) {
-                        case 'done':
-                            clusteringStatus = 'Clustered';
-                            if (this.clustering.association)
-                                reconciliationStatus = 'Reconciled';
-                            break;
-                        case 'failed':
-                        case 'waiting':
-                        case 'running':
-                        default:
-                            if (this.clustering.association)
-                                reconciliationStatus = `Reconciliation ${this.clusteringStatus}`;
-                            if (this.clustering.clusters_count)
-                                clusteringStatus = 'Clustered';
-                    }
-                }
-
-                return [alignmentStatus, clusteringStatus, reconciliationStatus]
-                    .filter(status => status !== null)
-                    .join(' - ');
-            },
-
-            downloads() {
-                if (this.alignmentStatus !== 'downloading')
-                    return [];
-
-                if (!this.refreshDownloadsInProgress) {
-                    this.refreshDownloadsInProgress = true;
-                    this.$emit('refreshDownloadsInProgress');
-                }
-
-                const datasets = [];
-                [...this.match.sources, ...this.match.targets].forEach(resourceId => {
-                    const resource = this.$root.getResourceById(resourceId);
-                    const datasetId = resource.dataset.dataset_id;
-                    if (!datasets.includes(datasetId))
-                        datasets.push(datasetId);
-                });
-
-                return this.$root.downloading.filter(collection => datasets.includes(collection.dataset_id));
+                return this.clustering ? this.clustering.status : null;
             },
         },
         methods: {
@@ -471,14 +257,12 @@
                 group.conditions.push({
                     method_name: '',
                     method_value: {},
-                    sources: this.match.sources.reduce((acc, resource) => {
-                        acc[resource] = [{property: [resource, ''], transformers: []}];
-                        return acc;
-                    }, {}),
-                    targets: this.match.targets.reduce((acc, resource) => {
-                        acc[resource] = [{property: [resource, ''], transformers: []}];
-                        return acc;
-                    }, {}),
+                    sources: this.match.sources.map(resource => {
+                        return {property: [resource, ''], transformers: []};
+                    }),
+                    targets: this.match.targets.map(resource => {
+                        return {property: [resource, ''], transformers: []};
+                    }),
                 });
             },
 
@@ -487,15 +271,15 @@
                 this.match[resourcesKey].push('');
             },
 
-            updateConditions(group, resourcesKey, value, isInsert) {
+            updateConditions(group, resourcesKey, value = null, index = null) {
                 group.conditions.forEach(condition => {
-                    if (isInsert)
-                        this.$set(condition[resourcesKey], value, [{property: [value, ''], transformers: []}]);
-                    else
-                        this.$delete(condition[resourcesKey], value);
+                    if (value !== null)
+                        condition[resourcesKey].push({property: [value, ''], transformers: []});
+                    else if (index !== null)
+                        condition[resourcesKey].splice(index, 1);
 
                     if (condition.conditions)
-                        this.updateConditions(condition, resourcesKey, value, isInsert);
+                        this.updateConditions(condition, resourcesKey, value, index);
                 });
             },
 
@@ -503,7 +287,7 @@
                 const resourceId = this.match[resourcesKey][resourceIndex];
 
                 this.$set(this.match[resourcesKey], resourceIndex, value);
-                this.updateConditions(this.match.methods, resourcesKey, value, true);
+                this.updateConditions(this.match.methods, resourcesKey, value);
 
                 this.updateProperties(resourceId, value);
             },
@@ -513,7 +297,7 @@
                 if (this.match[resourcesKey].length < 1)
                     this.addMatchResource(resourcesKey);
 
-                this.updateConditions(this.match.methods, resourcesKey, resourceId, false);
+                this.updateConditions(this.match.methods, resourcesKey, null, resourceIndex);
                 this.$delete(this.match[resourcesKey], resourceIndex);
 
                 this.updateProperties(resourceId);
@@ -534,11 +318,16 @@
             async runAlignment(force = false) {
                 if (!this.validateMatch(true))
                     return;
-
                 const data = await this.$root.runAlignment(this.match.id, force);
                 if (data.result === 'exists' && confirm('This Alignment job already exists.\nDo you want to overwrite it with the current configuration?'))
                     await this.runAlignment(true);
 
+                this.$emit('refresh');
+            },
+
+            async runClustering() {
+                const associationFile = this.association !== '' ? this.association : null;
+                await this.$root.runClustering(this.match.id, associationFile);
                 this.$emit('refresh');
             },
 
@@ -547,9 +336,8 @@
                 this.$emit('refresh');
             },
 
-            async runClustering() {
-                const associationFile = this.association !== '' ? this.association : null;
-                await this.$root.runClustering(this.match.id, associationFile);
+            async killClustering() {
+                await this.$root.killClustering(this.match.id);
                 this.$emit('refresh');
             },
         },

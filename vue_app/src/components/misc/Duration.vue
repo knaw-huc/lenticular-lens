@@ -1,6 +1,11 @@
 <template>
-  <span v-if="until">{{ momentDuration | duration('humanize') }} ({{ exactDuration }})</span>
-  <span v-else>{{ momentDuration | duration('humanize', true) }}</span>
+  <span v-if="until">
+    {{ momentDuration | duration('humanize') }}
+    <span class="font-italic">({{ exactDuration }})</span>
+  </span>
+  <span v-else>
+    {{ momentDuration | duration('humanize', true) }}
+  </span>
 </template>
 
 <script>

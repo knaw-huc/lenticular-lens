@@ -1,30 +1,26 @@
 import re
 import time
-import threading
 
 from common.config_db import db_conn
 from common.job_alignment import get_job_data, get_job_alignment, update_alignment_job
 
 from psycopg2 import sql as psycopg2_sql, ProgrammingError
 
+from worker.job import Job
 from worker.matching.linkset_sql import LinksetSql
 from worker.matching.alignment_config import AlignmentConfig
 
 
-class AlignmentJob:
+class AlignmentJob(Job):
     def __init__(self, job_id, alignment):
         self.job_id = job_id
         self.alignment = alignment
 
-        self.killed = False
-        self.status = None
-        self.exception = None
-
-        self.db_conn = None
         self.config = None
         self.linkset_sql = None
 
         self.reset()
+        super().__init__(self.run_generated_sql)
 
     def reset(self):
         job_data = get_job_data(self.job_id)
@@ -32,59 +28,40 @@ class AlignmentJob:
         self.linkset_sql = LinksetSql(self.config)
 
     def run(self):
-        while self.config.has_queued_resources:
-            update_alignment_job(self.job_id, self.alignment, {'status': 'downloading'})
+        download_status_set = False
+        while self.config.has_queued_resources and not self.killed:
+            if not download_status_set:
+                update_alignment_job(self.job_id, self.alignment, {'status': 'downloading'})
+                download_status_set = True
+
             time.sleep(1)
             self.reset()
 
-        thread = threading.Thread(target=self.run_generated_sql)
-        thread.start()
-
-        while not self.killed and thread.is_alive():
-            self.watch_process_counts()
-            self.watch_kill()
-            time.sleep(1)
-
-        if self.killed:
-            return
-
-        if self.exception:
-            err_message = str(self.exception)
-            update_alignment_job(self.job_id, self.alignment, {'status': 'failed', 'status_message': err_message})
-            self.cleanup()
-        else:
-            self.finish()
+        super().run()
 
     def run_generated_sql(self):
-        try:
-            self.db_conn = db_conn()
+        if not self.killed:
+            self.process_sql(self.linkset_sql.generate_schema())
 
-            if not self.killed:
-                self.process_sql(self.linkset_sql.generate_schema())
+        if not self.killed:
+            self.status = 'Generating collections'
+            self.process_sql(self.linkset_sql.generate_resources())
 
-            if not self.killed:
-                self.status = 'Generating collections'
-                self.process_sql(self.linkset_sql.generate_resources())
+        if not self.killed:
+            self.status = 'Generating indexes'
+            self.process_sql(self.linkset_sql.generate_match_index_sql())
 
-            if not self.killed:
-                self.status = 'Generating indexes'
-                self.process_sql(self.linkset_sql.generate_match_index_sql())
+        if not self.killed:
+            self.status = 'Generating source resources'
+            self.process_sql(self.linkset_sql.generate_match_source_sql())
 
-            if not self.killed:
-                self.status = 'Generating source resources'
-                self.process_sql(self.linkset_sql.generate_match_source_sql())
+        if not self.killed:
+            self.status = 'Generating target resources'
+            self.process_sql(self.linkset_sql.generate_match_target_sql())
 
-            if not self.killed:
-                self.status = 'Generating target resources'
-                self.process_sql(self.linkset_sql.generate_match_target_sql())
-
-            if not self.killed:
-                self.status = 'Looking for links'
-                self.process_sql(self.linkset_sql.generate_match_linkset_sql())
-        except Exception as e:
-            self.exception = e
-        finally:
-            self.db_conn.close()
+        if not self.killed:
+            self.status = 'Looking for links'
+            self.process_sql(self.linkset_sql.generate_match_linkset_sql())
 
     def process_sql(self, sql):
         sql_string = sql.as_string(self.db_conn)
@@ -102,18 +79,7 @@ class AlignmentJob:
                         cur.execute(statement)
                         self.db_conn.commit()
 
-    def kill(self, reset=True):
-        self.killed = True
-
-        job_data = {'status': 'waiting'} if reset else {'status': 'failed', 'status_message': 'Killed manually'}
-        update_alignment_job(self.job_id, self.alignment, job_data)
-
-        if self.db_conn and not self.db_conn.closed:
-            self.db_conn.cancel()
-
-        self.cleanup()
-
-    def watch_process_counts(self):
+    def watch_process(self):
         with db_conn() as conn, conn.cursor() as cur:
             data = {'status_message': self.status}
 
@@ -146,8 +112,20 @@ class AlignmentJob:
         if alignment_job['kill']:
             self.kill(reset=False)
 
-    def finish(self):
-        self.watch_process_counts()
+    def on_kill(self, reset):
+        job_data = {'status': 'waiting'} if reset else {'status': 'failed', 'status_message': 'Killed manually'}
+        update_alignment_job(self.job_id, self.alignment, job_data)
+
+        self.cleanup()
+
+    def on_exception(self):
+        err_message = str(self.exception)
+        update_alignment_job(self.job_id, self.alignment, {'status': 'failed', 'status_message': err_message})
+
+        self.cleanup()
+
+    def on_finish(self):
+        self.watch_process()
 
         with db_conn() as conn, conn.cursor() as cur:
             cur.execute(psycopg2_sql.SQL('SELECT count(*) FROM {}').format(
@@ -186,7 +164,7 @@ class AlignmentJob:
             if clustering:
                 query = psycopg2_sql.SQL("""
                     UPDATE clusterings 
-                    SET status = %s, requested_at = now(), processing_at = null, finished_at = null
+                    SET status = %s, kill = false, requested_at = now(), processing_at = null, finished_at = null
                     WHERE job_id = %s AND alignment = %s
                 """)
 
@@ -195,8 +173,8 @@ class AlignmentJob:
             else:
                 query = psycopg2_sql.SQL("""
                     INSERT INTO clusterings 
-                    (job_id, alignment, clustering_type, association_file, status, requested_at) 
-                    VALUES (%s, %s, %s, %s, %s, now())
+                    (job_id, alignment, clustering_type, association_file, status, kill, requested_at) 
+                    VALUES (%s, %s, %s, %s, %s, false, now())
                 """)
 
                 cur.execute(query, (self.job_id, self.alignment, 'default', None, 'waiting'))

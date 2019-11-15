@@ -120,7 +120,7 @@ div#app::before {
 }
 
 .is-invalid {
-  &:not(.v-select) {
+  &:not(.v-select):not(.invalid-feedback) {
     @extend .border;
     @extend .border-danger;
   }
@@ -162,9 +162,15 @@ div#app::before {
   overflow: auto;
 }
 
-.invalid-feedback.inline-feedback {
-  width: auto;
-  margin-top: 0;
+.invalid-feedback {
+  &.inline-feedback {
+    width: auto;
+    margin-top: 0;
+  }
+
+  &.is-invalid {
+    display: block;
+  }
 }
 
 .striped-container .striped:nth-of-type(odd),

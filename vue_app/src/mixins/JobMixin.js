@@ -168,30 +168,31 @@ export default {
             return this.createReferencesForProperty(newProperty, resources);
         },
 
+        createMatchConditionProperties(conditionProps, resources) {
+            return conditionProps.reduce((acc, conditionProp) => {
+                const key = this.getResourceById(conditionProp.property[0]).label;
+                if (!acc.hasOwnProperty(key))
+                    acc[key] = [];
+
+                acc[key].push({
+                    property: this.createReferencesForProperty(conditionProp.property, resources),
+                    transformers: conditionProp.transformers
+                });
+                return acc;
+            }, {});
+        },
+
         async submit() {
             const resources = copy(this.resources);
             const matches = copy(this.matches);
 
             matches.forEach(match => {
-                ['sources', 'targets'].forEach(key => {
-                    match[key].forEach((resourceId, index) => {
-                        if (isId(resourceId))
-                            match[key][index] = this.getResourceById(resourceId).label;
-                    });
-                });
+                match.sources = match.sources.map(resourceId => this.getResourceById(resourceId).label);
+                match.targets = match.targets.map(resourceId => this.getResourceById(resourceId).label);
 
                 getRecursiveConditions(match.methods.conditions).forEach(condition => {
-                    ['sources', 'targets'].forEach(key => {
-                        Object.keys(condition[key]).forEach(resourceId => {
-                            condition[key][resourceId].forEach((property, index) => {
-                                condition[key][resourceId][index].property =
-                                    this.createReferencesForProperty(property.property, resources);
-                            });
-
-                            condition[key][this.getResourceById(resourceId).label] = condition[key][resourceId];
-                            delete condition[key][resourceId];
-                        });
-                    });
+                    condition.sources = this.createMatchConditionProperties(condition.sources, resources);
+                    condition.targets = this.createMatchConditionProperties(condition.targets, resources);
                 });
 
                 match.value_targets = this.createTargetsForProperties(match.properties);
@@ -317,6 +318,10 @@ export default {
 
         async killAlignment(alignment) {
             return callApi(`/job/${this.job.job_id}/kill_alignment/${alignment}`, {});
+        },
+
+        async killClustering(alignment) {
+            return callApi(`/job/${this.job.job_id}/kill_clustering/${alignment}`, {});
         },
 
         async getAlignment(alignment, clusterId = undefined, limit = undefined, offset = 0) {

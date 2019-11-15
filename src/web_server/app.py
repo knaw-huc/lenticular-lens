@@ -140,7 +140,7 @@ def run_clustering(job_id, alignment):
             query = psycopg2_sql.SQL("""
                 UPDATE clusterings 
                 SET association_file = %s, status = %s, 
-                    requested_at = now(), processing_at = null, finished_at = null
+                    kill = false, requested_at = now(), processing_at = null, finished_at = null
                 WHERE job_id = %s AND alignment = %s
                 """)
             params = (request.json['association_file'], 'waiting', job_id, alignment)
@@ -149,8 +149,9 @@ def run_clustering(job_id, alignment):
             return jsonify({'result': 'ok'})
         else:
             query = psycopg2_sql.SQL("""
-                INSERT INTO clusterings (job_id, alignment, clustering_type, association_file, status, requested_at) 
-                VALUES (%s, %s, %s, %s, %s, now())
+                INSERT INTO clusterings (job_id, alignment, clustering_type, association_file, 
+                                        status, kill, requested_at) 
+                VALUES (%s, %s, %s, %s, %s, false, now())
             """)
             params = (job_id, alignment, request.json.get('clustering_type', 'default'),
                       request.json['association_file'], 'waiting')
@@ -159,6 +160,12 @@ def run_clustering(job_id, alignment):
             return jsonify({'result': 'ok'})
     except psycopg2.errors.UniqueViolation:
         return jsonify({'result': 'exists'})
+
+
+@app.route('/job/<job_id>/kill_clustering/<alignment>', methods=['POST'])
+def kill_clustering(job_id, alignment):
+    run_query('UPDATE clusterings SET kill = true WHERE job_id = %s AND alignment = %s', (job_id, alignment))
+    return jsonify({'result': 'ok'})
 
 
 @app.route('/job/<job_id>/clusters/<alignment>')

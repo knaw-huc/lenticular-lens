@@ -12,7 +12,8 @@
     </template>
 
     <sub-card label="Description">
-      <input type="text" class="form-control mt-3" :id="'description_' + resource.id" v-model="resource.description"/>
+      <textarea class="form-control mt-3" :id="'description_' + resource.id" v-model="resource.description">
+      </textarea>
 
       <small class="form-text text-muted mt-2">
         Provide a description for this collection

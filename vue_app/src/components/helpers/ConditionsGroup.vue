@@ -18,10 +18,8 @@
       <div v-if="conditionsGroup.conditions.length < 1" class="col font-italic">
         No conditions
 
-        <div class="invalid-feedback d-block">
-          <template v-if="errors.includes('conditions')">
-            Please provide at least one condition
-          </template>
+        <div class="invalid-feedback" v-bind:class="{'is-invalid': errors.includes('conditions')}">
+          Please provide at least one condition
         </div>
       </div>
 

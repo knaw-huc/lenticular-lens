@@ -52,9 +52,6 @@ class Match:
                         else property_field.hash
 
                     template = matching_function.index_template['template']
-                    if matching_function.parameters:
-                        template = matching_function.format_template(template, target='{target}')
-
                     template_sql = psycopg_sql.SQL(template).format(target=psycopg_sql.Identifier(resource_field_name))
 
                     index_sqls.append(psycopg_sql.SQL('CREATE INDEX ON {} USING {};').format(

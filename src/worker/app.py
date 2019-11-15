@@ -10,8 +10,9 @@ from enum import Enum
 from common.config_db import db_conn
 
 from worker.timbuctoo import TimbuctooJob
-from worker.alignments import AlignmentJob
+from worker.alignment import AlignmentJob
 from worker.clustering import ClusteringJob
+from worker.reconciliation import ReconciliationJob
 
 from psycopg2 import extras as psycopg2_extras, InterfaceError, OperationalError
 
@@ -20,8 +21,9 @@ locale.setlocale(locale.LC_ALL, '')
 
 class WorkerType(Enum):
     TIMBUCTOO = 'timbuctoo'
-    ALIGNMENTS = 'alignments'
-    CLUSTERINGS = 'clusterings'
+    ALIGNMENT = 'alignment'
+    CLUSTERING = 'clustering'
+    RECONCILIATION = 'reconciliation'
 
 
 class Worker:
@@ -57,7 +59,7 @@ class Worker:
                 WHERE "table_name" = %s""", (self.job_data['table_name'],))
 
             self.watch_for_jobs("timbuctoo_tables", watch_query, update_status, self.run_timbuctoo_job)
-        elif self.type == WorkerType.ALIGNMENTS:
+        elif self.type == WorkerType.ALIGNMENT:
             watch_query = """
                 SELECT *
                 FROM alignments aj
@@ -73,11 +75,11 @@ class Worker:
                 WHERE job_id = %s AND alignment = %s""", (self.job_data['job_id'], self.job_data['alignment']))
 
             self.watch_for_jobs("alignments", watch_query, update_status, self.run_alignment_job)
-        elif self.type == WorkerType.CLUSTERINGS:
+        elif self.type == WorkerType.CLUSTERING:
             watch_query = """
                 SELECT *
                 FROM clusterings cl
-                WHERE cl.status = 'waiting'
+                WHERE cl.status = 'waiting' AND (cl.association_file IS NULL OR cl.association_file = '')
                 ORDER BY cl.requested_at
                 LIMIT 1
             """
@@ -88,9 +90,23 @@ class Worker:
                 WHERE job_id = %s AND alignment = %s""", (self.job_data['job_id'], self.job_data['alignment']))
 
             self.watch_for_jobs("clusterings", watch_query, update_status, self.run_clustering_job)
+        elif self.type == WorkerType.RECONCILIATION:
+            watch_query = """
+                SELECT *
+                FROM clusterings cl
+                WHERE cl.status = 'waiting' AND cl.association_file IS NOT NULL AND cl.association_file != ''
+                ORDER BY cl.requested_at
+                LIMIT 1
+            """
+
+            update_status = lambda cur: cur.execute("""
+                UPDATE clusterings
+                SET status = 'running', processing_at = now()
+                WHERE job_id = %s AND alignment = %s""", (self.job_data['job_id'], self.job_data['alignment']))
+
+            self.watch_for_jobs("clusterings", watch_query, update_status, self.run_reconciliation_job)
 
     def watch_for_jobs(self, table, watch_sql, update_status, run_job):
-        n1 = 0
         while True:
             try:
                 with db_conn() as conn, conn.cursor(cursor_factory=psycopg2_extras.DictCursor) as cur:
@@ -109,8 +125,7 @@ class Worker:
                 else:
                     time.sleep(2)
             except (InterfaceError, OperationalError):
-                n1 += 1
-                time.sleep((2 ** n1) + (random.randint(0, 1000) / 1000))
+                time.sleep(random.randint(0, 1000) / 1000)
 
     def run_timbuctoo_job(self):
         self.job = TimbuctooJob(table_name=self.job_data['table_name'],
@@ -131,8 +146,13 @@ class Worker:
         self.cleanup()
 
     def run_clustering_job(self):
-        self.job = ClusteringJob(job_id=self.job_data['job_id'], alignment=self.job_data['alignment'],
-                                 association_file=self.job_data['association_file'])
+        self.job = ClusteringJob(job_id=self.job_data['job_id'], alignment=self.job_data['alignment'])
+        self.job.run()
+        self.cleanup()
+
+    def run_reconciliation_job(self):
+        self.job = ReconciliationJob(job_id=self.job_data['job_id'], alignment=self.job_data['alignment'],
+                                     association_file=self.job_data['association_file'])
         self.job.run()
         self.cleanup()
 

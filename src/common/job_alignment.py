@@ -88,8 +88,18 @@ def get_clusters(job_id, alignment, limit=None, offset=0, include_props=False):
 
     with db_conn() as conn, conn.cursor() as cur:
         cur.itersize = 10000
-        cur.execute('SELECT id, size, links, nodes FROM {} ORDER BY size DESC {}'
-                    .format(clusters_table, limit_offset_sql))
+
+        if values:
+            cur.execute("""
+                SELECT clusters.id, clusters.size, clusters.links, 
+                       ARRAY_AGG(DISTINCT links.source_uri) || ARRAY_AGG(DISTINCT links.target_uri) AS nodes
+                FROM {} AS clusters
+                LEFT JOIN {} AS links ON clusters.id = links.cluster_id
+                GROUP BY clusters.id
+                ORDER BY clusters.size DESC {}
+            """.format(clusters_table, linkset_table, limit_offset_sql))
+        else:
+            cur.execute('SELECT id, size, links FROM {} ORDER BY size DESC {}'.format(clusters_table, limit_offset_sql))
 
         for cluster in cur:
             cluster_values = {}
@@ -97,7 +107,7 @@ def get_clusters(job_id, alignment, limit=None, offset=0, include_props=False):
 
             if values:
                 for uri, uri_values in values.items():
-                    if '<' + uri + '>' in cluster[3]:
+                    if uri in cluster[3]:
                         for prop_value in uri_values:
                             key = prop_value['dataset'] + '_' + prop_value['property']
 

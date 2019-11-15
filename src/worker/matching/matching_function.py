@@ -54,7 +54,7 @@ class MatchingFunction:
             template = re.sub(r'{source}', 'source.{field_name}', template)
             template = re.sub(r'{target}', 'target.{field_name}', template)
 
-        return psycopg2_sql.SQL(template)
+        return psycopg2_sql.SQL(str(template))
 
     @property
     def sql(self):

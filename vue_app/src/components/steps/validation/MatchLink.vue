@@ -125,11 +125,11 @@
         },
         methods: {
             async copySourceUriToClipboard() {
-                await navigator.clipboard.writeText(this.source);
+                await navigator.clipboard.writeText(this.link.source);
             },
 
             async copyTargetUriToClipboard() {
-                await navigator.clipboard.writeText(this.target);
+                await navigator.clipboard.writeText(this.link.target);
             },
         },
     };

@@ -3,8 +3,8 @@
     <div v-if="researchForm === 'new' || jobId" class="border p-4 mt-4 bg-light">
       <div class="form-group">
         <label class="h3" for="research">Research Question</label>
-        <input type="text" class="form-control" id="research" v-model="title"
-               v-bind:class="{'is-invalid': errors.includes('title')}" :disabled="isUpdating">
+        <textarea class="form-control" id="research" v-model="title"
+                  v-bind:class="{'is-invalid': errors.includes('title')}" :disabled="isUpdating"></textarea>
         <small class="form-text text-muted mt-2">
           Write here your main research question
         </small>
@@ -16,8 +16,7 @@
       <div class="form-group">
         <label class="h3" for="description">Hypothesis</label>
         <textarea class="form-control" id="description" v-model="description"
-                  v-bind:class="{'is-invalid': errors.includes('description')}"
-                  :disabled="isUpdating"></textarea>
+                  v-bind:class="{'is-invalid': errors.includes('description')}" :disabled="isUpdating"></textarea>
         <small class="form-text text-muted mt-2">
           Describe here your expectations and possibly your sub-research questions
         </small>

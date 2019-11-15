@@ -56,7 +56,8 @@
     </div>
 
     <div class="row" v-show="errors.includes('property') || errors.includes('condition') || errors.includes('value')">
-      <div class="invalid-feedback d-block pl-3">
+      <div class="invalid-feedback pl-3"
+           v-bind:class="{'is-invalid': errors.includes('property') || errors.includes('condition') || errors.includes('value')}">
         <template v-if="errors.includes('property')">
           Please select a property
         </template>
