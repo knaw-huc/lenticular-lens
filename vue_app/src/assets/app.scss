@@ -2,9 +2,13 @@ $primary: #efc501;
 $secondary: #0c8c75;
 $info: $secondary;
 $light: #eff1f3;
+$primary-very-light: mix($primary, $light, 15%);
+$secondary-very-light: mix($secondary, $light, 10%);
 $border-color: #adb5bd;
+$zindex-fixed: 50;
+$zindex-sticky: 50;
 $container-max-widths: (lg: 1500px);
-$vs-state-active-bg: inherit;
+$vs-state-active-bg: $secondary-very-light !important;
 $vs-state-active-color: inherit;
 $vs-component-placeholder-color: lightgrey;
 
@@ -45,12 +49,12 @@ div#app::before {
   background-color: #f5ecc1 !important;
 }
 
-.bg-info-light {
-  background-color: #c8eae4 !important;
+.bg-primary-very-light {
+  background-color: $primary-very-light !important;
 }
 
-.sticky-top {
-  z-index: 50;
+.bg-info-light {
+  background-color: #c8eae4 !important;
 }
 
 .v-select {
@@ -173,9 +177,9 @@ div#app::before {
   }
 }
 
-.striped-container .striped:nth-of-type(odd),
-.vs__dropdown-menu .vs__dropdown-option:nth-of-type(odd) {
-  background-color: rgba(0, 0, 0, .05);
+.striped-container .striped:nth-of-type(even),
+.vs__dropdown-menu .vs__dropdown-option:nth-of-type(even) {
+  background-color: mix($secondary, $light, 5%);
 }
 
 ul.inline-list li {

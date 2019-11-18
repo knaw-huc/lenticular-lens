@@ -2,7 +2,7 @@
   <div class="main-card" v-bind:class="{'is-invalid': hasError}">
     <handle v-if="hasHandle"/>
 
-    <div class="sticky-top bg-light py-2">
+    <div class="bg-light py-2" v-bind:class="{'sticky-top': visible}">
       <div class="row flex-nowrap align-items-center justify-content-start">
         <div v-if="hasCollapse" class="col-auto">
           <fa-icon icon="chevron-down" size="2x" v-b-toggle="hasCollapse ? id : {}"></fa-icon>
