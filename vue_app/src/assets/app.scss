@@ -217,23 +217,58 @@ ul.inline-list li:not(:first-child):before {
   }
 }
 
-.property-resource, .property-path {
-  @extend .btn;
-  @extend .rounded-pill;
-  @extend .py-0;
-  @extend .my-1;
-  @extend .text-break-all;
-}
+.property {
+  display: flex;
 
-.property-resource {
-  @extend .border;
-  @extend .border-info;
-  @extend .bg-white;
-}
+  .property-resource, .property-values-resource, .property-path {
+    display: inline-flex;
+    align-items: baseline;
+  }
 
-.property-path {
-  @extend .bg-info;
-  @extend .text-white;
+  .property-pill {
+    @extend .btn;
+    @extend .rounded-pill;
+    @extend .py-0;
+    @extend .my-1;
+    @extend .text-break-all;
+
+    &.btn-sm {
+      @extend .btn-sm;
+    }
+  }
+
+  .property-resource, .property-values-resource {
+    flex: 0 0 auto;
+  }
+
+  .property-path {
+    flex-wrap: wrap;
+  }
+
+  .property-resource {
+    .property-pill {
+      @extend .border;
+      @extend .border-info;
+      @extend .bg-white;
+    }
+  }
+
+  .property-path, .property-values-resource {
+    .property-pill {
+      @extend .bg-info;
+      @extend .text-white;
+    }
+  }
+
+  .property-values {
+    flex-shrink: 1;
+    padding: 0;
+
+    @extend .text-info;
+    @extend .mb-0;
+    @extend .mt-1;
+    @extend .ml-2;
+  }
 }
 
 .modal-full-size {

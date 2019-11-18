@@ -1,7 +1,7 @@
 <template>
   <div class="border border-dark p-3 mt-3">
     <div class="row align-items-center justify-content-between m-0 mb-2">
-      <div class="col">
+      <div class="col p-0">
         <property :property="condition.property" :singular="true" :resource-info="false"
                   @resetProperty="resetProperty(condition.property, $event)" ref="propertyComponent"/>
       </div>

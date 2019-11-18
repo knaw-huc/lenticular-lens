@@ -1,13 +1,13 @@
 <template>
   <div>
-    <div class="row flex-nowrap m-0" v-for="(values, property) in propsGrouped">
-      <div class="col-auto">
-        <div class="property-path btn-sm read-only">
+    <div class="property" v-for="(values, property) in propsGrouped">
+      <div class="property-values-resource">
+        <div class="property-pill btn-sm read-only">
           {{ property }}
         </div>
       </div>
 
-      <ul class="col-auto text-info inline-list flex-shrink-1 p-0 mb-0 mt-1">
+      <ul class="property-values inline-list">
         <li v-for="value in values">
           {{ value }}
         </li>

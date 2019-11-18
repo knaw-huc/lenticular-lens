@@ -112,7 +112,6 @@
           <div class="mt-4">
             <property
                 v-for="(property, idx) in match.properties"
-                class="mx-0"
                 :key="idx"
                 :property="property"
                 :singular="false"

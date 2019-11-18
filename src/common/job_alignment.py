@@ -8,6 +8,7 @@ from decimal import Decimal
 from psycopg2 import extras as psycopg2_extras, sql as psycopg2_sql
 from psycopg2.extensions import AsIs
 
+from common.collection import Collection
 from common.helpers import hasher, get_pagination_sql
 from common.config_db import db_conn, execute_query, run_query
 from common.ll.DataAccess.PostgreSQL.Query import get_values_for
@@ -46,9 +47,40 @@ def get_job_clustering(job_id, alignment):
     return run_query('SELECT * FROM clusterings WHERE job_id = %s AND alignment = %s', (job_id, alignment), dict=True)
 
 
-def get_value_targets(job_id, alignment):
+def get_value_targets(job_id, alignment, downloaded_only=True):
+    def is_downloaded(dataset_id, collection_id):
+        return any(download['dataset_id'] == dataset_id and download['collection_id'] == collection_id
+                   for download in downloaded)
+
     job_data = get_job_data(job_id)
-    return next((mapping['value_targets'] for mapping in job_data['mappings'] if mapping['id'] == alignment))
+    value_targets = next((mapping['value_targets'] for mapping in job_data['mappings'] if mapping['id'] == alignment))
+
+    if not downloaded_only:
+        return value_targets
+
+    new_value_targets = []
+    downloaded = Collection.download_status()['downloaded']
+
+    for value_target in value_targets:
+        graph = value_target['graph']
+        new_graph_data = []
+
+        for data_of_entity in value_target['data']:
+            entity_type = data_of_entity['entity_type']
+
+            if is_downloaded(graph, entity_type):
+                new_properties = []
+                for properties in data_of_entity['properties']:
+                    if len(properties) == 1 or all(is_downloaded(graph, entity) for entity in properties[1::2]):
+                        new_properties.append(properties)
+
+                if len(new_properties) > 0:
+                    new_graph_data.append({'entity_type': entity_type, 'properties': new_properties})
+
+        if len(new_graph_data) > 0:
+            new_value_targets.append({'graph': graph, 'data': new_graph_data})
+
+    return new_value_targets
 
 
 def get_links(job_id, alignment, export_links=ExportLinks.ALL, cluster_id=None,

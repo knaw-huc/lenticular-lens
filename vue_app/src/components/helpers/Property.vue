@@ -1,34 +1,31 @@
 <template>
-  <div class="row align-items-center">
-    <template v-if="resourceInfo">
-      <div class="col-auto p-0">
-        <div class="property-resource read-only" v-bind:class="{'btn-sm': small}">
-          {{ dataset.title }}
-        </div>
+  <div class="property">
+    <div v-if="resourceInfo" class="property-resource">
+      <div class="property-pill read-only" v-bind:class="{'btn-sm': small}">
+        {{ dataset.title }}
       </div>
 
-      <div class="col-auto p-0">
-        <div class="property-resource read-only mx-2" v-bind:class="{'btn-sm': small}">
-          {{ resource.dataset.collection_id }}
-        </div>
+      <div class="property-pill read-only mx-2" v-bind:class="{'btn-sm': small}">
+        {{ resource.dataset.collection_id }}
       </div>
 
-      <div v-if="!singular && !readOnly" class="col-auto pl-0 ml-0 my-1">
+      <div v-if="!singular && !readOnly" class="mr-2">
         <button-add @click="$emit('clone')" size="sm" title="Add another property"/>
         <button-delete v-if="allowDelete" class="ml-2" @click="$emit('delete')" size="sm" title="Remove this property"/>
       </div>
-    </template>
+    </div>
 
-    <template v-for="prop in props">
-      <div v-if="!Array.isArray(prop.resources) && prop.inPath" class="col-auto">
-        <fa-icon icon="arrow-right"/>
-      </div>
+    <div class="property-path">
+      <template v-for="prop in props">
+        <div v-if="!Array.isArray(prop.resources) && prop.inPath" class="mx-2">
+          <fa-icon icon="arrow-right"/>
+        </div>
 
-      <div v-if="prop.value[0] === '' && !readOnly" :value="prop.value[0]" class="col-auto p-0 my-1">
-        <v-select :clearable="false" autocomplete="off" placeholder="Choose a referenced collection"
+        <v-select v-if="prop.value[0] === '' && !readOnly" :value="prop.value[0]"
+                  :clearable="false" autocomplete="off" placeholder="Choose a referenced collection"
                   :options="['__value__', ...Object.keys(prop.resources).sort()]"
-                  @input="updateProperty($event, prop.idx)"
-                  v-bind:class="{'is-invalid': errors.includes(`value_${prop.idx}`)}">
+                  v-bind:class="{'is-invalid': errors.includes(`value_${prop.idx}`)}"
+                  @input="updateProperty($event, prop.idx)">
           <div slot="option" slot-scope="option">
             <div v-if="option.label === '__value__'">
               <span class="text-success pr-2">Value</span>
@@ -47,30 +44,25 @@
             </template>
           </div>
         </v-select>
-      </div>
 
-      <template v-else-if="!Array.isArray(prop.resources) && prop.inPath">
-        <div v-if="readOnly" class="col-auto p-0">
-          <div class="property-path read-only" v-bind:class="{'btn-sm': small}">
+        <template v-else-if="!Array.isArray(prop.resources) && prop.inPath">
+          <div v-if="readOnly" class="property-pill read-only" v-bind:class="{'btn-sm': small}">
             {{ prop.value[0] }}
           </div>
-        </div>
 
-        <div v-else class="col-auto p-0">
-          <button type="button" class="property-path" v-bind:class="{'btn-sm': small}"
+          <button v-else type="button" class="property-pill" v-bind:class="{'btn-sm': small}"
                   @click="$emit('resetProperty', prop.idx)">
             {{ prop.value[0] }}
           </button>
-        </div>
-      </template>
+        </template>
 
-      <template v-if="prop.value[0] !== '' && prop.value[0] !== '__value__'">
-        <div v-if="!Array.isArray(prop.resources)" class="col-auto">
-          <fa-icon icon="arrow-right"/>
-        </div>
+        <template v-if="prop.value[0] !== '' && prop.value[0] !== '__value__'">
+          <div v-if="!Array.isArray(prop.resources)" class="mx-2">
+            <fa-icon icon="arrow-right"/>
+          </div>
 
-        <div v-if="!prop.value[1] && !readOnly" class="col-auto p-0 my-1">
-          <v-select :clearable="false" autocomplete="off" placeholder="Choose a property"
+          <v-select v-if="!prop.value[1] && !readOnly"
+                    :clearable="false" autocomplete="off" placeholder="Choose a property"
                     :options="Object.keys(prop.properties).sort()" @input="updateProperty($event, prop.idx + 1)"
                     v-bind:class="{'is-invalid': errors.includes(`value_${prop.idx}`)}">
             <div slot="option" slot-scope="option">
@@ -85,22 +77,18 @@
               </div>
             </div>
           </v-select>
-        </div>
 
-        <div v-else-if="readOnly" class="col-auto p-0">
-          <div class="property-path read-only" v-bind:class="{'btn-sm': small}">
+          <div v-else-if="readOnly" class="property-pill read-only" v-bind:class="{'btn-sm': small}">
             {{ prop.value[1] }}
           </div>
-        </div>
 
-        <div v-else class="col-auto p-0">
-          <button type="button" class="property-path" v-bind:class="{'btn-sm': small}"
+          <button v-else type="button" class="property-pill" v-bind:class="{'btn-sm': small}"
                   @click="$emit('resetProperty', prop.idx + 1)">
             {{ prop.value[1] }}
           </button>
-        </div>
+        </template>
       </template>
-    </template>
+    </div>
   </div>
 </template>
 

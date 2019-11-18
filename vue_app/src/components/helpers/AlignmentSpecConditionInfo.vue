@@ -1,31 +1,28 @@
 <template>
   <div class="border shadow p-2">
-    <template v-for="collection_properties in condition.sources">
-      <div v-for="resource in collection_properties" class="row mx-0">
-        <div class="col-auto">
-          <property :property="resource.property" :read-only="true" :small="true"/>
-        </div>
-
-        <p class="font-weight-bold m-0" v-if="resource.transformers && resource.transformers.length > 0">
-          with transformers {{ resource.transformers.join(', ') }}
-        </p>
+    <div v-for="resource in condition.sources" class="row">
+      <div class="col-auto">
+        <property :property="resource.property" :read-only="true" :small="true"/>
       </div>
-    </template>
+
+      <p class="font-weight-bold m-0" v-if="resource.transformers && resource.transformers.length > 0">
+        with transformers
+        <span class="text-info" v-html="resourceTransformersHumanReadable(resource)"/>
+      </p>
+    </div>
 
     <p class="font-weight-bold m-0">against</p>
 
-    <template v-for="collection_properties in condition.targets">
-      <div v-for="resource in collection_properties" class="row mx-0">
-        <div class="col-auto">
-          <property :property="resource.property" :read-only="true" :small="true"/>
-        </div>
-
-        <p class="font-weight-bold m-0" v-if="resource.transformers && resource.transformers.length > 0">
-          with transformers
-          <span class="text-info">{{ resource.transformers.join(', ') }}</span>
-        </p>
+    <div v-for="resource in condition.targets" class="row">
+      <div class="col-auto">
+        <property :property="resource.property" :read-only="true" :small="true"/>
       </div>
-    </template>
+
+      <p class="font-weight-bold m-0" v-if="resource.transformers && resource.transformers.length > 0">
+        with transformers
+        <span class="text-info" v-html="resourceTransformersHumanReadable(resource)"/>
+      </p>
+    </div>
 
     <p class="font-weight-bold m-0">
       using
@@ -75,7 +72,13 @@
                         return `<span class="text-info">${value}</span>`;
                     })
                     .join(' and ');
-            }
+            },
+
+            resourceTransformersHumanReadable(resource) {
+                return resource.transformers
+                    .map(transformer => this.transformers[transformer.name].label)
+                    .join(' and ');
+            },
         },
     }
 </script>
