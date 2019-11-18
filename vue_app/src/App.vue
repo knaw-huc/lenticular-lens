@@ -83,7 +83,12 @@
       </tab-content>
 
       <tab-content title="Export">
-        <tab-content-structure title="Export" :tab-error="tabError" :is-saved="isSaved"></tab-content-structure>
+        <tab-content-structure title="Export" :tab-error="tabError" :is-saved="isSaved">
+          <match-export
+              v-for="match in matchesWithResults"
+              :match="match"
+              :key="match.id"/>
+        </tab-content-structure>
       </tab-content>
 
       <template v-if="(props.activeTabIndex === 0  && !jobId) || [1,2].includes(props.activeTabIndex)"
@@ -134,6 +139,7 @@
     import Resource from './components/steps/resources/Resource';
     import Match from './components/steps/matches/Match';
     import MatchValidation from './components/steps/validation/MatchValidation';
+    import MatchExport from './components/steps/export/MatchExport';
 
     import ValidationMixin from "./mixins/ValidationMixin";
     import TabContentStructure from './components/structural/TabContentStructure';
@@ -148,6 +154,7 @@
             Resource,
             Match,
             MatchValidation,
+            MatchExport,
         },
         data() {
             return {

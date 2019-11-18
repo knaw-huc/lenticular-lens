@@ -360,6 +360,15 @@ export default {
             return callApi(`/job/${this.job.job_id}/validate/${alignment}`, {source, target, valid});
         },
 
+        exportCsvLink(alignment, accepted, declined, notValidated) {
+            const params = [];
+            if (accepted) params.push('accepted=true');
+            if (declined) params.push('declined=true');
+            if (notValidated) params.push('not_validated=true');
+
+            return `/job/${this.job.job_id}/export/${alignment}/csv?${params.join('&')}`;
+        },
+
         async getAssociationFiles() {
             return callApi("/association_files");
         },

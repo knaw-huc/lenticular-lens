@@ -2,6 +2,7 @@ import time
 import random
 import psycopg2
 
+from enum import IntFlag
 from decimal import Decimal
 
 from psycopg2 import extras as psycopg2_extras, sql as psycopg2_sql
@@ -10,6 +11,13 @@ from psycopg2.extensions import AsIs
 from common.helpers import hasher, get_pagination_sql
 from common.config_db import db_conn, execute_query, run_query
 from common.ll.DataAccess.PostgreSQL.Query import get_values_for
+
+
+class ExportLinks(IntFlag):
+    ALL = 7
+    ACCEPTED = 4
+    DECLINED = 2
+    NOT_VALIDATED = 1
 
 
 def get_job_data(job_id):
@@ -43,7 +51,8 @@ def get_value_targets(job_id, alignment):
     return next((mapping['value_targets'] for mapping in job_data['mappings'] if mapping['id'] == alignment))
 
 
-def get_links(job_id, alignment, cluster_id=None, limit=None, offset=0, include_props=False):
+def get_links(job_id, alignment, export_links=ExportLinks.ALL, cluster_id=None,
+              limit=None, offset=0, include_props=False):
     linkset_table = 'linkset_' + job_id + '_' + str(alignment)
     limit_offset_sql = get_pagination_sql(limit, offset)
 
@@ -54,7 +63,23 @@ def get_links(job_id, alignment, cluster_id=None, limit=None, offset=0, include_
             values = get_values_for(targets, linkset_table_name=linkset_table, cluster_id=cluster_id,
                                     limit=limit, offset=offset)
 
-    where_sql = 'WHERE cluster_id = %s' if cluster_id else ''
+    cluster_sql = 'cluster_id = %s' if cluster_id else ''
+    export_links_sql = []
+    if export_links < ExportLinks.ALL and ExportLinks.ACCEPTED in export_links:
+        export_links_sql.append('valid = true')
+    if export_links < ExportLinks.ALL and ExportLinks.DECLINED in export_links:
+        export_links_sql.append('valid = false')
+    if export_links < ExportLinks.ALL and ExportLinks.NOT_VALIDATED in export_links:
+        export_links_sql.append('valid IS NULL')
+
+    where_sql = ''
+    if cluster_id and export_links < ExportLinks.ALL:
+        where_sql = 'WHERE {} AND ({})'.format(cluster_sql, ' OR '.join(export_links_sql))
+    elif cluster_id:
+        where_sql = 'WHERE {}'.format(cluster_sql)
+    elif export_links < ExportLinks.ALL:
+        where_sql = 'WHERE {}'.format(' OR '.join(export_links_sql))
+
     query = 'SELECT source_uri, target_uri, strengths, cluster_id, valid FROM {} {} {}' \
         .format(linkset_table, where_sql, limit_offset_sql)
 

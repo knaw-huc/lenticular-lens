@@ -4,7 +4,6 @@ import jstyleson
 
 from hashlib import md5
 from os.path import join, dirname, realpath
-from psycopg2 import sql as psycopg2_sql
 
 from common.config_db import db_conn
 
@@ -18,16 +17,6 @@ def hasher(object):
 def file_date():
     today = datetime.date.isoformat(datetime.date.today()).replace('-', '')
     return f"{today}_{re.findall('..:.*', str(datetime.datetime.now()))[0]}"
-
-
-def table_to_csv(table_name, columns, file):
-    table_name = [psycopg2_sql.Identifier(name_part) for name_part in table_name.split('.')]
-
-    with db_conn() as conn, conn.cursor() as cur:
-        sql = cur.mogrify(
-            psycopg2_sql.SQL("COPY (SELECT {columns} FROM {schema}.{table}) TO STDOUT WITH CSV DELIMITER ','")
-                .format(columns=psycopg2_sql.SQL(', ').join(columns), schema=table_name[0], table=table_name[1]))
-        cur.copy_expert(sql, file)
 
 
 def get_json_from_file(filename):

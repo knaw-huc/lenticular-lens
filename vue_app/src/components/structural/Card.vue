@@ -4,8 +4,8 @@
 
     <div class="sticky-top bg-light py-2">
       <div class="row flex-nowrap align-items-center justify-content-start">
-        <div class="col-auto">
-          <fa-icon icon="chevron-down" size="2x" v-b-toggle="id"></fa-icon>
+        <div v-if="hasCollapse" class="col-auto">
+          <fa-icon icon="chevron-down" size="2x" v-b-toggle="hasCollapse ? id : {}"></fa-icon>
         </div>
 
         <div class="flex-shrink-1 mr-auto" v-bind:class="[isEditing ? 'col' : 'col-auto']">
@@ -32,10 +32,12 @@
       </div>
     </div>
 
-    <b-collapse :id="id" :ref="id" :accordion="type + '-accordion'" :visible="openCard"
+    <b-collapse v-if="hasCollapse" :id="id" :ref="id" :accordion="type + '-accordion'" :visible="openCard"
                 @show="$emit('show')" @hide="$emit('hide')" @input="withInput($event)">
       <slot></slot>
     </b-collapse>
+
+    <slot v-else></slot>
   </div>
 </template>
 
@@ -54,6 +56,10 @@
             hasError: {
                 type: Boolean,
                 default: false,
+            },
+            hasCollapse: {
+                type: Boolean,
+                default: true
             },
             hasExtraRow: {
                 type: Boolean,

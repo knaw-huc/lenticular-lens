@@ -1,16 +1,17 @@
+import io
+import csv
 import json
-import subprocess
 
 import psycopg2
 from psycopg2 import sql as psycopg2_sql
 
-from flask import Flask, jsonify, request, abort
+from flask import Flask, jsonify, request, abort, make_response
 
 from common.config_db import run_query
 from common.helpers import hash_string, get_association_files
 from common.collection import Collection
 from common.timbuctoo_datasets import TimbuctooDatasets
-from common.job_alignment import get_job_data, get_job_alignments, get_job_clusterings, \
+from common.job_alignment import ExportLinks, get_job_data, get_job_alignments, get_job_clusterings, \
     get_job_clustering, update_job_data, get_links, get_clusters, get_cluster, get_value_targets
 
 from common.ll.Clustering.IlnVisualisation import plot, plot_compact, plot_reconciliation
@@ -246,7 +247,25 @@ def get_cluster_graph_data(job_id, alignment, cluster_id):
     })
 
 
-@app.route('/server_status/')
-def status():
-    status_process = subprocess.run(['python', '/app/status.py'], capture_output=True, text=True)
-    return status_process.stdout.replace('\n', '<br>')
+@app.route('/job/<job_id>/export/<alignment>/csv')
+def export_to_csv(job_id, alignment):
+    export_links = 0
+    if request.args.get('accepted', default=False) == 'true':
+        export_links |= ExportLinks.ACCEPTED
+    if request.args.get('declined', default=False) == 'true':
+        export_links |= ExportLinks.DECLINED
+    if request.args.get('not_validated', default=False) == 'true':
+        export_links |= ExportLinks.NOT_VALIDATED
+
+    stream = io.StringIO()
+    writer = csv.writer(stream)
+
+    writer.writerow(['Source URI', 'Target URI', 'Strengths', 'Valid'])
+    for link in get_links(job_id, alignment, export_links=export_links):
+        writer.writerow([link['source'], link['target'], link['strengths'], link['valid']])
+
+    output = make_response(stream.getvalue())
+    output.headers['Content-Disposition'] = 'attachment; filename=' + job_id + '_' + alignment + '.csv'
+    output.headers['Content-Type'] = 'text/csv'
+
+    return output
