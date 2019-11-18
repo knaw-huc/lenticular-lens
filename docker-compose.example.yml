@@ -27,7 +27,7 @@ services:
       - DATABASE_PASSWORD=postgres
       - WORKER_TYPE=timbuctoo
 
-  alignments_worker:
+  alignment_worker:
     build:
       context: .
       dockerfile: Dockerfile.worker
@@ -39,9 +39,9 @@ services:
       - DATABASE_DB=postgres
       - DATABASE_USER=postgres
       - DATABASE_PASSWORD=postgres
-      - WORKER_TYPE=alignments
+      - WORKER_TYPE=alignment
 
-  clusterings_worker:
+  clustering_worker:
     build:
       context: .
       dockerfile: Dockerfile.worker
@@ -53,7 +53,7 @@ services:
       - DATABASE_DB=postgres
       - DATABASE_USER=postgres
       - DATABASE_PASSWORD=postgres
-      - WORKER_TYPE=clusterings
+      - WORKER_TYPE=clustering
 
   web_server:
     build:
