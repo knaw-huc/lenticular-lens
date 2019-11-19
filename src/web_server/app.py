@@ -34,6 +34,15 @@ def downloads():
     return jsonify(Collection.download_status())
 
 
+@app.route('/download')
+def start_download():
+    datasets = TimbuctooDatasets(request.args.get('endpoint'), request.args.get('hsid'))
+    collection = datasets.collection(request.args.get('dataset_id'), request.args.get('collection_id'))
+    collection.start_download()
+
+    return jsonify({'result': 'ok'})
+
+
 @app.route('/association_files')
 def association_files():
     return jsonify(get_association_files())

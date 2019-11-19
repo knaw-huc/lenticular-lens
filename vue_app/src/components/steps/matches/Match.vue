@@ -172,6 +172,8 @@
 </template>
 
 <script>
+    import {EventBus} from '../../../eventbus.js';
+
     import MatchSourcesInfo from '../../info/MatchSourcesInfo';
     import MatchTargetsInfo from '../../info/MatchTargetsInfo';
     import MatchMatchingMethodsInfo from '../../info/MatchMatchingMethodsInfo';
@@ -321,23 +323,23 @@
                 if (data.result === 'exists' && confirm('This Alignment job already exists.\nDo you want to overwrite it with the current configuration?'))
                     await this.runAlignment(true);
 
-                this.$emit('refresh');
+                EventBus.$emit('refresh');
             },
 
             async runClustering() {
                 const associationFile = this.association !== '' ? this.association : null;
                 await this.$root.runClustering(this.match.id, associationFile);
-                this.$emit('refresh');
+                EventBus.$emit('refresh');
             },
 
             async killAlignment() {
                 await this.$root.killAlignment(this.match.id);
-                this.$emit('refresh');
+                EventBus.$emit('refresh');
             },
 
             async killClustering() {
                 await this.$root.killClustering(this.match.id);
-                this.$emit('refresh');
+                EventBus.$emit('refresh');
             },
         },
         async mounted() {

@@ -67,8 +67,6 @@
                 @submit="submit"
                 @remove="$root.matches.splice(index, 1)"
                 @update:label="match.label = $event"
-                @refresh="refresh(true)"
-                @refreshDownloadsInProgress="refreshDownloadsInProgress(true)"
                 ref="matchComponents"/>
           </draggable>
         </tab-content-structure>
@@ -135,6 +133,7 @@
 
 <script>
     import Draggable from 'vuedraggable';
+    import {EventBus} from './eventbus.js';
 
     import Research from './components/steps/research/Research';
     import Resource from './components/steps/resources/Resource';
@@ -389,6 +388,9 @@
 
             this.refreshDownloadsInProgress();
             this.$root.loadAssociationFiles();
+
+            EventBus.$on('refresh', _ => this.refresh(true));
+            EventBus.$on('refreshDownloadsInProgress', _ => this.refreshDownloadsInProgress(true));
         },
     };
 </script>

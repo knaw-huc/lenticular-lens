@@ -157,6 +157,10 @@ div#app::before {
   font-size: 0.9rem;
 }
 
+.smaller {
+  font-size: 0.8rem;
+}
+
 .text-break-all {
   word-break: break-all;
 }
@@ -220,24 +224,25 @@ ul.inline-list li:not(:first-child):before {
 .property {
   display: flex;
 
-  .property-resource, .property-values-resource, .property-path {
+  .property-resource, .property-path {
     display: inline-flex;
     align-items: baseline;
   }
 
   .property-pill {
     @extend .btn;
+    @extend .border;
     @extend .rounded-pill;
     @extend .py-0;
     @extend .my-1;
     @extend .text-break-all;
 
-    &.btn-sm {
+    &.sm {
       @extend .btn-sm;
     }
   }
 
-  .property-resource, .property-values-resource {
+  .property-resource {
     flex: 0 0 auto;
   }
 
@@ -245,19 +250,24 @@ ul.inline-list li:not(:first-child):before {
     flex-wrap: wrap;
   }
 
-  .property-resource {
-    .property-pill {
-      @extend .border;
-      @extend .border-info;
-      @extend .bg-white;
-    }
+  .resource-pills .property-pill {
+    @extend .border-info;
+    @extend .bg-white;
   }
 
-  .property-path, .property-values-resource {
-    .property-pill {
-      @extend .bg-info;
-      @extend .text-white;
-    }
+  .property-pills .property-pill {
+    @extend .border-info;
+    @extend .bg-info;
+    @extend .text-white;
+  }
+
+  .property-pill.download-pill {
+    font-size: 0.9em;
+
+    @extend .border-warning;
+    @extend .bg-warning;
+    @extend .font-italic;
+    @extend .text-dark;
   }
 
   .property-values {

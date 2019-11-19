@@ -60,34 +60,32 @@ class Collection:
         if self._table_data:
             return self._table_data
 
-        with db_conn() as conn:
-            with conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) as cur:
-                cur.execute('SELECT * FROM timbuctoo_tables '
-                            'WHERE graphql_endpoint = %s AND dataset_id = %s AND collection_id = %s',
-                            (self.graphql_endpoint, self.dataset_id, self.collection_id))
-                self._table_data = cur.fetchone()
+        with db_conn() as conn, conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) as cur:
+            cur.execute('SELECT * FROM timbuctoo_tables '
+                        'WHERE graphql_endpoint = %s AND dataset_id = %s AND collection_id = %s',
+                        (self.graphql_endpoint, self.dataset_id, self.collection_id))
+            self._table_data = cur.fetchone()
 
-            if not self._table_data:
-                with conn.cursor() as cur:
-                    cur.execute(psycopg2_sql.SQL('CREATE TABLE {} ({})').format(
-                        psycopg2_sql.Identifier(self.table_name),
-                        self.columns_sql,
-                    ))
-
-                with conn.cursor() as cur:
-                    cur.execute('''
-                        INSERT INTO timbuctoo_tables (
-                            "table_name", graphql_endpoint, hsid, dataset_id, collection_id, 
-                            dataset_name, title, description, total, columns, create_time)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, now())
-                    ''', (self.table_name, self.graphql_endpoint, self.hsid, self.dataset_id, self.collection_id,
-                          self.dataset_name, self.title, self.description, self.total, dumps(self.columns)))
-
-                conn.commit()
-
-                return self.table_data
+        if not self._table_data:
+            self.start_download()
+            return self.table_data
 
         return self._table_data
+
+    def start_download(self):
+        with db_conn() as conn, conn.cursor() as cur:
+            cur.execute(psycopg2_sql.SQL('CREATE TABLE {} ({})').format(
+                psycopg2_sql.Identifier(self.table_name),
+                self.columns_sql,
+            ))
+
+            cur.execute('''
+                INSERT INTO timbuctoo_tables (
+                    "table_name", graphql_endpoint, hsid, dataset_id, collection_id, 
+                    dataset_name, title, description, total, columns, create_time)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, now())
+            ''', (self.table_name, self.graphql_endpoint, self.hsid, self.dataset_id, self.collection_id,
+                  self.dataset_name, self.title, self.description, self.total, dumps(self.columns)))
 
     @staticmethod
     def download_status():

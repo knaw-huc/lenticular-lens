@@ -98,6 +98,15 @@ export default {
             return matches.find(match => (isId(matchId) && match.id === parseInt(matchId)) || match.label === matchId);
         },
 
+        exportCsvLink(alignment, accepted, declined, notValidated) {
+            const params = [];
+            if (accepted) params.push('accepted=true');
+            if (declined) params.push('declined=true');
+            if (notValidated) params.push('not_validated=true');
+
+            return `/job/${this.job.job_id}/export/${alignment}/csv?${params.join('&')}`;
+        },
+
         createTargetsForProperties(properties) {
             return properties.reduce((targets, prop) => {
                 if (prop.length === 2 && prop[1] === '')
@@ -306,13 +315,20 @@ export default {
             this.clusterings = clusterings;
         },
 
+        async startDownload(datasetId, collectionId, graphqlEndpoint, hsid) {
+            const params = [`dataset_id=${datasetId}`, `collection_id=${collectionId}`, `endpoint=${graphqlEndpoint}`];
+            if (hsid) params.push(`hsid=${hsid}`);
+
+            return callApi(`/download?${params.join('&')}`);
+        },
+
         async createJob(inputs) {
             const data = await callApi('/job/create/', inputs);
             return data.job_id;
         },
 
         async updateJob(jobData) {
-            await callApi('/job/update/', jobData);
+            return callApi('/job/update/', jobData);
         },
 
         async runAlignment(alignment, restart) {
@@ -362,15 +378,6 @@ export default {
 
         async validateLink(alignment, source, target, valid) {
             return callApi(`/job/${this.job.job_id}/validate/${alignment}`, {source, target, valid});
-        },
-
-        exportCsvLink(alignment, accepted, declined, notValidated) {
-            const params = [];
-            if (accepted) params.push('accepted=true');
-            if (declined) params.push('declined=true');
-            if (notValidated) params.push('not_validated=true');
-
-            return `/job/${this.job.job_id}/export/${alignment}/csv?${params.join('&')}`;
         },
 
         async loadDatasets(graphqlEndpoint, hsid) {

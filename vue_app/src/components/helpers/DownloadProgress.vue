@@ -1,9 +1,23 @@
 <template>
-  <span v-if="downloadedInfo" class="text-success">Downloaded</span>
-  <span v-else-if="downloadingInfo" class="text-info font-italic">
+  <span v-if="small && downloadingInfo" class="smaller font-italic">
+    {{ downloadingInfo.rows_count }}/{{ downloadingInfo.total }}
+  </span>
+
+  <span v-else-if="small && !downloadingInfo && !downloadedInfo" class="text-warning">
+    <fa-icon icon="times" size="sm"/>
+  </span>
+
+  <span v-else-if="!small && downloadedInfo" class="text-success">
+    Downloaded
+  </span>
+
+  <span v-else-if="!small && downloadingInfo" class="text-info font-italic">
     Downloading {{ downloadingInfo.rows_count }}/{{ downloadingInfo.total }}
   </span>
-  <span v-else class="text-danger">Not yet downloaded</span>
+
+  <span v-else-if="!small" class="text-danger">
+    Not yet downloaded
+  </span>
 </template>
 
 <script>
@@ -12,6 +26,10 @@
         props: {
             'datasetId': String,
             'collectionId': String,
+            'small': {
+                type: Boolean,
+                default: false
+            },
         },
         computed: {
             downloadedInfo() {

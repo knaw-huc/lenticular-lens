@@ -1,12 +1,15 @@
 <template>
   <div class="property">
-    <div v-if="resourceInfo" class="property-resource">
-      <div class="property-pill read-only" v-bind:class="{'btn-sm': small}">
+    <div v-if="resourceInfo" class="property-resource resource-pills">
+      <div class="property-pill read-only" v-bind:class="{'sm': small}">
         {{ dataset.title }}
       </div>
 
-      <div class="property-pill read-only mx-2" v-bind:class="{'btn-sm': small}">
+      <div class="property-pill read-only mx-2" v-bind:class="{'sm': small}">
         {{ resource.dataset.collection_id }}
+
+        <download-progress :dataset-id="datasetId" :collection-id="resource.dataset.collection_id"
+                           :small="true" class="pl-2"/>
       </div>
 
       <div v-if="!singular && !readOnly" class="mr-2">
@@ -15,7 +18,7 @@
       </div>
     </div>
 
-    <div class="property-path">
+    <div class="property-path property-pills">
       <template v-for="prop in props">
         <div v-if="!Array.isArray(prop.resources) && prop.inPath" class="mx-2">
           <fa-icon icon="arrow-right"/>
@@ -46,13 +49,17 @@
         </v-select>
 
         <template v-else-if="!Array.isArray(prop.resources) && prop.inPath">
-          <div v-if="readOnly" class="property-pill read-only" v-bind:class="{'btn-sm': small}">
+          <div v-if="readOnly" class="property-pill read-only" v-bind:class="{'sm': small}">
             {{ prop.value[0] }}
+
+            <download-progress :dataset-id="datasetId" :collection-id="prop.value[0]" :small="true" class="pl-2"/>
           </div>
 
-          <button v-else type="button" class="property-pill" v-bind:class="{'btn-sm': small}"
+          <button v-else type="button" class="property-pill" v-bind:class="{'sm': small}"
                   @click="$emit('resetProperty', prop.idx)">
             {{ prop.value[0] }}
+
+            <download-progress :dataset-id="datasetId" :collection-id="prop.value[0]" :small="true" class="pl-2"/>
           </button>
         </template>
 
@@ -78,21 +85,27 @@
             </div>
           </v-select>
 
-          <div v-else-if="readOnly" class="property-pill read-only" v-bind:class="{'btn-sm': small}">
+          <div v-else-if="readOnly" class="property-pill read-only" v-bind:class="{'sm': small}">
             {{ prop.value[1] }}
           </div>
 
-          <button v-else type="button" class="property-pill" v-bind:class="{'btn-sm': small}"
+          <button v-else type="button" class="property-pill" v-bind:class="{'sm': small}"
                   @click="$emit('resetProperty', prop.idx + 1)">
             {{ prop.value[1] }}
           </button>
         </template>
       </template>
+
+      <button v-if="notDownloaded.length > 0" type="button" class="property-pill download-pill ml-4"
+              v-bind:class="{'sm': small}" @click="startDownloading">
+        Start downloading missing entities
+      </button>
     </div>
   </div>
 </template>
 
 <script>
+    import {EventBus} from "../../eventbus";
     import ValidationMixin from "../../mixins/ValidationMixin";
 
     export default {
@@ -126,10 +139,21 @@
                 return this.$root.getResourceById(this.property[0]);
             },
 
+            datasetId() {
+                return this.resource.dataset.dataset_id;
+            },
+
             dataset() {
                 const datasets = this.$root.getDatasets(
                     this.resource.dataset.timbuctoo_graphql, this.resource.dataset.timbuctoo_hsid);
-                return datasets[this.resource.dataset.dataset_id];
+                return datasets[this.datasetId];
+            },
+
+            collections() {
+                return [
+                    this.resource.dataset.collection_id,
+                    ...this.property.filter((_, idx) => idx > 0 && idx % 2 === 0)
+                ];
             },
 
             props() {
@@ -145,6 +169,22 @@
                             inPath: this.readOnly || this.property[propertyIdx] !== '__value__',
                         };
                     });
+            },
+
+            downloading() {
+                return this.collections.filter(collection => {
+                    return this.$root.downloading.find(downloadInfo => {
+                        return downloadInfo.dataset_id === this.datasetId && downloadInfo.collection_id === collection;
+                    });
+                });
+            },
+
+            notDownloaded() {
+                return this.collections.filter(collection => {
+                    return ![...this.$root.downloading, ...this.$root.downloaded].find(downloadInfo => {
+                        return downloadInfo.dataset_id === this.datasetId && downloadInfo.collection_id === collection;
+                    });
+                });
             },
         },
         methods: {
@@ -194,6 +234,16 @@
                 const properties = prop ? this.getPropertiesForCollection(collectionId)[prop] : null;
                 if (properties && properties.referencedCollections.length > 0)
                     this.property.push('', '');
+            },
+
+            async startDownloading() {
+                const downloads = this.notDownloaded.map(async collection => {
+                    return this.$root.startDownload(this.resource.dataset.dataset_id, collection,
+                        this.resource.dataset.timbuctoo_graphql, this.resource.dataset.timbuctoo_hsid);
+                });
+
+                await Promise.all(downloads);
+                EventBus.$emit('refreshDownloadsInProgress');
             },
         },
     };

@@ -1,8 +1,8 @@
 <template>
   <div>
     <div class="property" v-for="(values, property) in propsGrouped">
-      <div class="property-values-resource">
-        <div class="property-pill btn-sm read-only">
+      <div class="property-resource property-pills">
+        <div class="property-pill sm read-only">
           {{ property }}
         </div>
       </div>
