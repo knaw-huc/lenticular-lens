@@ -19,4 +19,4 @@ ENV LANGUAGE en_US.UTF-8
 
 COPY ./src /app
 
-CMD ["python", "/app/worker/app.py"]
+CMD ["python", "/app/worker.py"]

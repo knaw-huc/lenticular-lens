@@ -2,8 +2,8 @@ import sys
 import signal
 import threading
 
-from web_server.app import app
-from worker.app import Worker, WorkerType
+from web import app as webapp
+from worker import Worker, WorkerType
 
 if __name__ == "__main__":
     def teardown(signum=0, stack=None):
@@ -24,5 +24,4 @@ if __name__ == "__main__":
     threading.Thread(target=alignment_worker.run).start()
     threading.Thread(target=clustering_worker.run).start()
 
-    # threading.Thread(target=web_server.app.run).start()
-    app.run()
+    webapp.run()
