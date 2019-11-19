@@ -41,11 +41,11 @@
         </button>
       </div>
 
-      <div v-if="alignmentStatus === 'done' && associationFiles" class="col-auto">
+      <div v-if="alignmentStatus === 'done' && $root.associationFiles" class="col-auto">
         <select class="col-auto form-control association-select my-1" v-model="association"
                 :id="'match_' + match.id + '_association'">
           <option value="">No association</option>
-          <option v-for="associationFileName in associationFiles" :value="associationFileName">
+          <option v-for="associationFileName in $root.associationFiles" :value="associationFileName">
             {{ associationFileName }}
           </option>
         </select>
@@ -201,7 +201,6 @@
         data() {
             return {
                 association: '',
-                associationFiles: [],
             };
         },
         computed: {
@@ -347,8 +346,6 @@
 
             if (this.match.targets.length < 1)
                 this.addMatchResource('targets');
-
-            this.associationFiles = await this.$root.getAssociationFiles();
         },
     };
 </script>

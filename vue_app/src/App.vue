@@ -22,6 +22,7 @@
               :job-description="jobDescription"
               :job-link="jobLink"
               :research-form="researchForm"
+              :is-loading="isLoading"
               :is-updating="isUpdating"
               @load="setJobId($event)"
               @create="createJob($event)"
@@ -166,6 +167,7 @@
                 jobDescription: '',
                 jobLink: '',
                 isSaved: true,
+                isLoading: false,
                 isUpdating: false,
                 isDownloading: false,
                 steps: ['research', 'collections', 'alignments', 'validation', 'export'],
@@ -281,14 +283,22 @@
                 this.isUpdating = false;
             },
 
-            async setJobId(jobId) {
+            async setJobId(jobId, fromUrl = false) {
                 this.jobId = jobId;
+                this.isLoading = true;
 
-                const parsedUrl = new URL(window.location.href);
-                parsedUrl.searchParams.set('job_id', jobId);
-                window.history.pushState(null, null, parsedUrl.href);
+                if (!fromUrl) {
+                    const parsedUrl = new URL(window.location.href);
+                    parsedUrl.searchParams.set('job_id', jobId);
+                    window.history.pushState(null, null, parsedUrl.href);
+                }
+                else {
+                    this.researchForm = 'existing';
+                }
 
                 await this.getJobData();
+
+                this.isLoading = false;
             },
 
             async submit() {
@@ -374,13 +384,11 @@
             }
 
             const jobId = urlParams.get('job_id');
-            if (jobId) {
-                this.jobId = jobId;
-                this.researchForm = 'existing';
-                this.getJobData();
-            }
+            if (jobId)
+                this.setJobId(jobId, true);
 
             this.refreshDownloadsInProgress();
+            this.$root.loadAssociationFiles();
         },
     };
 </script>

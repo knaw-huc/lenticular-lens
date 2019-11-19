@@ -11,6 +11,7 @@ export default {
             datasets: {},
             downloaded: [],
             downloading: [],
+            associationFiles: [],
         };
     },
     methods: {
@@ -241,6 +242,9 @@ export default {
 
         async loadJob(jobId) {
             const job = await callApi('/job/' + jobId);
+            if (!job)
+                return;
+
             job.created_at = job.created_at ? new Date(job.created_at) : null;
             job.updated_at = job.updated_at ? new Date(job.updated_at) : null;
             this.job = job;
@@ -270,7 +274,7 @@ export default {
                         if (dataB.hsid && !dataA.hsid) return 1;
                         return 0;
                     })
-                    .filter((data, idx, filtered) => filtered.find(d => d.endpoint === data.endpoint));
+                    .filter((data, idx, res) => res.findIndex(data2 => data2.endpoint === data.endpoint) === idx);
                 await Promise.all(graphQlEndpoints.map(data => this.loadDatasets(data.endpoint, data.hsid)));
 
                 this.resources = resources;
@@ -369,10 +373,6 @@ export default {
             return `/job/${this.job.job_id}/export/${alignment}/csv?${params.join('&')}`;
         },
 
-        async getAssociationFiles() {
-            return callApi("/association_files");
-        },
-
         async loadDatasets(graphqlEndpoint, hsid) {
             const id = graphqlEndpoint && hsid ? graphqlEndpoint + ':' + hsid : graphqlEndpoint;
             if (!id || this.datasets.hasOwnProperty(id))
@@ -400,6 +400,10 @@ export default {
             const downloads = await callApi('/downloads');
             this.downloaded = downloads.downloaded;
             this.downloading = downloads.downloading;
+        },
+
+        async loadAssociationFiles() {
+            this.associationFiles = await callApi('/association_files');
         },
     },
 };
@@ -434,20 +438,29 @@ function getRecursiveConditions(conditionsGroup) {
 }
 
 async function callApi(path, body) {
-    if (body) {
-        const response = await fetch(path, {
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-            },
-            method: 'POST',
-            body: JSON.stringify(body)
-        });
+    try {
+        let response = null;
+
+        if (body) {
+            response = await fetch(path, {
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                },
+                method: 'POST',
+                body: JSON.stringify(body)
+            });
+        }
+        else {
+            response = await fetch(path);
+        }
+
+        if (!response.ok)
+            return null;
 
         return response.json();
     }
-
-    const response = await fetch(path);
-
-    return response.json();
+    catch (e) {
+        return null;
+    }
 }

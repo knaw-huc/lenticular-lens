@@ -6,9 +6,7 @@
       </div>
 
       <div v-if="failed" class="col-auto">
-        <div class="d-flex justify-content-center text-danger">
-          <fa-icon icon="times" size="3x"/>
-        </div>
+        <failed size="3x"/>
       </div>
 
       <div class="col-auto">

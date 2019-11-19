@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div v-if="researchForm === 'new' || jobId" class="border p-4 mt-4 bg-light">
+    <div v-if="!isLoading && !failed && (researchForm === 'new' || jobId)" class="border p-4 mt-4 bg-light">
       <div class="form-group">
         <label class="h3" for="research">Research Question</label>
         <textarea class="form-control" id="research" v-model="title"
@@ -50,6 +50,10 @@
 
     <div v-if="researchForm === 'existing' || jobId" class="bg-light border mt-4 p-4">
       <div class="row justify-content-end align-items-center">
+        <loading v-if="isLoading"/>
+
+        <failed v-else-if="failed" size="2x"/>
+
         <span class="badge badge-info" ref="clipboardCopyMessage" hidden>
           Job ID copied to clipboard
         </span>
@@ -102,7 +106,13 @@
             jobDescription: String,
             jobLink: String,
             researchForm: String,
+            isLoading: Boolean,
             isUpdating: Boolean,
+        },
+        computed: {
+            failed() {
+                return !this.isLoading && this.jobId && !this.$root.job;
+            },
         },
         methods: {
             validateResearch() {
