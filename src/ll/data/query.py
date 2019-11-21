@@ -61,15 +61,16 @@ def get_property_values_query(query_data, uris=None, cluster_id=None,
 def create_query_for(table_info, graph, property_path, cluster_id=None,
                      linkset_table_name=None, clusters_table_name=None, limit=None, offset=0):
     table_name = table_info['table_name']
+    property_name = property_path
     resource = 'target'
     columns = table_info['columns']
-
     joins = []
     if type(property_path) is list:
-        property_name = property_path[-1]
-        joins = get_property_joins_sql(graph, resource, columns, property_path)
-    else:
-        property_name = property_path
+        property_sql_info = get_property_sql_info(graph, resource, columns, property_path)
+        property_name = property_sql_info['property_name']
+        resource = property_sql_info['resource']
+        columns = property_sql_info['columns']
+        joins = property_sql_info['joins']
 
     property = PropertyField(property_name, parent_label=resource, columns=columns)
     where_sql = psycopg2_sql.SQL('WHERE target.uri IN %(uris)s') if not linkset_table_name else psycopg2_sql.SQL('')
@@ -97,7 +98,7 @@ def create_query_for(table_info, graph, property_path, cluster_id=None,
     )
 
 
-def get_property_joins_sql(graph, cur_resource, cur_columns, property_path):
+def get_property_sql_info(graph, cur_resource, cur_columns, property_path):
     joins = []
 
     while len(property_path) > 1:
@@ -125,7 +126,7 @@ def get_property_joins_sql(graph, cur_resource, cur_columns, property_path):
         cur_resource = next_resource
         cur_columns = next_table_info['columns']
 
-    return joins
+    return {'property_name': property_path[0], 'resource': cur_resource, 'columns': cur_columns, 'joins': joins}
 
 
 def get_linkset_join_sql(linkset_table_name, cluster_id=None, limit=None, offset=0):
