@@ -8,10 +8,13 @@ from decimal import Decimal
 from psycopg2 import extras as psycopg2_extras, sql as psycopg2_sql
 from psycopg2.extensions import AsIs
 
+from ll.job.job_config import JobConfig
+
 from ll.data.collection import Collection
-from ll.util.helpers import hasher, get_pagination_sql
+from ll.data.query import get_property_values
+
 from ll.util.config_db import db_conn, execute_query, run_query
-from ll.DataAccess.PostgreSQL.Query import get_values_for
+from ll.util.helpers import hash_string, hasher, get_pagination_sql
 
 
 class ExportLinks(IntFlag):
@@ -92,8 +95,8 @@ def get_links(job_id, alignment, export_links=ExportLinks.ALL, cluster_id=None,
     if include_props:
         targets = get_value_targets(job_id, alignment)
         if targets:
-            values = get_values_for(targets, linkset_table_name=linkset_table, cluster_id=cluster_id,
-                                    limit=limit, offset=offset)
+            values = get_property_values(targets, linkset_table_name=linkset_table, cluster_id=cluster_id,
+                                         limit=limit, offset=offset)
 
     cluster_sql = 'cluster_id = %s' if cluster_id else ''
     export_links_sql = []
@@ -140,8 +143,8 @@ def get_clusters(job_id, alignment, limit=None, offset=0, include_props=False):
     if include_props:
         targets = get_value_targets(job_id, alignment)
         if targets:
-            values = get_values_for(targets, linkset_table_name=linkset_table, clusters_table_name=clusters_table,
-                                    limit=limit, offset=offset)
+            values = get_property_values(targets, linkset_table_name=linkset_table, clusters_table_name=clusters_table,
+                                         limit=limit, offset=offset)
 
     with db_conn() as conn, conn.cursor() as cur:
         cur.itersize = 10000
@@ -222,6 +225,35 @@ def get_cluster(job_id, alignment, cluster_id):
             nodes.append(target)
 
     return {'links': all_links, 'strengths': strengths, 'nodes': nodes}
+
+
+def get_resource_sample(job_id, resource_label, limit=None, offset=0, total=False):
+    job_data = get_job_data(job_id)
+    job_config = JobConfig('job_id', job_data['resources'], job_data['mappings'])
+
+    resource_label = hash_string(resource_label)
+    resource = job_config.get_resource_by_label(resource_label)
+    if not resource:
+        return []
+
+    selection = psycopg2_sql.SQL('count(*) AS total') if total else resource.properties_sql
+    order_limit = psycopg2_sql.SQL('' if total else 'ORDER BY uri ' + get_pagination_sql(limit, offset))
+
+    with db_conn() as conn, conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) as cur:
+        cur.execute(psycopg2_sql.SQL("""
+            SELECT {selection}
+            FROM {table_name} AS {view_name} {joins} {wheres} 
+            {order_limit}; 
+        """).format(
+            selection=selection,
+            table_name=psycopg2_sql.Identifier(resource.table_name),
+            view_name=psycopg2_sql.Identifier(resource.label),
+            joins=resource.joins_related_sql,
+            wheres=resource.where_sql,
+            order_limit=order_limit,
+        ))
+
+        return cur.fetchone() if total else cur.fetchall()
 
 
 def update_job_data(job_id, job_data):

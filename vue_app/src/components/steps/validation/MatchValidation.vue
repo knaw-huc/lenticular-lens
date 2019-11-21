@@ -216,7 +216,7 @@
         </template>
 
         <template v-slot:no-more>
-          No more clusters
+          No more links
         </template>
       </infinite-loading>
     </template>

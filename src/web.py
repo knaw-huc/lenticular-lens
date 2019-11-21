@@ -12,7 +12,7 @@ from ll.util.helpers import hash_string, get_association_files
 from ll.data.collection import Collection
 from ll.data.timbuctoo_datasets import TimbuctooDatasets
 from ll.job.job_alignment import ExportLinks, get_job_data, get_job_alignments, get_job_clusterings, \
-    get_job_clustering, update_job_data, get_links, get_clusters, get_cluster, get_value_targets
+    get_job_clustering, update_job_data, get_links, get_clusters, get_cluster, get_value_targets, get_resource_sample
 from ll.Clustering.IlnVisualisation import plot, plot_compact, plot_reconciliation
 
 app = Flask(__name__)
@@ -35,8 +35,8 @@ def downloads():
 
 @app.route('/download')
 def start_download():
-    datasets = TimbuctooDatasets(request.args.get('endpoint'), request.args.get('hsid'))
-    collection = datasets.collection(request.args.get('dataset_id'), request.args.get('collection_id'))
+    collection = Collection(request.args.get('endpoint'), request.args.get('hsid'),
+                            request.args.get('dataset_id'), request.args.get('collection_id'))
     collection.start_download()
 
     return jsonify({'result': 'ok'})
@@ -101,6 +101,14 @@ def job_clusterings(job_id):
     if job_clusterings:
         return jsonify(job_clusterings)
     return jsonify([])
+
+
+@app.route('/job/<job_id>/resource/<resource_label>')
+def resource_sample(job_id, resource_label):
+    return jsonify(get_resource_sample(job_id, resource_label,
+                                       limit=request.args.get('limit', type=int),
+                                       offset=request.args.get('offset', 0, type=int),
+                                       total=request.args.get('total', default=False) == 'true'))
 
 
 @app.route('/job/<job_id>/run_alignment/<alignment>', methods=['POST'])

@@ -1,14 +1,14 @@
 <template>
   <div>
-    <div class="property" v-for="(values, property) in propsGrouped">
+    <div class="property" v-for="propAndValues in properties">
       <div class="property-resource property-pills">
         <div class="property-pill sm read-only">
-          {{ property }}
+          {{ propAndValues.property }}
         </div>
       </div>
 
       <ul class="property-values inline-list">
-        <li v-for="value in values">
+        <li v-for="value in propAndValues.values">
           {{ value }}
         </li>
       </ul>
@@ -21,17 +21,6 @@
         name: "Properties",
         props: {
             properties: Array
-        },
-        computed: {
-            propsGrouped() {
-                return this.properties.reduce((acc, propAndValues) => {
-                    if (!acc.hasOwnProperty(propAndValues.property[1]))
-                        acc[propAndValues.property[1]] = [];
-
-                    acc[propAndValues.property[1]].push(...propAndValues.values);
-                    return acc;
-                }, {});
-            }
         },
     };
 </script>

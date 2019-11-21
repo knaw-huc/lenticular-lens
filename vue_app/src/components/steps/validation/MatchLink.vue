@@ -39,18 +39,18 @@
           </button>
         </div>
 
-        <div v-if="sourceProperties.length > 0 || targetProperties.length > 0"
+        <div v-if="link.source_values.length > 0 || link.target_values.length > 0"
              class="row flex-nowrap border-top mt-2 pt-2">
           <div class="col">
             <div class="font-weight-bold mb-2">Source properties:</div>
 
-            <properties :properties="sourceProperties" :show-resource-info="false"/>
+            <properties :properties="this.link.source_values"/>
           </div>
 
           <div class="col">
             <div class="font-weight-bold mb-2">Target properties:</div>
 
-            <properties :properties="targetProperties" :show-resource-info="false"/>
+            <properties :properties="this.link.target_values"/>
           </div>
         </div>
       </div>
@@ -97,30 +97,6 @@
                     return 'bg-danger';
 
                 return 'bg-white';
-            },
-
-            sourceProperties() {
-                if (!this.link.source_values)
-                    return [];
-
-                return this.link.source_values.map(value => {
-                    return {
-                        property: [this.$root.getResourceByDatasetId(value.dataset).id, value.property],
-                        values: value.values,
-                    };
-                });
-            },
-
-            targetProperties() {
-                if (!this.link.target_values)
-                    return [];
-
-                return this.link.target_values.map(value => {
-                    return {
-                        property: [this.$root.getResourceByDatasetId(value.dataset).id, value.property],
-                        values: value.values,
-                    };
-                });
             },
         },
         methods: {

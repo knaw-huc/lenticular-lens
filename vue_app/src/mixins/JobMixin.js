@@ -69,7 +69,7 @@ export default {
                 label: undefined,
             };
 
-            getRecursiveConditions(newResource.filter.conditions)
+            this.getRecursiveConditions(newResource.filter.conditions)
                 .forEach(condition => condition.property[0] = newId);
 
             this.resources.splice(index, 0, newResource);
@@ -105,6 +105,19 @@ export default {
             if (notValidated) params.push('not_validated=true');
 
             return `/job/${this.job.job_id}/export/${alignment}/csv?${params.join('&')}`;
+        },
+
+        getRecursiveConditions(conditionsGroup) {
+            let conditions;
+            if (Array.isArray(conditionsGroup))
+                conditions = conditionsGroup;
+            else if (Array.isArray(conditionsGroup.conditions))
+                conditions = conditionsGroup.conditions;
+
+            if (conditions)
+                return conditions.reduce((acc, condition) => acc.concat(this.getRecursiveConditions(condition)), []);
+
+            return [conditionsGroup];
         },
 
         createTargetsForProperties(properties) {
@@ -200,7 +213,7 @@ export default {
                 match.sources = match.sources.map(resourceId => this.getResourceById(resourceId).label);
                 match.targets = match.targets.map(resourceId => this.getResourceById(resourceId).label);
 
-                getRecursiveConditions(match.methods.conditions).forEach(condition => {
+                this.getRecursiveConditions(match.methods.conditions).forEach(condition => {
                     condition.sources = this.createMatchConditionProperties(condition.sources, resources);
                     condition.targets = this.createMatchConditionProperties(condition.targets, resources);
                 });
@@ -211,7 +224,7 @@ export default {
 
             resources.forEach(resource => {
                 if (resource.filter && resource.filter.conditions && resource.filter.conditions.length > 0) {
-                    getRecursiveConditions(resource.filter.conditions).forEach(condition => {
+                    this.getRecursiveConditions(resource.filter.conditions).forEach(condition => {
                         condition.property = this.createReferencesForProperty(condition.property, resources);
                     });
                 }
@@ -322,6 +335,17 @@ export default {
             return callApi(`/download?${params.join('&')}`);
         },
 
+        async getResourceSamples(resourceLabel, total = false, limit = undefined, offset = 0) {
+            await this.submit();
+
+            const params = [];
+            if (total) params.push(`total=true`);
+            if (!total && limit) params.push(`limit=${limit}`);
+            if (!total && offset) params.push(`offset=${offset}`);
+
+            return callApi(`/job/${this.job.job_id}/resource/${resourceLabel}?${params.join('&')}`);
+        },
+
         async createJob(inputs) {
             const data = await callApi('/job/create/', inputs);
             return data.job_id;
@@ -380,15 +404,6 @@ export default {
             return callApi(`/job/${this.job.job_id}/validate/${alignment}`, {source, target, valid});
         },
 
-        exportCsvLink(alignment, accepted, declined, notValidated) {
-            const params = [];
-            if (accepted) params.push('accepted=true');
-            if (declined) params.push('declined=true');
-            if (notValidated) params.push('not_validated=true');
-
-            return `/job/${this.job.job_id}/export/${alignment}/csv?${params.join('&')}`;
-        },
-
         async getAssociationFiles() {
             return callApi("/association_files");
         },
@@ -442,19 +457,6 @@ function findId(objs) {
         if (obj.id > latestId) latestId = obj.id;
     });
     return latestId + 1;
-}
-
-function getRecursiveConditions(conditionsGroup) {
-    let conditions;
-    if (Array.isArray(conditionsGroup))
-        conditions = conditionsGroup;
-    else if (Array.isArray(conditionsGroup.conditions))
-        conditions = conditionsGroup.conditions;
-
-    if (conditions)
-        return conditions.reduce((acc, condition) => acc.concat(getRecursiveConditions(condition)), []);
-
-    return [conditionsGroup];
 }
 
 async function callApi(path, body) {

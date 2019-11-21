@@ -3,8 +3,8 @@ import time
 
 from psycopg2 import sql as psycopg2_sql, ProgrammingError
 
-from ll.job.job_sql import JobSql
 from ll.job.job_config import JobConfig
+from ll.job.matching_sql import MatchingSql
 from ll.job.job_alignment import get_job_data, get_job_alignment, update_alignment_job
 
 from ll.worker.job import Job
@@ -17,7 +17,7 @@ class AlignmentJob(Job):
         self.alignment = alignment
 
         self.config = None
-        self.job_sql = None
+        self.matching_sql = None
 
         self.reset()
         super().__init__(self.run_generated_sql)
@@ -25,7 +25,7 @@ class AlignmentJob(Job):
     def reset(self):
         job_data = get_job_data(self.job_id)
         self.config = JobConfig(self.job_id, job_data['resources'], job_data['mappings'], self.alignment)
-        self.job_sql = JobSql(self.config)
+        self.matching_sql = MatchingSql(self.config)
 
     def run(self):
         download_status_set = False
@@ -41,27 +41,27 @@ class AlignmentJob(Job):
 
     def run_generated_sql(self):
         if not self.killed:
-            self.process_sql(self.job_sql.generate_schema())
+            self.process_sql(self.matching_sql.generate_schema_sql())
 
         if not self.killed:
             self.status = 'Generating collections'
-            self.process_sql(self.job_sql.generate_resources())
+            self.process_sql(self.matching_sql.generate_resources_sql())
 
         if not self.killed:
             self.status = 'Generating indexes'
-            self.process_sql(self.job_sql.generate_match_index_sql())
+            self.process_sql(self.matching_sql.generate_match_index_sql())
 
         if not self.killed:
             self.status = 'Generating source resources'
-            self.process_sql(self.job_sql.generate_match_source_sql())
+            self.process_sql(self.matching_sql.generate_match_source_sql())
 
         if not self.killed:
             self.status = 'Generating target resources'
-            self.process_sql(self.job_sql.generate_match_target_sql())
+            self.process_sql(self.matching_sql.generate_match_target_sql())
 
         if not self.killed:
             self.status = 'Looking for links'
-            self.process_sql(self.job_sql.generate_match_linkset_sql())
+            self.process_sql(self.matching_sql.generate_match_linkset_sql())
 
     def process_sql(self, sql):
         sql_string = sql.as_string(self.db_conn)

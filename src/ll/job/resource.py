@@ -1,7 +1,7 @@
 from psycopg2 import sql as psycopg2_sql
 
 from ll.util.helpers import hash_string
-from ll.data.timbuctoo_datasets import TimbuctooDatasets
+from ll.data.collection import Collection
 from ll.job.property_field import PropertyField
 from ll.job.filter_function import FilterFunction
 
@@ -12,13 +12,14 @@ class Resource:
         self.config = config
 
         if 'type' not in resource_data['dataset'] or resource_data['dataset']['type'] == 'timbuctoo':
+            graphql = resource_data['dataset']['timbuctoo_graphql']
             hsid = resource_data['dataset']['timbuctoo_hsid'] if not resource_data['dataset']['published'] else None
-            timbuctoo_datasets = TimbuctooDatasets(resource_data['dataset']['timbuctoo_graphql'], hsid)
-            collection = timbuctoo_datasets.collection(
-                self.__data['dataset']['dataset_id'], self.__data['dataset']['collection_id'])
+            dataset_id = self.__data['dataset']['dataset_id']
+            collection_id = self.__data['dataset']['collection_id']
 
+            collection = Collection(graphql, hsid, dataset_id, collection_id)
             self.table_name = collection.table_name
-            self.columns = collection.table_data['columns']
+            self.columns = collection.columns
             self.view_queued = collection.rows_downloaded > -1 \
                                and (self.limit < 0 or self.limit > collection.rows_downloaded)
 
@@ -54,6 +55,12 @@ class Resource:
         return self.get_fields(only_matching_fields=False)
 
     @property
+    def properties(self):
+        if 'filter' in self.__data:
+            return self.r_get_filter_properties(self.__data['filter'], [])
+        return []
+
+    @property
     def matching_fields_sql(self):
         matching_fields_sqls = [psycopg2_sql.SQL('{}.uri').format(psycopg2_sql.Identifier(self.label))]
 
@@ -66,10 +73,25 @@ class Resource:
         return psycopg2_sql.SQL(',\n       ').join(matching_fields_sqls)
 
     @property
+    def properties_sql(self):
+        properties_sqls = [psycopg2_sql.SQL('{}.uri').format(psycopg2_sql.Identifier(self.label))]
+
+        for property_field in self.properties:
+            properties_sqls.append(psycopg2_sql.SQL('{property} AS {name}').format(
+                property=property_field.sql,
+                name=psycopg2_sql.Identifier(property_field.prop_name)
+            ))
+
+        return psycopg2_sql.SQL(',\n       ').join(properties_sqls)
+
+    @property
     def joins_sql(self):
-        joins = []
-        joins_added = []
-        self.get_fields_joins_sql(joins_added, joins)
+        joins = self.get_fields_joins_sql([], [])
+        return psycopg2_sql.Composed(joins)
+
+    @property
+    def joins_related_sql(self):
+        joins = self.get_fields_joins_sql([], [], fields=False)
         return psycopg2_sql.Composed(joins)
 
     @property
@@ -99,14 +121,27 @@ class Resource:
 
         return matching_fields
 
-    def get_fields_joins_sql(self, joins_added, joins):
-        for property_field in self.fields:
-            if property_field.is_list and property_field.absolute_property not in joins_added:
-                joins.append(property_field.left_join)
-                joins_added.append(property_field.absolute_property)
+    def get_fields_joins_sql(self, joins, joins_added, fields=True, related=True):
+        if fields:
+            for property_field in self.fields:
+                if property_field.is_list and property_field.absolute_property not in joins_added:
+                    joins.append(property_field.left_join)
+                    joins_added.append(property_field.absolute_property)
 
-        for relation in self.related:
-            self.r_get_join_sql(relation, joins_added, joins)
+        if related:
+            for relation in self.related:
+                self.r_get_join_sql(relation, joins, joins_added, fields, related)
+
+        return joins
+
+    def r_get_filter_properties(self, filter_obj, properties):
+        if 'conditions' in filter_obj:
+            for condition in filter_obj['conditions']:
+                self.r_get_filter_properties(condition, properties)
+        else:
+            properties.append(PropertyField(filter_obj['property'], parent_label=self.label, columns=self.columns))
+
+        return properties
 
     def r_get_filter_sql(self, filter_obj):
         if filter_obj['type'] in ['AND', 'OR']:
@@ -120,10 +155,10 @@ class Resource:
 
         return FilterFunction(filter_obj, property).sql
 
-    def r_get_join_sql(self, relation, property_join_added, joins):
+    def r_get_join_sql(self, relation, joins, property_join_added, fields, related):
         if isinstance(relation, list):
             for sub_relation in relation:
-                self.r_get_join_sql(sub_relation, property_join_added, joins)
+                self.r_get_join_sql(sub_relation, joins, property_join_added, fields, related)
             return
 
         remote_resource_name = hash_string(relation['resource'])
@@ -153,4 +188,4 @@ class Resource:
             extra_filter=extra_filter
         ))
 
-        remote_resource.get_fields_joins_sql(property_join_added, joins)
+        remote_resource.get_fields_joins_sql(joins, property_join_added, fields, related)

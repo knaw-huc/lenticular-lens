@@ -222,7 +222,7 @@
             },
         },
         methods: {
-            validateMatch(matchAgainstValidiation = false) {
+            validateMatch(matchAgainstValidation = false) {
                 const sourcesValid = this.validateField('sources', this.match.sources.length > 0);
                 const targetsValid = this.validateField('targets', this.match.targets.length > 0);
 
@@ -243,7 +243,7 @@
                 matchingMethodGroupValid = this.validateField('matching-methods', matchingMethodGroupValid);
 
                 let matchAgainstValid = true;
-                if (matchAgainstValidiation && this.match.match_against) {
+                if (matchAgainstValidation && this.match.match_against) {
                     const alignment = this.$root.alignments
                         .find(alignment => alignment.alignment === this.match.match_against);
                     matchAgainstValid = this.validateField('match-against', alignment && alignment.status === 'done');

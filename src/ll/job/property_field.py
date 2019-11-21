@@ -40,6 +40,10 @@ class PropertyField:
         return self.absolute_property[1]
 
     @property
+    def prop_name(self):
+        return self.__data[1]
+
+    @property
     def extended_prop_label(self):
         return hash_string('.'.join(self.absolute_property)) + '_extended'
 

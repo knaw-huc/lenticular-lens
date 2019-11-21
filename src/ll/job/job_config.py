@@ -21,11 +21,11 @@ class JobConfig:
 
     @property
     def match_to_run(self):
-        return self.get_match_by_id(self.run_match) if self.run_match else None
+        return self.get_match_by_id(self.run_match) if self.run_match is not None else None
 
     @property
     def resources_to_run(self):
-        if not self.run_match:
+        if self.run_match is None:
             return self.resources
 
         resources_to_add = [hash_string(resource) for resource in self.match_to_run.resources]

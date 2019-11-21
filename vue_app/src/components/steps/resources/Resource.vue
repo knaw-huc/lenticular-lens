@@ -105,7 +105,18 @@
         </div>
       </sub-card>
 
-      <sub-card v-if="resource.dataset.collection_id !== ''" label="Filter" :hasError="errors.includes('filters')">
+      <sub-card v-if="resource.dataset.collection_id !== ''" label="Filter"
+                :has-error="errors.includes('filters')" :has-columns="canRunSample">
+        <template v-if="canRunSample" v-slot:columns>
+          <div class="col-auto">
+            <button type="button" class="btn btn-info btn-sm" @click="runSample">
+              Run sample of filtered properties
+            </button>
+          </div>
+        </template>
+
+        <resource-samples :resource="resource" ref="resourceSamples"/>
+
         <conditions-group :conditions-group="resource.filter"
                           :is-root="true"
                           group="resource-filters"
@@ -230,14 +241,17 @@
 
 <script>
     import ConditionsGroup from "../../helpers/ConditionsGroup";
-    import ResourceFilterCondition from "./ResourceFilterCondition";
     import ValidationMixin from "../../../mixins/ValidationMixin";
+
+    import ResourceSamples from "./ResourceSamples";
+    import ResourceFilterCondition from "./ResourceFilterCondition";
 
     export default {
         name: "Resource",
         mixins: [ValidationMixin],
         components: {
             ConditionsGroup,
+            ResourceSamples,
             ResourceFilterCondition,
         },
         data() {
@@ -301,6 +315,30 @@
                 }
 
                 return false;
+            },
+
+            filteredConditions() {
+                return this.$root.getRecursiveConditions(this.resource.filter);
+            },
+
+            allCollections() {
+                const all = this.filteredConditions.reduce((acc, condition) => {
+                    return acc.concat(condition.property.filter((_, idx) => idx > 0 && idx % 2 === 0));
+                }, [this.resource.dataset.collection_id]);
+                return [...new Set(all)];
+            },
+
+            notDownloaded() {
+                return this.allCollections.filter(collection => {
+                    return ![...this.$root.downloading, ...this.$root.downloaded].find(downloadInfo => {
+                        return downloadInfo.dataset_id === this.resource.dataset.dataset_id &&
+                            downloadInfo.collection_id === collection;
+                    });
+                });
+            },
+
+            canRunSample() {
+                return this.resource.filter.conditions.length > 0 && this.notDownloaded.length === 0;
             },
         },
         methods: {
@@ -417,6 +455,12 @@
                 }, false);
 
                 document.getElementById('login_' + this.resource.id).submit();
+            },
+
+            runSample() {
+                if (!this.validateResource())
+                    return;
+                this.$refs.resourceSamples.resetSample();
             },
 
             async loadDatasets() {

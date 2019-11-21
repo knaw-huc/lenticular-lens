@@ -1,24 +1,27 @@
 # import ll.Generic.Utility as Ut
 import ll.Generic.Settings as St
 import ll.DataAccess.Stardog.Query as Stardog
-import ll.DataAccess.PostgreSQL.Query as Postgre
 
+from ll.data.query import get_property_values_query as postgres_property_values_query
+from ll.util.config_db import execute_query as postgres_execute_query
 
 # RETURNS A QUERY STRING TO RUN OVER THE DATA STORE OF CHOICE
 node_labels_switcher = {
     St.Stardog: Stardog.get_resource_value,
-    St.Postgre: Postgre.get_resource_value}
+    St.Postgre: lambda targets, resources: postgres_property_values_query(targets, uris=resources)
+}
 
 
 # RETURNS THE RESULT OF A QUERY IN AN XML FORMAT
 run_query_xml_switcher = {
-    St.Stardog: Stardog.endpoint}
+    St.Stardog: Stardog.endpoint
+}
 
 
 # RETURNS THE RESULT OF A QUERY IN A TABLE (A MATRIX)
 run_query_matrix_switcher = {
     # St.Stardog: Stardog.sparql_xml_to_matrix,
-    St.Postgre: Postgre.execute_query
+    St.Postgre: postgres_execute_query
 }
 
 

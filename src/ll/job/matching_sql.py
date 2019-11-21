@@ -6,11 +6,11 @@ from inspect import cleandoc
 locale.setlocale(locale.LC_ALL, '')
 
 
-class JobSql:
+class MatchingSql:
     def __init__(self, config):
         self.config = config
 
-    def generate_schema(self):
+    def generate_schema_sql(self):
         schema_name_sql = sql.Identifier(self.config.linkset_schema_name)
 
         return sql.Composed([
@@ -18,7 +18,7 @@ class JobSql:
             sql.SQL('SET SEARCH_PATH TO "$user", {}, public;\n').format(schema_name_sql),
         ])
 
-    def generate_resources(self):
+    def generate_resources_sql(self):
         resources_sql = []
         for resource in self.config.resources_to_run:
             pre = sql.SQL('SELECT * FROM (') if resource.limit > -1 else sql.SQL('')
@@ -122,8 +122,8 @@ class JobSql:
         )
 
     def sql_string(self, conn):
-        sql_str = self.generate_schema().as_string(conn)
-        sql_str += self.generate_resources().as_string(conn)
+        sql_str = self.generate_schema_sql().as_string(conn)
+        sql_str += self.generate_resources_sql().as_string(conn)
         sql_str += self.generate_match_index_sql().as_string(conn)
         sql_str += self.generate_match_source_sql().as_string(conn)
         sql_str += self.generate_match_target_sql().as_string(conn)
@@ -139,6 +139,6 @@ if __name__ == '__main__':
 
     job_data = get_job_data('job_id')
     config = JobConfig('job_id', job_data['resources'], job_data['mappings'], 1)
-    job_sql = JobSql(config)
+    job_sql = MatchingSql(config)
 
     print(job_sql.sql_string(db_conn()))

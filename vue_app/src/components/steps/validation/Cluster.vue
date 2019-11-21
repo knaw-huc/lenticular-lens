@@ -34,7 +34,7 @@
       </div>
 
       <div class="col-8">
-        <properties :properties="props" :show-resource-info="false"/>
+        <properties :properties="cluster.values"/>
       </div>
     </div>
   </div>
@@ -56,19 +56,6 @@
                 type: Boolean,
                 default: true
             }
-        },
-        computed: {
-            props() {
-                if (!this.cluster.values)
-                    return [];
-
-                return this.cluster.values.map(value => {
-                    return {
-                        property: [this.$root.getResourceByDatasetId(value.dataset).id, value.property],
-                        values: value.values,
-                    };
-                });
-            },
         },
     };
 </script>
