@@ -1,7 +1,7 @@
 from psycopg2 import sql as psycopg2_sql
 
+from ll.util.config_db import db_conn
 from ll.util.helpers import hash_string
-from ll.util.config_db import run_query
 
 from ll.worker.job import Job
 from ll.data.timbuctoo import Timbuctoo
@@ -148,8 +148,9 @@ class TimbuctooJob(Job):
 
     def on_finish(self):
         if self.cursor is None:
-            run_query('UPDATE timbuctoo_tables SET update_finish_time = now() WHERE "table_name" = %s',
-                      (self.table_name,))
+            with db_conn() as conn, conn.cursor() as cur:
+                cur.execute('UPDATE timbuctoo_tables SET update_finish_time = now() WHERE "table_name" = %s',
+                            (self.table_name,))
 
     def watch_process(self):
         pass

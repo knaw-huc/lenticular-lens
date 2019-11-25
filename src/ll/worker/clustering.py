@@ -3,8 +3,8 @@ from psycopg2 import sql as psycopg2_sql
 from ll.worker.job import Job
 from ll.util.config_db import db_conn
 
+from ll.job.data import Job as JobLL
 from ll.job.simple_link_clustering import SimpleLinkClustering
-from ll.job.job_alignment import get_job_clustering, update_clustering_job, get_links
 
 
 class ClusteringJob(Job):
@@ -12,6 +12,7 @@ class ClusteringJob(Job):
         self.job_id = job_id
         self.alignment = alignment
 
+        self.job = JobLL(job_id)
         self.worker = None
 
         super().__init__(self.start_clustering)
@@ -20,7 +21,7 @@ class ClusteringJob(Job):
         linkset_table_name = 'linkset_' + self.job_id + '_' + str(self.alignment)
         cluster_table_name = 'clusters_' + self.job_id + '_' + str(self.alignment)
 
-        links = get_links(self.job_id, self.alignment)
+        links = self.job.get_links(self.alignment)
 
         with self.db_conn.cursor() as cur:
             cur.execute(psycopg2_sql.SQL('DROP TABLE IF EXISTS {} CASCADE')
@@ -58,20 +59,18 @@ class ClusteringJob(Job):
                     links=psycopg2_sql.SQL(' OR ').join(link_sqls)
                 ))
 
-            self.db_conn.commit()
-
     def watch_process(self):
         if not self.worker:
             return
 
-        update_clustering_job(self.job_id, self.alignment, {
+        self.job.update_clustering(self.alignment, {
             'status_message': 'Processing found clusters' if self.worker.links_processed else 'Processing links',
             'links_count': self.worker.links_processed,
             'clusters_count': len(self.worker.clusters)
         })
 
     def watch_kill(self):
-        clustering_job = get_job_clustering(self.job_id, self.alignment)
+        clustering_job = self.job.clustering(self.alignment)
         if clustering_job['kill']:
             self.kill(reset=False)
 
@@ -80,11 +79,11 @@ class ClusteringJob(Job):
             self.worker.stop_clustering()
 
         job_data = {'status': 'waiting'} if reset else {'status': 'failed', 'status_message': 'Killed manually'}
-        update_clustering_job(self.job_id, self.alignment, job_data)
+        self.job.update_clustering(self.alignment, job_data)
 
     def on_exception(self):
         err_message = str(self.exception)
-        update_clustering_job(self.job_id, self.alignment, {'status': 'failed', 'status_message': err_message})
+        self.job.update_clustering(self.alignment, {'status': 'failed', 'status_message': err_message})
 
     def on_finish(self):
         cluster_table_name = 'clusters_' + self.job_id + '_' + str(self.alignment)

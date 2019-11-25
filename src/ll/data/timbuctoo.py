@@ -6,7 +6,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 class Timbuctoo:
-    def __init__(self, graphql_uri, hsid):
+    def __init__(self, graphql_uri, hsid=None):
         self.graphql_uri = graphql_uri
         self.hsid = hsid
 
@@ -39,10 +39,13 @@ class Timbuctoo:
                     collectionList {
                         items {
                             collectionId
+                            title { value }
                             total
                             properties {
                                 items {
                                     name
+                                    shortenedUri
+                                    isInverse
                                     isList
                                     isValueType
                                     density
@@ -77,13 +80,19 @@ class Timbuctoo:
 
             for collection in dataset['collectionList']['items']:
                 collection_id = collection['collectionId']
+                collection_title = collection['title']['value'] \
+                    if collection['title'] and collection['title']['value'] else None
+
                 if collection_id != 'tim_unknown':
                     datasets[dataset_id]['collections'][collection_id] = {
+                        'title': collection_title,
                         'total': collection['total'],
                         'downloaded': False,
                         'properties': {
                             'uri': {
                                 'name': 'uri',
+                                'shortenedUri': 'uri',
+                                'isInverse': False,
                                 'isList': False,
                                 'isValueType': False,
                                 'isLink': False,
@@ -102,6 +111,8 @@ class Timbuctoo:
 
                         datasets[dataset_id]['collections'][collection_id]['properties'][property_name] = {
                             'name': property_name,
+                            'shortenedUri': collection_property['shortenedUri'],
+                            'isInverse': collection_property['isInverse'],
                             'isList': collection_property['isList'],
                             'isValueType': collection_property['isValueType'],
                             'isLink': len(referenced_collections) > 0,
@@ -110,3 +121,22 @@ class Timbuctoo:
                         }
 
         return datasets
+
+
+if __name__ == '__main__':
+    from json import dumps
+    from ll.util.helpers import hash_string
+
+    timbuctoo = Timbuctoo('https://repository.goldenagents.org/v5/graphql')
+    datasets = timbuctoo.datasets
+    for dataset, dataset_data in datasets.items():
+        for collection, collection_data in dataset_data['collections'].items():
+            columns = {hash_string(col_name.lower()): col_info
+                       for col_name, col_info in collection_data['properties'].items()}
+
+
+            print(dataset + ' --- ' + collection)
+            print(collection_data['title'])
+            print()
+            print(dumps(columns))
+            print()

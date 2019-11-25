@@ -6,10 +6,9 @@
       </div>
 
       <div class="property-pill read-only mx-2" v-bind:class="{'sm': small}">
-        {{ resource.dataset.collection_id }}
+        {{ collection.title || collectionId }}
 
-        <download-progress :dataset-id="datasetId" :collection-id="resource.dataset.collection_id"
-                           :small="true" class="pl-2"/>
+        <download-progress :dataset-id="datasetId" :collection-id="collectionId" :small="true" class="pl-2"/>
       </div>
 
       <div v-if="!singular && !readOnly" class="mr-2">
@@ -37,7 +36,7 @@
 
             <template v-else>
               <div>
-                <span class="pr-2">{{ option.label }}</span>
+                <span class="pr-2">{{ prop.resources[option.label].title || option.label }}</span>
                 <span class="font-italic text-muted small">{{ prop.resources[option.label].total }}</span>
               </div>
 
@@ -50,14 +49,14 @@
 
         <template v-else-if="!Array.isArray(prop.resources) && prop.inPath">
           <div v-if="readOnly" class="property-pill read-only" v-bind:class="{'sm': small}">
-            {{ prop.value[0] }}
+            {{ prop.resources[prop.value[0]].title || prop.value[0] }}
 
             <download-progress :dataset-id="datasetId" :collection-id="prop.value[0]" :small="true" class="pl-2"/>
           </div>
 
           <button v-else type="button" class="property-pill" v-bind:class="{'sm': small}"
                   @click="$emit('resetProperty', prop.idx)">
-            {{ prop.value[0] }}
+            {{ prop.resources[prop.value[0]].title || prop.value[0] }}
 
             <download-progress :dataset-id="datasetId" :collection-id="prop.value[0]" :small="true" class="pl-2"/>
           </button>
@@ -79,7 +78,13 @@
                 <ul class="small font-italic text-info inline-list px-0 pt-1">
                   <li>Density: {{ prop.properties[option.label].density }}&percnt;</li>
                   <li v-if="prop.properties[option.label].isValueType">Has values</li>
-                  <li v-if="prop.properties[option.label].isLink">Has links to another collection</li>
+
+                  <li v-if="prop.properties[option.label].isLink && !prop.properties[option.label].isInverse">
+                    Has links to another collection
+                  </li>
+                  <li v-else-if="prop.properties[option.label].isLink && prop.properties[option.label].isInverse">
+                    Has inverted links to another collection
+                  </li>
                 </ul>
               </div>
             </div>
@@ -143,17 +148,41 @@
                 return this.resource.dataset.dataset_id;
             },
 
+            collectionId() {
+                return this.resource.dataset.collection_id;
+            },
+
             dataset() {
                 const datasets = this.$root.getDatasets(
                     this.resource.dataset.timbuctoo_graphql, this.resource.dataset.timbuctoo_hsid);
                 return datasets[this.datasetId];
             },
 
-            collections() {
+            collection() {
+                return this.dataset['collections'][this.collectionId];
+            },
+
+            entities() {
                 return [
-                    this.resource.dataset.collection_id,
+                    this.collectionId,
                     ...this.property.filter((_, idx) => idx > 0 && idx % 2 === 0)
                 ];
+            },
+
+            downloading() {
+                return this.entities.filter(entity => {
+                    return this.$root.downloading.find(downloadInfo => {
+                        return downloadInfo.dataset_id === this.datasetId && downloadInfo.collection_id === entity;
+                    });
+                });
+            },
+
+            notDownloaded() {
+                return this.entities.filter(entity => {
+                    return ![...this.$root.downloading, ...this.$root.downloaded].find(downloadInfo => {
+                        return downloadInfo.dataset_id === this.datasetId && downloadInfo.collection_id === entity;
+                    });
+                });
             },
 
             props() {
@@ -170,29 +199,13 @@
                         };
                     });
             },
-
-            downloading() {
-                return this.collections.filter(collection => {
-                    return this.$root.downloading.find(downloadInfo => {
-                        return downloadInfo.dataset_id === this.datasetId && downloadInfo.collection_id === collection;
-                    });
-                });
-            },
-
-            notDownloaded() {
-                return this.collections.filter(collection => {
-                    return ![...this.$root.downloading, ...this.$root.downloaded].find(downloadInfo => {
-                        return downloadInfo.dataset_id === this.datasetId && downloadInfo.collection_id === collection;
-                    });
-                });
-            },
         },
         methods: {
             validateProperty() {
                 this.errors = [];
                 return !this.props.map(prop => {
-                    const valid =
-                        (prop.value[0] === '__value__') || (prop.value.find(value => value === '') === undefined);
+                    const valid = (prop.value[0] === '__value__')
+                        || (prop.value.find(value => value === '') === undefined);
                     return this.validateField(`value_${prop.idx}`, valid);
                 }).includes(false);
             },
@@ -213,13 +226,13 @@
                 if (index === 0)
                     return this.$root.resources;
 
-                const collectionId = index > 2 ? this.property[index - 2] : this.resource.dataset.collection_id;
+                const collectionId = index > 2 ? this.property[index - 2] : this.collectionId;
                 const property = this.getPropertiesForCollection(collectionId)[this.property[index - 1]];
                 return this.getReferencedCollections(property.referencedCollections);
             },
 
             getPropertiesForIndex(index) {
-                const collectionId = index === 0 ? this.resource.dataset.collection_id : this.property[index];
+                const collectionId = index === 0 ? this.collectionId : this.property[index];
                 return this.getPropertiesForCollection(collectionId);
             },
 
@@ -228,7 +241,7 @@
 
                 const collectionId = this.property.length > 2
                     ? this.property.slice(-2)[0]
-                    : this.resource.dataset.collection_id;
+                    : this.collectionId;
 
                 const prop = this.property.slice(-1)[0];
                 const properties = prop ? this.getPropertiesForCollection(collectionId)[prop] : null;

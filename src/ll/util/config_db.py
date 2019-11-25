@@ -1,22 +1,37 @@
 import os
-import psycopg2
 
+from contextlib import contextmanager
 from typing import List, Mapping, Sequence
-from psycopg2 import sql as psycopg2_sql, extras as psycopg2_extras
+
+from psycopg2 import extras as psycopg2_extras
+from psycopg2.pool import ThreadedConnectionPool
+
+conn_pool = ThreadedConnectionPool(
+    minconn=2,
+    maxconn=6,
+    host=os.environ['DATABASE_HOST'] if 'DATABASE_HOST' in os.environ else 'localhost',
+    port=os.environ['DATABASE_PORT'] if 'DATABASE_PORT' in os.environ else 5432,
+    database=os.environ['DATABASE_DB'] if 'DATABASE_DB' in os.environ else 'postgres',
+    user=os.environ['DATABASE_USER'] if 'DATABASE_USER' in os.environ else 'postgres',
+    password=os.environ['DATABASE_PASSWORD'] if 'DATABASE_PASSWORD' in os.environ else 'postgres',
+)
 
 
-def config_db():
-    return {
-        "host": os.environ['DATABASE_HOST'] if 'DATABASE_HOST' in os.environ else "localhost",
-        "port": os.environ['DATABASE_PORT'] if 'DATABASE_PORT' in os.environ else 5432,
-        "database": os.environ['DATABASE_DB'] if 'DATABASE_DB' in os.environ else "postgres",
-        "user": os.environ['DATABASE_USER'] if 'DATABASE_USER' in os.environ else "postgres",
-        "password": os.environ['DATABASE_PASSWORD'] if 'DATABASE_PASSWORD' in os.environ else "postgres",
-    }
+def get_conn(key=None):
+    return conn_pool.getconn(key)
 
 
-def db_conn():
-    return psycopg2.connect(**config_db())
+def return_conn(conn, key=None):
+    conn_pool.putconn(conn, key)
+
+
+@contextmanager
+def db_conn(key=None):
+    try:
+        with get_conn(key) as conn:
+            yield conn
+    finally:
+        return_conn(conn, key)
 
 
 def execute_query(query_dict: Mapping, cursor_args: Mapping = None) -> List[Sequence]:
@@ -42,16 +57,8 @@ def execute_query(query_dict: Mapping, cursor_args: Mapping = None) -> List[Sequ
             else [query_dict['header']] + cur.fetchall()
 
 
-def run_query(query, args=None, dict=False):
-    conn = db_conn()
-    cur = conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) if dict else conn.cursor()
-    cur.execute(query, args)
-    result = cur.fetchone() if cur.description else None
-    conn.commit()
-    conn.close()
-    return result
-
-
-def table_exists(table_name):
-    return run_query(psycopg2_sql.SQL("SELECT to_regclass({});")
-                     .format(psycopg2_sql.Literal(table_name)))[0] is not None
+def fetch_one(query, args=None, dict=False):
+    with db_conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) if dict else conn.cursor() as cur:
+            cur.execute(query, args)
+            return cur.fetchone() if cur.description else None

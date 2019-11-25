@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS timbuctoo_tables
     dataset_name       text          not null,
     title              text          not null,
     description        text,
+    collection_title   text,
     total              int           not null,
     columns            json          not null,
     create_time        timestamp     not null,

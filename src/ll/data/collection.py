@@ -1,8 +1,8 @@
 from json import dumps
 
-from ll.util.config_db import db_conn
 from ll.util.helpers import hash_string
 from ll.data.timbuctoo import Timbuctoo
+from ll.util.config_db import db_conn, fetch_one
 
 from psycopg2 import extras as psycopg2_extras, sql as psycopg2_sql
 
@@ -21,11 +21,9 @@ class Collection:
         if self._table_data:
             return self._table_data
 
-        with db_conn() as conn, conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) as cur:
-            cur.execute('SELECT * FROM timbuctoo_tables '
-                        'WHERE graphql_endpoint = %s AND dataset_id = %s AND collection_id = %s',
-                        (self.graphql_endpoint, self.dataset_id, self.collection_id))
-            self._table_data = cur.fetchone()
+        self._table_data = fetch_one('SELECT * FROM timbuctoo_tables '
+                                     'WHERE graphql_endpoint = %s AND dataset_id = %s AND collection_id = %s',
+                                     (self.graphql_endpoint, self.dataset_id, self.collection_id), dict=True)
 
         if not self._table_data:
             self.start_download()
@@ -80,10 +78,11 @@ class Collection:
                 cur.execute('''
                     INSERT INTO timbuctoo_tables (
                         "table_name", graphql_endpoint, hsid, dataset_id, collection_id, 
-                        dataset_name, title, description, total, columns, create_time)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, now())
+                        dataset_name, title, description, collection_title, total, columns, create_time)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, now())
                 ''', (self.table_name, self.graphql_endpoint, self.hsid, self.dataset_id, self.collection_id,
-                      dataset['name'], dataset['title'], dataset['description'], collection['total'], dumps(columns)))
+                      dataset['name'], dataset['title'], dataset['description'],
+                      collection['title'], collection['total'], dumps(columns)))
 
     @staticmethod
     def columns_sql(columns):

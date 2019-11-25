@@ -6,16 +6,29 @@ import psycopg2
 from psycopg2 import sql as psycopg2_sql
 
 from flask import Flask, jsonify, request, abort, make_response
+from werkzeug.routing import BaseConverter
 
-from ll.util.config_db import run_query
+from ll.job.data import Job, ExportLinks
+
+from ll.util.config_db import fetch_one
 from ll.util.helpers import hash_string, get_association_files
+
 from ll.data.collection import Collection
 from ll.data.timbuctoo_datasets import TimbuctooDatasets
-from ll.job.job_alignment import ExportLinks, get_job_data, get_job_alignments, get_job_clusterings, \
-    get_job_clustering, update_job_data, get_links, get_clusters, get_cluster, get_value_targets, get_resource_sample
+
 from ll.Clustering.IlnVisualisation import plot, plot_compact, plot_reconciliation
 
+
+class JobConverter(BaseConverter):
+    def to_python(self, job_id):
+        return Job(job_id)
+
+    def to_url(self, job):
+        return job.job_id
+
+
 app = Flask(__name__)
+app.url_map.converters['job'] = JobConverter
 
 
 @app.route('/')
@@ -50,7 +63,9 @@ def association_files():
 @app.route('/job/create/', methods=['POST'])
 def job_create():
     job_id = hash_string(request.json['job_title'] + request.json['job_description'])
-    update_job_data(job_id, request.json)
+
+    job = Job(job_id)
+    job.update_data(request.json)
 
     return jsonify({'result': 'created', 'job_id': job_id})
 
@@ -74,94 +89,88 @@ def job_update():
     if 'matches' in request.json:
         job_data['mappings'] = json.dumps(request.json['matches'])
 
-    update_job_data(job_id, job_data)
+    job = Job(job_id)
+    job.update_data(job_data)
 
     return jsonify({'result': 'updated', 'job_id': job_id, 'job_data': job_data})
 
 
-@app.route('/job/<job_id>')
-def job_data(job_id):
-    job_data = get_job_data(job_id)
-    if job_data:
-        return jsonify(job_data)
+@app.route('/job/<job:job>')
+def job_data(job):
+    if job.data:
+        return jsonify(job.data)
+
     return abort(404)
 
 
-@app.route('/job/<job_id>/alignments')
-def job_alignments(job_id):
-    job_alignments = get_job_alignments(job_id)
-    if job_alignments:
-        return jsonify(job_alignments)
-    return jsonify([])
+@app.route('/job/<job:job>/alignments')
+def job_alignments(job):
+    job_alignments = job.alignments
+    return jsonify(job_alignments if job_alignments else [])
 
 
-@app.route('/job/<job_id>/clusterings')
-def job_clusterings(job_id):
-    job_clusterings = get_job_clusterings(job_id)
-    if job_clusterings:
-        return jsonify(job_clusterings)
-    return jsonify([])
+@app.route('/job/<job:job>/clusterings')
+def job_clusterings(job):
+    job_clusterings = job.clusterings
+    return jsonify(job_clusterings if job_clusterings else [])
 
 
-@app.route('/job/<job_id>/resource/<resource_label>')
-def resource_sample(job_id, resource_label):
-    return jsonify(get_resource_sample(job_id, resource_label,
-                                       limit=request.args.get('limit', type=int),
-                                       offset=request.args.get('offset', 0, type=int),
-                                       total=request.args.get('total', default=False) == 'true'))
+@app.route('/job/<job:job>/resource/<resource_label>')
+def resource_sample(job, resource_label):
+    return jsonify(job.get_resource_sample(resource_label,
+                                           limit=request.args.get('limit', type=int),
+                                           offset=request.args.get('offset', 0, type=int),
+                                           total=request.args.get('total', default=False) == 'true'))
 
 
-@app.route('/job/<job_id>/run_alignment/<alignment>', methods=['POST'])
-def run_alignment(job_id, alignment):
+@app.route('/job/<job:job>/run_alignment/<alignment>', methods=['POST'])
+def run_alignment(job, alignment):
     if 'restart' in request.json and request.json['restart'] is True:
         query = psycopg2_sql.SQL("DELETE FROM alignments WHERE job_id = %s AND alignment = %s")
-        params = (job_id, alignment)
-        run_query(query, params)
+        params = (job.job_id, alignment)
+        fetch_one(query, params)
 
         query = psycopg2_sql.SQL("DELETE FROM clusterings WHERE job_id = %s AND alignment = %s")
-        run_query(query, params)
+        fetch_one(query, params)
 
     try:
         query = psycopg2_sql.SQL(
             "INSERT INTO alignments (job_id, alignment, status, kill, requested_at) VALUES (%s, %s, %s, false, now())")
-        params = (job_id, alignment, 'waiting')
-        run_query(query, params)
+        params = (job.job_id, alignment, 'waiting')
+        fetch_one(query, params)
     except psycopg2.errors.UniqueViolation:
         return jsonify({'result': 'exists'})
 
     return jsonify({'result': 'ok'})
 
 
-@app.route('/job/<job_id>/kill_alignment/<alignment>', methods=['POST'])
-def kill_alignment(job_id, alignment):
-    run_query('UPDATE alignments SET kill = true WHERE job_id = %s AND alignment = %s', (job_id, alignment))
+@app.route('/job/<job:job>/kill_alignment/<alignment>', methods=['POST'])
+def kill_alignment(job, alignment):
+    fetch_one('UPDATE alignments SET kill = true WHERE job_id = %s AND alignment = %s', (job.job_id, alignment))
     return jsonify({'result': 'ok'})
 
 
-@app.route('/job/<job_id>/alignment/<alignment>')
-def alignment_result(job_id, alignment):
+@app.route('/job/<job:job>/alignment/<alignment>')
+def alignment_result(job, alignment):
     cluster_id = request.args.get('cluster_id')
-    links = [link for link in get_links(job_id, int(alignment), cluster_id=cluster_id, include_props=True,
-                                        limit=request.args.get('limit', type=int),
-                                        offset=request.args.get('offset', 0, type=int))]
+    links = [link for link in job.get_links(int(alignment), cluster_id=cluster_id, include_props=True,
+                                            limit=request.args.get('limit', type=int),
+                                            offset=request.args.get('offset', 0, type=int))]
     return jsonify(links)
 
 
-@app.route('/job/<job_id>/run_clustering/<alignment>', methods=['POST'])
-def run_clustering(job_id, alignment):
+@app.route('/job/<job:job>/run_clustering/<alignment>', methods=['POST'])
+def run_clustering(job, alignment):
     try:
-        job_clusterings = get_job_clusterings(job_id)
-        clustering = next((cl for cl in job_clusterings if cl['alignment'] == alignment), None)
-
-        if clustering:
+        if job.clustering(alignment):
             query = psycopg2_sql.SQL("""
                 UPDATE clusterings 
                 SET association_file = %s, status = %s, 
                     kill = false, requested_at = now(), processing_at = null, finished_at = null
                 WHERE job_id = %s AND alignment = %s
                 """)
-            params = (request.json['association_file'], 'waiting', job_id, alignment)
-            run_query(query, params)
+            params = (request.json['association_file'], 'waiting', job.job_id, alignment)
+            fetch_one(query, params)
 
             return jsonify({'result': 'ok'})
         else:
@@ -170,23 +179,23 @@ def run_clustering(job_id, alignment):
                                         status, kill, requested_at) 
                 VALUES (%s, %s, %s, %s, %s, false, now())
             """)
-            params = (job_id, alignment, request.json.get('clustering_type', 'default'),
+            params = (job.job_id, alignment, request.json.get('clustering_type', 'default'),
                       request.json['association_file'], 'waiting')
-            run_query(query, params)
+            fetch_one(query, params)
 
             return jsonify({'result': 'ok'})
     except psycopg2.errors.UniqueViolation:
         return jsonify({'result': 'exists'})
 
 
-@app.route('/job/<job_id>/kill_clustering/<alignment>', methods=['POST'])
-def kill_clustering(job_id, alignment):
-    run_query('UPDATE clusterings SET kill = true WHERE job_id = %s AND alignment = %s', (job_id, alignment))
+@app.route('/job/<job:job>/kill_clustering/<alignment>', methods=['POST'])
+def kill_clustering(job, alignment):
+    fetch_one('UPDATE clusterings SET kill = true WHERE job_id = %s AND alignment = %s', (job.job_id, alignment))
     return jsonify({'result': 'ok'})
 
 
-@app.route('/job/<job_id>/clusters/<alignment>')
-def clusters(job_id, alignment):
+@app.route('/job/<job:job>/clusters/<alignment>')
+def clusters(job, alignment):
     if request.args.get('association'):
         extended_data = []
         cycles_data = []
@@ -201,9 +210,9 @@ def clusters(job_id, alignment):
         cycles_data = []
 
     clusters = []
-    for cluster in get_clusters(job_id, int(alignment), include_props=True,
-                                limit=request.args.get('limit', type=int),
-                                offset=request.args.get('offset', 0, type=int)):
+    for cluster in job.get_clusters(int(alignment), include_props=True,
+                                    limit=request.args.get('limit', type=int),
+                                    offset=request.args.get('offset', 0, type=int)):
         clusters.append({
             'id': cluster['id'],
             'size': cluster['size'],
@@ -222,9 +231,9 @@ def clusters(job_id, alignment):
     return jsonify(clusters)
 
 
-@app.route('/job/<job_id>/validate/<alignment>', methods=['POST'])
-def validate_link(job_id, alignment):
-    linkset_table = 'linkset_' + job_id + '_' + str(alignment)
+@app.route('/job/<job:job>/validate/<alignment>', methods=['POST'])
+def validate_link(job, alignment):
+    linkset_table = 'linkset_' + job.job_id + '_' + str(alignment)
 
     valid = request.json.get('valid')
     source = request.json.get('source')
@@ -232,16 +241,16 @@ def validate_link(job_id, alignment):
 
     query = psycopg2_sql.SQL('UPDATE {} SET valid = %s WHERE source_uri = %s AND target_uri = %s') \
         .format(psycopg2_sql.Identifier(linkset_table))
-    run_query(query, (valid, source, target))
+    fetch_one(query, (valid, source, target))
 
     return jsonify({'result': 'ok'})
 
 
-@app.route('/job/<job_id>/cluster/<alignment>/<cluster_id>/graph')
-def get_cluster_graph_data(job_id, alignment, cluster_id):
-    cluster_data = get_cluster(job_id, alignment, cluster_id)
-    clustering = get_job_clustering(job_id, alignment)
-    properties = get_value_targets(job_id, int(alignment))
+@app.route('/job/<job:job>/cluster/<alignment>/<cluster_id>/graph')
+def get_cluster_graph_data(job, alignment, cluster_id):
+    cluster_data = job.cluster(alignment, cluster_id)
+    clustering = job.clustering(alignment)
+    properties = job.value_targets(int(alignment))
 
     specifications = {
         "data_store": "POSTGRESQL",
@@ -263,8 +272,8 @@ def get_cluster_graph_data(job_id, alignment, cluster_id):
     })
 
 
-@app.route('/job/<job_id>/export/<alignment>/csv')
-def export_to_csv(job_id, alignment):
+@app.route('/job/<job:job>/export/<alignment>/csv')
+def export_to_csv(job, alignment):
     export_links = 0
     if request.args.get('accepted', default=False) == 'true':
         export_links |= ExportLinks.ACCEPTED
@@ -277,11 +286,11 @@ def export_to_csv(job_id, alignment):
     writer = csv.writer(stream)
 
     writer.writerow(['Source URI', 'Target URI', 'Strengths', 'Valid'])
-    for link in get_links(job_id, alignment, export_links=export_links):
+    for link in job.get_links(alignment, export_links=export_links):
         writer.writerow([link['source'], link['target'], link['strengths'], link['valid']])
 
     output = make_response(stream.getvalue())
-    output.headers['Content-Disposition'] = 'attachment; filename=' + job_id + '_' + alignment + '.csv'
+    output.headers['Content-Disposition'] = 'attachment; filename=' + job.job_id + '_' + alignment + '.csv'
     output.headers['Content-Type'] = 'text/csv'
 
     return output

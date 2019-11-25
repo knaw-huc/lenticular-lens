@@ -5,7 +5,7 @@ from psycopg2 import sql as psycopg2_sql, ProgrammingError
 
 from ll.job.job_config import JobConfig
 from ll.job.matching_sql import MatchingSql
-from ll.job.job_alignment import get_job_data, get_job_alignment, update_alignment_job
+from ll.job.data import Job as JobLL
 
 from ll.worker.job import Job
 from ll.util.config_db import db_conn
@@ -16,6 +16,7 @@ class AlignmentJob(Job):
         self.job_id = job_id
         self.alignment = alignment
 
+        self.job = None
         self.config = None
         self.matching_sql = None
 
@@ -23,15 +24,15 @@ class AlignmentJob(Job):
         super().__init__(self.run_generated_sql)
 
     def reset(self):
-        job_data = get_job_data(self.job_id)
-        self.config = JobConfig(self.job_id, job_data['resources'], job_data['mappings'], self.alignment)
+        self.job = JobLL(self.job_id)
+        self.config = JobConfig(self.job_id, self.job.resources, self.job.mappings, self.alignment)
         self.matching_sql = MatchingSql(self.config)
 
     def run(self):
         download_status_set = False
         while self.config.has_queued_resources and not self.killed:
             if not download_status_set:
-                update_alignment_job(self.job_id, self.alignment, {'status': 'downloading'})
+                self.job.update_alignment(self.alignment, {'status': 'downloading'})
                 download_status_set = True
 
             time.sleep(1)
@@ -105,22 +106,22 @@ class AlignmentJob(Job):
                 finally:
                     conn.commit()
 
-        update_alignment_job(self.job_id, self.alignment, data)
+        self.job.update_alignment(self.alignment, data)
 
     def watch_kill(self):
-        alignment_job = get_job_alignment(self.job_id, self.alignment)
+        alignment_job = self.job.alignment(self.alignment)
         if alignment_job['kill']:
             self.kill(reset=False)
 
     def on_kill(self, reset):
         job_data = {'status': 'waiting'} if reset else {'status': 'failed', 'status_message': 'Killed manually'}
-        update_alignment_job(self.job_id, self.alignment, job_data)
+        self.job.update_alignment(self.alignment, job_data)
 
         self.cleanup()
 
     def on_exception(self):
         err_message = str(self.exception)
-        update_alignment_job(self.job_id, self.alignment, {'status': 'failed', 'status_message': err_message})
+        self.job.update_alignment(self.alignment, {'status': 'failed', 'status_message': err_message})
 
         self.cleanup()
 
@@ -145,43 +146,38 @@ class AlignmentJob(Job):
             cur.execute(psycopg2_sql.SQL('DROP SCHEMA {} CASCADE')
                         .format(psycopg2_sql.Identifier(self.config.linkset_schema_name)))
 
-            if links == 0:
-                cur.execute(psycopg2_sql.SQL('DROP TABLE {} CASCADE')
-                            .format(psycopg2_sql.Identifier(self.config.linkset_table_name)))
-                conn.commit()
-
             cur.execute("UPDATE alignments "
                         "SET status = %s, status_message = null, distinct_links_count = %s, "
                         "distinct_sources_count = %s, distinct_targets_count = %s, finished_at = now() "
                         "WHERE job_id = %s AND alignment = %s",
                         ('done', links, sources, targets, self.job_id, self.alignment))
-            conn.commit()
 
-            cur.execute('SELECT * FROM clusterings WHERE job_id = %s AND alignment = %s',
-                        (self.job_id, self.alignment))
-            clustering = cur.fetchone()
-
-            if clustering:
-                query = psycopg2_sql.SQL("""
-                    UPDATE clusterings 
-                    SET status = %s, kill = false, requested_at = now(), processing_at = null, finished_at = null
-                    WHERE job_id = %s AND alignment = %s
-                """)
-
-                cur.execute(query, ('waiting', self.job_id, self.alignment))
-                conn.commit()
+            if links == 0:
+                cur.execute(psycopg2_sql.SQL('DROP TABLE {} CASCADE')
+                            .format(psycopg2_sql.Identifier(self.config.linkset_table_name)))
             else:
-                query = psycopg2_sql.SQL("""
-                    INSERT INTO clusterings 
-                    (job_id, alignment, clustering_type, association_file, status, kill, requested_at) 
-                    VALUES (%s, %s, %s, %s, %s, false, now())
-                """)
+                cur.execute('SELECT * FROM clusterings WHERE job_id = %s AND alignment = %s',
+                            (self.job_id, self.alignment))
+                clustering = cur.fetchone()
 
-                cur.execute(query, (self.job_id, self.alignment, 'default', None, 'waiting'))
-                conn.commit()
+                if clustering:
+                    query = psycopg2_sql.SQL("""
+                        UPDATE clusterings 
+                        SET status = %s, kill = false, requested_at = now(), processing_at = null, finished_at = null
+                        WHERE job_id = %s AND alignment = %s
+                    """)
+
+                    cur.execute(query, ('waiting', self.job_id, self.alignment))
+                else:
+                    query = psycopg2_sql.SQL("""
+                        INSERT INTO clusterings 
+                        (job_id, alignment, clustering_type, association_file, status, kill, requested_at) 
+                        VALUES (%s, %s, %s, %s, %s, false, now())
+                    """)
+
+                    cur.execute(query, (self.job_id, self.alignment, 'default', None, 'waiting'))
 
     def cleanup(self):
         with db_conn() as conn, conn.cursor() as cur:
             cur.execute(psycopg2_sql.SQL('DROP SCHEMA {} CASCADE')
                         .format(psycopg2_sql.Identifier(self.config.linkset_schema_name)))
-            conn.commit()

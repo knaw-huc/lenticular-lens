@@ -2,6 +2,7 @@ import locale
 
 from psycopg2 import sql
 from inspect import cleandoc
+from ll.util.helpers import get_string_from_sql
 
 locale.setlocale(locale.LC_ALL, '')
 
@@ -121,24 +122,22 @@ class MatchingSql:
             sequence=sql.Literal(self.config.match_to_run.name + '_count')
         )
 
-    def sql_string(self, conn):
-        sql_str = self.generate_schema_sql().as_string(conn)
-        sql_str += self.generate_resources_sql().as_string(conn)
-        sql_str += self.generate_match_index_sql().as_string(conn)
-        sql_str += self.generate_match_source_sql().as_string(conn)
-        sql_str += self.generate_match_target_sql().as_string(conn)
-        sql_str += self.generate_match_linkset_sql().as_string(conn)
+    @property
+    def sql_string(self):
+        sql_str = get_string_from_sql(self.generate_schema_sql())
+        sql_str += get_string_from_sql(self.generate_resources_sql())
+        sql_str += get_string_from_sql(self.generate_match_index_sql())
+        sql_str += get_string_from_sql(self.generate_match_source_sql())
+        sql_str += get_string_from_sql(self.generate_match_target_sql())
+        sql_str += get_string_from_sql(self.generate_match_linkset_sql())
 
         return sql_str
 
 
 if __name__ == '__main__':
-    from ll.util.config_db import db_conn
-    from ll.job.job_alignment import get_job_data
-    from ll.job.job_config import JobConfig
+    from ll.job.data import Job
 
-    job_data = get_job_data('job_id')
-    config = JobConfig('job_id', job_data['resources'], job_data['mappings'], 1)
-    job_sql = MatchingSql(config)
+    job = Job('job_id')
+    job_sql = MatchingSql(job.config)
 
-    print(job_sql.sql_string(db_conn()))
+    print(job_sql.sql_string)

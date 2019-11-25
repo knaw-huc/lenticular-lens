@@ -145,6 +145,8 @@
 </template>
 
 <script>
+    import {EventBus} from "../../../eventbus";
+
     export default {
         name: "MatchStatus",
         props: ['match'],
@@ -202,7 +204,7 @@
 
                 if (!this.refreshDownloadsInProgress) {
                     this.refreshDownloadsInProgress = true;
-                    this.$emit('refreshDownloadsInProgress');
+                    EventBus.$emit('refreshDownloadsInProgress');
                 }
 
                 const datasets = [];

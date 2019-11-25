@@ -88,7 +88,7 @@
                       @input="updateCollection" v-bind:class="{'is-invalid': errors.includes('collection')}">
               <div slot="option" slot-scope="option">
                 <div>
-                  <span class="pr-2">{{ option.id }}</span>
+                  <span class="pr-2">{{ option.title || option.id }}</span>
                   <span class="font-italic text-muted small">{{ option.total }}</span>
                 </div>
 
@@ -297,7 +297,8 @@
             autoLabel() {
                 if (this.datasetsLoaded && this.resource.dataset.dataset_id && this.resource.dataset.collection_id) {
                     const datasetTitle = this.selectedDataset.title;
-                    return `${datasetTitle} [type: ${this.resource.dataset.collection_id}]`;
+                    const collectionTitle = this.selectedCollection.title || this.resource.dataset.collection_id;
+                    return `${datasetTitle} [type: ${collectionTitle}]`;
                 }
                 return 'Collection ' + (this.resource.id + 1);
             },

@@ -3,7 +3,7 @@ from psycopg2 import sql as psycopg2_sql
 
 from ll.job.property_field import PropertyField
 from ll.util.helpers import hash_string, get_pagination_sql
-from ll.util.config_db import execute_query, run_query
+from ll.util.config_db import execute_query, fetch_one
 
 
 def get_property_values(targets, resources=None, cluster_id=None,
@@ -181,7 +181,7 @@ def get_linkset_cluster_join_sql(linkset_table_name, clusters_table_name, limit=
 
 
 def get_table_info(dataset_id, collection_id):
-    result = run_query(
+    result = fetch_one(
         'SELECT table_name, columns FROM timbuctoo_tables WHERE dataset_id = %s AND collection_id = %s',
         (dataset_id, collection_id)
     )

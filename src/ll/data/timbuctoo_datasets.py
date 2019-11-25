@@ -33,9 +33,12 @@ class TimbuctooDatasets:
                     }
 
                 datasets[table['dataset_id']]['collections'][table['collection_id']] = {
+                    'title': table['collection_title'],
                     'total': table['total'],
                     'properties': {
                         column_info['name']: {
+                            'shortenedUri': column_info['shortenedUri'],
+                            'isInverse': column_info['isInverse'],
                             'isList': column_info['isList'],
                             'isValueType': column_info['isValueType'],
                             'isLink': column_info['isLink'],

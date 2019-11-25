@@ -1,7 +1,7 @@
 import time
 import threading
 
-from ll.util.config_db import db_conn
+from ll.util.config_db import get_conn, return_conn
 
 
 class Job:
@@ -31,12 +31,14 @@ class Job:
 
     def run_in_thread(self):
         try:
-            self.db_conn = db_conn()
+            self.db_conn = get_conn()
             self.target()
+            self.db_conn.commit()
         except Exception as e:
             self.exception = e
         finally:
-            self.db_conn.close()
+            return_conn(self.db_conn)
+            self.db_conn = None
 
     def kill(self, reset=True):
         self.killed = True

@@ -41,11 +41,11 @@
         </button>
       </div>
 
-      <div v-if="alignmentStatus === 'done' && associationFiles" class="col-auto">
+      <div v-if="alignmentStatus === 'done' && $root.associationFiles" class="col-auto">
         <select class="col-auto form-control association-select my-1" v-model="association"
                 :id="'match_' + match.id + '_association'">
           <option value="">No association</option>
-          <option v-for="associationFileName in associationFiles" :value="associationFileName">
+          <option v-for="associationFileName in $root.associationFiles" :value="associationFileName">
             {{ associationFileName }}
           </option>
         </select>
@@ -172,6 +172,8 @@
 </template>
 
 <script>
+    import {EventBus} from "../../../eventbus";
+
     import MatchSourcesInfo from '../../info/MatchSourcesInfo';
     import MatchTargetsInfo from '../../info/MatchTargetsInfo';
     import MatchMatchingMethodsInfo from '../../info/MatchMatchingMethodsInfo';
@@ -200,8 +202,7 @@
         },
         data() {
             return {
-                association: '',
-                associationFiles: [],
+                association: ''
             };
         },
         computed: {
@@ -322,23 +323,23 @@
                 if (data.result === 'exists' && confirm('This Alignment job already exists.\nDo you want to overwrite it with the current configuration?'))
                     await this.runAlignment(true);
 
-                this.$emit('refresh');
+                EventBus.$emit('refresh');
             },
 
             async runClustering() {
                 const associationFile = this.association !== '' ? this.association : null;
                 await this.$root.runClustering(this.match.id, associationFile);
-                this.$emit('refresh');
+                EventBus.$emit('refresh');
             },
 
             async killAlignment() {
                 await this.$root.killAlignment(this.match.id);
-                this.$emit('refresh');
+                EventBus.$emit('refresh');
             },
 
             async killClustering() {
                 await this.$root.killClustering(this.match.id);
-                this.$emit('refresh');
+                EventBus.$emit('refresh');
             },
         },
         async mounted() {
@@ -347,8 +348,6 @@
 
             if (this.match.targets.length < 1)
                 this.addMatchResource('targets');
-
-            this.associationFiles = await this.$root.getAssociationFiles();
         },
     };
 </script>

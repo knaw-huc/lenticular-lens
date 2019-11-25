@@ -98,6 +98,15 @@ export default {
             return matches.find(match => (isId(matchId) && match.id === parseInt(matchId)) || match.label === matchId);
         },
 
+        getCleanPropertyName(property, propInfo) {
+            if (propInfo.isList)
+                property = property.replace(/List$/, '');
+            if (propInfo.isInverse)
+                property = property.replace(/^_inverse_/, '');
+
+            return property;
+        },
+
         exportCsvLink(alignment, accepted, declined, notValidated) {
             const params = [];
             if (accepted) params.push('accepted=true');
@@ -402,10 +411,6 @@ export default {
 
         async validateLink(alignment, source, target, valid) {
             return callApi(`/job/${this.job.job_id}/validate/${alignment}`, {source, target, valid});
-        },
-
-        async getAssociationFiles() {
-            return callApi("/association_files");
         },
 
         async loadDatasets(graphqlEndpoint, hsid) {
