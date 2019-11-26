@@ -66,6 +66,82 @@ class Job:
         return fetch_one('SELECT * FROM clusterings WHERE job_id = %s AND alignment = %s',
                          (self.job_id, alignment), dict=True)
 
+    def update_data(self, data):
+        with db_conn() as conn, conn.cursor() as cur:
+            cur.execute(psycopg2_sql.SQL("""
+                    INSERT INTO reconciliation_jobs (job_id, %s) VALUES %s
+                    ON CONFLICT (job_id) DO 
+                    UPDATE SET (%s) = ROW %s, updated_at = NOW()
+                """), (
+                AsIs(', '.join(data.keys())),
+                tuple([self.job_id] + list(data.values())),
+                AsIs(', '.join(data.keys())),
+                tuple(data.values()),
+            ))
+
+    def update_alignment(self, alignment, data):
+        with db_conn() as conn, conn.cursor() as cur:
+            cur.execute(psycopg2_sql.SQL('UPDATE alignments SET (%s) = ROW %s WHERE job_id = %s AND alignment = %s'), (
+                AsIs(', '.join(data.keys())),
+                tuple(data.values()),
+                self.job_id,
+                alignment
+            ))
+
+    def update_clustering(self, alignment, data):
+        with db_conn() as conn, conn.cursor() as cur:
+            cur.execute(psycopg2_sql.SQL('UPDATE clusterings SET (%s) = ROW %s WHERE job_id = %s AND alignment = %s'), (
+                AsIs(', '.join(data.keys())),
+                tuple(data.values()),
+                self.job_id,
+                alignment
+            ))
+
+    def run_alignment(self, alignment, restart=False):
+        with db_conn() as conn, conn.cursor() as cur:
+            if restart:
+                cur.execute(psycopg2_sql.SQL("DELETE FROM alignments WHERE job_id = %s AND alignment = %s"),
+                            (self.job_id, alignment))
+                cur.execute(psycopg2_sql.SQL("DELETE FROM clusterings WHERE job_id = %s AND alignment = %s"),
+                            (self.job_id, alignment))
+
+            cur.execute(psycopg2_sql.SQL("INSERT INTO alignments (job_id, alignment, status, kill, requested_at) "
+                                         "VALUES (%s, %s, %s, false, now())"), (self.job_id, alignment, 'waiting'))
+
+    def run_clustering(self, alignment, association_file, clustering_type='default'):
+        clustering = self.clustering(alignment)
+
+        with db_conn() as conn, conn.cursor() as cur:
+            if clustering:
+                cur.execute(psycopg2_sql.SQL("""
+                    UPDATE clusterings 
+                    SET association_file = %s, status = %s, 
+                        kill = false, requested_at = now(), processing_at = null, finished_at = null
+                    WHERE job_id = %s AND alignment = %s
+                """), (association_file, 'waiting', self.job_id, alignment))
+            else:
+                cur.execute(psycopg2_sql.SQL("""
+                    INSERT INTO clusterings (job_id, alignment, clustering_type, association_file, 
+                                             status, kill, requested_at) 
+                    VALUES (%s, %s, %s, %s, %s, false, now())
+                """), (self.job_id, alignment, clustering_type, association_file, 'waiting'))
+
+    def kill_alignment(self, alignment):
+        with db_conn() as conn, conn.cursor() as cur:
+            cur.execute('UPDATE alignments SET kill = true WHERE job_id = %s AND alignment = %s',
+                        (self.job_id, alignment))
+
+    def kill_clustering(self, alignment):
+        with db_conn() as conn, conn.cursor() as cur:
+            cur.execute('UPDATE clusterings SET kill = true WHERE job_id = %s AND alignment = %s',
+                        (self.job_id, alignment))
+
+    def validate_link(self, alignment, source_uri, target_uri, valid):
+        with db_conn() as conn, conn.cursor() as cur:
+            linkset_table = 'linkset_' + self.job_id + '_' + str(alignment)
+            cur.execute(psycopg2_sql.SQL('UPDATE {} SET valid = %s WHERE source_uri = %s AND target_uri = %s')
+                        .format(psycopg2_sql.Identifier(linkset_table)), (valid, source_uri, target_uri))
+
     def value_targets(self, alignment, downloaded_only=True):
         def is_downloaded(dataset_id, collection_id):
             return any(download['dataset_id'] == dataset_id and download['collection_id'] == collection_id
@@ -98,6 +174,35 @@ class Job:
                 new_value_targets.append({'graph': graph, 'data': new_graph_data})
 
         return new_value_targets
+
+    def get_resource_sample(self, resource_label, limit=None, offset=0, total=False):
+        job_config = self.config
+
+        resource_label = hash_string(resource_label)
+        resource = job_config.get_resource_by_label(resource_label)
+        if not resource:
+            return []
+
+        selection = psycopg2_sql.SQL('count(*) AS total') if total else resource.properties_sql
+        order_limit = psycopg2_sql.SQL('') if total else \
+            psycopg2_sql.SQL('ORDER BY {view_name}.uri ' + get_pagination_sql(limit, offset)) \
+                .format(view_name=psycopg2_sql.Identifier(resource.label))
+
+        with db_conn() as conn, conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) as cur:
+            cur.execute(psycopg2_sql.SQL("""
+                SELECT {selection}
+                FROM {table_name} AS {view_name} {joins} {wheres} 
+                {order_limit}; 
+            """).format(
+                selection=selection,
+                table_name=psycopg2_sql.Identifier(resource.table_name),
+                view_name=psycopg2_sql.Identifier(resource.label),
+                joins=resource.joins_related_sql,
+                wheres=resource.where_sql,
+                order_limit=order_limit,
+            ))
+
+            return cur.fetchone() if total else cur.fetchall()
 
     def get_links(self, alignment, export_links=ExportLinks.ALL, cluster_id=None,
                   limit=None, offset=0, include_props=False):
@@ -146,6 +251,22 @@ class Job:
                     'cluster_id': link[3],
                     'valid': link[4]
                 }
+
+    def get_cluster_nodes(self, alignment):
+        with db_conn() as conn, conn.cursor() as cur:
+            linkset_table = 'linkset_' + self.job_id + '_' + str(alignment)
+
+            cur.execute("""
+                SELECT nodes.node AS node, ARRAY_AGG(DISTINCT nodes.cluster_id) AS clusters
+                FROM (
+                    SELECT source_uri AS node, cluster_id FROM {}
+                    UNION
+                    SELECT target_uri AS node, cluster_id FROM {}
+                ) AS nodes
+                GROUP BY nodes.node
+            """.format(linkset_table, linkset_table))
+
+            return {cluster_node[0]: set(cluster_node[1]) for cluster_node in cur}
 
     def get_clusters(self, alignment, limit=None, offset=0, include_props=False):
         linkset_table = 'linkset_' + self.job_id + '_' + str(alignment)
@@ -238,63 +359,3 @@ class Job:
                 nodes.append(target)
 
         return {'links': all_links, 'strengths': strengths, 'nodes': nodes}
-
-    def get_resource_sample(self, resource_label, limit=None, offset=0, total=False):
-        job_config = self.config
-
-        resource_label = hash_string(resource_label)
-        resource = job_config.get_resource_by_label(resource_label)
-        if not resource:
-            return []
-
-        selection = psycopg2_sql.SQL('count(*) AS total') if total else resource.properties_sql
-        order_limit = psycopg2_sql.SQL('') if total else \
-            psycopg2_sql.SQL('ORDER BY {view_name}.uri ' + get_pagination_sql(limit, offset))\
-                .format(view_name=psycopg2_sql.Identifier(resource.label))
-
-        with db_conn() as conn, conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) as cur:
-            cur.execute(psycopg2_sql.SQL("""
-                SELECT {selection}
-                FROM {table_name} AS {view_name} {joins} {wheres} 
-                {order_limit}; 
-            """).format(
-                selection=selection,
-                table_name=psycopg2_sql.Identifier(resource.table_name),
-                view_name=psycopg2_sql.Identifier(resource.label),
-                joins=resource.joins_related_sql,
-                wheres=resource.where_sql,
-                order_limit=order_limit,
-            ))
-
-            return cur.fetchone() if total else cur.fetchall()
-
-    def update_data(self, data):
-        with db_conn() as conn, conn.cursor() as cur:
-            cur.execute(psycopg2_sql.SQL("""
-                INSERT INTO reconciliation_jobs (job_id, %s) VALUES %s
-                ON CONFLICT (job_id) DO 
-                UPDATE SET (%s) = ROW %s, updated_at = NOW()
-            """), (
-                AsIs(', '.join(data.keys())),
-                tuple([self.job_id] + list(data.values())),
-                AsIs(', '.join(data.keys())),
-                tuple(data.values()),
-            ))
-
-    def update_alignment(self, alignment, data):
-        with db_conn() as conn, conn.cursor() as cur:
-            cur.execute(psycopg2_sql.SQL('UPDATE alignments SET (%s) = ROW %s WHERE job_id = %s AND alignment = %s'), (
-                AsIs(', '.join(data.keys())),
-                tuple(data.values()),
-                self.job_id,
-                alignment
-            ))
-
-    def update_clustering(self, alignment, data):
-        with db_conn() as conn, conn.cursor() as cur:
-            cur.execute(psycopg2_sql.SQL('UPDATE clusterings SET (%s) = ROW %s WHERE job_id = %s AND alignment = %s'), (
-                AsIs(', '.join(data.keys())),
-                tuple(data.values()),
-                self.job_id,
-                alignment
-            ))

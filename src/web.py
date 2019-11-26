@@ -2,15 +2,11 @@ import io
 import csv
 import json
 
-import psycopg2
-from psycopg2 import sql as psycopg2_sql
-
 from flask import Flask, jsonify, request, abort, make_response
 from werkzeug.routing import BaseConverter
 
 from ll.job.data import Job, ExportLinks
 
-from ll.util.config_db import fetch_one
 from ll.util.helpers import hash_string, get_association_files
 
 from ll.data.collection import Collection
@@ -125,28 +121,28 @@ def resource_sample(job, resource_label):
 
 @app.route('/job/<job:job>/run_alignment/<alignment>', methods=['POST'])
 def run_alignment(job, alignment):
-    if 'restart' in request.json and request.json['restart'] is True:
-        query = psycopg2_sql.SQL("DELETE FROM alignments WHERE job_id = %s AND alignment = %s")
-        params = (job.job_id, alignment)
-        fetch_one(query, params)
+    restart = 'restart' in request.json and request.json['restart'] is True
+    job.run_alignment(alignment, restart)
+    return jsonify({'result': 'ok'})
 
-        query = psycopg2_sql.SQL("DELETE FROM clusterings WHERE job_id = %s AND alignment = %s")
-        fetch_one(query, params)
 
-    try:
-        query = psycopg2_sql.SQL(
-            "INSERT INTO alignments (job_id, alignment, status, kill, requested_at) VALUES (%s, %s, %s, false, now())")
-        params = (job.job_id, alignment, 'waiting')
-        fetch_one(query, params)
-    except psycopg2.errors.UniqueViolation:
-        return jsonify({'result': 'exists'})
-
+@app.route('/job/<job:job>/run_clustering/<alignment>', methods=['POST'])
+def run_clustering(job, alignment):
+    association_file = request.json['association_file']
+    clustering_type = request.json.get('clustering_type', 'default')
+    job.run_clustering(alignment, association_file, clustering_type)
     return jsonify({'result': 'ok'})
 
 
 @app.route('/job/<job:job>/kill_alignment/<alignment>', methods=['POST'])
 def kill_alignment(job, alignment):
-    fetch_one('UPDATE alignments SET kill = true WHERE job_id = %s AND alignment = %s', (job.job_id, alignment))
+    job.kill_alignment(alignment)
+    return jsonify({'result': 'ok'})
+
+
+@app.route('/job/<job:job>/kill_clustering/<alignment>', methods=['POST'])
+def kill_clustering(job, alignment):
+    job.kill_clustering(alignment)
     return jsonify({'result': 'ok'})
 
 
@@ -157,41 +153,6 @@ def alignment_result(job, alignment):
                                             limit=request.args.get('limit', type=int),
                                             offset=request.args.get('offset', 0, type=int))]
     return jsonify(links)
-
-
-@app.route('/job/<job:job>/run_clustering/<alignment>', methods=['POST'])
-def run_clustering(job, alignment):
-    try:
-        if job.clustering(alignment):
-            query = psycopg2_sql.SQL("""
-                UPDATE clusterings 
-                SET association_file = %s, status = %s, 
-                    kill = false, requested_at = now(), processing_at = null, finished_at = null
-                WHERE job_id = %s AND alignment = %s
-                """)
-            params = (request.json['association_file'], 'waiting', job.job_id, alignment)
-            fetch_one(query, params)
-
-            return jsonify({'result': 'ok'})
-        else:
-            query = psycopg2_sql.SQL("""
-                INSERT INTO clusterings (job_id, alignment, clustering_type, association_file, 
-                                        status, kill, requested_at) 
-                VALUES (%s, %s, %s, %s, %s, false, now())
-            """)
-            params = (job.job_id, alignment, request.json.get('clustering_type', 'default'),
-                      request.json['association_file'], 'waiting')
-            fetch_one(query, params)
-
-            return jsonify({'result': 'ok'})
-    except psycopg2.errors.UniqueViolation:
-        return jsonify({'result': 'exists'})
-
-
-@app.route('/job/<job:job>/kill_clustering/<alignment>', methods=['POST'])
-def kill_clustering(job, alignment):
-    fetch_one('UPDATE clusterings SET kill = true WHERE job_id = %s AND alignment = %s', (job.job_id, alignment))
-    return jsonify({'result': 'ok'})
 
 
 @app.route('/job/<job:job>/clusters/<alignment>')
@@ -223,26 +184,15 @@ def clusters(job, alignment):
                                  cluster['id'] in cycles_data and cluster['id'] in extended_data else 'no'
         })
 
-    if not clusters:
-        response = jsonify(clusters)
-        response.status_code = 500
-        return response
-
     return jsonify(clusters)
 
 
 @app.route('/job/<job:job>/validate/<alignment>', methods=['POST'])
 def validate_link(job, alignment):
-    linkset_table = 'linkset_' + job.job_id + '_' + str(alignment)
-
-    valid = request.json.get('valid')
     source = request.json.get('source')
     target = request.json.get('target')
-
-    query = psycopg2_sql.SQL('UPDATE {} SET valid = %s WHERE source_uri = %s AND target_uri = %s') \
-        .format(psycopg2_sql.Identifier(linkset_table))
-    fetch_one(query, (valid, source, target))
-
+    valid = request.json.get('valid')
+    job.validate_link(alignment, source, target, valid)
     return jsonify({'result': 'ok'})
 
 
@@ -262,13 +212,17 @@ def get_cluster_graph_data(job, alignment, cluster_id):
         "properties": properties,
     }
 
+    cluster_graph = plot(specs=specifications, activated=True) \
+        if request.args.get('get_cluster', True) else None
+    cluster_graph_compact = plot_compact(specs=specifications, community_only=True, activated=True) \
+        if request.args.get('get_cluster_compact', True) else None
+    reconciliation_graph = plot_reconciliation(specs=specifications, activated=True)[1] \
+        if clustering['association_file'] and request.args.get('get_reconciliation', True) else None
+
     return jsonify({
-        'cluster_graph': plot(specs=specifications, activated=True) if request.args.get('get_cluster', True) else None,
-        'cluster_graph_compact': plot_compact(specs=specifications, community_only=True,
-                                              activated=True) if request.args.get('get_cluster_compact',
-                                                                                  True) else None,
-        'reconciliation_graph': plot_reconciliation(specs=specifications, activated=True)[1] \
-            if clustering['association_file'] and request.args.get('get_reconciliation', True) else None,
+        'cluster_graph': cluster_graph,
+        'cluster_graph_compact': cluster_graph_compact,
+        'reconciliation_graph': reconciliation_graph,
     })
 
 
