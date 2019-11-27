@@ -19,7 +19,7 @@
       </div>
 
       <div v-if="!alignment || alignmentStatus === 'failed'" class="col-auto">
-        <b-button variant="info" @click="runAlignment">
+        <b-button variant="info" @click="runAlignment()">
           Run
           <template v-if="alignmentStatus === 'failed'">again</template>
         </b-button>

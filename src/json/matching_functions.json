@@ -12,7 +12,7 @@
   "TRIGRAM_DISTANCE": {
     "sql_template": "{source} % {target}",
     "similarity": "similarity({source}, {target})",
-    "before_index": "SELECT set_config('pg_trgm.similarity_threshold', '{threshold}', true);",
+    "before_index": "SELECT set_config('pg_trgm.similarity_threshold', {threshold}, true);",
     "index_using": "gin({target} gin_trgm_ops)"
   },
   "DISTANCE_IS_BETWEEN": {
@@ -24,8 +24,8 @@
     "similarity": "{source} - {target}"
   },
   "SAME_YEAR_MONTH": {
-    "sql_template": "get_{date_part}({source}) = get_{date_part}({target})",
-    "index_using": "btree(get_{date_part}({target}))"
+    "sql_template": "get_date_part({date_part}, {source}) = get_date_part({date_part}, {target})",
+    "index_using": "btree(get_date_part({date_part}, {target}))"
   },
   "LEVENSHTEIN": {
     "sql_template": "levenshtein_distance({source}, {target}) <= {max_distance}",
@@ -41,12 +41,12 @@
     "index_using": "btree(ll_soundex({target}))"
   },
   "BLOOTHOOFT_REDUCT": {
-    "sql_template": "bloothooft({source}, '{name_type}') = bloothooft({target}, '{name_type}') AND levenshtein_similarity({source}, {target}) >= {threshold}",
+    "sql_template": "bloothooft({source}, {name_type}) = bloothooft({target}, {name_type}) AND levenshtein_similarity({source}, {target}) >= {threshold}",
     "similarity": "levenshtein_similarity({source}, {target})",
-    "index_using": "btree(bloothooft({target}, '{name_type}'))"
+    "index_using": "btree(bloothooft({target}, {name_type}))"
   },
   "BLOOTHOOFT_REDUCT_APPROX": {
-    "sql_template": "levenshtein_similarity(bloothooft({source}, '{name_type}'), bloothooft({target}, '{name_type}')) >= {bloothooft_threshold} AND levenshtein_similarity({source}, {target}) >= {threshold}",
+    "sql_template": "levenshtein_similarity(bloothooft({source}, {name_type}), bloothooft({target}, {name_type})) >= {bloothooft_threshold} AND levenshtein_similarity({source}, {target}) >= {threshold}",
     "similarity": "levenshtein_similarity({source}, {target})"
   }
 }

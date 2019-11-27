@@ -98,51 +98,36 @@ EXCEPTION
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION get_year(text) RETURNS int
+CREATE OR REPLACE FUNCTION get_date_part(text, text) RETURNS text
     STRICT IMMUTABLE PARALLEL SAFE AS
 $$
 DECLARE
     year text;
-BEGIN
-    year = substr($1, 0, 5);
-    IF year ~ E'^\\d+$' THEN
-        RETURN year::int;
-    ELSE
-        RETURN NULL;
-    END IF;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE FUNCTION get_month(text) RETURNS int
-    STRICT IMMUTABLE PARALLEL SAFE AS
-$$
-DECLARE
     month text;
 BEGIN
-    month = substr($1, 6, 2);
-    IF month ~ E'^\\d+$' THEN
-        RETURN month::int;
-    ELSE
-        RETURN NULL;
-    END IF;
-END;
-$$ LANGUAGE plpgsql;
+    year = substr($2, 0, 5);
+    month = substr($2, 6, 2);
 
-CREATE OR REPLACE FUNCTION get_year_month(text) RETURNS text
-    STRICT IMMUTABLE PARALLEL SAFE AS
-$$
-DECLARE
-    month int;
-    year  int;
-BEGIN
-    month = get_month($1);
-    year = get_year($1);
-
-    IF month IS NULL OR year IS NULL THEN
-        RETURN NULL;
-    ELSE
-        RETURN year::text || '-' || month::text;
-    END IF;
+    CASE $1
+    WHEN 'year' THEN
+        IF year ~ E'^\\d+$' THEN
+            RETURN year;
+        ELSE
+            RETURN NULL;
+        END IF;
+    WHEN 'month' THEN
+        IF month ~ E'^\\d+$' THEN
+            RETURN month;
+        ELSE
+            RETURN NULL;
+        END IF;
+    WHEN 'year_month' THEN
+        IF year ~ E'^\\d+$' AND month ~ E'^\\d+$' THEN
+            RETURN year || '-' || month;
+        ELSE
+            RETURN NULL;
+        END IF;
+    END CASE;
 END;
 $$ LANGUAGE plpgsql;
 

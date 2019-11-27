@@ -1,6 +1,7 @@
 import io
 import csv
 import json
+import psycopg2
 
 from flask import Flask, jsonify, request, abort, make_response
 from werkzeug.routing import BaseConverter
@@ -121,9 +122,12 @@ def resource_sample(job, resource_label):
 
 @app.route('/job/<job:job>/run_alignment/<alignment>', methods=['POST'])
 def run_alignment(job, alignment):
-    restart = 'restart' in request.json and request.json['restart'] is True
-    job.run_alignment(alignment, restart)
-    return jsonify({'result': 'ok'})
+    try:
+        restart = 'restart' in request.json and request.json['restart'] is True
+        job.run_alignment(alignment, restart)
+        return jsonify({'result': 'ok'})
+    except psycopg2.errors.UniqueViolation:
+        return jsonify({'result': 'exists'})
 
 
 @app.route('/job/<job:job>/run_clustering/<alignment>', methods=['POST'])
