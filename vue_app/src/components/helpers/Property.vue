@@ -165,7 +165,9 @@
             entities() {
                 return [
                     this.collectionId,
-                    ...this.property.filter((_, idx) => idx > 0 && idx % 2 === 0)
+                    ...this.property
+                        .filter(prop => prop !== '__value__' && prop !== '')
+                        .filter((_, idx) => idx > 0 && idx % 2 === 0)
                 ];
             },
 
