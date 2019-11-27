@@ -219,8 +219,10 @@ export default {
             const matches = copy(this.matches);
 
             matches.forEach(match => {
-                match.sources = match.sources.map(resourceId => this.getResourceById(resourceId).label);
-                match.targets = match.targets.map(resourceId => this.getResourceById(resourceId).label);
+                match.sources = match.sources.map(resourceId =>
+                    isId(resourceId) ? this.getResourceById(resourceId).label : resourceId);
+                match.targets = match.targets.map(resourceId =>
+                    isId(resourceId) ? this.getResourceById(resourceId).label : resourceId);
 
                 this.getRecursiveConditions(match.methods.conditions).forEach(condition => {
                     condition.sources = this.createMatchConditionProperties(condition.sources, resources);
