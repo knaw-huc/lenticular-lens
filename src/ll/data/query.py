@@ -66,7 +66,7 @@ def create_query_for(table_info, graph, property_path, cluster_id=None,
     columns = table_info['columns']
     joins = []
     if type(property_path) is list:
-        property_sql_info = get_property_sql_info(graph, resource, columns, property_path)
+        property_sql_info = get_property_sql_info(graph, resource, columns, list(property_path))
         property_name = property_sql_info['property_name']
         resource = property_sql_info['resource']
         columns = property_sql_info['columns']

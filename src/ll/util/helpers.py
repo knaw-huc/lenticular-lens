@@ -29,9 +29,7 @@ def get_json_from_file(filename):
 
 def get_string_from_sql(sql):
     with db_conn() as conn:
-        sql_string = sql.as_string(conn)
-
-    return sql_string
+        return sql.as_string(conn)
 
 
 def hash_string(to_hash):
