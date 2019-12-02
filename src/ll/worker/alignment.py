@@ -3,7 +3,6 @@ import time
 
 from psycopg2 import sql as psycopg2_sql, ProgrammingError
 
-from ll.job.job_config import JobConfig
 from ll.job.matching_sql import MatchingSql
 from ll.job.data import Job as JobLL
 
@@ -25,7 +24,7 @@ class AlignmentJob(Job):
 
     def reset(self):
         self.job = JobLL(self.job_id)
-        self.config = JobConfig(self.job_id, self.job.resources, self.job.mappings, self.alignment)
+        self.config = self.job.config_for_alignment(self.alignment)
         self.matching_sql = MatchingSql(self.config)
 
     def run(self):

@@ -138,6 +138,15 @@ def run_clustering(job, alignment):
     return jsonify({'result': 'ok'})
 
 
+@app.route('/job/<job:job>/matching_sql/<alignment>')
+def matching_sql(job, alignment):
+    from flask import Response
+    from ll.job.matching_sql import MatchingSql
+
+    job_sql = MatchingSql(job.config_for_alignment(int(alignment)))
+    return Response(job_sql.sql_string, mimetype='application/sql')
+
+
 @app.route('/job/<job:job>/kill_alignment/<alignment>', methods=['POST'])
 def kill_alignment(job, alignment):
     job.kill_alignment(alignment)

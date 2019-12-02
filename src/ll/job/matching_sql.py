@@ -132,12 +132,3 @@ class MatchingSql:
         sql_str += get_string_from_sql(self.generate_match_linkset_sql())
 
         return sql_str
-
-
-if __name__ == '__main__':
-    from ll.job.data import Job
-
-    job = Job('job_id')
-    job_sql = MatchingSql(job.config)
-
-    print(job_sql.sql_string)

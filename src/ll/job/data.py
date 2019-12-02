@@ -58,6 +58,9 @@ class Job:
             'parameters': (self.job_id,)
         }, {'cursor_factory': psycopg2_extras.RealDictCursor})
 
+    def config_for_alignment(self, alignment):
+        return JobConfig(self.job_id, self.resources, self.mappings, run_match=alignment)
+
     def alignment(self, alignment):
         return fetch_one('SELECT * FROM alignments WHERE job_id = %s AND alignment = %s',
                          (self.job_id, alignment), dict=True)
