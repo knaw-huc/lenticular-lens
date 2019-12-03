@@ -29,6 +29,7 @@ class TimbuctooDatasets:
                         'name': table['dataset_name'],
                         'title': table['title'],
                         'description': table['description'],
+                        'published': table['hsid'] is None,
                         'collections': {},
                     }
 
