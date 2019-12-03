@@ -105,18 +105,7 @@
         </div>
       </sub-card>
 
-      <sub-card v-if="resource.dataset.collection_id !== ''" label="Filter"
-                :has-error="errors.includes('filters')" :has-columns="canRunSample">
-        <template v-if="canRunSample" v-slot:columns>
-          <div class="col-auto">
-            <button type="button" class="btn btn-info btn-sm" @click="runSample">
-              Run sample of filtered properties
-            </button>
-          </div>
-        </template>
-
-        <resource-samples :resource="resource" ref="resourceSamples"/>
-
+      <sub-card v-if="resource.dataset.collection_id !== ''" label="Filter" :has-error="errors.includes('filters')">
         <conditions-group :conditions-group="resource.filter"
                           :is-root="true"
                           group="resource-filters"
