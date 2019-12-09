@@ -31,6 +31,10 @@ class Match:
         return self.__data.get('is_association', False)
 
     @property
+    def properties(self):
+        return self.__data['properties']
+
+    @property
     def index_sql(self):
         index_sqls = []
 

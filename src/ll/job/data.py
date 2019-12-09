@@ -7,9 +7,11 @@ from psycopg2.extensions import AsIs
 from ll.job.job_config import JobConfig
 
 from ll.data.collection import Collection
-from ll.data.query import get_property_values
+from ll.data.query import get_property_values, get_property_values_queries, get_property_values_for_query, \
+    create_query_for_properties, create_count_query_for_properties, \
+    get_linkset_join_sql, get_linkset_cluster_join_sql, get_table_info
 
-from ll.util.config_db import db_conn, execute_query, fetch_one
+from ll.util.config_db import db_conn, fetch_one
 from ll.util.helpers import hash_string, hasher, get_pagination_sql
 
 
@@ -46,17 +48,15 @@ class Job:
 
     @property
     def alignments(self):
-        return execute_query({
-            'query': "SELECT * FROM alignments WHERE job_id = %s",
-            'parameters': (self.job_id,)
-        }, {'cursor_factory': psycopg2_extras.RealDictCursor})
+        with db_conn() as conn, conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) as cur:
+            cur.execute('SELECT * FROM alignments WHERE job_id = %s', (self.job_id,))
+            return cur.fetchall()
 
     @property
     def clusterings(self):
-        return execute_query({
-            'query': "SELECT * FROM clusterings WHERE job_id = %s",
-            'parameters': (self.job_id,)
-        }, {'cursor_factory': psycopg2_extras.RealDictCursor})
+        with db_conn() as conn, conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) as cur:
+            cur.execute('SELECT * FROM clusterings WHERE job_id = %s', (self.job_id,))
+            return cur.fetchall()
 
     def config_for_alignment(self, alignment):
         return JobConfig(self.job_id, self.resources, self.mappings, run_match=alignment)
@@ -141,83 +141,60 @@ class Job:
 
     def validate_link(self, alignment, source_uri, target_uri, valid):
         with db_conn() as conn, conn.cursor() as cur:
-            linkset_table = 'linkset_' + self.job_id + '_' + str(alignment)
-            cur.execute(psycopg2_sql.SQL('UPDATE {} SET valid = %s WHERE source_uri = %s AND target_uri = %s')
-                        .format(psycopg2_sql.Identifier(linkset_table)), (valid, source_uri, target_uri))
+            query = psycopg2_sql.SQL('UPDATE {} SET valid = %s WHERE source_uri = %s AND target_uri = %s') \
+                .format(psycopg2_sql.Identifier(self.get_linkset_table(alignment)))
+            cur.execute(query, (valid, source_uri, target_uri))
 
-    def value_targets(self, alignment, downloaded_only=True):
-        def is_downloaded(dataset_id, collection_id):
-            return any(download['dataset_id'] == dataset_id and download['collection_id'] == collection_id
-                       for download in downloaded)
+    def properties_for_resource(self, resource, downloaded_only=True):
+        return self.properties(resource.dataset_id, resource.properties, None, downloaded_only)
 
-        value_targets = next((mapping['value_targets'] for mapping in self.mappings if mapping['id'] == alignment))
-        if not downloaded_only:
-            return value_targets
+    def value_targets_for_match(self, match, downloaded_only=True):
+        return self.value_targets(match.properties, downloaded_only)
 
-        new_value_targets = []
-        downloaded = Collection.download_status()['downloaded']
+    def get_linkset_table(self, alignment):
+        return 'linkset_' + self.job_id + '_' + str(alignment)
 
-        for value_target in value_targets:
-            graph = value_target['graph']
-            new_graph_data = []
-
-            for data_of_entity in value_target['data']:
-                entity_type = data_of_entity['entity_type']
-
-                if is_downloaded(graph, entity_type):
-                    new_properties = []
-                    for properties in data_of_entity['properties']:
-                        if len(properties) == 1 or all(is_downloaded(graph, entity) for entity in properties[1::2]):
-                            new_properties.append(properties)
-
-                    if len(new_properties) > 0:
-                        new_graph_data.append({'entity_type': entity_type, 'properties': new_properties})
-
-            if len(new_graph_data) > 0:
-                new_value_targets.append({'graph': graph, 'data': new_graph_data})
-
-        return new_value_targets
-
-    def get_resource_sample(self, resource_label, limit=None, offset=0, total=False):
-        job_config = self.config
-
-        resource_label = hash_string(resource_label)
-        resource = job_config.get_resource_by_label(resource_label)
+    def get_resource_sample(self, resource_label, limit=None, offset=0):
+        resource = self.config.get_resource_by_label(hash_string(resource_label))
         if not resource:
             return []
 
-        selection = psycopg2_sql.SQL('count(*) AS total') if total else resource.properties_sql
-        order_limit = psycopg2_sql.SQL('') if total else \
-            psycopg2_sql.SQL('ORDER BY {view_name}.uri ' + get_pagination_sql(limit, offset)) \
-                .format(view_name=psycopg2_sql.Identifier(resource.label))
+        properties = self.properties_for_resource(resource)
+        if not properties:
+            return []
 
-        with db_conn() as conn, conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) as cur:
-            cur.execute(psycopg2_sql.SQL("""
-                SELECT {selection}
-                FROM {table_name} AS {view_name} {joins} {wheres} 
-                {order_limit}; 
-            """).format(
-                selection=selection,
-                table_name=psycopg2_sql.Identifier(resource.table_name),
-                view_name=psycopg2_sql.Identifier(resource.label),
-                joins=resource.joins_related_sql,
-                wheres=resource.where_sql,
-                order_limit=order_limit,
-            ))
+        table_info = get_table_info(resource.dataset_id, resource.collection_id)
+        query = create_query_for_properties(resource.dataset_id, resource.label,
+                                            table_info['table_name'], table_info['columns'], properties,
+                                            initial_join=resource.related_joins, condition=resource.filter_sql,
+                                            limit=limit, offset=offset)
 
-            return cur.fetchone() if total else cur.fetchall()
+        return get_property_values_for_query(query, None, resource.properties, dict=False)
+
+    def get_resource_sample_total(self, resource_label):
+        resource = self.config.get_resource_by_label(hash_string(resource_label))
+        if not resource:
+            return {'total': 0}
+
+        table_info = get_table_info(resource.dataset_id, resource.collection_id)
+        query = create_count_query_for_properties(resource.label, table_info['table_name'],
+                                                  initial_join=resource.related_joins, condition=resource.filter_sql)
+
+        return fetch_one(query, dict=True)
 
     def get_links(self, alignment, export_links=ExportLinks.ALL, cluster_id=None,
                   limit=None, offset=0, include_props=False):
-        linkset_table = 'linkset_' + self.job_id + '_' + str(alignment)
+        linkset_table = self.get_linkset_table(alignment)
         limit_offset_sql = get_pagination_sql(limit, offset)
 
         values = None
         if include_props:
-            targets = self.value_targets(alignment)
+            match = self.config.get_match_by_id(alignment)
+            targets = self.value_targets_for_match(match)
             if targets:
-                values = get_property_values(targets, linkset_table_name=linkset_table, cluster_id=cluster_id,
-                                             limit=limit, offset=offset)
+                initial_join = get_linkset_join_sql(linkset_table, cluster_id, limit, offset)
+                queries = get_property_values_queries(targets, initial_join=initial_join)
+                values = get_property_values(queries, dict=True)
 
         cluster_sql = 'cluster_id = %s' if cluster_id else ''
         export_links_sql = []
@@ -255,75 +232,49 @@ class Job:
                     'valid': link[4]
                 }
 
-    def get_cluster_nodes(self, alignment):
-        with db_conn() as conn, conn.cursor() as cur:
-            linkset_table = 'linkset_' + self.job_id + '_' + str(alignment)
-
-            cur.execute("""
-                SELECT nodes.node AS node, ARRAY_AGG(DISTINCT nodes.cluster_id) AS clusters
-                FROM (
-                    SELECT source_uri AS node, cluster_id FROM {}
-                    UNION
-                    SELECT target_uri AS node, cluster_id FROM {}
-                ) AS nodes
-                GROUP BY nodes.node
-            """.format(linkset_table, linkset_table))
-
-            return {cluster_node[0]: set(cluster_node[1]) for cluster_node in cur}
-
     def get_clusters(self, alignment, limit=None, offset=0, include_props=False):
-        linkset_table = 'linkset_' + self.job_id + '_' + str(alignment)
-        clusters_table = 'clusters_' + self.job_id + '_' + str(alignment)
+        linkset_table = self.get_linkset_table(alignment)
         limit_offset_sql = get_pagination_sql(limit, offset)
+        nodes_sql = ', ARRAY_AGG(DISTINCT nodes.uri) AS nodes_arr' if include_props else ''
 
         values = None
         if include_props:
-            targets = self.value_targets(alignment)
+            match = self.config.get_match_by_id(alignment)
+            targets = self.value_targets_for_match(match)
             if targets:
-                values = get_property_values(targets, linkset_table_name=linkset_table,
-                                             clusters_table_name=clusters_table, limit=limit, offset=offset)
+                initial_join = get_linkset_cluster_join_sql(linkset_table, limit, offset)
+                queries = get_property_values_queries(targets, initial_join=initial_join)
+                values = get_property_values(queries, dict=True)
 
         with db_conn() as conn, conn.cursor() as cur:
             cur.itersize = 1000
-
-            if values:
-                cur.execute("""
-                    SELECT clusters.id, clusters.size, clusters.links, 
-                           ARRAY_AGG(DISTINCT links.source_uri) || ARRAY_AGG(DISTINCT links.target_uri) AS nodes
-                    FROM {} AS clusters
-                    LEFT JOIN {} AS links ON clusters.id = links.cluster_id
-                    GROUP BY clusters.id
-                    ORDER BY clusters.size DESC {}
-                """.format(clusters_table, linkset_table, limit_offset_sql))
-            else:
-                cur.execute(
-                    'SELECT id, size, links FROM {} ORDER BY size DESC {}'.format(clusters_table, limit_offset_sql))
+            cur.execute("""
+                 SELECT ls.cluster_id, COUNT(DISTINCT nodes.uri) AS size, COUNT(ls.*) / 2 AS links {}
+                 FROM {} AS ls
+                 CROSS JOIN LATERAL (VALUES (ls.source_uri), (ls.target_uri)) AS nodes(uri)
+                 GROUP BY ls.cluster_id
+                 ORDER BY size DESC, ls.cluster_id ASC
+                 {}
+             """.format(nodes_sql, linkset_table, limit_offset_sql))
 
             for cluster in cur:
                 cluster_values = {}
-                cluster_keys = {}
-
                 if values:
                     for uri, uri_values in values.items():
                         if uri in cluster[3]:
                             for prop_value in uri_values:
-                                key = prop_value['dataset'] + '_' + prop_value['property']
+                                key = prop_value['dataset'] + '_' + prop_value['entity'] \
+                                      + '_' + prop_value['property'][-1]
 
                                 if key not in cluster_values:
                                     cluster_values[key] = {
                                         'dataset': prop_value['dataset'],
+                                        'entity': prop_value['entity'],
                                         'property': prop_value['property'],
                                         'values': set()
                                     }
 
-                                if key not in cluster_keys:
-                                    cluster_keys[key] = 0
-
-                                cluster_prop_values = prop_value['values'][:5]
-                                cluster_keys[key] = cluster_keys[key] + len(cluster_prop_values)
-
-                                if cluster_keys[key] < 5:
-                                    cluster_values[key]['values'].update(cluster_prop_values)
+                                cluster_values[key]['values'].update(prop_value['values'])
 
                 yield {
                     'id': cluster[0],
@@ -331,34 +282,76 @@ class Job:
                     'links': cluster[2],
                     'values': [{
                         'dataset': cluster_value['dataset'],
+                        'entity': cluster_value['entity'],
                         'property': cluster_value['property'],
                         'values': list(cluster_value['values'])
                     } for key, cluster_value in cluster_values.items()] if values else None
                 }
 
     def cluster(self, alignment, cluster_id):
-        linkset_table = 'linkset_' + self.job_id + '_' + str(alignment)
-        links = execute_query({
-            'query': f'SELECT source_uri, target_uri, strengths FROM {linkset_table} WHERE cluster_id = %s',
-            'parameters': (cluster_id,)
-        })
-
         all_links = []
         strengths = {}
         nodes = []
-        for link in links:
-            source = '<' + link[0] + '>'
-            target = '<' + link[1] + '>'
 
-            current_link = (source, target) if source < target else (target, source)
-            link_hash = "key_{}".format(str(hasher(current_link)).replace("-", "N"))
+        with db_conn() as conn, conn.cursor() as cur:
+            linkset_table = self.get_linkset_table(alignment)
+            cur.execute(f'SELECT source_uri, target_uri, strengths FROM {linkset_table} WHERE cluster_id = %s',
+                        (cluster_id,))
 
-            all_links.append([source, target])
-            strengths[link_hash] = link[2]
+            for link in cur:
+                source = '<' + link[0] + '>'
+                target = '<' + link[1] + '>'
 
-            if source not in nodes:
-                nodes.append(source)
-            if target not in nodes:
-                nodes.append(target)
+                current_link = (source, target) if source < target else (target, source)
+                link_hash = "key_{}".format(str(hasher(current_link)).replace("-", "N"))
 
-        return {'links': all_links, 'strengths': strengths, 'nodes': nodes}
+                all_links.append([source, target])
+                strengths[link_hash] = link[2]
+
+                if source not in nodes:
+                    nodes.append(source)
+                if target not in nodes:
+                    nodes.append(target)
+
+            return {'links': all_links, 'strengths': strengths, 'nodes': nodes}
+
+    @staticmethod
+    def value_targets(properties, downloaded_only=True):
+        value_targets = []
+        downloaded = Collection.download_status()['downloaded']
+
+        for prop in properties:
+            graph = prop['graph']
+            new_graph_data = []
+
+            for data_of_entity in prop['data']:
+                entity_type = data_of_entity['entity_type']
+
+                if not downloaded_only or Job.is_downloaded(downloaded, graph, entity_type):
+                    new_properties = Job.properties(graph, data_of_entity['properties'], downloaded, downloaded_only)
+                    if len(new_properties) > 0:
+                        new_graph_data.append({'entity_type': entity_type, 'properties': new_properties})
+
+            if len(new_graph_data) > 0:
+                value_targets.append({'graph': graph, 'data': new_graph_data})
+
+        return value_targets
+
+    @staticmethod
+    def properties(graph, properties, downloaded=None, downloaded_only=True):
+        downloaded = Collection.download_status()['downloaded'] if downloaded is None else downloaded
+
+        new_properties = []
+        for props in properties:
+            if not downloaded_only or len(props) == 1 \
+                    or all(Job.is_downloaded(downloaded, graph, entity) for entity in props[1::2]):
+                props_filtered = [prop for prop in props if prop != '__value__' and prop != '']
+                if len(props_filtered) > 0:
+                    new_properties.append(props_filtered)
+
+        return new_properties
+
+    @staticmethod
+    def is_downloaded(downloaded, dataset_id, collection_id):
+        return any(download['dataset_id'] == dataset_id and download['collection_id'] == collection_id
+                   for download in downloaded)

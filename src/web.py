@@ -114,10 +114,12 @@ def job_clusterings(job):
 
 @app.route('/job/<job:job>/resource/<resource_label>')
 def resource_sample(job, resource_label):
+    if request.args.get('total', default=False) == 'true':
+        return jsonify(job.get_resource_sample_total(resource_label))
+
     return jsonify(job.get_resource_sample(resource_label,
                                            limit=request.args.get('limit', type=int),
-                                           offset=request.args.get('offset', 0, type=int),
-                                           total=request.args.get('total', default=False) == 'true'))
+                                           offset=request.args.get('offset', 0, type=int)))
 
 
 @app.route('/job/<job:job>/run_alignment/<alignment>', methods=['POST'])
@@ -213,7 +215,8 @@ def validate_link(job, alignment):
 def get_cluster_graph_data(job, alignment, cluster_id):
     cluster_data = job.cluster(alignment, cluster_id)
     clustering = job.clustering(alignment)
-    properties = job.value_targets(int(alignment))
+    match = job.config.get_match_by_id(int(alignment))
+    properties = job.value_targets_for_match(match)
 
     specifications = {
         "data_store": "POSTGRESQL",

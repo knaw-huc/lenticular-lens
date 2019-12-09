@@ -2,6 +2,14 @@
   <card :id="'resource_' + resource.id" type="resources" v-model="resource.label"
         :has-error="errors.length > 0" :has-handle="true">
     <template v-slot:title-columns>
+      <div class="col-auto" v-if="resource.dataset.collection_id !== ''">
+        <button type="button" class="btn btn-info" @click="runSample">
+          Explore sample
+        </button>
+
+        <resource-sample-view :resource="resource" ref="resourceSampleView"/>
+      </div>
+
       <div class="col-auto">
         <b-button variant="info" @click="$emit('duplicate', resource)">Duplicate</b-button>
       </div>
@@ -232,7 +240,7 @@
     import ConditionsGroup from "../../helpers/ConditionsGroup";
     import ValidationMixin from "../../../mixins/ValidationMixin";
 
-    import ResourceSamples from "./ResourceSamples";
+    import ResourceSampleView from "./ResourceSampleView";
     import ResourceFilterCondition from "./ResourceFilterCondition";
 
     export default {
@@ -240,7 +248,7 @@
         mixins: [ValidationMixin],
         components: {
             ConditionsGroup,
-            ResourceSamples,
+            ResourceSampleView,
             ResourceFilterCondition,
         },
         data() {
@@ -325,10 +333,6 @@
                             downloadInfo.collection_id === collection;
                     });
                 });
-            },
-
-            canRunSample() {
-                return this.resource.filter.conditions.length > 0 && this.notDownloaded.length === 0;
             },
         },
         methods: {
@@ -450,7 +454,7 @@
             runSample() {
                 if (!this.validateResource())
                     return;
-                this.$refs.resourceSamples.resetSample();
+                this.$refs.resourceSampleView.resetSample();
             },
 
             async loadDatasets() {
@@ -473,6 +477,9 @@
 
             if (this.datasetsList.length === 0)
                 this.datasetsLoaded = false;
+
+            if (this.resource.properties.length === 0)
+                this.resource.properties.push(['']);
         },
     };
 </script>

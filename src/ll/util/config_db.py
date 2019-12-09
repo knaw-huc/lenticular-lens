@@ -1,8 +1,5 @@
 import os
-
 from contextlib import contextmanager
-from typing import List, Mapping, Sequence
-
 from psycopg2 import extras as psycopg2_extras
 from psycopg2.pool import ThreadedConnectionPool
 
@@ -32,29 +29,6 @@ def db_conn(key=None):
             yield conn
     finally:
         return_conn(conn, key)
-
-
-def execute_query(query_dict: Mapping, cursor_args: Mapping = None) -> List[Sequence]:
-    """
-    Execute a query using the default database connection and return all results.
-
-    :param query_dict: a dictionary containing:
-        'query': a query string or a psycopg2.sql.Composable
-        'parameters' (optional): the parameters to pass to cursor.execute() (a tuple, list, or dict)
-    :param cursor_args: a dictionary containing the arguments to pass to the cursor constructor.
-    :return: a list containing the rows returned by the query (as tuples by default)
-    """
-    if not cursor_args:
-        cursor_args = {}
-
-    if 'parameters' not in query_dict:
-        setattr(query_dict, 'parameters', None)
-
-    with db_conn() as conn, conn.cursor(**cursor_args) as cur:
-        cur.execute(query_dict['query'], query_dict['parameters'])
-
-        return cur.fetchall() if 'header' not in query_dict or not query_dict['header'] \
-            else [query_dict['header']] + cur.fetchall()
 
 
 def fetch_one(query, args=None, dict=False):

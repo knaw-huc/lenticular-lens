@@ -29,6 +29,9 @@ class PropertyField:
         if self.parent_label and len(property_array) == 1:
             property_array.insert(0, self.parent_label)
 
+        if len(property_array) == 2 and property_array[1] == hash_string('uri'):
+            property_array[1] = 'uri'
+
         return property_array
 
     @property

@@ -1,5 +1,5 @@
 <template>
-  <div class="border p-3 mb-4 bg-primary-very-light">
+  <div class="border p-3 mb-4 bg-white">
     <div class="row align-items-baseline flex-nowrap">
       <div class="col-auto">
         <span class="font-weight-bold font-italic"># {{ index + 1 }}</span>
@@ -20,7 +20,7 @@
 
     <div class="row flex-nowrap border-top mt-2 pt-2">
       <div class="col">
-        <properties :properties="properties"/>
+        <properties :properties="sample.properties"/>
       </div>
     </div>
   </div>
@@ -37,16 +37,6 @@
         props: {
             index: Number,
             sample: Object,
-        },
-        computed: {
-            properties() {
-                return Object.keys(this.sample)
-                    .filter(property => property !== 'uri')
-                    .map(property => ({
-                        property: property,
-                        values: Array.isArray(this.sample[property]) ? this.sample[property] : [this.sample[property]]
-                    }));
-            },
         },
         methods: {
             async copyUri() {

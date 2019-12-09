@@ -286,11 +286,13 @@ ul.inline-list li:not(:first-child):before {
   margin-left: 1.75rem;
   margin-right: 1.75rem;
 
-  .modal-content {
-    height: calc(100vh - 3.5rem);
-  }
-
   .modal-body {
     padding: 0;
+  }
+}
+
+.modal-full-height, .modal-full-size {
+  .modal-content {
+    height: calc(100vh - 3.5rem);
   }
 }

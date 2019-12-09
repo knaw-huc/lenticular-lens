@@ -304,16 +304,17 @@
                 this.updateProperties(resourceId);
             },
 
-            updateProperties(oldValue, newValue) {
-                const sourcesHasValue = this.match.sources.find(res => res === oldValue);
-                const targetsHasValue = this.match.targets.find(res => res === oldValue);
-                const oldValueIndex = this.match.properties.findIndex(prop => prop[0] === oldValue);
+            updateProperties(oldResource, newResource) {
+                const sourcesHasValue = this.match.sources.find(res => res === oldResource);
+                const targetsHasValue = this.match.targets.find(res => res === oldResource);
+                const oldValueIndex = this.match.properties.findIndex(prop => prop.resource === oldResource);
 
                 if ((oldValueIndex >= 0) && !sourcesHasValue && !targetsHasValue)
                     this.match.properties.splice(oldValueIndex, 1);
 
-                if ((newValue !== undefined) && !this.match.properties.find(prop => prop[0] === newValue))
-                    this.match.properties.push([newValue, '']);
+                if ((newResource !== undefined) &&
+                    !this.match.properties.find(prop => prop.resource === newResource))
+                    this.match.properties.push({resource: newResource, property: ['']});
             },
 
             async runAlignment(force = false) {
@@ -342,7 +343,7 @@
                 EventBus.$emit('refresh');
             },
         },
-        async mounted() {
+        mounted() {
             if (this.match.sources.length < 1)
                 this.addMatchResource('sources');
 

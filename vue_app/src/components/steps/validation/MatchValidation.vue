@@ -99,28 +99,8 @@
 
         <alignment-spec v-if="showInfo" :match="match"/>
 
-        <sub-card v-if="showPropertySelection" :id="'properties_card_' + match.id" type="properties"
-                  label="Property selection" :has-margin-auto="true" :has-columns="true">
-          <template v-slot:columns>
-            <div class="col-auto ml-auto">
-              <button type="button" class="btn btn-info" @click="saveProperties">
-                Save
-              </button>
-            </div>
-          </template>
-
-          <div class="mt-4">
-            <property
-                v-for="(property, idx) in match.properties"
-                :key="idx"
-                :property="property"
-                :singular="false"
-                :allow-delete="match.properties.findIndex(p => p[0] === property[0]) !== idx"
-                @clone="match.properties.splice(idx + 1, 0, [match.properties[idx][0], ''])"
-                @delete="$delete(match.properties, idx)"
-                @resetProperty="resetProperty(idx, property, $event)"/>
-          </div>
-        </sub-card>
+        <property-selection v-if="showPropertySelection" label="Property selection"
+                            :properties="match.properties" @save="saveProperties"/>
 
         <sub-card v-if="showClusters && clustering" label="Clusters" id="clusters-list" type="clusters-list"
                   :open-card="openClusters" :has-collapse="true"
@@ -227,6 +207,7 @@
     import InfiniteLoading from 'vue-infinite-loading';
 
     import Properties from "../../helpers/Properties";
+    import PropertySelection from "../../helpers/PropertySelection";
     import AlignmentSpec from "../../helpers/AlignmentSpec";
 
     import MatchLink from "./MatchLink";
@@ -238,6 +219,7 @@
         components: {
             InfiniteLoading,
             Properties,
+            PropertySelection,
             AlignmentSpec,
             MatchLink,
             Cluster,
@@ -269,7 +251,7 @@
         },
         computed: {
             hasProperties() {
-                return !this.match.properties.map(res => res[1] !== '').includes(false);
+                return !this.match.properties.map(res => res.property[0] !== '').includes(false);
             },
 
             alignment() {
@@ -400,16 +382,6 @@
 
                 link.valid = declined;
                 await this.$root.validateLink(this.match.id, link.source, link.target, declined);
-            },
-
-            resetProperty(idx, property, propertyIndex) {
-                const newProperty = property.slice(0, propertyIndex);
-                newProperty.push('');
-
-                if (newProperty.length % 2 > 0)
-                    newProperty.push('');
-
-                this.$set(this.match.properties, idx, newProperty);
             },
         }
     };

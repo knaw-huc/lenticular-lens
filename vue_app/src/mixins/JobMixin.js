@@ -35,6 +35,7 @@ export default {
                     type: 'AND',
                     conditions: [],
                 },
+                properties: [],
                 limit: -1,
                 related: [],
                 related_array: false,
@@ -60,19 +61,12 @@ export default {
 
         duplicateResource(resource) {
             const index = this.resources.findIndex(res => res.id === resource.id);
-            const newId = findId(this.resources);
-
             const duplicate = copy(resource);
-            const newResource = {
+            this.resources.splice(index, 0, {
                 ...duplicate,
-                id: newId,
+                id: findId(this.resources),
                 label: undefined,
-            };
-
-            this.getRecursiveConditions(newResource.filter.conditions)
-                .forEach(condition => condition.property[0] = newId);
-
-            this.resources.splice(index, 0, newResource);
+            });
         },
 
         duplicateMatch(match) {
@@ -131,10 +125,7 @@ export default {
 
         createTargetsForProperties(properties) {
             return properties.reduce((targets, prop) => {
-                if (prop.length === 2 && prop[1] === '')
-                    return targets;
-
-                const resource = this.getResourceById(prop[0]);
+                const resource = this.getResourceById(prop.resource);
 
                 let resourceTarget = targets.find(t => t.graph === resource.dataset.dataset_id);
                 if (!resourceTarget) {
@@ -148,12 +139,7 @@ export default {
                     resourceTarget.data.push(entityTarget);
                 }
 
-                if (prop[prop.length - 1] === '__value__')
-                    entityTarget.properties.push(prop.slice(1, -1));
-                else if (prop[prop.length - 2] === '__value__')
-                    entityTarget.properties.push(prop.slice(1, -2));
-                else
-                    entityTarget.properties.push(prop.slice(1));
+                entityTarget.properties.push(prop.property);
 
                 return targets;
             }, []);
@@ -202,12 +188,14 @@ export default {
 
         createMatchConditionProperties(conditionProps, resources) {
             return conditionProps.reduce((acc, conditionProp) => {
-                const key = this.getResourceById(conditionProp.property[0]).label;
-                if (!acc.hasOwnProperty(key))
-                    acc[key] = [];
+                const resource = this.getResourceById(conditionProp.resource).label;
+                const property = [resource, ...conditionProp.property];
 
-                acc[key].push({
-                    property: this.createReferencesForProperty(conditionProp.property, resources),
+                if (!acc.hasOwnProperty(resource))
+                    acc[resource] = [];
+
+                acc[resource].push({
+                    property: this.createReferencesForProperty(property, resources),
                     transformers: conditionProp.transformers
                 });
                 return acc;
@@ -229,14 +217,14 @@ export default {
                     condition.targets = this.createMatchConditionProperties(condition.targets, resources);
                 });
 
-                match.value_targets = this.createTargetsForProperties(match.properties);
-                delete match.properties;
+                match.properties = this.createTargetsForProperties(match.properties);
             });
 
             resources.forEach(resource => {
                 if (resource.filter && resource.filter.conditions && resource.filter.conditions.length > 0) {
                     this.getRecursiveConditions(resource.filter.conditions).forEach(condition => {
-                        condition.property = this.createReferencesForProperty(condition.property, resources);
+                        const property = [resource.label, ...condition.property];
+                        condition.property = this.createReferencesForProperty(property, resources);
                     });
                 }
                 else
@@ -284,18 +272,14 @@ export default {
 
             if (this.job.resources_form_data) {
                 this.job.resources_form_data.forEach(res => {
-                    if (res.hasOwnProperty('dataset_id') && res.hasOwnProperty('collection_id')) {
-                        res.dataset = {
-                            timbuctoo_graphql: 'https://repository.goldenagents.org/v5/graphql',
-                            timbuctoo_hsid: null,
-                            dataset_id: res.dataset_id,
-                            collection_id: res.collection_id,
-                            published: true
-                        };
+                    this.getRecursiveConditions(res.filter.conditions).forEach(condition => {
+                        if (isId(condition.property[0]))
+                            condition.property = condition.property.slice(1);
+                        condition.property = condition.property.filter(prop => prop !== '');
+                    });
 
-                        delete res.dataset_id;
-                        delete res.collection_id;
-                    }
+                    if (!res.hasOwnProperty('properties'))
+                        res.properties = [];
                 });
 
                 const resources = copy(this.job.resources_form_data);
@@ -313,8 +297,25 @@ export default {
                 this.resources = resources;
             }
 
-            if (this.job.mappings_form_data)
+            if (this.job.mappings_form_data) {
+                this.job.mappings_form_data.forEach(match => {
+                    this.getRecursiveConditions(match.methods.conditions).forEach(matchCondition => {
+                        [...matchCondition.sources, ...matchCondition.targets].forEach(condition => {
+                            if (isId(condition.property[0]))
+                                condition.resource = condition.property.shift();
+                            condition.property = condition.property.filter(prop => prop !== '');
+                        });
+                    });
+
+                    match.properties = match.properties.map(prop => {
+                        if (Array.isArray(prop))
+                            return {resource: prop.shift(), property: prop};
+                        return prop;
+                    });
+                });
+
                 this.matches = copy(this.job.mappings_form_data);
+            }
 
             await Promise.all([this.loadAlignments(), this.loadClusterings()]);
         },
@@ -346,9 +347,7 @@ export default {
             return callApi(`/download?${params.join('&')}`);
         },
 
-        async getResourceSamples(resourceLabel, total = false, limit = undefined, offset = 0) {
-            await this.submit();
-
+        async getResourceSample(resourceLabel, total = false, limit = undefined, offset = 0) {
             const params = [];
             if (total) params.push(`total=true`);
             if (!total && limit) params.push(`limit=${limit}`);

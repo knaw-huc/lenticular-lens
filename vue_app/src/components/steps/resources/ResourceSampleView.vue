@@ -1,6 +1,6 @@
 <template>
-  <b-modal id="resource-samples" ref="resourceSamples" size="xl" dialog-class="modal-full-size"
-           scrollable hide-footer static>
+  <b-modal id="resource-sample-view" ref="resourceSampleView" size="xl"
+           body-class="bg-light" dialog-class="modal-full-height" scrollable hide-footer static>
     <template v-slot:modal-header="{close}">
       <h5 class="modal-title">Sample</h5>
 
@@ -10,7 +10,10 @@
       <button type="button" aria-label="Close" class="close" @click="close()">×</button>
     </template>
 
-    <div class="p-4">
+    <property-selection label="Property selection" @save="saveProperties" :is-first="true"
+                        :resource="resource" :properties="resource.properties"/>
+
+    <div class="mt-4">
       <resource-sample v-for="(sample, idx) in samples" :index="idx" :sample="sample"/>
 
       <infinite-loading :identifier="samplesIdentifier" @infinite="getSamples">
@@ -21,6 +24,12 @@
         <template v-slot:no-more>
           No more data
         </template>
+
+        <template v-slot:no-results>
+          <template v-if="total === 0">This resource has no data</template>
+          <template v-else-if="!hasProperties">Please select a property</template>
+          <template v-else>Save selected properties to load results</template>
+        </template>
       </infinite-loading>
     </div>
   </b-modal>
@@ -28,12 +37,14 @@
 
 <script>
     import InfiniteLoading from 'vue-infinite-loading';
+    import PropertySelection from "../../helpers/PropertySelection";
     import ResourceSample from "./ResourceSample";
 
     export default {
-        name: "ResourceSamples",
+        name: "ResourceSampleView",
         components: {
             InfiniteLoading,
+            PropertySelection,
             ResourceSample,
         },
         data() {
@@ -46,6 +57,11 @@
         props: {
             'resource': Object,
         },
+        computed: {
+            hasProperties() {
+                return !this.resource.properties.map(prop => prop[0] !== '').includes(false);
+            },
+        },
         methods: {
             resetSample() {
                 this.total = null;
@@ -53,16 +69,21 @@
                 this.samplesIdentifier += 1;
 
                 this.getTotal();
-                this.$refs.resourceSamples.show();
+                this.$refs.resourceSampleView.show();
+            },
+
+            async saveProperties() {
+                await this.$root.submit();
+                this.resetSample();
             },
 
             async getTotal() {
-                const total = await this.$root.getResourceSamples(this.resource.label, true);
+                const total = await this.$root.getResourceSample(this.resource.label, true);
                 this.total = total.total;
             },
 
             async getSamples(state) {
-                const samples = await this.$root.getResourceSamples(this.resource.label, false, 50, this.samples.length);
+                const samples = await this.$root.getResourceSample(this.resource.label, false, 50, this.samples.length);
                 this.samples.push(...samples);
 
                 if (state) {

@@ -1,109 +1,143 @@
+from psycopg2 import sql, extras
 from collections import defaultdict
-from psycopg2 import sql as psycopg2_sql
 
-from ll.job.property_field import PropertyField
-from ll.util.helpers import hash_string, get_pagination_sql
-from ll.util.config_db import execute_query, fetch_one
+from ll.data.joins import Joins
+from ll.data.property_field import PropertyField
+
+from ll.util.config_db import db_conn, fetch_one
+from ll.util.helpers import hasher, hash_string, get_pagination_sql
 
 
-def get_property_values(targets, resources=None, cluster_id=None,
-                        linkset_table_name=None, clusters_table_name=None, limit=None, offset=0):
-    query = get_property_values_query(targets, uris=resources, cluster_id=cluster_id,
-                                      linkset_table_name=linkset_table_name, clusters_table_name=clusters_table_name,
-                                      limit=limit, offset=offset)
-    result = execute_query(query)
+def get_property_values(query, dict=True):
+    results = {}
+    for graph_set in query['query_data']:
+        graph = graph_set['graph']
+        for datatype_set in graph_set['data']:
+            entity_type = datatype_set['entity_type']
+            query_results = get_property_values_for_query(
+                query['queries'][graph][entity_type], query['parameters'], datatype_set['properties'],
+                graph=graph, entity_type=entity_type, dict=dict)
 
-    response = defaultdict(list)
-    res_idx = result[0].index('resource')
-    for row in result[1:]:
-        row_dict = {label: row[idx] for idx, label in enumerate(result[0])}
-        del row_dict['resource']
+            for uri, values in query_results.items():
+                uri_values = results.get(uri, [])
+                uri_values += values
+                results[uri] = uri_values
 
-        if row_dict['value']:
-            targets = response[row[res_idx]]
-            matching_targets = [target for target in targets
-                                if target['dataset'] == row_dict['dataset']
-                                and target['property'] == row_dict['property']]
-            if matching_targets:
-                matching_targets[0]['values'].append(row_dict['value'])
+    return results
+
+
+def get_property_values_for_query(query, parameters, property_paths, graph=None, entity_type=None, dict=True):
+    property_values = defaultdict(list) if dict else []
+    with db_conn() as conn, conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
+        cur.execute(query, parameters)
+        for values in cur:
+            prop_and_values = [{
+                'dataset': graph if graph else None,
+                'entity': entity_type if entity_type else None,
+                'property': property_path,
+                'values': list(filter(None, values[hasher(property_path)]))
+            } for property_path in property_paths]
+
+            if dict:
+                property_values[values['uri']] = prop_and_values
             else:
-                row_dict['values'] = [row_dict['value']]
-                del row_dict['value']
-                targets.append(row_dict)
+                property_values.append({'uri': values['uri'], 'properties': prop_and_values})
 
-    return response
+    return property_values
 
 
-def get_property_values_query(query_data, uris=None, cluster_id=None,
-                              linkset_table_name=None, clusters_table_name=None, limit=None, offset=0):
+def get_property_values_queries(query_data, uris=None, initial_join=None):
+    condition = None
     if uris:
+        condition = sql.SQL('target.uri IN %(uris)s')
         uris = [uri.replace('<', '').replace('>', '')
                 if uri.startswith('<') and uri.endswith('>') else uri for uri in uris]
 
-    sqls = []
+    queries = {}
     for graph_set in query_data:
+        entities = {}
         for datatype_set in graph_set['data']:
             table_info = get_table_info(graph_set['graph'], datatype_set['entity_type'])
             if table_info:
-                for property_path in datatype_set['properties']:
-                    sql = create_query_for(table_info, graph_set['graph'], property_path,
-                                           cluster_id=cluster_id, linkset_table_name=linkset_table_name,
-                                           clusters_table_name=clusters_table_name, limit=limit, offset=offset)
-                    sqls.append(sql)
+                entities[datatype_set['entity_type']] \
+                    = create_query_for_properties(graph_set['graph'], 'target',
+                                                  table_info['table_name'], table_info['columns'],
+                                                  datatype_set['properties'],
+                                                  initial_join=initial_join, condition=condition)
+        queries[graph_set['graph']] = entities
 
     return {
-        'query': psycopg2_sql.SQL('\nUNION ALL\n').join(sqls),
-        'header': ('resource', 'dataset', 'property', 'value'),
-        'parameters': {'uris': tuple(uris)} if uris else {}
+        'queries': queries,
+        'parameters': {'uris': tuple(uris)} if uris else {},
+        'query_data': query_data
     }
 
 
-def create_query_for(table_info, graph, property_path, cluster_id=None,
-                     linkset_table_name=None, clusters_table_name=None, limit=None, offset=0):
-    table_name = table_info['table_name']
-    property_name = property_path
-    resource = 'target'
-    columns = table_info['columns']
-    joins = []
-    if type(property_path) is list:
-        property_sql_info = get_property_sql_info(graph, resource, columns, list(property_path))
-        property_name = property_sql_info['property_name']
-        resource = property_sql_info['resource']
-        columns = property_sql_info['columns']
-        joins = property_sql_info['joins']
-
-    property = PropertyField(property_name, parent_label=resource, columns=columns)
-    where_sql = psycopg2_sql.SQL('WHERE target.uri IN %(uris)s') if not linkset_table_name else psycopg2_sql.SQL('')
-
-    joins.append(property.left_join)
-    if linkset_table_name and clusters_table_name:
-        linkset_cluster_join_sql = get_linkset_cluster_join_sql(linkset_table_name, clusters_table_name, limit, offset)
-        joins.append(linkset_cluster_join_sql)
-    elif linkset_table_name:
-        linkset_join_sql = get_linkset_join_sql(linkset_table_name, cluster_id, limit, offset)
-        joins.append(linkset_join_sql)
-
-    return psycopg2_sql.SQL('''
-        SELECT DISTINCT target.uri AS table_name, {graph_name} AS dataset, {property} AS property, {value} AS value
-        FROM {table_name} AS target 
+def create_count_query_for_properties(resource, target, initial_join=None, condition=None):
+    return sql.SQL('''
+        SELECT COUNT({parent_resource}.uri) AS total
+        FROM {table_name} AS {parent_resource} 
         {joins}
-        {where_sql}
+        {condition}
     ''').format(
-        graph_name=psycopg2_sql.Literal(graph),
-        property=psycopg2_sql.Literal(property_name),
-        value=property.sql,
-        table_name=psycopg2_sql.Identifier(table_name),
-        joins=psycopg2_sql.Composed(joins),
-        where_sql=where_sql
+        parent_resource=sql.Identifier(resource),
+        table_name=sql.Identifier(target),
+        joins=get_initial_joins(initial_join).sql,
+        condition=sql.SQL('WHERE {}').format(condition) if condition else sql.SQL(''),
     )
 
 
-def get_property_sql_info(graph, cur_resource, cur_columns, property_path):
-    joins = []
+def create_query_for_properties(graph, resource, target, columns, property_paths,
+                                initial_join=None, condition=None, limit=None, offset=0):
+    joins = get_initial_joins(initial_join)
+    properties = []
+    parent_resource = resource
 
-    while len(property_path) > 1:
-        column = property_path.pop(0)
-        target_resource = property_path.pop(0)
+    for property_path in property_paths:
+        property_name = hasher(property_path)
+        property_path = property_path if type(property_path) is list else [property_path]
+
+        property = get_property_field(graph, joins, resource, columns, property_path)
+        property_sql = sql.SQL('ARRAY_AGG(DISTINCT {value}) AS {name}').format(
+            value=property.sql,
+            name=sql.Identifier(property_name))
+        properties.append(property_sql)
+
+        if property.is_list:
+            joins.add_join(property.left_join, property.extended_prop_label)
+
+    return sql.SQL('''
+        SELECT {parent_resource}.uri AS uri, {selection}
+        FROM {table_name} AS {parent_resource} 
+        {joins}
+        {condition}
+        GROUP BY {parent_resource}.uri
+        ORDER BY {parent_resource}.uri ASC {limit_offset}
+    ''').format(
+        parent_resource=sql.Identifier(parent_resource),
+        selection=sql.SQL(', ').join(properties),
+        table_name=sql.Identifier(target),
+        joins=joins.sql,
+        condition=sql.SQL('WHERE {}').format(condition) if condition else sql.SQL(''),
+        limit_offset=sql.SQL(get_pagination_sql(limit, offset))
+    )
+
+
+def get_initial_joins(initial_join=None):
+    joins = Joins()
+    if initial_join and isinstance(initial_join, Joins):
+        joins.copy_from(initial_join)
+    elif initial_join:
+        joins.add_join(initial_join, 'initial_join')
+
+    return joins
+
+
+def get_property_field(graph, joins, cur_resource, cur_columns, property_path):
+    property_path_copy = list(property_path)
+    while len(property_path_copy) > 1:
+        column = property_path_copy.pop(0)
+        target_resource = property_path_copy.pop(0)
 
         next_table_info = get_table_info(graph, target_resource)
         next_resource = hash_string(cur_resource + '_' + target_resource + '_' + column)
@@ -112,72 +146,63 @@ def get_property_sql_info(graph, cur_resource, cur_columns, property_path):
         remote_property = PropertyField('uri', parent_label=next_resource, columns=next_table_info['columns'])
 
         if local_property.is_list:
-            joins.append(local_property.left_join)
+            joins.add_join(local_property.left_join, local_property.extended_prop_label)
 
         lhs = local_property.sql
         rhs = remote_property.sql
 
-        joins.append(psycopg2_sql.SQL('\nLEFT JOIN {target} AS {alias}\nON {lhs} = {rhs}').format(
-            target=psycopg2_sql.Identifier(next_table_info['table_name']),
-            alias=psycopg2_sql.Identifier(next_resource),
+        joins.add_join(sql.SQL('\nLEFT JOIN {target} AS {alias}\nON {lhs} = {rhs}').format(
+            target=sql.Identifier(next_table_info['table_name']),
+            alias=sql.Identifier(next_resource),
             lhs=lhs, rhs=rhs
-        ))
+        ), next_resource)
 
         cur_resource = next_resource
         cur_columns = next_table_info['columns']
 
-    return {'property_name': property_path[0], 'resource': cur_resource, 'columns': cur_columns, 'joins': joins}
+    return PropertyField(property_path_copy[0], parent_label=cur_resource, columns=cur_columns)
 
 
 def get_linkset_join_sql(linkset_table_name, cluster_id=None, limit=None, offset=0):
     limit_offset_sql = get_pagination_sql(limit, offset)
 
-    cluster_criteria = psycopg2_sql.SQL('WHERE cluster_id = {}').format(psycopg2_sql.Literal(cluster_id)) \
-        if cluster_id else psycopg2_sql.SQL('')
+    cluster_criteria = sql.SQL('WHERE cluster_id = {}').format(sql.Literal(cluster_id)) \
+        if cluster_id else sql.SQL('')
 
-    linkset = psycopg2_sql.SQL('''(
-        (SELECT source_uri AS uri FROM {linkset} {cluster_criteria} {limit_offset})
-        UNION
-        (SELECT target_uri AS uri FROM {linkset} {cluster_criteria} {limit_offset})
-    )''').format(
-        linkset=psycopg2_sql.Identifier(linkset_table_name),
+    return sql.SQL('''
+        INNER JOIN (
+            (SELECT source_uri AS uri FROM {linkset} {cluster_criteria} {limit_offset})
+            UNION
+            (SELECT target_uri AS uri FROM {linkset} {cluster_criteria} {limit_offset})
+        ) AS linkset ON target.uri = linkset.uri
+    ''').format(
+        linkset=sql.Identifier(linkset_table_name),
         cluster_criteria=cluster_criteria,
-        limit_offset=psycopg2_sql.SQL(limit_offset_sql)
+        limit_offset=sql.SQL(limit_offset_sql)
     )
 
-    return psycopg2_sql.SQL('INNER JOIN {} AS linkset ON target.uri = linkset.uri').format(linkset)
 
-
-def get_linkset_cluster_join_sql(linkset_table_name, clusters_table_name, limit=None, offset=0):
-    limit_offset_sql = get_pagination_sql(limit, offset)
-
-    linkset = psycopg2_sql.SQL('''(
-        SELECT source_uri AS uri 
-        FROM {linkset} 
-        WHERE cluster_id IN (
-            SELECT id 
-            FROM {clusters}
-            ORDER BY size DESC
-            {limit_offset}
-        )
-        
-        UNION 
-    
-        SELECT target_uri AS uri 
-        FROM {linkset} 
-        WHERE cluster_id IN (
-            SELECT id 
-            FROM {clusters}
-            ORDER BY size DESC
-            {limit_offset}
-        )
-    )''').format(
-        linkset=psycopg2_sql.Identifier(linkset_table_name),
-        clusters=psycopg2_sql.Identifier(clusters_table_name),
-        limit_offset=psycopg2_sql.SQL(limit_offset_sql)
+def get_linkset_cluster_join_sql(linkset_table_name, limit=None, offset=0, uri_limit=5):
+    return sql.SQL('''
+        INNER JOIN (
+            SELECT nodes.uri, ROW_NUMBER() OVER (PARTITION BY ls.cluster_id) AS cluster_row_number
+            FROM {linkset} AS ls
+            INNER JOIN (
+                SELECT cluster_id
+                FROM {linkset}
+                CROSS JOIN LATERAL (VALUES (source_uri), (target_uri)) AS nodes(uri)
+                GROUP BY cluster_id
+                ORDER BY COUNT(DISTINCT nodes.uri) DESC, cluster_id ASC
+                {limit_offset}
+            ) AS clusters ON ls.cluster_id = clusters.cluster_id
+            CROSS JOIN LATERAL (VALUES (source_uri), (target_uri)) AS nodes(uri)
+        ) AS linkset 
+        ON target.uri = linkset.uri AND linkset.cluster_row_number < {uri_limit}
+    ''').format(
+        linkset=sql.Identifier(linkset_table_name),
+        limit_offset=sql.SQL(get_pagination_sql(limit, offset)),
+        uri_limit=sql.Literal(uri_limit)
     )
-
-    return psycopg2_sql.SQL('INNER JOIN {} AS linkset ON target.uri = linkset.uri').format(linkset)
 
 
 def get_table_info(dataset_id, collection_id):

@@ -731,27 +731,25 @@ def plot(specs, visualisation_obj=None, resources_obj=None,
     # query = "select distinct ?subject " \
     #         "{ GRAPH <http://risis.eu/dataset/eter_2014> {?subject a ?o} } limit 3"
     # result = None
-    table = None
+    result = None
     if query and (data_store in Middleware.run_query_matrix_switcher):
         result = Middleware.run_query_matrix_switcher[data_store](query)
         # Stardog.display_matrix(result, spacing=130, is_activated=True)
-        table = result[St.result] if isinstance(result, dict) else result
 
     # ***************************************************************
     print(F"\n{tab}--> 5. BUILDING VISUALISATION OBJECT FOR UI")
     # ***************************************************************
 
     # NO NEED TO CONTINUE AS NO RESULT WAS FETCHED FROM THE DB SEVER
-    if table is not None:
+    if result is not None:
 
         # ITERATING THROUGH THE RETURN TABLE FROM THE DB SERVER
         # --> 1. CRATING THE NODE FOR THE VISUALISATION
-        for i in range(1, len(table)):
+        for uri in list(result.keys()):
 
             # CONVERT THE DATASET NAME INTO A DIGIT FOR SETTING A NODE'S COLOR
-            i_dataset = table[i][1]
-            label = table[i][3]
-            uri = table[i][0]
+            i_dataset = result[uri][0]['dataset']
+            label = result[uri][0]['values'][0]
             formatted_uri = to_nt_format(uri)
 
             if i_dataset not in dataset_index:
@@ -1055,7 +1053,6 @@ def plot_reconciliation(specs, visualisation_obj=None, activated=False):
     if data_store in Middleware.run_query_matrix_switcher:
         result = Middleware.run_query_matrix_switcher[data_store](query)
     # Stardog.display_matrix(result, spacing=130, is_activated=True)
-    table = result[St.result] if isinstance(result, dict) else result
 
     # ***************************************************************
     print(F"\n{tab}--> 3. BUILDING VISUALISATION OBJECT FOR UI")
@@ -1088,16 +1085,15 @@ def plot_reconciliation(specs, visualisation_obj=None, activated=False):
         root_reconciled = pickle_deserializer(CLUSTER_SERIALISATION_DIR, F"{specs['sub_clusters']}-2.txt.gz")
 
     # NO NEED TO CONTINUE AS NO RESULT WAS FETCHED FROM THE DB SEVER
-    if table is not None:
+    if result is not None:
 
         # ITERATING THROUGH THE RETURN TABLE FROM THE DB SERVER
         # --> 1. CRATING THE NODE FOR THE VISUALISATION
-        for i in range(1, len(table)):
+        for uri in list(result.keys()):
 
             # CONVERT THE DATASET NAME INTO A DIGIT FOR SETTING A NODE'S COLOR
-            i_dataset = table[i][1]
-            label = table[i][3]
-            uri = table[i][0]
+            i_dataset = result[uri][0]['dataset']
+            label = result[uri][0]['values'][0]
             formatted_uri = to_nt_format(uri)
             if i_dataset not in dataset:
                 dataset[i_dataset] = hash_number(i_dataset)
@@ -1358,24 +1354,21 @@ def plot_compact(specs, vis=None, root=None, map_of_labels=None, sub_clusters=No
             resources=resource, targets=properties_converted)
 
         # FETCHING THE LABELS
-        table = None
+        result = None
         if data_store in Middleware.run_query_matrix_switcher and query:
             result = Middleware.run_query_matrix_switcher[data_store](query)
             Stardog.display_matrix(result, spacing=130, is_activated=False)
-            table = result[St.result] if isinstance(result, dict) else result
 
-        if properties_converted is not None and table is not None:
+        if properties_converted is not None and result is not None:
 
-            for i, rsc_label in enumerate(table):
-                if i > 0:
-                    uri = to_nt_format(table[i][0])
-                    db_label = get_uri_local_name_plus(table[i][1])
-                    underscore = db_label.split("__")
-                    db_label = underscore[1] if len(underscore) > 1 else db_label
-                    label = F"{label_prefix}{table[i][3]} ({db_label} {hasher(uri)})"
-                    # label = F"{label_prefix}{table[i][3]} ({db_label})"
+            for plain_uri in list(result.keys()):
+                uri = to_nt_format(plain_uri)
+                db_label = get_uri_local_name_plus(result[plain_uri][0]['dataset'])
+                underscore = db_label.split("__")
+                db_label = underscore[1] if len(underscore) > 1 else db_label
+                label = F"{label_prefix}{result[plain_uri][0]['values'][0]} ({db_label} {hasher(uri)})"
 
-                    label_map[inverse_map[uri]] = label
+                label_map[inverse_map[uri]] = label
 
     the_delta = F"\nWITH A DELTA OF {delta}" if delta is not None else ""
     indent = "\t" # if vis is None else "t"
@@ -2483,20 +2476,19 @@ def get_compact_child(key, child, properties, data_store):
     query = Middleware.node_labels_switcher[data_store](resources=resources, targets=properties)
 
     # FETCHING THE LABELS
-    table = None
+    result = None
     if data_store in Middleware.run_query_matrix_switcher and query:
         result = Middleware.run_query_matrix_switcher[data_store](query)
         Stardog.display_matrix(result, spacing=130, is_activated=False)
-        table = result[St.result] if isinstance(result, dict) else result
 
-    if properties is not None and table is not None:
+    if properties is not None and result is not None:
 
-        for i in range(1, len(table)):
-            formatted = to_nt_format(table[i][0])
-            db_label = get_uri_local_name_plus(table[i][1])
+        for uri in list(result.keys()):
+            formatted = to_nt_format(uri)
+            db_label = get_uri_local_name_plus(result[uri][0]['dataset'])
             underscore = db_label.split("__")
             db_label = underscore[1] if len(underscore) > 1 else db_label
-            label = F"-- {table[i][3]} ({db_label}_{hasher(formatted)})"
+            label = F"-- {result[uri][0]['values'][0]} ({db_label}_{hasher(formatted)})"
 
             if formatted not in label_map:
                 label_map[formatted] = label

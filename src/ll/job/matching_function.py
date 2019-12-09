@@ -3,7 +3,7 @@ import json
 
 from psycopg2 import sql as psycopg2_sql
 
-from ll.job.property_field import PropertyField
+from ll.data.property_field import PropertyField
 from ll.util.helpers import hash_string, get_json_from_file
 
 

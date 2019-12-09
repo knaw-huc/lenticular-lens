@@ -82,8 +82,9 @@
           </div>
         </div>
 
-        <match-condition-property v-for="(conditionProperty, index) in conditionPropertiesFor(resourcesKey)"
+        <match-condition-property v-for="(conditionProperty, index) in condition[resourcesKey]"
                                   :key="index" :condition-property="conditionProperty"
+                                  :allow-delete="allowDeleteForIndex(index, conditionProperty, resourcesKey)"
                                   @clone="cloneProperty(resourcesKey, index, conditionProperty)"
                                   @delete="condition[resourcesKey].splice(index, 1)"
                                   ref="matchConditionProperties"/>
@@ -142,7 +143,7 @@
             },
 
             conditionProperties() {
-                return [...this.conditionPropertiesFor('sources'), ...this.conditionPropertiesFor('targets')];
+                return this.condition['sources'].concat(this.condition['targets']);
             },
 
             requiredTransformers() {
@@ -155,14 +156,6 @@
             },
         },
         methods: {
-            // TODO: this.condition[resourcesKey];
-            conditionPropertiesFor(resourcesKey) {
-                if (!Array.isArray(this.condition[resourcesKey]))
-                    this.condition[resourcesKey] = Object.values(this.condition[resourcesKey]).flat();
-
-                return this.condition[resourcesKey];
-            },
-
             validateMatchCondition() {
                 const methodNameValid = this.validateField('method_name', this.condition.method_name.length > 0);
 
@@ -240,6 +233,10 @@
                 return {};
             },
 
+            allowDeleteForIndex(index, prop, resourcesKey) {
+                return this.condition[resourcesKey].findIndex(p => p.resource === prop.resource) !== index;
+            },
+
             cloneProperty(resourcesKey, index, conditionProperty) {
                 const transformers = [];
                 if (this.methodValueTemplate.hasOwnProperty('transformers'))
@@ -251,7 +248,8 @@
                     });
 
                 this.condition[resourcesKey].splice(index + 1, 0, {
-                    property: [conditionProperty.property[0], ''],
+                    resource: conditionProperty.resource,
+                    property: [''],
                     transformers
                 });
             },

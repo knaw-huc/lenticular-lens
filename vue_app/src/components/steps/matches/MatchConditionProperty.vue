@@ -1,8 +1,8 @@
 <template>
   <div class="ml-5 p-3 border-top">
-    <property :property="conditionProperty.property"
-              @clone="$emit('clone')" @delete="$emit('delete')" @resetProperty="resetProperty"
-              ref="propertyComponent"/>
+    <property :resource="$root.getResourceById(conditionProperty.resource)"
+              :property="conditionProperty.property" :allow-delete="allowDelete"
+              @clone="$emit('clone')" @delete="$emit('delete')" ref="propertyComponent"/>
 
     <div class="row align-items-top mt-2">
       <div class="col-auto h5">Transformers</div>
@@ -64,7 +64,13 @@
                 matchingMethods: props.matchingMethods,
             };
         },
-        props: ['conditionProperty'],
+        props: {
+            conditionProperty: Object,
+            allowDelete: {
+                type: Boolean,
+                default: true,
+            },
+        },
         methods: {
             validateMatchConditionProperty() {
                 const propertyValid = this.$refs.propertyComponent.validateProperty();
@@ -107,16 +113,6 @@
                 this.getTransformerTemplate(transformer).items.forEach(valueItem => {
                     transformer.parameters[valueItem.key] = valueItem.type;
                 });
-            },
-
-            resetProperty(index) {
-                const newProperty = this.conditionProperty.property.slice(0, index);
-
-                newProperty.push('');
-                if (newProperty.length % 2 > 0)
-                    newProperty.push('');
-
-                this.conditionProperty.property = newProperty;
             },
         },
     };

@@ -39,7 +39,7 @@ class MatchingSql:
                 view_name=sql.Identifier(resource.label),
                 matching_fields=resource.matching_fields_sql,
                 table_name=sql.Identifier(resource.table_name),
-                joins=resource.joins_sql,
+                joins=resource.joins.sql,
                 wheres=resource.where_sql,
                 limit=resource.limit_sql,
             )

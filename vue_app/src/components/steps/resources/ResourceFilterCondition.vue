@@ -2,8 +2,8 @@
   <div class="border border-dark p-3 mt-3">
     <div class="row align-items-center justify-content-between m-0 mb-2">
       <div class="col p-0">
-        <property :property="condition.property" :singular="true" :resource-info="false"
-                  @resetProperty="resetProperty(condition.property, $event)" ref="propertyComponent"/>
+        <property :resource="resource" :property="condition.property" :singular="true" :resource-info="false"
+                  ref="propertyComponent"/>
       </div>
 
       <div class="col-auto">
@@ -108,16 +108,6 @@
                     valueValid = this.validateField('value', true);
 
                 return propertyValid && conditionValid && valueValid;
-            },
-
-            resetProperty(property, property_index) {
-                let new_property = property.slice(0, property_index);
-                new_property.push('');
-                if (new_property.length % 2 > 0) {
-                    new_property.push('');
-                }
-
-                this.$set(this.condition, 'property', new_property);
             },
         },
     }
