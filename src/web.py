@@ -1,6 +1,5 @@
 import io
 import csv
-import json
 import psycopg2
 
 from flask import Flask, jsonify, request, abort, make_response
@@ -70,32 +69,32 @@ def job_create():
 @app.route('/job/update/', methods=['POST'])
 def job_update():
     job_id = request.json['job_id']
-    job_data = {
+
+    job = Job(job_id)
+    job.update_data({
         'job_title': request.json['job_title'],
         'job_description': request.json['job_description'],
         'job_link': request.json['job_link'],
-    }
+        'resources': request.json['resources'] if 'resources' in request.json else [],
+        'mappings': request.json['mappings'] if 'mappings' in request.json else [],
+    })
 
-    if 'resources_original' in request.json:
-        job_data['resources_form_data'] = json.dumps(request.json['resources_original'])
-    if 'matches_original' in request.json:
-        job_data['mappings_form_data'] = json.dumps(request.json['matches_original'])
-
-    if 'resources' in request.json:
-        job_data['resources'] = json.dumps(request.json['resources'])
-    if 'matches' in request.json:
-        job_data['mappings'] = json.dumps(request.json['matches'])
-
-    job = Job(job_id)
-    job.update_data(job_data)
-
-    return jsonify({'result': 'updated', 'job_id': job_id, 'job_data': job_data})
+    return jsonify({'result': 'updated', 'job_id': job_id})
 
 
 @app.route('/job/<job:job>')
 def job_data(job):
     if job.data:
-        return jsonify(job.data)
+        return jsonify({
+            'job_id': job.data['job_id'],
+            'job_title': job.data['job_title'],
+            'job_description': job.data['job_description'],
+            'job_link': job.data['job_link'],
+            'resources': job.data['resources_form_data'],
+            'mappings': job.data['mappings_form_data'],
+            'created_at': job.data['created_at'],
+            'updated_at': job.data['updated_at']
+        })
 
     return abort(404)
 

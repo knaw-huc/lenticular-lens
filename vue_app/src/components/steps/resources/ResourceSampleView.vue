@@ -14,7 +14,7 @@
                         :resource="resource" :properties="resource.properties"/>
 
     <div class="mt-4">
-      <resource-sample v-for="(sample, idx) in samples" :index="idx" :sample="sample"/>
+      <resource-sample v-for="(sample, idx) in samples" :key="idx" :index="idx" :sample="sample"/>
 
       <infinite-loading :identifier="samplesIdentifier" @infinite="getSamples">
         <template v-slot:spinner>

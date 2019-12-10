@@ -157,6 +157,7 @@
           <div class="max-overflow mt-4">
             <cluster
                 v-for="(cluster, idx) in clusters"
+                :key="idx"
                 :index="idx"
                 :cluster="cluster"
                 :selected="clusterIdSelected === cluster.id"
@@ -185,6 +186,7 @@
     <template v-if="showLinks">
       <match-link
           v-for="(link, idx) in links"
+          :key="idx"
           :index="idx"
           :link="link"
           @accepted="acceptLink(link)"

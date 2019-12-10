@@ -364,7 +364,7 @@
                     const localPropValid = this.validateField(`relations_local_prop_${idx}`,
                         related.local_property && localProperties && localProperties.hasOwnProperty(related.local_property));
 
-                    const remoteDatasets = remoteResource && ds[remoteResource.dataset.dataset_id];
+                    const remoteDatasets = remoteResource && this.datasets[remoteResource.dataset.dataset_id];
                     const remoteProperties = remoteDatasets && remoteDatasets.collections
                         [remoteResource.dataset.collection_id].properties;
                     const remotePropValid = this.validateField(`relations_remote_prop_${idx}`,

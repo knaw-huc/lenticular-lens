@@ -1,5 +1,3 @@
-import md5 from 'md5';
-
 export default {
     data() {
         return {
@@ -123,141 +121,14 @@ export default {
             return [conditionsGroup];
         },
 
-        createTargetsForProperties(properties) {
-            return properties.reduce((targets, prop) => {
-                const resource = this.getResourceById(prop.resource);
-
-                let resourceTarget = targets.find(t => t.graph === resource.dataset.dataset_id);
-                if (!resourceTarget) {
-                    resourceTarget = {graph: resource.dataset.dataset_id, data: []};
-                    targets.push(resourceTarget);
-                }
-
-                let entityTarget = resourceTarget.data.find(d => d.entity_type === resource.dataset.collection_id);
-                if (!entityTarget) {
-                    entityTarget = {entity_type: resource.dataset.collection_id, properties: []};
-                    resourceTarget.data.push(entityTarget);
-                }
-
-                entityTarget.properties.push(prop.property);
-
-                return targets;
-            }, []);
-        },
-
-        createReferencesForProperty(property, resources) {
-            const baseReferencedResource = this.getResourceById(property[0], resources);
-            property[0] = baseReferencedResource.label;
-
-            if (property.length < 3)
-                return property;
-
-            if (property[2] === '__value__')
-                return property.slice(0, 2);
-
-            const referencedResource = {
-                label: md5(property[0] + property[1] + property[2]),
-                dataset: {
-                    timbuctoo_graphql: baseReferencedResource.dataset.timbuctoo_graphql,
-                    timbuctoo_hsid: baseReferencedResource.dataset.timbuctoo_hsid,
-                    dataset_id: baseReferencedResource.dataset.dataset_id,
-                    collection_id: property[2],
-                    published: baseReferencedResource.dataset.published,
-                },
-                related: []
-            };
-
-            if (!resources.find(rc => rc.label === referencedResource.label))
-                resources.push(referencedResource);
-
-            const relation = {
-                resource: referencedResource.label,
-                local_property: property[1],
-                remote_property: 'uri'
-            };
-
-            if (!baseReferencedResource.related.find(rel => JSON.stringify(rel) === JSON.stringify(relation)))
-                baseReferencedResource.related.push(relation);
-
-            if (baseReferencedResource.related.length > 1)
-                baseReferencedResource.related_array = true;
-
-            const newProperty = [referencedResource.label, property[3], ...property.slice(4)];
-            return this.createReferencesForProperty(newProperty, resources);
-        },
-
-        createMatchConditionProperties(conditionProps, resources) {
-            return conditionProps.reduce((acc, conditionProp) => {
-                const resource = this.getResourceById(conditionProp.resource).label;
-                const property = [resource, ...conditionProp.property];
-
-                if (!acc.hasOwnProperty(resource))
-                    acc[resource] = [];
-
-                acc[resource].push({
-                    property: this.createReferencesForProperty(property, resources),
-                    transformers: conditionProp.transformers
-                });
-                return acc;
-            }, {});
-        },
-
         async submit() {
-            const resources = copy(this.resources);
-            const matches = copy(this.matches);
-
-            matches.forEach(match => {
-                match.sources = match.sources.map(resourceId =>
-                    isId(resourceId) ? this.getResourceById(resourceId).label : resourceId);
-                match.targets = match.targets.map(resourceId =>
-                    isId(resourceId) ? this.getResourceById(resourceId).label : resourceId);
-
-                this.getRecursiveConditions(match.methods.conditions).forEach(condition => {
-                    condition.sources = this.createMatchConditionProperties(condition.sources, resources);
-                    condition.targets = this.createMatchConditionProperties(condition.targets, resources);
-                });
-
-                match.properties = this.createTargetsForProperties(match.properties);
-            });
-
-            resources.forEach(resource => {
-                if (resource.filter && resource.filter.conditions && resource.filter.conditions.length > 0) {
-                    this.getRecursiveConditions(resource.filter.conditions).forEach(condition => {
-                        const property = [resource.label, ...condition.property];
-                        condition.property = this.createReferencesForProperty(property, resources);
-                    });
-                }
-                else
-                    delete resource.filter;
-            });
-
-            resources.forEach(resource => {
-                if (resource.related) {
-                    resource.related.forEach(related => {
-                        if (isId(related.resource))
-                            related.resource = this.getResourceById(related.resource).label;
-
-                        related.local_property = [related.local_property];
-                        related.remote_property = [related.remote_property];
-                    });
-
-                    if (resource.related_array)
-                        resource.related = [resource.related];
-                }
-
-                delete resource.related_array;
-                delete resource.id;
-            });
-
             await this.updateJob({
                 job_id: this.job.job_id,
                 job_title: this.job.job_title,
                 job_description: this.job.job_description,
                 job_link: this.job.job_link,
-                resources: resources,
-                matches: matches,
-                resources_original: this.resources,
-                matches_original: this.matches,
+                resources: this.resources,
+                mappings: this.matches,
             });
         },
 
@@ -270,8 +141,8 @@ export default {
             job.updated_at = job.updated_at ? new Date(job.updated_at) : null;
             this.job = job;
 
-            if (this.job.resources_form_data) {
-                this.job.resources_form_data.forEach(res => {
+            if (this.job.resources) {
+                this.job.resources.forEach(res => {
                     this.getRecursiveConditions(res.filter.conditions).forEach(condition => {
                         if (isId(condition.property[0]))
                             condition.property = condition.property.slice(1);
@@ -282,7 +153,7 @@ export default {
                         res.properties = [];
                 });
 
-                const resources = copy(this.job.resources_form_data);
+                const resources = copy(this.job.resources);
 
                 const graphQlEndpoints = resources
                     .map(res => ({endpoint: res.dataset.timbuctoo_graphql, hsid: res.dataset.timbuctoo_hsid}))
@@ -297,8 +168,8 @@ export default {
                 this.resources = resources;
             }
 
-            if (this.job.mappings_form_data) {
-                this.job.mappings_form_data.forEach(match => {
+            if (this.job.mappings) {
+                this.job.mappings.forEach(match => {
                     this.getRecursiveConditions(match.methods.conditions).forEach(matchCondition => {
                         [...matchCondition.sources, ...matchCondition.targets].forEach(condition => {
                             if (isId(condition.property[0]))
@@ -314,7 +185,7 @@ export default {
                     });
                 });
 
-                this.matches = copy(this.job.mappings_form_data);
+                this.matches = copy(this.job.mappings);
             }
 
             await Promise.all([this.loadAlignments(), this.loadClusterings()]);

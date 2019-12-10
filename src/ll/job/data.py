@@ -1,3 +1,4 @@
+from json import dumps
 from enum import IntFlag
 from decimal import Decimal
 
@@ -5,6 +6,7 @@ from psycopg2 import extras as psycopg2_extras, sql as psycopg2_sql
 from psycopg2.extensions import AsIs
 
 from ll.job.job_config import JobConfig
+from ll.job.job_transformer import transform
 
 from ll.data.collection import Collection
 from ll.data.query import get_property_values, get_property_values_queries, get_property_values_for_query, \
@@ -70,6 +72,13 @@ class Job:
                          (self.job_id, alignment), dict=True)
 
     def update_data(self, data):
+        (resources, mappings) = transform(data['resources'], data['mappings'])
+
+        data['resources_form_data'] = dumps(data['resources'])
+        data['mappings_form_data'] = dumps(data['mappings'])
+        data['resources'] = dumps(resources)
+        data['mappings'] = dumps(mappings)
+
         with db_conn() as conn, conn.cursor() as cur:
             cur.execute(psycopg2_sql.SQL("""
                     INSERT INTO reconciliation_jobs (job_id, %s) VALUES %s
