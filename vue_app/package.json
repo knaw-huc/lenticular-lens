@@ -5,7 +5,7 @@
   "dependencies": {
     "@vue/cli": "^3.12.1",
     "@vue/cli-service": "^3.12.1",
-    "bootstrap": "^4.3.1",
+    "bootstrap": "^4.4.1",
     "bootstrap-vue": "^2.1.0",
     "d3": "^5.14.2",
     "jquery": "^3.4.1",
@@ -20,7 +20,7 @@
     "vue-template-compiler": "^2.6.10",
     "vuedraggable": "^2.23.2",
     "vue-infinite-loading": "^2.4.4",
-    "vue-select": "^3.2.0"
+    "vue-select": "^3.4.0"
   },
   "devDependencies": {
     "node-sass": "^4.13.0",
