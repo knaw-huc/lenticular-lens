@@ -57,8 +57,7 @@ class SimpleLinkClustering:
             self.root[child_1] = parent
             self.root[child_2] = parent
 
-            link = (child_1, child_2) if child_1 < child_2 else (child_2, child_1)
-            self.clusters[parent] = {'nodes': {child_1, child_2}, 'links': {link}}
+            self.clusters[parent] = {'nodes': {child_1, child_2}, 'links': {(child_1, child_2)}}
         elif has_parent_1 and has_parent_2:
             if self.root[child_1] != self.root[child_2]:
                 parent1 = self.root[child_1]
@@ -73,19 +72,15 @@ class SimpleLinkClustering:
                     self.clusters[parent1]['links'] = self.clusters[parent1]['links'] \
                         .union(self.clusters[parent2]['links'])
 
-                    link = (child_1, child_2) if child_1 < child_2 else (child_2, child_1)
-                    self.clusters[parent1]['links'].add(link)
-
+                    self.clusters[parent1]['links'].add((child_1, child_2))
                     del self.clusters[parent2]
             else:
                 parent = self.root[child_1]
-                link = (child_1, child_2) if child_1 < child_2 else (child_2, child_1)
-                self.clusters[parent]['links'].add(link)
+                self.clusters[parent]['links'].add((child_1, child_2))
         else:
             child = child_2 if has_parent_1 else child_1
             parent = self.root[child_1 if has_parent_1 else child_2]
             self.root[child] = parent
 
-            link = (child_1, child_2) if child_1 < child_2 else (child_2, child_1)
-            self.clusters[parent]['links'].add(link)
             self.clusters[parent]['nodes'].add(child)
+            self.clusters[parent]['links'].add((child_1, child_2))
