@@ -5,7 +5,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.postgres
-    image: knawhuc/postgres_reconciliation_worker:postgres-latest
+    image: knawhuc/lenticular-lenses-postgres:latest
+    shm_size: 1g
     volumes:
       - ./pgdata:/pgdata
     environment:
@@ -15,7 +16,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.worker
-    image: knawhuc/postgres_reconciliation_worker:worker-latest
+    image: knawhuc/lenticular-lenses-worker:latest
     depends_on:
       - postgres
     environment:
@@ -29,7 +30,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.worker
-    image: knawhuc/postgres_reconciliation_worker:worker-latest
+    image: knawhuc/lenticular-lenses-worker:latest
     depends_on:
       - postgres
     environment:
@@ -43,7 +44,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.worker
-    image: knawhuc/postgres_reconciliation_worker:worker-latest
+    image: knawhuc/lenticular-lenses-worker:latest
     depends_on:
       - postgres
     environment:
@@ -56,8 +57,8 @@ services:
   web_server:
     build:
       context: .
-      dockerfile: Dockerfile.web_server
-    image: knawhuc/postgres_reconciliation_worker:web_server-latest
+      dockerfile: Dockerfile.web
+    image: knawhuc/lenticular-lenses-web:latest
     depends_on:
       - postgres
     environment:
