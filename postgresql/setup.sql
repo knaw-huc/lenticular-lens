@@ -155,14 +155,11 @@ import Levenshtein
 return Levenshtein.distance(source, target)
 $$ LANGUAGE plpython3u;
 
-CREATE OR REPLACE FUNCTION levenshtein_similarity(source text, target text) RETURNS decimal
+CREATE OR REPLACE FUNCTION similarity(source text, target text, distance decimal) RETURNS decimal
     STRICT IMMUTABLE PARALLEL SAFE AS
 $$
-DECLARE
-    longest int;
 BEGIN
-    longest = greatest(char_length(source), char_length(target));
-    RETURN 1 - (levenshtein_distance(source, target)::decimal / longest);
+    RETURN 1 - (distance / greatest(char_length(source), char_length(target)));
 END
 $$ LANGUAGE plpgsql;
 
