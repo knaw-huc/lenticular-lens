@@ -151,7 +151,7 @@ def get_property_field(graph, joins, cur_resource, cur_columns, property_path):
         lhs = local_property.sql
         rhs = remote_property.sql
 
-        joins.add_join(sql.SQL('\nLEFT JOIN {target} AS {alias}\nON {lhs} = {rhs}').format(
+        joins.add_join(sql.SQL('LEFT JOIN {target} AS {alias}\nON {lhs} = {rhs}').format(
             target=sql.Identifier(next_table_info['table_name']),
             alias=sql.Identifier(next_resource),
             lhs=lhs, rhs=rhs

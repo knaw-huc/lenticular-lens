@@ -48,20 +48,16 @@ class Match:
             if 'template' not in matching_function.index_template:
                 continue
 
-            resources = matching_function.targets if len(matching_function.targets) > 0 else matching_function.sources
-            for resource_name, resource in resources.items():
-                for property_field in resource:
-                    resource_field_name = matching_function.index_template['field_name'][2::] \
-                        if matching_function.index_template['field_name'].startswith('__') \
-                        else property_field.hash
+            resource_field_name = matching_function.index_template['field_name']
+            template = matching_function.index_template['template']
+            template_sql = psycopg_sql.SQL(template) \
+                .format(target=psycopg_sql.Identifier(resource_field_name), **matching_function.sql_parameters)
+            table_name = self.config.match_to_run.name + '_' \
+                         + ('target' if len(matching_function.targets) > 0 else 'source')
 
-                    template = matching_function.index_template['template']
-                    template_sql = psycopg_sql.SQL(template)\
-                        .format(target=psycopg_sql.Identifier(resource_field_name), **matching_function.sql_parameters)
-
-                    index_sqls.append(psycopg_sql.SQL('CREATE INDEX ON {} USING {};').format(
-                        psycopg_sql.Identifier(hash_string(resource_name)), template_sql
-                    ))
+            index_sqls.append(psycopg_sql.SQL('CREATE INDEX ON {} USING {};').format(
+                psycopg_sql.Identifier(table_name), template_sql
+            ))
 
         return psycopg_sql.SQL('\n').join(index_sqls)
 

@@ -32,8 +32,8 @@ class ClusteringJob(Job):
             cur.execute(psycopg2_sql.SQL('UPDATE {linkset} SET cluster_id = {cluster_id} WHERE {links}').format(
                 linkset=psycopg2_sql.Identifier(linkset_table_name),
                 cluster_id=psycopg2_sql.Literal(cluster['id']),
-                    links=psycopg2_sql.SQL(' OR ').join(link_sqls)
-                ))
+                links=psycopg2_sql.SQL(' OR ').join(link_sqls)
+            ))
 
     def watch_process(self):
         if not self.worker:

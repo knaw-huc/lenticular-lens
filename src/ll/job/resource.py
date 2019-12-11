@@ -95,7 +95,7 @@ class Resource:
     def where_sql(self):
         where_sql = self.filter_sql
         if where_sql != psycopg2_sql.SQL(''):
-            where_sql = psycopg2_sql.SQL('\nWHERE {}').format(where_sql)
+            where_sql = psycopg2_sql.SQL('WHERE {}').format(where_sql)
 
         return where_sql
 
@@ -161,7 +161,7 @@ class Resource:
             extra_filter = psycopg2_sql.SQL('\nAND ({resource_filter})').format(resource_filter=extra_filter)
 
         joins.add_join(
-            psycopg2_sql.SQL('\nLEFT JOIN {resource_view} AS {alias}\nON {lhs} = {rhs}{extra_filter}').format(
+            psycopg2_sql.SQL('LEFT JOIN {resource_view} AS {alias}\nON {lhs} = {rhs}{extra_filter}').format(
                 resource_view=psycopg2_sql.Identifier(remote_resource.table_name),
                 alias=psycopg2_sql.Identifier(remote_resource_name),
                 lhs=lhs, rhs=rhs,

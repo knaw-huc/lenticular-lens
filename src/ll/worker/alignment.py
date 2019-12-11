@@ -48,16 +48,16 @@ class AlignmentJob(Job):
             self.process_sql(self.matching_sql.generate_resources_sql())
 
         if not self.killed:
-            self.status = 'Generating indexes'
-            self.process_sql(self.matching_sql.generate_match_index_sql())
-
-        if not self.killed:
             self.status = 'Generating source resources'
             self.process_sql(self.matching_sql.generate_match_source_sql())
 
         if not self.killed:
             self.status = 'Generating target resources'
             self.process_sql(self.matching_sql.generate_match_target_sql())
+
+        if not self.killed:
+            self.status = 'Generating indexes'
+            self.process_sql(self.matching_sql.generate_match_index_sql())
 
         if not self.killed:
             self.status = 'Looking for links'

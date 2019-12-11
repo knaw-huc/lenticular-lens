@@ -74,7 +74,7 @@ class PropertyField:
         if self.is_list:
             sql = psycopg2_sql.SQL(cleandoc(
                 """ LEFT JOIN unnest({table_name}.{column_name}) 
-                    AS {column_name_expanded} ON true""") + '\n')
+                    AS {column_name_expanded} ON true"""))
 
             return sql.format(
                 table_name=psycopg2_sql.Identifier(self.resource_label),

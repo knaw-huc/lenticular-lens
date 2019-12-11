@@ -16,7 +16,7 @@ class MatchingSql:
 
         return sql.Composed([
             sql.SQL('CREATE SCHEMA IF NOT EXISTS {};\n').format(schema_name_sql),
-            sql.SQL('SET SEARCH_PATH TO "$user", {}, public;\n').format(schema_name_sql),
+            sql.SQL('SET SEARCH_PATH TO "$user", {}, public;').format(schema_name_sql),
         ])
 
     def generate_resources_sql(self):
@@ -29,12 +29,14 @@ class MatchingSql:
                 
                     CREATE MATERIALIZED VIEW {view_name} AS
                     {pre}SELECT DISTINCT {matching_fields}
-                    FROM {table_name} AS {view_name} {joins} {wheres}
+                    FROM {table_name} AS {view_name} 
+                    {joins} 
+                    {wheres}
                     ORDER BY uri {limit};
                     
                     ANALYZE {view_name};
                 """
-            )).format(
+            ) + '\n').format(
                 pre=pre,
                 view_name=sql.Identifier(resource.label),
                 matching_fields=resource.matching_fields_sql,
@@ -60,10 +62,10 @@ class MatchingSql:
                 CREATE MATERIALIZED VIEW {source_name} AS 
                 {source};
                 
-                ANALYZE {source_name};
                 CREATE INDEX ON {source_name} (uri);
+                ANALYZE {source_name};
             """
-        )).format(
+        ) + '\n').format(
             source=self.config.match_to_run.source_sql,
             source_name=sql.Identifier(self.config.match_to_run.name + '_source'),
             source_sequence_name=sql.Identifier(self.config.match_to_run.name + '_source_count'),
@@ -78,10 +80,10 @@ class MatchingSql:
                 CREATE MATERIALIZED VIEW {target_name} AS 
                 {target};
                 
-                ANALYZE {target_name};
                 CREATE INDEX ON {target_name} (uri);
+                ANALYZE {target_name};
             """
-        )).format(
+        ) + '\n').format(
             target=self.config.match_to_run.target_sql,
             target_name=sql.Identifier(self.config.match_to_run.name + '_target'),
             target_sequence_name=sql.Identifier(self.config.match_to_run.name + '_target_count'),
@@ -111,7 +113,7 @@ class MatchingSql:
                 CREATE INDEX ON public.{view_name} (cluster_id);
                 ANALYZE public.{view_name};
             """
-        )).format(
+        ) + '\n').format(
             strengths_field=self.config.match_to_run.similarity_fields_agg_sql,
             conditions=self.config.match_to_run.conditions_sql,
             match_against=self.config.match_to_run.match_against_sql,
@@ -125,10 +127,15 @@ class MatchingSql:
     @property
     def sql_string(self):
         sql_str = get_string_from_sql(self.generate_schema_sql())
+        sql_str += '\n\n'
         sql_str += get_string_from_sql(self.generate_resources_sql())
-        sql_str += get_string_from_sql(self.generate_match_index_sql())
+        sql_str += '\n\n'
         sql_str += get_string_from_sql(self.generate_match_source_sql())
+        sql_str += '\n\n'
         sql_str += get_string_from_sql(self.generate_match_target_sql())
+        sql_str += '\n\n'
+        sql_str += get_string_from_sql(self.generate_match_index_sql())
+        sql_str += '\n\n'
         sql_str += get_string_from_sql(self.generate_match_linkset_sql())
 
         return sql_str
