@@ -212,7 +212,7 @@ def validate_link(job, alignment):
 
 @app.route('/job/<job:job>/cluster/<alignment>/<cluster_id>/graph')
 def get_cluster_graph_data(job, alignment, cluster_id):
-    cluster_data = job.cluster(alignment, cluster_id)
+    cluster_data = job.cluster(alignment, cluster_id=cluster_id)
     clustering = job.clustering(alignment)
     match = job.config.get_match_by_id(int(alignment))
     properties = job.value_targets_for_match(match)

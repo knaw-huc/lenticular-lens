@@ -2,7 +2,7 @@ from json import dumps
 from enum import IntFlag
 from decimal import Decimal
 
-from psycopg2 import extras as psycopg2_extras, sql as psycopg2_sql
+from psycopg2 import extras, sql
 from psycopg2.extensions import AsIs
 
 from ll.job.job_config import JobConfig
@@ -50,13 +50,13 @@ class Job:
 
     @property
     def alignments(self):
-        with db_conn() as conn, conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) as cur:
+        with db_conn() as conn, conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
             cur.execute('SELECT * FROM alignments WHERE job_id = %s', (self.job_id,))
             return cur.fetchall()
 
     @property
     def clusterings(self):
-        with db_conn() as conn, conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) as cur:
+        with db_conn() as conn, conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
             cur.execute('SELECT * FROM clusterings WHERE job_id = %s', (self.job_id,))
             return cur.fetchall()
 
@@ -80,7 +80,7 @@ class Job:
         data['mappings'] = dumps(mappings)
 
         with db_conn() as conn, conn.cursor() as cur:
-            cur.execute(psycopg2_sql.SQL("""
+            cur.execute(sql.SQL("""
                     INSERT INTO reconciliation_jobs (job_id, %s) VALUES %s
                     ON CONFLICT (job_id) DO 
                     UPDATE SET (%s) = ROW %s, updated_at = NOW()
@@ -93,7 +93,7 @@ class Job:
 
     def update_alignment(self, alignment, data):
         with db_conn() as conn, conn.cursor() as cur:
-            cur.execute(psycopg2_sql.SQL('UPDATE alignments SET (%s) = ROW %s WHERE job_id = %s AND alignment = %s'), (
+            cur.execute(sql.SQL('UPDATE alignments SET (%s) = ROW %s WHERE job_id = %s AND alignment = %s'), (
                 AsIs(', '.join(data.keys())),
                 tuple(data.values()),
                 self.job_id,
@@ -102,7 +102,7 @@ class Job:
 
     def update_clustering(self, alignment, data):
         with db_conn() as conn, conn.cursor() as cur:
-            cur.execute(psycopg2_sql.SQL('UPDATE clusterings SET (%s) = ROW %s WHERE job_id = %s AND alignment = %s'), (
+            cur.execute(sql.SQL('UPDATE clusterings SET (%s) = ROW %s WHERE job_id = %s AND alignment = %s'), (
                 AsIs(', '.join(data.keys())),
                 tuple(data.values()),
                 self.job_id,
@@ -112,27 +112,27 @@ class Job:
     def run_alignment(self, alignment, restart=False):
         with db_conn() as conn, conn.cursor() as cur:
             if restart:
-                cur.execute(psycopg2_sql.SQL("DELETE FROM alignments WHERE job_id = %s AND alignment = %s"),
+                cur.execute(sql.SQL("DELETE FROM alignments WHERE job_id = %s AND alignment = %s"),
                             (self.job_id, alignment))
-                cur.execute(psycopg2_sql.SQL("DELETE FROM clusterings WHERE job_id = %s AND alignment = %s"),
+                cur.execute(sql.SQL("DELETE FROM clusterings WHERE job_id = %s AND alignment = %s"),
                             (self.job_id, alignment))
 
-            cur.execute(psycopg2_sql.SQL("INSERT INTO alignments (job_id, alignment, status, kill, requested_at) "
-                                         "VALUES (%s, %s, %s, false, now())"), (self.job_id, alignment, 'waiting'))
+            cur.execute(sql.SQL("INSERT INTO alignments (job_id, alignment, status, kill, requested_at) "
+                                "VALUES (%s, %s, %s, false, now())"), (self.job_id, alignment, 'waiting'))
 
     def run_clustering(self, alignment, association_file, clustering_type='default'):
         clustering = self.clustering(alignment)
 
         with db_conn() as conn, conn.cursor() as cur:
             if clustering:
-                cur.execute(psycopg2_sql.SQL("""
+                cur.execute(sql.SQL("""
                     UPDATE clusterings 
                     SET association_file = %s, status = %s, 
                         kill = false, requested_at = now(), processing_at = null, finished_at = null
                     WHERE job_id = %s AND alignment = %s
                 """), (association_file, 'waiting', self.job_id, alignment))
             else:
-                cur.execute(psycopg2_sql.SQL("""
+                cur.execute(sql.SQL("""
                     INSERT INTO clusterings (job_id, alignment, clustering_type, association_file, 
                                              status, kill, requested_at) 
                     VALUES (%s, %s, %s, %s, %s, false, now())
@@ -150,8 +150,8 @@ class Job:
 
     def validate_link(self, alignment, source_uri, target_uri, valid):
         with db_conn() as conn, conn.cursor() as cur:
-            query = psycopg2_sql.SQL('UPDATE {} SET valid = %s WHERE source_uri = %s AND target_uri = %s') \
-                .format(psycopg2_sql.Identifier(self.get_linkset_table(alignment)))
+            query = sql.SQL('UPDATE {} SET valid = %s WHERE source_uri = %s AND target_uri = %s') \
+                .format(sql.Identifier(self.get_linkset_table(alignment)))
             cur.execute(query, (valid, source_uri, target_uri))
 
     def properties_for_resource(self, resource, downloaded_only=True):
@@ -191,10 +191,28 @@ class Job:
 
         return fetch_one(query, dict=True)
 
-    def get_links(self, alignment, export_links=ExportLinks.ALL, cluster_id=None,
+    def get_links(self, alignment, export_links=ExportLinks.ALL, cluster_id=None, uri=None,
                   limit=None, offset=0, include_props=False):
+        export_links_sql = []
+        if export_links < ExportLinks.ALL and ExportLinks.ACCEPTED in export_links:
+            export_links_sql.append('valid = true')
+        if export_links < ExportLinks.ALL and ExportLinks.DECLINED in export_links:
+            export_links_sql.append('valid = false')
+        if export_links < ExportLinks.ALL and ExportLinks.NOT_VALIDATED in export_links:
+            export_links_sql.append('valid IS NULL')
+
+        conditions = []
+        if cluster_id:
+            conditions.append(sql.SQL('cluster_id = {cluster_id}').format(cluster_id=sql.Literal(cluster_id)))
+        if uri:
+            conditions.append(sql.SQL('(source_uri = {uri} OR target_uri = {uri})').format(uri=sql.Literal(uri)))
+        if len(export_links_sql) > 0:
+            conditions.append(sql.SQL('(' + ' OR '.join(export_links_sql) + ')'))
+
         linkset_table = self.get_linkset_table(alignment)
         limit_offset_sql = get_pagination_sql(limit, offset)
+        where_sql = sql.SQL('WHERE {}').format(sql.SQL(' AND ').join(conditions)) \
+            if len(conditions) > 0 else sql.SQL('')
 
         values = None
         if include_props:
@@ -205,29 +223,14 @@ class Job:
                 queries = get_property_values_queries(targets, initial_join=initial_join)
                 values = get_property_values(queries, dict=True)
 
-        cluster_sql = 'cluster_id = %s' if cluster_id else ''
-        export_links_sql = []
-        if export_links < ExportLinks.ALL and ExportLinks.ACCEPTED in export_links:
-            export_links_sql.append('valid = true')
-        if export_links < ExportLinks.ALL and ExportLinks.DECLINED in export_links:
-            export_links_sql.append('valid = false')
-        if export_links < ExportLinks.ALL and ExportLinks.NOT_VALIDATED in export_links:
-            export_links_sql.append('valid IS NULL')
-
-        where_sql = ''
-        if cluster_id and export_links < ExportLinks.ALL:
-            where_sql = 'WHERE {} AND ({})'.format(cluster_sql, ' OR '.join(export_links_sql))
-        elif cluster_id:
-            where_sql = 'WHERE {}'.format(cluster_sql)
-        elif export_links < ExportLinks.ALL:
-            where_sql = 'WHERE {}'.format(' OR '.join(export_links_sql))
-
-        query = 'SELECT source_uri, target_uri, strengths, cluster_id, valid FROM {} {} {}' \
-            .format(linkset_table, where_sql, limit_offset_sql)
-
         with db_conn() as conn, conn.cursor() as cur:
             cur.itersize = 1000
-            cur.execute(query, (cluster_id,) if cluster_id else None)
+            cur.execute(sql.SQL('SELECT source_uri, target_uri, strengths, cluster_id, valid '
+                                'FROM {linkset} {where_sql} {limit_offset}').format(
+                linkset=sql.Identifier(linkset_table),
+                where_sql=where_sql,
+                limit_offset=sql.SQL(limit_offset_sql)
+            ))
 
             for link in cur:
                 yield {
@@ -297,32 +300,40 @@ class Job:
                     } for key, cluster_value in cluster_values.items()] if values else None
                 }
 
-    def cluster(self, alignment, cluster_id):
+    def get_cluster_nodes(self, alignment):
+        with db_conn() as conn, conn.cursor() as cur:
+            cur.execute("""
+                SELECT DISTINCT ON nodes.node, nodes.node AS node, nodes.cluster_id AS cluster_id
+                FROM (
+                    SELECT source_uri AS node, cluster_id FROM {}
+                    UNION
+                    SELECT target_uri AS node, cluster_id FROM {}
+                ) AS nodes
+            """.format(self.get_linkset_table(alignment)))
+
+            return {cluster_node[0]: cluster_node[1] for cluster_node in cur}
+
+    def cluster(self, alignment, cluster_id=None, uri=None):
         all_links = []
         strengths = {}
         nodes = []
 
-        with db_conn() as conn, conn.cursor() as cur:
-            linkset_table = self.get_linkset_table(alignment)
-            cur.execute(f'SELECT source_uri, target_uri, strengths FROM {linkset_table} WHERE cluster_id = %s',
-                        (cluster_id,))
+        for link in self.get_links(alignment, cluster_id=cluster_id, uri=uri):
+            source = '<' + link['source'] + '>'
+            target = '<' + link['target'] + '>'
 
-            for link in cur:
-                source = '<' + link[0] + '>'
-                target = '<' + link[1] + '>'
+            current_link = (source, target) if source < target else (target, source)
+            link_hash = "key_{}".format(str(hasher(current_link)).replace("-", "N"))
 
-                current_link = (source, target) if source < target else (target, source)
-                link_hash = "key_{}".format(str(hasher(current_link)).replace("-", "N"))
+            all_links.append([source, target])
+            strengths[link_hash] = link['strengths']
 
-                all_links.append([source, target])
-                strengths[link_hash] = link[2]
+            if source not in nodes:
+                nodes.append(source)
+            if target not in nodes:
+                nodes.append(target)
 
-                if source not in nodes:
-                    nodes.append(source)
-                if target not in nodes:
-                    nodes.append(target)
-
-            return {'links': all_links, 'strengths': strengths, 'nodes': nodes}
+        return {'links': all_links, 'strengths': strengths, 'nodes': nodes}
 
     @staticmethod
     def value_targets(properties, downloaded_only=True):

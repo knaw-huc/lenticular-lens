@@ -130,7 +130,7 @@ def transform(resources_org, mappings_org):
             'label': mapping_org['label'],
             'description': mapping_org['description'] if 'description' in mapping_org else '',
             'is_association': mapping_org['is_association'],
-            'match_against': mapping_org['match_against'],
+            'match_against': mapping_org['match_against'] if 'match_against' in mapping_org else None,
             'sources': [resource_label_by_id[resource] for resource in mapping_org['sources'] if resource != ''],
             'targets': [resource_label_by_id[resource] for resource in mapping_org['targets'] if resource != ''],
             'methods': transform_conditions(mapping_org['methods'], lambda condition: {

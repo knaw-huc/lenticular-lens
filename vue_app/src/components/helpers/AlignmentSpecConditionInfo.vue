@@ -2,7 +2,8 @@
   <div class="border shadow p-2">
     <div v-for="resource in condition.sources" class="row">
       <div class="col-auto">
-        <property :resource="resource.resource" :property="resource.property" :read-only="true" :small="true"/>
+        <property :resource="$root.getResourceById(resource.resource)"
+                  :property="resource.property" :read-only="true" :small="true"/>
       </div>
 
       <p class="font-weight-bold m-0" v-if="resource.transformers && resource.transformers.length > 0">
@@ -15,7 +16,8 @@
 
     <div v-for="resource in condition.targets" class="row">
       <div class="col-auto">
-        <property :resource="resource.resource" :property="resource.property" :read-only="true" :small="true"/>
+        <property :resource="$root.getResourceById(resource.resource)"
+                  :property="resource.property" :read-only="true" :small="true"/>
       </div>
 
       <p class="font-weight-bold m-0" v-if="resource.transformers && resource.transformers.length > 0">

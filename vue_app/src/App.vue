@@ -175,8 +175,8 @@
         computed: {
             hasChanges() {
                 return !Boolean(this.$root.job)
-                    || JSON.stringify(this.$root.resources) !== JSON.stringify(this.$root.job['resources_form_data'])
-                    || JSON.stringify(this.$root.matches) !== JSON.stringify(this.$root.job['mappings_form_data']);
+                    || JSON.stringify(this.$root.resources) !== JSON.stringify(this.$root.job['resources'])
+                    || JSON.stringify(this.$root.matches) !== JSON.stringify(this.$root.job['mappings']);
             },
 
             matchesWithResults() {
