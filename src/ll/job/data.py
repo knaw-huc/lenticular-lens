@@ -178,7 +178,7 @@ class Job:
                                             initial_join=resource.related_joins, condition=resource.filter_sql,
                                             limit=limit, offset=offset)
 
-        return get_property_values_for_query(query, None, resource.properties, dict=False)
+        return get_property_values_for_query(query, None, properties, dict=False)
 
     def get_resource_sample_total(self, resource_label):
         resource = self.config.get_resource_by_label(hash_string(resource_label))
@@ -363,11 +363,11 @@ class Job:
 
         new_properties = []
         for props in properties:
-            if not downloaded_only or len(props) == 1 \
-                    or all(Job.is_downloaded(downloaded, graph, entity) for entity in props[1::2]):
-                props_filtered = [prop for prop in props if prop != '__value__' and prop != '']
-                if len(props_filtered) > 0:
-                    new_properties.append(props_filtered)
+            props = [prop for prop in props if prop != '__value__' and prop != '']
+
+            if len(props) > 0 and (not downloaded_only or len(props) == 1
+                                   or all(Job.is_downloaded(downloaded, graph, entity) for entity in props[1::2])):
+                new_properties.append(props)
 
         return new_properties
 
