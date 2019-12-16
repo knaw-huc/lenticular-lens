@@ -30,6 +30,13 @@
           <template v-else-if="!hasProperties">Please select a property</template>
           <template v-else>Save selected properties to load results</template>
         </template>
+
+        <template v-slot:error="{trigger}">
+          <div class="text-danger mb-2">
+            Failed to obtain samples
+          </div>
+          <button type="button" class="btn btn-sm btn-danger" @click="trigger">Retry</button>
+        </template>
       </infinite-loading>
     </div>
   </b-modal>
@@ -59,7 +66,8 @@
         },
         computed: {
             hasProperties() {
-                return !this.resource.properties.map(prop => prop[0] !== '').includes(false);
+                return this.resource.properties.length > 0 &&
+                    !this.resource.properties.find(prop => prop[0] === '');
             },
         },
         methods: {
@@ -79,15 +87,19 @@
 
             async getTotal() {
                 const total = await this.$root.getResourceSample(this.resource.label, true);
-                this.total = total.total;
+                this.total = total !== null ? total.total : null;
             },
 
             async getSamples(state) {
                 const samples = await this.$root.getResourceSample(this.resource.label, false, 50, this.samples.length);
-                this.samples.push(...samples);
+
+                if (samples !== null)
+                    this.samples.push(...samples);
 
                 if (state) {
-                    if (samples.length > 0)
+                    if (samples === null)
+                        state.error();
+                    else if (samples.length > 0)
                         state.loaded();
                     else
                         state.complete();

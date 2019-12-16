@@ -171,6 +171,13 @@
               <template v-slot:no-more>
                 No more clusters
               </template>
+
+              <template v-slot:error="{trigger}">
+                <div class="text-danger mb-2">
+                  Failed to obtain clusters
+                </div>
+                <button type="button" class="btn btn-sm btn-danger" @click="trigger">Retry</button>
+              </template>
             </infinite-loading>
           </div>
         </sub-card>
@@ -199,6 +206,13 @@
 
         <template v-slot:no-more>
           No more links
+        </template>
+
+        <template v-slot:error="{trigger}">
+          <div class="text-danger mb-2">
+            Failed to obtain links
+          </div>
+          <button type="button" class="btn btn-sm btn-danger" @click="trigger">Retry</button>
         </template>
       </infinite-loading>
     </template>
@@ -344,12 +358,15 @@
 
             async getLinks(state) {
                 const clusterId = this.showClusterLinks ? this.clusterIdSelected : undefined;
-
                 const links = await this.$root.getAlignment(this.match.id, clusterId, 50, this.links.length);
-                this.links.push(...links);
+
+                if (links !== null)
+                    this.links.push(...links);
 
                 if (state) {
-                    if (links.length > 0)
+                    if (links === null)
+                        state.error();
+                    else if (links.length > 0)
                         state.loaded();
                     else
                         state.complete();
@@ -362,10 +379,14 @@
 
                 const clusters = await this.$root.getClusters(
                     this.match.id, this.clustering.association, 5, this.clusters.length);
-                this.clusters.push(...clusters);
+
+                if (clusters !== null)
+                    this.clusters.push(...clusters);
 
                 if (state) {
-                    if (clusters.length > 0)
+                    if (clusters === null)
+                        state.error();
+                    else if (clusters.length > 0)
                         state.loaded();
                     else
                         state.complete();

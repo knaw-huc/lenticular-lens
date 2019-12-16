@@ -334,6 +334,11 @@
                     });
                 });
             },
+
+            hasProperties() {
+                return this.resource.properties.length > 0 &&
+                    !this.resource.properties.find(prop => prop[0] === '');
+            },
         },
         methods: {
             hsurl() {
@@ -451,9 +456,14 @@
                 document.getElementById('login_' + this.resource.id).submit();
             },
 
-            runSample() {
+            async runSample() {
                 if (!this.validateResource())
                     return;
+
+                if (!this.hasProperties && this.filteredConditions.length > 0)
+                    this.resource.properties = this.filteredConditions.map(condition => condition.property);
+
+                await this.$root.submit();
                 this.$refs.resourceSampleView.resetSample();
             },
 
