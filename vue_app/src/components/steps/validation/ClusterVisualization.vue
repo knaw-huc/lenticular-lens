@@ -7,7 +7,24 @@
       <cluster-visualization-reconciled-info v-else-if="show === 'visualize-reconciled'"/>
       <cluster-visualization-info v-else/>
 
-      <button type="button" aria-label="Close" class="close" @click="close()">×</button>
+      <div class="btn-group btn-group-toggle ml-auto">
+        <label class="btn btn-sm btn-secondary" v-bind:class="{'active': show === 'visualize'}"
+               @click="drawShown('visualize')">
+          Cluster
+        </label>
+
+        <label class="btn btn-sm btn-secondary" v-bind:class="{'active': show === 'visualize-compact'}"
+               @click="drawShown('visualize-compact')">
+          Compact
+        </label>
+
+        <label v-if="association" class="btn btn-sm btn-secondary"
+               v-bind:class="{'active': show === 'visualize-reconciled'}" @click="drawShown('visualize-reconciled')">
+          Reconciled
+        </label>
+      </div>
+
+      <button type="button" aria-label="Close" class="close modal-header-close" @click="close()">×</button>
     </template>
 
     <div class="plot"></div>
@@ -39,6 +56,7 @@
         props: {
             matchId: Number,
             cluster: Object,
+            association: String,
         },
         computed: {
             label() {
@@ -54,8 +72,8 @@
             },
         },
         methods: {
-            showVisualization(show) {
-                this.show = show;
+            showVisualization(show = null) {
+                this.show = show || 'visualize';
                 this.$refs.visualization.show();
                 this.$refs.visualization.$on('shown', _ => this.drawShown());
             },
@@ -75,7 +93,10 @@
                 this.drawShown();
             },
 
-            drawShown() {
+            drawShown(show = null) {
+                if (show)
+                    this.show = show;
+
                 switch (this.show) {
                     case 'visualize-compact':
                         if (this.clusterGraphCompact) this.draw(this.clusterGraphCompact);

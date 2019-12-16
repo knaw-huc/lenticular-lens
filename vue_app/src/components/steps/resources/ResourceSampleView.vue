@@ -1,44 +1,58 @@
 <template>
-  <b-modal id="resource-sample-view" ref="resourceSampleView" size="xl"
+  <b-modal id="resource-sample-view" ref="resourceSampleView" size="xl" header-class="flex-column align-items-stretch"
            body-class="bg-light" dialog-class="modal-full-height" scrollable hide-footer static>
     <template v-slot:modal-header="{close}">
-      <h5 class="modal-title">Sample</h5>
+      <div class="d-flex">
+        <h5 class="modal-title">Sample</h5>
 
-      <span v-if="!total" class="badge badge-info align-self-center font-italic ml-4">Loading total size</span>
-      <span v-else class="badge badge-info align-self-center ml-4">Total: {{ total }}</span>
+        <span class="badge badge-info align-self-center ml-auto mr-4">
+          <span v-if="!total" class="font-italic">Loading total size</span>
+          <span v-else>Total: {{ total }}</span>
+        </span>
 
-      <button type="button" aria-label="Close" class="close" @click="close()">×</button>
+        <div class="btn-group-toggle mr-2" data-toggle="buttons">
+          <label class="btn btn-secondary btn-sm" v-bind:class="{'active': showPropertySelection}">
+            <input type="checkbox" autocomplete="off" v-model="showPropertySelection"/>
+            <fa-icon icon="cog"/>
+            Show property config
+          </label>
+        </div>
+
+        <button class="btn btn-secondary btn-sm" @click="saveProperties">
+          Save and reload
+        </button>
+
+        <button type="button" aria-label="Close" class="close modal-header-close" @click="close()">×</button>
+      </div>
+
+      <property-selection v-if="showPropertySelection" class="mt-2"
+                          :resource="resource" :properties="resource.properties"/>
     </template>
 
-    <property-selection label="Property selection" @save="saveProperties" :is-first="true"
-                        :resource="resource" :properties="resource.properties"/>
+    <resource-sample v-for="(sample, idx) in samples" :key="idx" :index="idx" :sample="sample"/>
 
-    <div class="mt-4">
-      <resource-sample v-for="(sample, idx) in samples" :key="idx" :index="idx" :sample="sample"/>
+    <infinite-loading :identifier="samplesIdentifier" @infinite="getSamples">
+      <template v-slot:spinner>
+        <loading class="mt-4"/>
+      </template>
 
-      <infinite-loading :identifier="samplesIdentifier" @infinite="getSamples">
-        <template v-slot:spinner>
-          <loading class="mt-4"/>
-        </template>
+      <template v-slot:no-more>
+        No more data
+      </template>
 
-        <template v-slot:no-more>
-          No more data
-        </template>
+      <template v-slot:no-results>
+        <template v-if="total === 0">This resource has no data</template>
+        <template v-else-if="!hasProperties">Please select a property</template>
+        <template v-else>Save selected properties to load results</template>
+      </template>
 
-        <template v-slot:no-results>
-          <template v-if="total === 0">This resource has no data</template>
-          <template v-else-if="!hasProperties">Please select a property</template>
-          <template v-else>Save selected properties to load results</template>
-        </template>
-
-        <template v-slot:error="{trigger}">
-          <div class="text-danger mb-2">
-            Failed to obtain samples
-          </div>
-          <button type="button" class="btn btn-sm btn-danger" @click="trigger">Retry</button>
-        </template>
-      </infinite-loading>
-    </div>
+      <template v-slot:error="{trigger}">
+        <div class="text-danger mb-2">
+          Failed to obtain samples
+        </div>
+        <button type="button" class="btn btn-sm btn-danger" @click="trigger">Retry</button>
+      </template>
+    </infinite-loading>
   </b-modal>
 </template>
 
@@ -59,6 +73,7 @@
                 total: null,
                 samples: [],
                 samplesIdentifier: +new Date(),
+                showPropertySelection: false,
             };
         },
         props: {

@@ -181,6 +181,10 @@ div#app::before {
   }
 }
 
+.modal-header .close.modal-header-close {
+  margin: -1rem -1rem -1rem 0;
+}
+
 .striped-container .striped:nth-of-type(even),
 .vs__dropdown-menu .vs__dropdown-option:nth-of-type(even) {
   background-color: mix($secondary, $light, 5%);

@@ -85,8 +85,7 @@
                     Overview of all links
                   </label>
 
-                  <label v-if="clustering" class="btn btn-secondary btn-sm"
-                         v-bind:class="{'active': showClusters}">
+                  <label v-if="clustering" class="btn btn-secondary btn-sm" v-bind:class="{'active': showClusters}">
                     <input type="checkbox" autocomplete="off" v-model="showClusters" @change="updateShow('clusters')"/>
                     <fa-icon icon="list"/>
                     Overview of all clusters
@@ -99,8 +98,18 @@
 
         <alignment-spec v-if="showInfo" :match="match"/>
 
-        <property-selection v-if="showPropertySelection" label="Property selection"
-                            :properties="match.properties" @save="saveProperties"/>
+        <sub-card v-if="showPropertySelection" id="properties-card" type="properties" label="Property selection"
+                  :has-margin-auto="true" :has-columns="true">
+          <template v-slot:columns>
+            <div class="col-auto ml-auto">
+              <button type="button" class="btn btn-info" @click="saveProperties">
+                Save
+              </button>
+            </div>
+          </template>
+
+          <property-selection class="mt-4" :properties="match.properties"/>
+        </sub-card>
 
         <sub-card v-if="showClusters && clustering" label="Clusters" id="clusters-list" type="clusters-list"
                   :open-card="openClusters" :has-collapse="true"
@@ -116,32 +125,16 @@
               <div class="col-auto">
                 <div class="btn-toolbar" role="toolbar" aria-label="Toolbar">
                   <div class="btn-group btn-group-toggle mr-2">
-                    <label v-if="showClusters" class="btn btn-secondary btn-sm"
-                           v-bind:class="{'active': showSelectedCluster}">
+                    <label class="btn btn-sm btn-secondary" v-bind:class="{'active': showSelectedCluster}">
                       <input type="checkbox" autocomplete="off" v-model="showSelectedCluster" @change="updateShow"/>
-                      <fa-icon icon="project-diagram"/>
+                      <fa-icon icon="info-circle"/>
                       Show selected cluster spec
                     </label>
-                  </div>
 
-                  <div class="btn-group btn-group-toggle">
-                    <button v-if="hasProperties" type="button" class="btn btn-sm btn-secondary"
-                            @click="showVisualization('visualize')">
+                    <label v-if="hasProperties" class="btn btn-sm btn-secondary" @click="showVisualization">
                       <fa-icon icon="project-diagram"/>
                       Visualize
-                    </button>
-
-                    <button v-if="hasProperties" type="button" class="btn btn-sm btn-secondary"
-                            @click="showVisualization('visualize-compact')">
-                      <fa-icon icon="project-diagram"/>
-                      Visualize compact
-                    </button>
-
-                    <button v-if="hasProperties && clustering.association" type="button"
-                            class="btn btn-sm btn-secondary" @click="showVisualization('visualize-reconciled')">
-                      <fa-icon icon="project-diagram"/>
-                      Visualize reconciled
-                    </button>
+                    </label>
                   </div>
                 </div>
               </div>
@@ -188,6 +181,7 @@
         v-if="showClusters && clustering && clusterIdSelected && hasProperties"
         :matchId="match.id"
         :cluster="selectedCluster"
+        :association="clustering.association"
         ref="visualization"/>
 
     <template v-if="showLinks">
@@ -347,8 +341,8 @@
                 this.linksIdentifier += 1;
             },
 
-            showVisualization(show) {
-                this.$refs.visualization.showVisualization(show);
+            showVisualization() {
+                this.$refs.visualization.showVisualization();
             },
 
             async saveProperties() {
