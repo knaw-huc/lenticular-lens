@@ -48,7 +48,7 @@ export default {
                     type: '',
                     choices: {
                         'First name': 'first_name',
-                        'Family name': 'family name',
+                        'Family name': 'family_name',
                     },
                 },
                 {
@@ -69,7 +69,7 @@ export default {
                     type: '',
                     choices: {
                         'First name': 'first_name',
-                        'Family name': 'family name',
+                        'Family name': 'family_name',
                     },
                 },
                 {
