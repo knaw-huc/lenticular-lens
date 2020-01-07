@@ -72,24 +72,29 @@ class Job:
                          (self.job_id, alignment), dict=True)
 
     def update_data(self, data):
-        (resources, mappings) = transform(data['resources'], data['mappings'])
+        if 'resources' in data and 'mappings' in data:
+            (resources, mappings) = transform(data['resources'], data['mappings'])
 
-        data['resources_form_data'] = dumps(data['resources'])
-        data['mappings_form_data'] = dumps(data['mappings'])
-        data['resources'] = dumps(resources)
-        data['mappings'] = dumps(mappings)
+            data['resources_form_data'] = dumps(data['resources'])
+            data['mappings_form_data'] = dumps(data['mappings'])
+            data['resources'] = dumps(resources)
+            data['mappings'] = dumps(mappings)
+        else:
+            resources = [], mappings = []
 
         with db_conn() as conn, conn.cursor() as cur:
             cur.execute(sql.SQL("""
-                    INSERT INTO reconciliation_jobs (job_id, %s) VALUES %s
-                    ON CONFLICT (job_id) DO 
-                    UPDATE SET (%s) = ROW %s, updated_at = NOW()
-                """), (
+                INSERT INTO reconciliation_jobs (job_id, %s) VALUES %s
+                ON CONFLICT (job_id) DO 
+                UPDATE SET (%s) = ROW %s, updated_at = NOW()
+            """), (
                 AsIs(', '.join(data.keys())),
                 tuple([self.job_id] + list(data.values())),
                 AsIs(', '.join(data.keys())),
                 tuple(data.values()),
             ))
+
+        return resources, mappings
 
     def update_alignment(self, alignment, data):
         with db_conn() as conn, conn.cursor() as cur:

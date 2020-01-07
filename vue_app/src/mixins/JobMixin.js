@@ -77,17 +77,12 @@ export default {
             });
         },
 
-        getResourceById(resourceId, resources = this.resources) {
-            return resources.find(res =>
-                (isId(resourceId) && res.id === parseInt(resourceId)) || res.label === resourceId);
+        getResourceById(resourceId) {
+            return this.resources.find(res => res.id === parseInt(resourceId));
         },
 
-        getResourceByDatasetId(datasetId, resources = this.resources) {
-            return resources.find(res => res.dataset.dataset_id === datasetId);
-        },
-
-        getMatchById(matchId, matches = this.matches) {
-            return matches.find(match => (isId(matchId) && match.id === parseInt(matchId)) || match.label === matchId);
+        getMatchById(matchId) {
+            return this.matches.find(match => match.id === parseInt(matchId));
         },
 
         getCleanPropertyName(property, propInfo) {
@@ -142,17 +137,6 @@ export default {
             this.job = job;
 
             if (this.job.resources) {
-                this.job.resources.forEach(res => {
-                    this.getRecursiveConditions(res.filter.conditions).forEach(condition => {
-                        if (isId(condition.property[0]))
-                            condition.property = condition.property.slice(1);
-                        condition.property = condition.property.filter(prop => prop !== '');
-                    });
-
-                    if (!res.hasOwnProperty('properties'))
-                        res.properties = [];
-                });
-
                 const resources = copy(this.job.resources);
 
                 const graphQlEndpoints = resources
@@ -168,25 +152,8 @@ export default {
                 this.resources = resources;
             }
 
-            if (this.job.mappings) {
-                this.job.mappings.forEach(match => {
-                    this.getRecursiveConditions(match.methods.conditions).forEach(matchCondition => {
-                        [...matchCondition.sources, ...matchCondition.targets].forEach(condition => {
-                            if (isId(condition.property[0]))
-                                condition.resource = condition.property.shift();
-                            condition.property = condition.property.filter(prop => prop !== '');
-                        });
-                    });
-
-                    match.properties = match.properties.map(prop => {
-                        if (Array.isArray(prop))
-                            return {resource: prop.shift(), property: prop};
-                        return prop;
-                    });
-                });
-
+            if (this.job.mappings)
                 this.matches = copy(this.job.mappings);
-            }
 
             await Promise.all([this.loadAlignments(), this.loadClusterings()]);
         },
@@ -322,10 +289,6 @@ export default {
 
 function copy(obj) {
     return JSON.parse(JSON.stringify(obj));
-}
-
-function isId(id) {
-    return Number.isInteger(id) || /^\d+$/.test(id);
 }
 
 function findId(objs) {

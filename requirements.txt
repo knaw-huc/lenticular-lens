@@ -1,6 +1,7 @@
 flask>=1.1.1
 gunicorn>=19.9.0
 jstyleson>=0.0.2
+schema>=0.7.1
 kitchen>=1.2.6
 psycopg2-binary
 networkx>=2.3

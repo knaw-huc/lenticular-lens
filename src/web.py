@@ -59,9 +59,13 @@ def association_files():
 @app.route('/job/create/', methods=['POST'])
 def job_create():
     job_id = hash_string(request.json['job_title'] + request.json['job_description'])
-
     job = Job(job_id)
-    job.update_data(request.json)
+
+    job.update_data({
+        'job_title': request.json['job_title'],
+        'job_description': request.json['job_description'],
+        'job_link': request.json['job_link'] if 'job_link' in request.json else None,
+    })
 
     return jsonify({'result': 'created', 'job_id': job_id})
 
@@ -69,9 +73,9 @@ def job_create():
 @app.route('/job/update/', methods=['POST'])
 def job_update():
     job_id = request.json['job_id']
-
     job = Job(job_id)
-    job.update_data({
+
+    (resources, mappings) = job.update_data({
         'job_title': request.json['job_title'],
         'job_description': request.json['job_description'],
         'job_link': request.json['job_link'],
@@ -79,7 +83,12 @@ def job_update():
         'mappings': request.json['mappings'] if 'mappings' in request.json else [],
     })
 
-    return jsonify({'result': 'updated', 'job_id': job_id})
+    return jsonify({
+        'result': 'updated',
+        'job_id': job_id,
+        'resources': [resource['id'] for resource in resources if 'id' in resource],
+        'mappings': [mapping['id'] for mapping in mappings if 'id' in mapping]
+    })
 
 
 @app.route('/job/<job:job>')

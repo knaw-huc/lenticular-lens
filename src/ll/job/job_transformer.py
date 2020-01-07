@@ -1,5 +1,91 @@
 from functools import reduce
-from ll.util.helpers import hash_string
+from schema import Schema, SchemaError, And, Or, Use, Optional
+from ll.util.helpers import hash_string, get_json_from_file
+
+filter_functions = get_json_from_file('filter_functions.json')
+matching_functions = get_json_from_file('matching_functions.json')
+transformers = get_json_from_file('transformers.json')
+
+
+class Condition:
+    def __init__(self, schema):
+        self.schema = schema
+
+    def validate(self, data):
+        if type(data) is not dict:
+            raise SchemaError('not an dict')
+
+        if 'type' in data and data['type'].upper() in ('AND', 'OR') and \
+                'conditions' in data and type(data['conditions']) is list:
+            conditions = [self.validate(c) for c in data['conditions']]
+            if len(conditions) == 0:
+                return None
+
+            return {'type': data['type'].upper(), 'conditions': conditions}
+
+        return self.schema.validate(data)
+
+
+resource_filter_condition_schema = Schema({
+    'property': [And(str, len)],
+    'type': And(str, Use(str.lower), lambda t: t in filter_functions.keys()),
+    Optional('value'): And(str, len),
+}, ignore_extra_keys=True)
+
+mapping_method_condition_schema = Schema({
+    'method_name': And(str, Use(str.upper), lambda m: m in matching_functions.keys()),
+    'method_value': dict,
+    'sources': [{
+        'resource': Use(int),
+        'property': [And(str, len)],
+        Optional('transformers', default=list): [{
+            'name': And(str, Use(str.upper), lambda n: n in transformers.keys()),
+            'parameters': dict
+        }]
+    }],
+    'targets': [{
+        'resource': Use(int),
+        'property': [And(str, len)],
+        Optional('transformers', default=list): [{
+            'name': And(str, Use(str.upper), lambda n: n in transformers.keys()),
+            'parameters': dict
+        }]
+    }]
+}, ignore_extra_keys=True)
+
+resource_schema = Schema({
+    'id': Use(int),
+    'label': And(str, len),
+    Optional('description', default=None): Or(str, None),
+    'dataset': {
+        'dataset_id': And(str, len),
+        'collection_id': And(str, len),
+        Optional('published', default=True): bool,
+        'timbuctoo_graphql': And(str, len),
+        Optional('timbuctoo_hsid'): Or(str, None),
+    },
+    Optional('filter', default=None): Or(None, Condition(resource_filter_condition_schema)),
+    Optional('limit', default=-1): And(int, lambda n: n > 0 or n == -1),
+    Optional('random', default=False): bool,
+    Optional('properties', default=list): [[str]],
+    Optional('related', default=list): list,
+    Optional('related_array', default=False): bool
+}, ignore_extra_keys=True)
+
+mapping_schema = Schema({
+    'id': Use(int),
+    'label': And(str, len),
+    Optional('description', default=None): Or(str, None),
+    Optional('is_association', default=False): bool,
+    Optional('match_against', default=None): Or(Use(int), None),
+    'sources': [Use(int)],
+    'targets': [Use(int)],
+    'methods': And(Condition(mapping_method_condition_schema), dict),
+    Optional('properties', default=list): [{
+        'resource': Use(int),
+        'property': [str],
+    }]
+}, ignore_extra_keys=True)
 
 
 def transform(resources_org, mappings_org):
@@ -54,6 +140,9 @@ def transform(resources_org, mappings_org):
         return res_condition
 
     def transform_mapping_condition(mapping_conditions, condition):
+        if condition['resource'] not in resource_label_by_id:
+            raise SchemaError('resource %s not valid' % condition['resource'])
+
         resource_label = resource_label_by_id[condition['resource']]
         resource = next(resource for resource in resources if resource['label'] == resource_label)
         property = create_references_for_property(resource, condition['property'])
@@ -68,6 +157,9 @@ def transform(resources_org, mappings_org):
         return mapping_conditions
 
     def transform_mapping_property(mapping_properties, property):
+        if '' in property['property'] or property['resource'] not in resource_label_by_id:
+            return mapping_properties
+
         resource_label = resource_label_by_id[property['resource']]
         resource = next(resource for resource in resources if resource['label'] == resource_label)
 
@@ -97,50 +189,49 @@ def transform(resources_org, mappings_org):
     resources = []
     mappings = []
 
-    ref_resources = []
-    resource_label_by_id = {resource['id']: resource['label'] for resource in resources_org}
-
     for resource_org in resources_org:
-        resource = {
-            'label': resource_org['label'],
-            'description': resource_org['description'] if 'description' in resource_org else '',
-            'dataset': resource_org['dataset'],
-            'properties': resource_org['properties'],
-            'limit': resource_org['limit'],
-            'random': resource_org['random'] if 'random' in resource_org else False,
-            'related': []
-        }
+        try:
+            resource = resource_schema.validate(resource_org)
+            resource['properties'] = [prop for prop in resource['properties'] if prop != '']
+            resources.append(resource)
+        except SchemaError:
+            pass
 
-        if 'filter' in resource_org and 'conditions' in resource_org['filter'] \
-                and len(resource_org['filter']['conditions']) > 0:
-            resource['filter'] = transform_conditions(resource_org['filter'], transform_resource_condition)
+    ref_resources = []
+    resource_label_by_id = {resource['id']: resource['label'] for resource in resources
+                            if 'id' in resource and 'label' in resource}
 
-        if 'related' in resource_org:
-            resource['related'] += [{
-                'resource': resource_label_by_id[int(rel['resource'])],
-                'local_property': rel['local_property'],
-                'remote_property': rel['remote_property']
-            } for rel in resource_org['related']]
+    for resource in resources:
+        resource['related'] = [{
+            'resource': resource_label_by_id[rel['resource']],
+            'local_property': rel['local_property'],
+            'remote_property': rel['remote_property'],
+        } for rel in resource['related'] if rel['resource'] in resource_label_by_id]
 
-        resources.append(resource)
+        if resource['filter']:
+            resource['filter'] = transform_conditions(resource['filter'], transform_resource_condition)
 
     for mapping_org in mappings_org:
-        mappings.append({
-            'id': mapping_org['id'],
-            'label': mapping_org['label'],
-            'description': mapping_org['description'] if 'description' in mapping_org else '',
-            'is_association': mapping_org['is_association'],
-            'match_against': mapping_org['match_against'] if 'match_against' in mapping_org else None,
-            'sources': [resource_label_by_id[resource] for resource in mapping_org['sources'] if resource != ''],
-            'targets': [resource_label_by_id[resource] for resource in mapping_org['targets'] if resource != ''],
-            'methods': transform_conditions(mapping_org['methods'], lambda condition: {
+        try:
+            mapping = mapping_schema.validate(mapping_org)
+
+            for resource in (mapping['sources'] + mapping['targets']):
+                if resource not in resource_label_by_id:
+                    raise SchemaError('resource %s not valid' % resource)
+
+            mapping['sources'] = [resource_label_by_id[resource] for resource in mapping['sources']],
+            mapping['targets'] = [resource_label_by_id[resource] for resource in mapping['targets']],
+            mapping['methods'] = transform_conditions(mapping['methods'], lambda condition: {
                 'method_name': condition['method_name'],
                 'method_value': condition['method_value'],
                 'sources': reduce(transform_mapping_condition, condition['sources'], {}),
                 'targets': reduce(transform_mapping_condition, condition['targets'], {}),
-            }),
-            'properties': reduce(transform_mapping_property, mapping_org['properties'], [])
-        })
+            })
+            mapping['properties'] = reduce(transform_mapping_property, mapping['properties'], [])
+
+            mappings.append(mapping)
+        except SchemaError:
+            pass
 
     resources += ref_resources
 

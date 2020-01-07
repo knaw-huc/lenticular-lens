@@ -27,12 +27,11 @@
 
           <div v-if="getTransformerTemplate(transformer).items.length > 0" class="col-auto pr-0 form-inline">
             <template v-for="item in getTransformerTemplate(transformer).items">
-              <label class="small mr-2" v-if="item.label" :for="`transformer_${idx}_${item.key}`">
+              <label class="small mr-2" v-if="item.label">
                 {{ item.label }}
               </label>
 
-              <input :id="`transformer_${idx}_${item.key}`"
-                     class="form-control form-control-sm mr-2" v-model="transformer.parameters[item.key]"
+              <input class="form-control form-control-sm mr-2" v-model="transformer.parameters[item.key]"
                      v-bind:class="{'is-invalid': errors.includes(`transformer_value_${idx}_${item.key}`)}">
 
               <div class="invalid-feedback inline-feedback"
