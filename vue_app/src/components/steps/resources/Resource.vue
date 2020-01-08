@@ -412,16 +412,16 @@
                 if (event) event.target.blur();
 
                 this.resource.related.push({
-                    'resource': '',
-                    'local_property': '',
-                    'remote_property': '',
+                    resource: '',
+                    local_property: '',
+                    remote_property: '',
                 });
             },
 
             addFilterCondition(group) {
                 group.conditions.push({
                     type: '',
-                    property: [this.resource.id, ''],
+                    property: [''],
                 });
             },
 

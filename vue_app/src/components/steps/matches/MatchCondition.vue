@@ -85,6 +85,7 @@
         <match-condition-property v-for="(conditionProperty, index) in condition[resourcesKey]"
                                   :key="index" :condition-property="conditionProperty"
                                   :allow-delete="allowDeleteForIndex(index, conditionProperty, resourcesKey)"
+                                  :is-first="index === 0"
                                   @clone="cloneProperty(resourcesKey, index, conditionProperty)"
                                   @delete="condition[resourcesKey].splice(index, 1)"
                                   ref="matchConditionProperties"/>

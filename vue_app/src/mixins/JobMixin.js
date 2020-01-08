@@ -23,18 +23,19 @@ export default {
                 id: findId(this.resources),
                 description: '',
                 dataset: {
-                    timbuctoo_graphql: 'https://repository.goldenagents.org/v5/graphql',
-                    timbuctoo_hsid: null,
                     dataset_id: '',
                     collection_id: '',
                     published: true,
+                    timbuctoo_graphql: 'https://repository.goldenagents.org/v5/graphql',
+                    timbuctoo_hsid: null,
                 },
                 filter: {
                     type: 'AND',
                     conditions: [],
                 },
-                properties: [],
                 limit: -1,
+                random: false,
+                properties: [],
                 related: [],
                 related_array: false,
             });
@@ -43,17 +44,17 @@ export default {
         addMatch() {
             this.matches.unshift({
                 id: findId(this.matches),
+                label: 'Alignment ' + (this.matches.length + 1),
                 description: '',
                 is_association: false,
-                label: 'Alignment ' + (this.matches.length + 1),
+                match_against: null,
                 sources: [],
                 targets: [],
-                properties: [],
-                match_against: null,
                 methods: {
                     type: 'AND',
                     conditions: [],
                 },
+                properties: []
             });
         },
 

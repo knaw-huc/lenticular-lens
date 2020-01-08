@@ -1,5 +1,5 @@
 <template>
-  <div class="ml-5 p-3 border-top">
+  <div class="ml-5 p-3" v-bind:class="{'border-top': !isFirst}">
     <property :resource="$root.getResourceById(conditionProperty.resource)"
               :property="conditionProperty.property" :allow-delete="allowDelete"
               @clone="$emit('clone')" @delete="$emit('delete')" ref="propertyComponent"/>
@@ -68,6 +68,10 @@
             allowDelete: {
                 type: Boolean,
                 default: true,
+            },
+            isFirst: {
+                type: Boolean,
+                default: false,
             },
         },
         methods: {

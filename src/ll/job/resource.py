@@ -43,7 +43,7 @@ class Resource:
     @property
     def filter_sql(self):
         return self.r_get_filter_sql(self.__data['filter']) \
-            if 'filter' in self.__data else psycopg2_sql.SQL('')
+            if 'filter' in self.__data and self.__data['filter'] else psycopg2_sql.SQL('')
 
     @property
     def limit(self):

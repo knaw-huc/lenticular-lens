@@ -219,8 +219,8 @@ def transform(resources_org, mappings_org):
                 if resource not in resource_label_by_id:
                     raise SchemaError('resource %s not valid' % resource)
 
-            mapping['sources'] = [resource_label_by_id[resource] for resource in mapping['sources']],
-            mapping['targets'] = [resource_label_by_id[resource] for resource in mapping['targets']],
+            mapping['sources'] = [resource_label_by_id[resource] for resource in mapping['sources']]
+            mapping['targets'] = [resource_label_by_id[resource] for resource in mapping['targets']]
             mapping['methods'] = transform_conditions(mapping['methods'], lambda condition: {
                 'method_name': condition['method_name'],
                 'method_value': condition['method_value'],

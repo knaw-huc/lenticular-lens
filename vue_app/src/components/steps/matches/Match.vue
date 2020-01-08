@@ -258,12 +258,12 @@
                 group.conditions.push({
                     method_name: '',
                     method_value: {},
-                    sources: this.match.sources.map(resource => {
-                        return {property: [resource, ''], transformers: []};
-                    }),
-                    targets: this.match.targets.map(resource => {
-                        return {property: [resource, ''], transformers: []};
-                    }),
+                    sources: this.match.sources
+                        .filter(resource => resource !== '')
+                        .map(resource => ({resource, property: [''], transformers: []})),
+                    targets: this.match.targets
+                        .filter(resource => resource !== '')
+                        .map(resource => ({resource, property: [''], transformers: []})),
                 });
             },
 
@@ -272,33 +272,27 @@
                 this.match[resourcesKey].push('');
             },
 
-            updateConditions(group, resourcesKey, value = null, index = null) {
-                group.conditions.forEach(condition => {
-                    if (value !== null)
-                        condition[resourcesKey].push({property: [value, ''], transformers: []});
-                    else if (index !== null)
-                        condition[resourcesKey].splice(index, 1);
+            updateMatchResource(resourcesKey, resourceIndex, resourceId) {
+                const oldResourceId = this.match[resourcesKey][resourceIndex];
 
-                    if (condition.conditions)
-                        this.updateConditions(condition, resourcesKey, value, index);
+                this.$set(this.match[resourcesKey], resourceIndex, resourceId);
+                this.$root.getRecursiveConditions(this.match.methods).forEach(condition => {
+                    condition[resourcesKey].push({resource: resourceId, property: [''], transformers: []});
                 });
-            },
 
-            updateMatchResource(resourcesKey, resourceIndex, value) {
-                const resourceId = this.match[resourcesKey][resourceIndex];
-
-                this.$set(this.match[resourcesKey], resourceIndex, value);
-                this.updateConditions(this.match.methods, resourcesKey, value);
-
-                this.updateProperties(resourceId, value);
+                this.updateProperties(oldResourceId, resourceId);
             },
 
             deleteMatchResource(resourcesKey, resourceIndex) {
                 const resourceId = this.match[resourcesKey][resourceIndex];
-                if (this.match[resourcesKey].length < 1)
-                    this.addMatchResource(resourcesKey);
 
-                this.updateConditions(this.match.methods, resourcesKey, null, resourceIndex);
+                this.$root.getRecursiveConditions(this.match.methods).forEach(condition => {
+                    condition[resourcesKey]
+                        .map((resourceCondition, idx) => resourceCondition.resource === resourceId ? idx : null)
+                        .filter(idx => idx !== null)
+                        .sort((idxA, idxB) => idxA > idxB ? -1 : 1)
+                        .forEach(idx => condition[resourcesKey].splice(idx, 1));
+                });
                 this.$delete(this.match[resourcesKey], resourceIndex);
 
                 this.updateProperties(resourceId);

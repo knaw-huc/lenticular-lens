@@ -80,7 +80,8 @@ class Job:
             data['resources'] = dumps(resources)
             data['mappings'] = dumps(mappings)
         else:
-            resources = [], mappings = []
+            resources = []
+            mappings = []
 
         with db_conn() as conn, conn.cursor() as cur:
             cur.execute(sql.SQL("""
