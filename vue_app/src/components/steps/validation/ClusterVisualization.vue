@@ -73,7 +73,7 @@
         },
         methods: {
             showVisualization(show = null) {
-                this.show = show || 'visualize';
+                this.show = show || 'visualize-compact';
                 this.$refs.visualization.show();
                 this.$refs.visualization.$on('shown', _ => this.drawShown());
             },

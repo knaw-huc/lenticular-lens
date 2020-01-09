@@ -13,7 +13,7 @@
                  ref="editInput" required @blur="editing = false" @input="$emit('input', $event.target.value)"/>
 
           <div v-else-if="!label" class="row" @mouseenter="hovering = true" @mouseleave="hovering = false">
-            <div class="h2 col" v-b-toggle="id">{{ value }}</div>
+            <div class="h2 col" v-b-toggle="hasCollapse ? id : {}">{{ value }}</div>
 
             <button type="button" class="btn col-auto p-0" title="Click to Edit"
                     v-bind:class="{'invisible': !hovering}" @click="editing = true">
@@ -21,7 +21,7 @@
             </button>
           </div>
 
-          <div v-else class="h2" v-b-toggle="id">{{ label }}</div>
+          <div v-else class="h2" v-b-toggle="hasCollapse ? id : {}">{{ label }}</div>
         </div>
 
         <slot name="title-columns"></slot>
@@ -33,7 +33,7 @@
     </div>
 
     <b-collapse v-if="hasCollapse" :id="id" :ref="id" :accordion="type + '-accordion'" :visible="openCard"
-                @show="$emit('show')" @hide="onClosing" @input="withInput($event)">
+                @show="$emit('show')" @hide="$emit('hide')" @input="withInput($event)">
       <slot></slot>
     </b-collapse>
 
@@ -86,11 +86,6 @@
             withInput(evt) {
                 this.visible = evt;
                 evt ? this.$emit('show') : this.$emit('hide');
-            },
-
-            onClosing() {
-                this.$emit('hide');
-                this.$refs.cardElem.scrollIntoView();
             },
         },
         updated() {

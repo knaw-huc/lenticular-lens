@@ -1,6 +1,6 @@
 <template>
   <card :id="'resource_' + resource.id" type="resources" v-model="resource.label"
-        :has-error="errors.length > 0" :has-handle="true">
+        :has-error="errors.length > 0" :has-handle="true" @show="$emit('show')" @hide="$emit('hide')">
     <template v-slot:title-columns>
       <div class="col-auto" v-if="resource.dataset.collection_id !== ''">
         <button type="button" class="btn btn-info" @click="runSample">

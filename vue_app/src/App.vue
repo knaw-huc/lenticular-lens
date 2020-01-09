@@ -39,13 +39,17 @@
           </template>
 
           <draggable v-model="$root.resources" group="resources" handle=".handle">
-            <resource
-                v-for="(resource, index) in $root.resources"
-                :key="resource.id"
-                :resource="resource"
-                @duplicate="duplicateResource($event)"
-                @remove="$root.resources.splice(index, 1)"
-                ref="resourceComponents"/>
+            <b-collapse v-for="(resource, index) in $root.resources"
+                        :key="resource.id" :id="'resource_card_' + resource.id"
+                        :visible="resourceOpen === resource.id || resourceOpen === null">
+              <resource
+                  :resource="resource"
+                  @duplicate="duplicateResource($event)"
+                  @remove="$root.resources.splice(index, 1)"
+                  @show="resourceOpen = resource.id"
+                  @hide="resourceOpen = null"
+                  ref="resourceComponents"/>
+            </b-collapse>
           </draggable>
         </tab-content-structure>
       </tab-content>
@@ -59,25 +63,34 @@
           </template>
 
           <draggable v-model="$root.matches" group="matches" handle=".handle">
-            <match
-                v-for="(match, index) in $root.matches"
-                :match="match"
-                :key="match.id"
-                @duplicate="duplicateMatch($event)"
-                @submit="submit"
-                @remove="$root.matches.splice(index, 1)"
-                @update:label="match.label = $event"
-                ref="matchComponents"/>
+            <b-collapse v-for="(match, index) in $root.matches"
+                        :key="match.id" :id="'match_card_' + match.id"
+                        :visible="matchOpen === match.id || matchOpen === null">
+              <match
+                  :match="match"
+                  @duplicate="duplicateMatch($event)"
+                  @submit="submit"
+                  @remove="$root.matches.splice(index, 1)"
+                  @update:label="match.label = $event"
+                  @show="matchOpen = match.id"
+                  @hide="matchOpen = null"
+                  ref="matchComponents"/>
+            </b-collapse>
           </draggable>
         </tab-content-structure>
       </tab-content>
 
       <tab-content title="Validation">
         <tab-content-structure title="Validation" :tab-error="tabError" :is-saved="isSaved">
-          <match-validation
-              v-for="match in matchesWithResults"
-              :match="match"
-              :key="match.id"/>
+          <b-collapse v-for="match in matchesWithResults"
+                      :key="match.id" :id="'match_validation_card_' + match.id"
+                      :visible="matchValidationOpen === match.id || matchValidationOpen === null">
+            <match-validation
+                :match="match"
+                :key="match.id"
+                @show="matchValidationOpen = match.id"
+                @hide="matchValidationOpen = null"/>
+          </b-collapse>
         </tab-content-structure>
       </tab-content>
 
@@ -169,6 +182,9 @@
                 isLoading: false,
                 isUpdating: false,
                 isDownloading: false,
+                resourceOpen: null,
+                matchOpen: null,
+                matchValidationOpen: null,
                 steps: ['research', 'collections', 'alignments', 'validation', 'export'],
             };
         },

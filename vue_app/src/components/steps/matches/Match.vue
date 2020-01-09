@@ -1,6 +1,7 @@
 <template>
   <card :id="'match_' + match.id" type="matches" v-model="match.label"
-        :has-error="errors.length > 0" :has-handle="true" :has-extra-row="!!alignment">
+        :has-error="errors.length > 0" :has-handle="true" :has-extra-row="!!alignment"
+        @show="$emit('show')" @hide="$emit('hide')">
     <template v-slot:title-columns>
       <div class="col-auto">
         <b-button variant="info" @click="$emit('duplicate', match)">Duplicate</b-button>

@@ -321,6 +321,11 @@
 
                 if (this.showAllLinks || this.showClusters)
                     this.resetLists();
+
+                if (this.showInfo || this.showPropertySelection || this.showAllLinks || this.showClusters)
+                    this.$emit('show');
+                else
+                    this.$emit('hide');
             },
 
             resetLists() {
