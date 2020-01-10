@@ -31,4 +31,4 @@ COPY --from=builder /src/static/core /app/static/core
 ENV FLASK_APP=/app/web_server/app.py
 ENV FLASK_ENV=production
 
-CMD ["gunicorn", "-b", ":8000", "-t", "60", "web:app"]
+CMD ["gunicorn", "-b", ":8000", "-t", "60", "-w", "4", "web:app"]

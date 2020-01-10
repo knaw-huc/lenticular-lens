@@ -18,11 +18,21 @@ and is also able to report on manual corrections and the amount of manual valida
     1. [Mappings](#mappings)
     1. [Condition groups](#condition-groups)
     1. [Property paths](#property-paths)
+1. [Matching methods](#matching-methods)
+    1. [Levenshtein distance](#levenshtein-distance)
+    1. [Soundex](#soundex)
+    1. [Bloothooft Reduction](#bloothooft-reduction)
+    1. [Trigram distance](#trigram-distance)
+    1. [Time Delta](#time-delta)
+    1. [Same Year/Month](#same-yearmonth)
+    1. [Distance is between](#distance-is-between)
+    1. [Normalized / Similarity](#normalized--similarity)
+    1. [Future matching methods](#future-matching-methods)
 
 ## Installation with Docker
 
 1. Make sure Docker and Docker Compose are installed
-    * _For Windows and Mac users: install [Docker Desktop]( https://www.docker.com/products/docker-desktop)_
+    * _For Windows and Mac users: install [Docker Desktop](https://www.docker.com/products/docker-desktop)_
 1. Use the provided `docker-compose.yml` as a baseline
 1. Run `docker-compose up`
 1. Visit http://localhost:8000 in your browser
@@ -278,11 +288,11 @@ of the specific resources to use for a particular job.
     "dataset": {                // The data to use from Timbuctoo
         "dataset_id": "ufab7d657a250e3461361c982ce9b38f3816e0c4b__ecartico_20190805",   // The identifier of the dataset to use
         "collection_id": "foaf_Person",                                                 // The identifier of the collection from this dataset to use
-        "published": true,                                                              // Whether the dataset is published on Timbuctoo or not
+        "published": true,                                                              // Whether the dataset is published on Timbuctoo or not; optional field, defaults to 'true'
         "timbuctoo_graphql": "https://repository.goldenagents.org/v5/graphql",          // The GraphQL interface of the Timbuctoo instance
-        "timbuctoo_hsid": null                                                          // The hsid if the dataset is not published
+        "timbuctoo_hsid": null                                                          // The hsid if the dataset is not published; optional field
     },
-    "filter": {                 // The filter configuration to obtain only a subset of the data from Timbuctoo; an empty object is allowed to not filter out anything
+    "filter": {                 // The filter configuration to obtain only a subset of the data from Timbuctoo; optional field
         "conditions": [{        // The filter is composed of condition groups
             "property": ["foaf_name"],    // The property path to which this condition applies
             "type": 'not_ilike',          // The type of filtering to apply; see table below for allowed values
@@ -290,9 +300,9 @@ of the specific resources to use for a particular job.
         }],
         "type": "AND"
     },
-    "limit": -1,                // Apply a limit on the number of entities to obtain; or -1 for no limit
+    "limit": -1,                // Apply a limit on the number of entities to obtain or -1 for no limit; optional field, defaults to '-1'
     "random": false,            // Randomize the entities to obtain or not; optional field, defaults to 'false'
-    "properties": [             // A list of property paths to use for obtaining sample data
+    "properties": [             // A list of property paths to use for obtaining sample data; optional field
         ["foaf_name"]
     ],
     "related": [],              // Work in progress
@@ -321,7 +331,7 @@ of the alignments to perform for a particular job.
     "id": 1,                    // An integer as identifier  
     "label": "My alignment",    // The label of the resource in the GUI
     "description": "",          // A description of this mapping by the user; optional field
-    "is_association": false,    // Work in progress
+    "is_association": false,    // Work in progress; optional field, defaults to 'false'
     "match_against": 2,         // The resulting linkset of this alignment should be matched against the resulting linkset of another alignment with the given identifier; optional field
     "sources": [1],             // The identifiers of resources to use as source
     "targets": [1],             // The identifiers of resources to use as targets
@@ -347,7 +357,7 @@ of the alignments to perform for a particular job.
         }],
         "type": "AND"
     },
-    "properties": [{            // A list of property paths to use for obtaining data while reviewing the linkset
+    "properties": [{            // A list of property paths to use for obtaining data while reviewing the linkset; optional field
         "resource": 1,                        // The identifier of the resource to use
         "property": ["schema_birthDate"]      // The property path
     }]
@@ -366,6 +376,8 @@ of the alignments to perform for a particular job.
 | Time Delta                        | `TIME_DELTA`                  | `days` (Number of days), `multiplier` (Multiplier)                                                |
 | Same Year/Month                   | `SAME_YEAR_MONTH`             | `date_part` (Year, month, or both: `year`, `month`, `year_month`)                                 |
 | Distance is between               | `DISTANCE_IS_BETWEEN`         | `distance_start` (Start), `distance_end` (End)                                                    |
+
+_Note: See [Matching methods](#matching-methods) for a description and examples of these matching methods._
 
 | Transformer   | Key           | Values                    |
 | :------------ | :------------ | :------------------------ | 
@@ -406,7 +418,7 @@ As conditions may contain other conditions, complex conditions can be expressed.
 ### Property paths
 
 A property path is a list of values that expresses the path in the linked data from the entity to a specific property.
-The list has at least one value, the property to select on the entity. 
+The list has at least one value: the property to select on the entity. 
 If the property is a reference to another entity, 
 you have to specify another value in the list with the id of the entity it points to.
 Then you can select the specific property on the referenced entity.
@@ -431,3 +443,94 @@ there is a special value `__value__` that you can use.
     ["schema_parent", "__value__"]
 ]
 ```
+
+## Matching methods
+
+### Exact Match
+
+Exact match is a string-based metric that allows for zero error 
+between a pair of sequence of characters (word or token). 
+It returns 0 in the event that there is at least one character mismatch or 1 for a perfect match.
+
+```
+Exact_Match(cat, chat) = 0
+Exact_Match(cat, cat) = 1
+```
+
+### Levenshtein distance
+
+Levenshtein distance is a string-based metric for computing the similarity between two sequences. 
+It translates to the number of character editing operations required to change one sequence into the other.
+
+**Character Edits:**
+- Insertion 
+- Deletion 
+- Substitution = (Deletion and insertion)
+    
+```
+Levenshtein(kitten, sitten) = 1
+Levenshtein(sitting, sittin) = 1
+Levenshtein(intention, execution) = 5
+```
+
+|**1**|**1**|**1**|**0**|**1**|**1**|**0**|**0**|**0**|**0**|
+|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+|  i  |  n  |  t  |  e  |     |  n  |  t  |  i  |  o  |  n  |
+|     |  e  |  x  |  e  |  c  |  u  |  t  |  i  |  o  |  n  | 
+
+### Soundex
+
+Soundex is a phonetic algorithm for indexing names by sound, as pronounced in English. 
+The goal is for homophones to be encoded to the same representation 
+so that they can be matched despite minor differences in spelling.
+
+```
+Soundex(Robert) = R163
+Soundex(Rupert) = R163
+Soundex(Rubin) = R150
+```
+
+### Bloothooft Reduction
+
+_TO DO_
+
+### Trigram distance
+
+_TO DO_
+
+### Time Delta
+
+_TO DO_
+
+### Same Year/Month
+
+_TO DO_
+
+### Distance is between
+
+_TO DO_
+
+### Normalized / Similarity
+
+Normalization is a function to bound the result of method between 0 and 1.
+Often meaning a score of 0 implies the dissimilarity between the pair of string while 1 implies a perfect match.
+
+```
+Levenshtein(intention, execution) = 5
+Length(intention) = 9
+Length(execution) = 9
+Relative_Similarity = 1 - (5 / 9) = 0.666
+```
+
+### Future matching methods
+
+Suggestions on other generic matching methods to add:
+- TF-IDF
+- N-Grams
+- Intermediate Dataset
+- Cosine Similarity
+- Jaro-Winkler
+- Needleman Wunsch
+- Smith-Waterman
+- Metaphone
+- ...
