@@ -1,6 +1,6 @@
 <template>
   <card :id="'resource_' + resource.id" type="resources" v-model="resource.label"
-        :has-error="errors.length > 0" :has-handle="true" @show="$emit('show')" @hide="$emit('hide')">
+        :has-error="errors.length > 0" :has-handle="true" @show="onToggle(true)" @hide="onToggle(false)">
     <template v-slot:title-columns>
       <div class="col-auto" v-if="resource.dataset.collection_id !== ''">
         <button type="button" class="btn btn-info" @click="runSample">
@@ -10,11 +10,11 @@
         <resource-sample-view :resource="resource" ref="resourceSampleView"/>
       </div>
 
-      <div class="col-auto">
+      <div v-if="!isOpen" class="col-auto">
         <b-button variant="info" @click="$emit('duplicate', resource)">Duplicate</b-button>
       </div>
 
-      <div v-if="!isUsedInAlignmentResults" class="col-auto">
+      <div v-if="!isOpen && !isUsedInAlignmentResults" class="col-auto">
         <button-delete v-on:click="$emit('remove')" title="Delete Collection"/>
       </div>
     </template>
@@ -255,6 +255,7 @@
             return {
                 prevAutoLabel: '',
                 datasetsLoaded: true,
+                isOpen: false,
             };
         },
         props: {
@@ -386,6 +387,11 @@
                 filtersGroupsValid = this.validateField('filters', filtersGroupsValid);
 
                 return collectionValid && datasetValid && limitValid && relatedValid && filtersGroupsValid;
+            },
+
+            onToggle(isOpen) {
+                this.isOpen = isOpen;
+                isOpen ? this.$emit('show') : this.$emit('hide');
             },
 
             clearFilter() {

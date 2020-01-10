@@ -33,7 +33,7 @@
       <tab-content title="Collections" :before-change="validateCollectionsTab">
         <tab-content-structure title="Collections" :tab-error="tabError" :is-saved="isSaved">
           <template v-slot:header>
-            <div class="col-auto">
+            <div v-if="resourceOpen === null" class="col-auto">
               <button-add @click="addResource" title="Add a Collection" size="2x"/>
             </div>
           </template>
@@ -57,7 +57,7 @@
       <tab-content title="Alignments" :before-change="validateAlignmentsTab">
         <tab-content-structure title="Alignments" :tab-error="tabError" :is-saved="isSaved">
           <template v-slot:header>
-            <div class="col-auto">
+            <div v-if="matchOpen === null" class="col-auto">
               <button-add @click="addMatch" title="Add an Alignment" size="2x"/>
             </div>
           </template>

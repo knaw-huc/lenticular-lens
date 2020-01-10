@@ -1,9 +1,9 @@
 <template>
   <card :id="'match_' + match.id" type="matches" v-model="match.label"
         :has-error="errors.length > 0" :has-handle="true" :has-extra-row="!!alignment"
-        @show="$emit('show')" @hide="$emit('hide')">
+        @show="onToggle(true)" @hide="onToggle(false)">
     <template v-slot:title-columns>
-      <div class="col-auto">
+      <div v-if="!isOpen" class="col-auto">
         <b-button variant="info" @click="$emit('duplicate', match)">Duplicate</b-button>
       </div>
 
@@ -52,7 +52,7 @@
         </select>
       </div>
 
-      <div v-if="!alignment" class="col-auto">
+      <div v-if="!isOpen && !alignment" class="col-auto">
         <button-delete @click="$emit('remove')" title="Delete this Alignment"/>
       </div>
     </template>
@@ -203,7 +203,8 @@
         },
         data() {
             return {
-                association: ''
+                association: '',
+                isOpen: false,
             };
         },
         computed: {
@@ -253,6 +254,11 @@
 
                 return sourcesValid && targetsValid
                     && sourcesSelectValid && targetsSelectValid && matchingMethodGroupValid && matchAgainstValid;
+            },
+
+            onToggle(isOpen) {
+                this.isOpen = isOpen;
+                isOpen ? this.$emit('show') : this.$emit('hide');
             },
 
             addMatchCondition(group) {
