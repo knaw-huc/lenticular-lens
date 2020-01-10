@@ -132,6 +132,7 @@ export default {
         },
         'DISTANCE_IS_BETWEEN': {
             label: 'Distance is between',
+            transformers: ['PARSE_NUMERIC'],
             items: [
                 {
                     key: 'distance_start',
@@ -158,6 +159,10 @@ export default {
                 label: 'Date format',
                 type: 'YYYY-MM-DD'
             }]
+        },
+        'PARSE_NUMERIC': {
+            label: 'Parse numeric',
+            items: []
         },
         'PREFIX': {
             label: 'Prefix',

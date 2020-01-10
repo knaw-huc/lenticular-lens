@@ -379,11 +379,12 @@ of the alignments to perform for a particular job.
 
 _Note: See [Matching methods](#matching-methods) for a description and examples of these matching methods._
 
-| Transformer   | Key           | Values                    |
-| :------------ | :------------ | :------------------------ | 
-| Parse date    | `PARSE_DATE`  | `format` (Date format)    |
-| Prefix        | `PREFIX`      | `prefix` (The prefix)     |
-| Suffix        | `SUFFIX`      | `suffix` (The suffix)     |
+| Transformer   | Key               | Values                    |
+| :------------ | :---------------- | :------------------------ | 
+| Parse date    | `PARSE_DATE`      | `format` (Date format)    |
+| Parse numeric | `PARSE_NUMERIC`   | 
+| Prefix        | `PREFIX`          | `prefix` (The prefix)     |
+| Suffix        | `SUFFIX`          | `suffix` (The suffix)     |
 
 ### Condition groups
 

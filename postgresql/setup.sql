@@ -60,11 +60,11 @@ CREATE TABLE IF NOT EXISTS alignments
 
 CREATE TABLE IF NOT EXISTS clusterings
 (
-    job_id           text not null,
-    alignment        int  not null,
-    clustering_type  text not null,
+    job_id           text    not null,
+    alignment        int     not null,
+    clustering_type  text    not null,
     association_file text,
-    status           text not null,
+    status           text    not null,
     status_message   text,
     kill             boolean not null,
     requested_at     timestamp,
@@ -98,36 +98,44 @@ EXCEPTION
 END;
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE FUNCTION to_numeric_immutable(text) RETURNS numeric
+    STRICT IMMUTABLE AS
+$$
+BEGIN
+    RETURN $1::numeric;
+EXCEPTION
+    WHEN OTHERS THEN
+        RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
 CREATE OR REPLACE FUNCTION get_date_part(text, text) RETURNS text
     STRICT IMMUTABLE PARALLEL SAFE AS
 $$
 DECLARE
-    year text;
+    year  text;
     month text;
 BEGIN
     year = substr($2, 0, 5);
     month = substr($2, 6, 2);
 
     CASE $1
-    WHEN 'year' THEN
-        IF year ~ E'^\\d+$' THEN
+        WHEN 'year' THEN IF year ~ E'^\\d+$' THEN
             RETURN year;
         ELSE
             RETURN NULL;
         END IF;
-    WHEN 'month' THEN
-        IF month ~ E'^\\d+$' THEN
+        WHEN 'month' THEN IF month ~ E'^\\d+$' THEN
             RETURN month;
         ELSE
             RETURN NULL;
         END IF;
-    WHEN 'year_month' THEN
-        IF year ~ E'^\\d+$' AND month ~ E'^\\d+$' THEN
+        WHEN 'year_month' THEN IF year ~ E'^\\d+$' AND month ~ E'^\\d+$' THEN
             RETURN year || '-' || month;
         ELSE
             RETURN NULL;
         END IF;
-    END CASE;
+        END CASE;
 END;
 $$ LANGUAGE plpgsql;
 

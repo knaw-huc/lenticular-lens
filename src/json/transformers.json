@@ -5,6 +5,9 @@
   "PARSE_DATE": {
     "sql_template": "to_date_immutable({property}, {format})"
   },
+  "PARSE_NUMERIC": {
+    "sql_template": "to_numeric_immutable({property})"
+  },
   "PREFIX": {
     "sql_template": "{prefix} || {property}"
   },
