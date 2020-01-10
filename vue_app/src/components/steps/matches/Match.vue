@@ -254,7 +254,6 @@
             },
 
             addMatchResource(resourcesKey, event) {
-                if (event) event.target.blur();
                 this.match[resourcesKey].push('');
             },
 

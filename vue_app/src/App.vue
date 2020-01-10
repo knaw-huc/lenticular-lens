@@ -266,13 +266,11 @@
                     this.$refs.formWizard.changeTab(this.$refs.formWizard.activeTabIndex, stepIndex);
             },
 
-            addResource(event) {
-                if (event) event.target.blur();
+            addResource() {
                 this.$root.addResource();
             },
 
-            addMatch(event) {
-                if (event) event.target.blur();
+            addMatch() {
                 this.$root.addMatch();
             },
 

@@ -228,7 +228,7 @@
           </div>
 
           <div class="form-group col-1 align-self-end">
-            <button-delete size="" v-on:click="resource.related.splice(index, 1)"/>
+            <button-delete size="sm" v-on:click="resource.related.splice(index, 1)"/>
           </div>
         </div>
       </sub-card>
@@ -414,9 +414,7 @@
                 this.clearFilter();
             },
 
-            addRelation(event) {
-                if (event) event.target.blur();
-
+            addRelation() {
                 this.resource.related.push({
                     resource: '',
                     local_property: '',

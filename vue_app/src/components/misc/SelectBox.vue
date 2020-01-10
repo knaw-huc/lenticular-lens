@@ -9,16 +9,16 @@
         inheritAttrs: false,
         props: ['value'],
         computed: {
-            inputListeners: function () {
-                return Object.assign({},
-                    this.$listeners,
-                    {
-                        input: (event) => {
+            inputListeners() {
+                return {
+                    ...this.$listeners,
+                    ...{
+                        input: event => {
                             event.target.blur();
                             this.$emit('input', event.target.value);
                         }
                     }
-                )
+                };
             }
         },
     }
