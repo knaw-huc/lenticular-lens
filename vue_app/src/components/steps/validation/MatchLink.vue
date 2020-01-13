@@ -39,18 +39,17 @@
           </button>
         </div>
 
-        <div v-if="link.source_values.length > 0 || link.target_values.length > 0"
-             class="row flex-nowrap border-top mt-2 pt-2">
+        <div v-if="sourceValues.length > 0 || targetValues.length > 0" class="row flex-nowrap border-top mt-2 pt-2">
           <div class="col">
             <div class="font-weight-bold mb-2">Source properties:</div>
 
-            <properties :properties="this.link.source_values"/>
+            <properties :properties="sourceValues"/>
           </div>
 
           <div class="col">
             <div class="font-weight-bold mb-2">Target properties:</div>
 
-            <properties :properties="this.link.target_values"/>
+            <properties :properties="targetValues"/>
           </div>
         </div>
       </div>
@@ -89,6 +88,14 @@
             link: Object,
         },
         computed: {
+            sourceValues() {
+                return this.link.source_values || [];
+            },
+
+            targetValues() {
+                return this.link.target_values || [];
+            },
+
             bgColor() {
                 if (this.link.valid === true)
                     return 'bg-success';

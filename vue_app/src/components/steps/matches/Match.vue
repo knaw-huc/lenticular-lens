@@ -26,7 +26,7 @@
         </b-button>
       </div>
 
-      <div v-if="alignmentStatus === 'done'" class="col-auto">
+      <div v-if="alignmentStatus === 'done' && alignment.distinct_links_count > 0" class="col-auto">
         <button v-if="clustering && clustering !== 'running'" type="button" class="btn btn-info my-1"
                 @click="runClustering($event)" :disabled="association === ''"
                 :title="association === '' ? 'Choose an association first' : ''">
@@ -34,15 +34,15 @@
           <template v-if="clusteringStatus === 'failed'">again</template>
         </button>
 
-        <button v-else-if="!clustering && clustering !== 'running'" type="button" class="btn btn-info my-1"
-                @click="runClustering($event)">
+        <button v-else-if="!clustering" type="button" class="btn btn-info my-1" @click="runClustering($event)">
           Cluster
           <template v-if="association !== ''"> &amp; Reconcile</template>
           <template v-if="clusteringStatus === 'failed'">again</template>
         </button>
       </div>
 
-      <div v-if="alignmentStatus === 'done' && $root.associationFiles" class="col-auto">
+      <div v-if="alignmentStatus === 'done' && alignment.distinct_links_count > 0 && $root.associationFiles"
+           class="col-auto">
         <select class="col-auto form-control association-select my-1" v-model="association"
                 :id="'match_' + match.id + '_association'">
           <option value="">No association</option>
