@@ -1,29 +1,29 @@
 <template>
   <div class="border shadow p-2">
-    <div v-for="resource in condition.sources" class="row">
+    <div v-for="resource in condition.sources" class="row align-items-center">
       <div class="col-auto">
         <property :resource="$root.getResourceById(resource.resource)"
                   :property="resource.property" :read-only="true" :small="true"/>
       </div>
 
-      <p class="font-weight-bold m-0" v-if="resource.transformers && resource.transformers.length > 0">
-        with transformers
-        <span class="text-info" v-html="resourceTransformersHumanReadable(resource)"/>
-      </p>
+      <div class="col-auto font-weight-bold p-0" v-if="resource.transformers && resource.transformers.length > 0">
+        with transformer
+        <span v-html="resourceTransformersHumanReadable(resource)"/>
+      </div>
     </div>
 
     <p class="font-weight-bold m-0">against</p>
 
-    <div v-for="resource in condition.targets" class="row">
+    <div v-for="resource in condition.targets" class="row align-items-center">
       <div class="col-auto">
         <property :resource="$root.getResourceById(resource.resource)"
                   :property="resource.property" :read-only="true" :small="true"/>
       </div>
 
-      <p class="font-weight-bold m-0" v-if="resource.transformers && resource.transformers.length > 0">
-        with transformers
-        <span class="text-info" v-html="resourceTransformersHumanReadable(resource)"/>
-      </p>
+      <div class="col-auto font-weight-bold p-0" v-if="resource.transformers && resource.transformers.length > 0">
+        with transformer
+        <span v-html="resourceTransformersHumanReadable(resource)"/>
+      </div>
     </div>
 
     <p class="font-weight-bold m-0">
@@ -75,10 +75,22 @@
                     })
                     .join(' and ');
             },
-
+        },
+        methods: {
             resourceTransformersHumanReadable(resource) {
                 return resource.transformers
-                    .map(transformer => this.transformers[transformer.name].label)
+                    .map(transformer => {
+                        const info = this.transformers[transformer.name];
+                        const params = info.items
+                            .map(item =>
+                                `<span class="text-info">${item.label} = ${transformer.parameters[item.key]}</span>`)
+                            .join(' and ');
+
+                        if (!info.items || info.items.length === 0)
+                            return `<span class="text-info">${info.label}</span>`;
+
+                        return `<span class="text-info">${info.label}</span> [ ${params} ]`;
+                    })
                     .join(' and ');
             },
         },
