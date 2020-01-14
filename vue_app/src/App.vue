@@ -103,9 +103,9 @@
         </tab-content-structure>
       </tab-content>
 
-      <template v-if="(props.activeTabIndex === 0  && !jobId) || [1,2].includes(props.activeTabIndex)"
+      <template v-if="(props.activeTabIndex === 0  && !$root.job) || [1,2].includes(props.activeTabIndex)"
                 slot="next" slot-scope="props">
-        <template v-if="props.activeTabIndex === 0 && !jobId">
+        <template v-if="props.activeTabIndex === 0 && !$root.job">
           <wizard-button
               :style="props.fillButtonStyle"
               :disabled="props.loading || researchForm === 'existing'"

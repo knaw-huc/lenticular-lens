@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div v-if="!isLoading && !failed && (researchForm === 'new' || jobId)" class="border p-4 mt-4 bg-light">
+    <div v-if="!isLoading && (researchForm === 'new' || $root.job)" class="border p-4 mt-4 bg-light">
       <div class="form-group">
         <label class="h3" for="research">Research Question</label>
         <textarea class="form-control" id="research" v-model="title"
@@ -42,7 +42,7 @@
 
         <div class="col-auto">
           <b-button @click="saveResearch" variant="info">
-            {{ jobId ? 'Update' : 'Create' }}
+            {{ $root.job ? 'Update' : 'Create' }}
           </b-button>
         </div>
       </div>
@@ -123,9 +123,9 @@
 
             saveResearch() {
                 if (this.validateResearch()) {
-                    const event = this.jobId ? 'update' : 'create';
+                    const event = this.$root.job ? 'update' : 'create';
                     this.$emit(event, {
-                        job_id: this.jobId || undefined,
+                        job_id: this.$root.job ? this.jobId : undefined,
                         job_title: this.title,
                         job_description: this.description,
                         job_link: this.link,
