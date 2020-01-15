@@ -7,6 +7,7 @@ from werkzeug.routing import BaseConverter
 
 from ll.job.data import Job, ExportLinks
 
+from ll.util.logging import config_logger
 from ll.util.helpers import hash_string, get_association_files
 
 from ll.data.collection import Collection
@@ -22,6 +23,8 @@ class JobConverter(BaseConverter):
     def to_url(self, job):
         return job.job_id
 
+
+config_logger()
 
 app = Flask(__name__)
 app.url_map.converters['job'] = JobConverter
@@ -126,6 +129,7 @@ def resource_sample(job, resource_label):
         return jsonify(job.get_resource_sample_total(resource_label))
 
     return jsonify(job.get_resource_sample(resource_label,
+                                           invert=request.args.get('invert', default=False) == 'true',
                                            limit=request.args.get('limit', type=int),
                                            offset=request.args.get('offset', 0, type=int)))
 

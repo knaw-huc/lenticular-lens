@@ -43,11 +43,11 @@ Vue.component('sub-card', SubCard);
 import {library} from '@fortawesome/fontawesome-svg-core';
 import {faQuestionCircle} from '@fortawesome/free-regular-svg-icons';
 import {
-    faCopy, faChevronDown, faArrowRight, faPlus, faTrashAlt, faPencilAlt, faCheck, faTimes,
+    faCopy, faChevronDown, faArrowRight, faPlus, faTrashAlt, faPencilAlt, faFilter, faCheck, faTimes,
     faInfoCircle, faAlignJustify, faProjectDiagram, faList, faCog, faGripHorizontal, faFileExport
 } from '@fortawesome/free-solid-svg-icons';
 
-library.add(faQuestionCircle, faCopy, faChevronDown, faArrowRight, faPlus, faTrashAlt, faPencilAlt,
+library.add(faQuestionCircle, faCopy, faChevronDown, faArrowRight, faPlus, faTrashAlt, faPencilAlt, faFilter,
     faCheck, faTimes, faInfoCircle, faAlignJustify, faProjectDiagram, faList, faCog, faGripHorizontal, faFileExport);
 
 Vue.filter('capitalize', function (value) {

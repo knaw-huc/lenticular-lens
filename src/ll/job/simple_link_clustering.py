@@ -1,4 +1,7 @@
-import ll.Generic.Utility as Ut
+import logging
+from ll.util.helpers import hasher, to_nt_format
+
+log = logging.getLogger(__name__)
 
 
 class SimpleLinkClustering:
@@ -23,17 +26,21 @@ class SimpleLinkClustering:
         self.clusters = dict()
         self.root = dict()
 
+        log.info('Iterating through the links')
+
         for link in self.links_iter:
             if not self.stop:
                 self.add_link_to_cluster(link['source'], link['target'])
                 self.links_processed += 1
+
+        log.info('Processing the clusters for unique id and preparing for serialisation')
 
         self.all_links_processed = True
         for data in list(self.clusters.values()):
             if not self.stop:
                 smallest_hash = None
                 for node in data['nodes']:
-                    hashed = Ut.hasher(Ut.hasher(node))
+                    hashed = hasher(hasher(node))
                     if not smallest_hash or hashed < smallest_hash:
                         smallest_hash = hashed
 
@@ -43,9 +50,11 @@ class SimpleLinkClustering:
 
                 yield {'id': cluster_id, 'nodes': data['nodes'], 'links': data['links']}
 
+        log.info('Clustering is completed')
+
     def add_link_to_cluster(self, subject, t_object):
-        child_1 = Ut.to_nt_format(subject.strip()) if self.convert_to_nt_format else subject.strip()
-        child_2 = Ut.to_nt_format(t_object.strip()) if self.convert_to_nt_format else t_object.strip()
+        child_1 = to_nt_format(subject.strip()) if self.convert_to_nt_format else subject.strip()
+        child_2 = to_nt_format(t_object.strip()) if self.convert_to_nt_format else t_object.strip()
 
         has_parent_1 = child_1 in self.root
         has_parent_2 = child_2 in self.root

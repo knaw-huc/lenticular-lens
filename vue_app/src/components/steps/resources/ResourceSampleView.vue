@@ -5,17 +5,28 @@
       <div class="d-flex">
         <h5 class="modal-title">Sample</h5>
 
-        <span class="badge badge-info align-self-center ml-auto mr-4">
-          <span v-if="!total" class="font-italic">Loading total size</span>
-          <span v-else>Total: {{ total }}</span>
+        <span class="align-self-center small ml-auto mr-4" v-bind:class="{'font-italic': !total}">
+          <template v-if="!total">Loading total size</template>
+          <template v-else>
+            <span class="font-weight-bold">Total:</span>
+            {{ total.toLocaleString('en') }} / {{ totalResource.toLocaleString('en') }}
+          </template>
         </span>
 
-        <div class="btn-group-toggle mr-2" data-toggle="buttons">
-          <label class="btn btn-secondary btn-sm" v-bind:class="{'active': showPropertySelection}">
-            <input type="checkbox" autocomplete="off" v-model="showPropertySelection"/>
-            <fa-icon icon="cog"/>
-            Show property config
-          </label>
+        <div class="btn-toolbar" role="toolbar">
+          <div class="btn-group btn-group-toggle mr-2" data-toggle="buttons">
+            <label class="btn btn-secondary btn-sm" v-bind:class="{'active': showPropertySelection}">
+              <input type="checkbox" autocomplete="off" v-model="showPropertySelection"/>
+              <fa-icon icon="cog"/>
+              Show property config
+            </label>
+
+            <label class="btn btn-secondary btn-sm" v-bind:class="{'active': showFilteredOut}">
+              <input type="checkbox" autocomplete="off" v-model="showFilteredOut" @change="resetSample(false)"/>
+              <fa-icon icon="filter"/>
+              Show filtered out
+            </label>
+          </div>
         </div>
 
         <button class="btn btn-secondary btn-sm" @click="saveProperties">
@@ -41,7 +52,9 @@
       </template>
 
       <template v-slot:no-results>
-        <template v-if="total === 0">This resource has no data</template>
+        <template v-if="(!showFilteredOut && total === 0) || (showFilteredOut && total === totalResource)">
+          This resource has no data
+        </template>
         <template v-else-if="!hasProperties">Please select a property</template>
         <template v-else>Save selected properties to load results</template>
       </template>
@@ -74,24 +87,37 @@
                 samples: [],
                 samplesIdentifier: +new Date(),
                 showPropertySelection: false,
+                showFilteredOut: false,
             };
         },
         props: {
             'resource': Object,
         },
         computed: {
+            totalResource() {
+                const datasets = this.$root.getDatasets(
+                    this.resource.dataset.timbuctoo_graphql, this.resource.dataset.timbuctoo_hsid);
+
+                return datasets[this.resource.dataset.dataset_id]
+                    .collections[this.resource.dataset.collection_id]
+                    .total;
+            },
+
             hasProperties() {
                 return this.resource.properties.length > 0 &&
                     !this.resource.properties.find(prop => prop[0] === '');
             },
         },
         methods: {
-            resetSample() {
-                this.total = null;
+            resetSample(resetTotal = true) {
                 this.samples = [];
                 this.samplesIdentifier += 1;
 
-                this.getTotal();
+                if (resetTotal) {
+                    this.total = null;
+                    this.getTotal();
+                }
+
                 this.$refs.resourceSampleView.show();
             },
 
@@ -106,7 +132,8 @@
             },
 
             async getSamples(state) {
-                const samples = await this.$root.getResourceSample(this.resource.label, false, 50, this.samples.length);
+                const samples = await this.$root.getResourceSample(
+                    this.resource.label, false, this.showFilteredOut, 50, this.samples.length);
 
                 if (samples !== null)
                     this.samples.push(...samples);

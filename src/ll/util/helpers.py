@@ -36,6 +36,18 @@ def hash_string(to_hash):
     return md5(to_hash.encode('utf-8')).hexdigest()
 
 
+def is_nt_format(resource):
+    temp = resource.strip()
+    return temp.startswith('<') and temp.endswith('>')
+
+
+def to_nt_format(resource):
+    if is_nt_format(resource):
+        return resource
+
+    return '<{}>'.format(resource)
+
+
 def get_pagination_sql(limit=None, offset=0):
     return ('LIMIT ' + str(limit) + ' ' if limit else '') + ('OFFSET ' + str(offset) if offset > 0 else '')
 

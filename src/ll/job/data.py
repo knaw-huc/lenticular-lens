@@ -169,7 +169,7 @@ class Job:
     def get_linkset_table(self, alignment):
         return 'linkset_' + self.job_id + '_' + str(alignment)
 
-    def get_resource_sample(self, resource_label, limit=None, offset=0):
+    def get_resource_sample(self, resource_label, invert=False, limit=None, offset=0):
         resource = self.config.get_resource_by_label(hash_string(resource_label))
         if not resource:
             return []
@@ -182,7 +182,7 @@ class Job:
         query = create_query_for_properties(resource.dataset_id, resource.label,
                                             table_info['table_name'], table_info['columns'], properties,
                                             initial_join=resource.related_joins, condition=resource.filter_sql,
-                                            limit=limit, offset=offset)
+                                            invert=invert, limit=limit, offset=offset)
 
         return get_property_values_for_query(query, None, properties, dict=False)
 

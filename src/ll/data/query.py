@@ -88,7 +88,7 @@ def create_count_query_for_properties(resource, target, initial_join=None, condi
 
 
 def create_query_for_properties(graph, resource, target, columns, property_paths,
-                                initial_join=None, condition=None, limit=None, offset=0):
+                                initial_join=None, condition=None, invert=False, limit=None, offset=0):
     joins = get_initial_joins(initial_join)
     properties = []
     parent_resource = resource
@@ -106,6 +106,13 @@ def create_query_for_properties(graph, resource, target, columns, property_paths
         if property.is_list:
             joins.add_join(property.left_join, property.extended_prop_label)
 
+    condition_sql = sql.SQL('')
+    if condition and condition != sql.SQL(''):
+        condition_sql = sql.SQL('WHERE {}').format(condition) if not invert \
+            else sql.SQL('WHERE NOT ({})').format(condition)
+    elif invert:
+        condition_sql = sql.SQL('WHERE 1 != 1')
+
     return sql.SQL('''
         SELECT {parent_resource}.uri AS uri, {selection}
         FROM {table_name} AS {parent_resource} 
@@ -118,7 +125,7 @@ def create_query_for_properties(graph, resource, target, columns, property_paths
         selection=sql.SQL(', ').join(properties),
         table_name=sql.Identifier(target),
         joins=joins.sql,
-        condition=sql.SQL('WHERE {}').format(condition) if condition and condition != sql.SQL('') else sql.SQL(''),
+        condition=condition_sql,
         limit_offset=sql.SQL(get_pagination_sql(limit, offset))
     )
 

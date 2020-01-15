@@ -186,9 +186,10 @@ export default {
             return callApi(`/download?${params.join('&')}`);
         },
 
-        async getResourceSample(resourceLabel, total = false, limit = undefined, offset = 0) {
+        async getResourceSample(resourceLabel, total = false, invert = false, limit = undefined, offset = 0) {
             const params = [];
             if (total) params.push(`total=true`);
+            if (!total && invert) params.push(`invert=${invert}`);
             if (!total && limit) params.push(`limit=${limit}`);
             if (!total && offset) params.push(`offset=${offset}`);
 

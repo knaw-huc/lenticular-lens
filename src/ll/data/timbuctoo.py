@@ -1,7 +1,8 @@
-import sys
 import urllib3
 import requests
+import logging
 
+log = logging.getLogger(__name__)
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
@@ -20,11 +21,11 @@ class Timbuctoo:
 
             result = response.json()
             if 'errors' in result and len(result['errors']) > 0:
-                raise RuntimeError('Graphql query returned an error: ', result['errors'])
+                raise Exception('Graphql query returned an error: ', result['errors'])
 
-            return result["data"]
-        except requests.exceptions.ConnectionError as e:
-            print(e, file=sys.stderr)
+            return result['data']
+        except Exception as e:
+            log.error(e, exc_info=True)
 
     @property
     def datasets(self):
@@ -121,22 +122,3 @@ class Timbuctoo:
                         }
 
         return datasets
-
-
-if __name__ == '__main__':
-    from json import dumps
-    from ll.util.helpers import hash_string
-
-    timbuctoo = Timbuctoo('https://repository.goldenagents.org/v5/graphql')
-    datasets = timbuctoo.datasets
-    for dataset, dataset_data in datasets.items():
-        for collection, collection_data in dataset_data['collections'].items():
-            columns = {hash_string(col_name.lower()): col_info
-                       for col_name, col_info in collection_data['properties'].items()}
-
-
-            print(dataset + ' --- ' + collection)
-            print(collection_data['title'])
-            print()
-            print(dumps(columns))
-            print()
