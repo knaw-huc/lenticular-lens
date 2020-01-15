@@ -319,8 +319,10 @@
                     this.showAllLinks = false;
                 }
 
-                if (this.showAllLinks || this.showClusters)
-                    this.resetLists();
+                if (this.showAllLinks || this.showClusters) {
+                    this.links = [];
+                    this.linksIdentifier += 1;
+                }
 
                 if (this.showInfo || this.showPropertySelection || this.showAllLinks || this.showClusters)
                     this.$emit('show');
@@ -328,20 +330,10 @@
                     this.$emit('hide');
             },
 
-            resetLists() {
-                if (this.showClusters && this.clustering && this.clusters.length === 0) {
-                    this.links = [];
-                    this.linksIdentifier += 1;
-                }
-                else if ((!this.showClusters || !this.clustering) && this.links.length === 0) {
-                    this.clusters = [];
-                    this.clustersIdentifier += 1;
-                }
-            },
-
             selectClusterId(clusterId) {
-                this.clusterIdSelected = clusterId;
                 this.openClusters = false;
+                this.clusterIdSelected = clusterId;
+
                 this.links = [];
                 this.linksIdentifier += 1;
             },
@@ -352,7 +344,14 @@
 
             async saveProperties() {
                 await this.$root.submit();
-                this.resetLists();
+
+                this.clusterIdSelected = null;
+
+                this.links = [];
+                this.clusters = [];
+
+                this.linksIdentifier += 1;
+                this.clustersIdentifier += 1;
             },
 
             async getLinks(state) {
