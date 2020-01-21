@@ -135,7 +135,7 @@ BEGIN
         ELSE
             RETURN NULL;
         END IF;
-        END CASE;
+    END CASE;
 END;
 $$ LANGUAGE plpgsql;
 

@@ -48,7 +48,7 @@
                   method="post" action="https://secure.huygens.knaw.nl/saml2/login" target="loginWindow">
               <input type="hidden" name="hsurl" :value="hsurl()"/>
               <button class="btn btn-primary" v-bind:class="{'ml-2': !datasetsLoaded}" @click="login">
-                {{ !datasetsLoaded ? 'Login and load datasets' : 'Login and reload datasets'}}
+                {{ !datasetsLoaded ? 'Login and load datasets' : 'Login and reload datasets' }}
               </button>
             </form>
           </div>
@@ -105,6 +105,12 @@
                 </div>
               </div>
             </v-select>
+
+            <small v-if="selectedCollection" class="form-text text-muted mt-2">
+              Size: {{ selectedCollection.total }}
+              <download-progress class="ml-1"
+                                 :dataset-id="resource.dataset.dataset_id" :collection-id="selectedCollection.id"/>
+            </small>
 
             <div class="invalid-feedback" v-show="errors.includes('collection')">
               Please select an entity type
