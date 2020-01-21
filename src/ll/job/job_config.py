@@ -40,6 +40,8 @@ class JobConfig:
                     if resource.label == resource_to_add:
                         resources_to_run.append(resource)
 
+                        resources_to_add += [hash_string(related['resource']) for related in resource.related]
+
                         resources_to_add.remove(resource_to_add)
                         resources_added.append(resource_to_add)
             else:
