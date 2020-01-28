@@ -33,9 +33,6 @@ class Collection:
 
     @property
     def table_name(self):
-        if self.hsid:
-            return hash_string(self.graphql_endpoint + self.hsid + self.dataset_id + self.collection_id)
-
         return hash_string(self.graphql_endpoint + self.dataset_id + self.collection_id)
 
     @property

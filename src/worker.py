@@ -137,7 +137,7 @@ class Worker:
                                 columns=self.job_data['columns'],
                                 cursor=self.job_data['next_page'],
                                 rows_count=self.job_data['rows_count'],
-                                rows_per_page=500)
+                                rows_per_page=1000)
         self.job.run()
         self.cleanup()
 
