@@ -115,7 +115,7 @@ class Match:
                         matching_function.similarity_sql.format(field_name=field_name)
                     ))
 
-        return psycopg_sql.SQL(' || ').join(fields)
+        return psycopg_sql.SQL(' || ').join(fields) if fields else psycopg_sql.SQL('ARRAY[1]')
 
     @property
     def source_sql(self):

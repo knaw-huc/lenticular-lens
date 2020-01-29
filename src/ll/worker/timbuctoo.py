@@ -89,9 +89,8 @@ class TimbuctooJob(Job):
             for item in query_result['items']:
                 # Property names can be too long for column names in Postgres, so make them shorter
                 # We use hashing, because that keeps the column names unique and uniform
-                result = {hash_string(name.lower()): self.extract_value(item[name]) for name in item}
-                # Add non-hashed column 'uri'
-                result['uri'] = result[hash_string('uri')]
+                result = {'uri' if name == 'uri' else hash_string(name.lower()): self.extract_value(item[name])
+                          for name in item}
 
                 results.append(result)
 

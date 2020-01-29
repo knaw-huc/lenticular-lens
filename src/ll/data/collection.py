@@ -63,7 +63,7 @@ class Collection:
                 break
 
         if dataset and collection:
-            columns = {hash_string(col_name.lower()): col_info
+            columns = {'uri' if col_name == 'uri' else hash_string(col_name.lower()): col_info
                        for col_name, col_info in collection['properties'].items()}
 
             with db_conn() as conn, conn.cursor() as cur:
@@ -91,9 +91,10 @@ class Collection:
 
         columns_sqls = [column_sql('uri', 'text primary key')]
         for name, info in columns.items():
-            column_name = name
-            column_type = 'text[]' if info['isList'] else 'text'
-            columns_sqls.append(column_sql(column_name, column_type))
+            if name != 'uri':
+                column_name = name
+                column_type = 'text[]' if info['isList'] else 'text'
+                columns_sqls.append(column_sql(column_name, column_type))
 
         return psycopg2_sql.SQL(',\n').join(columns_sqls)
 

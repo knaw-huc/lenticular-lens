@@ -110,7 +110,11 @@ class MatchingSql:
                 ADD COLUMN cluster_id text,
                 ADD COLUMN valid boolean;
 
-                CREATE INDEX ON public.{view_name} (cluster_id);
+                CREATE INDEX ON public.{view_name} USING hash (source_uri);
+                CREATE INDEX ON public.{view_name} USING hash (target_uri);
+                CREATE INDEX ON public.{view_name} USING hash (cluster_id);
+                CREATE INDEX ON public.{view_name} USING hash (valid);
+
                 ANALYZE public.{view_name};
             """
         ) + '\n').format(
