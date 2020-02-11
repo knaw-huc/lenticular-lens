@@ -5,7 +5,7 @@ import psycopg2
 from flask import Flask, jsonify, request, abort, make_response
 from werkzeug.routing import BaseConverter
 
-from ll.job.data import Job, ExportLinks
+from ll.job.data import Job, Validation
 
 from ll.util.logging import config_logger
 from ll.util.helpers import hash_string, get_association_files
@@ -173,11 +173,18 @@ def kill_clustering(job, alignment):
     return jsonify({'result': 'ok'})
 
 
+@app.route('/job/<job:job>/alignment_totals/<alignment>')
+def linkset_totals(job, alignment):
+    return jsonify(job.get_links_totals(int(alignment), cluster_id=request.args.get('cluster_id')))
+
+
 @app.route('/job/<job:job>/alignment/<alignment>')
-def alignment_result(job, alignment):
+def linkset(job, alignment):
     cluster_id = request.args.get('cluster_id')
-    links = [link for link in job.get_links(int(alignment), cluster_id=cluster_id, include_props=True,
-                                            limit=request.args.get('limit', type=int),
+    validation_filter = validation_filter_helper(request.args)
+
+    links = [link for link in job.get_links(int(alignment), validation_filter=validation_filter, cluster_id=cluster_id,
+                                            include_props=True, limit=request.args.get('limit', type=int),
                                             offset=request.args.get('offset', 0, type=int))]
     return jsonify(links)
 
@@ -256,19 +263,11 @@ def get_cluster_graph_data(job, alignment, cluster_id):
 
 @app.route('/job/<job:job>/export/<alignment>/csv')
 def export_to_csv(job, alignment):
-    export_links = 0
-    if request.args.get('accepted', default=False) == 'true':
-        export_links |= ExportLinks.ACCEPTED
-    if request.args.get('declined', default=False) == 'true':
-        export_links |= ExportLinks.DECLINED
-    if request.args.get('not_validated', default=False) == 'true':
-        export_links |= ExportLinks.NOT_VALIDATED
-
     stream = io.StringIO()
     writer = csv.writer(stream)
 
     writer.writerow(['Source URI', 'Target URI', 'Strengths', 'Valid'])
-    for link in job.get_links(alignment, export_links=export_links):
+    for link in job.get_links(alignment, validation_filter=validation_filter_helper(request.args)):
         writer.writerow([link['source'], link['target'], link['strengths'], link['valid']])
 
     output = make_response(stream.getvalue())
@@ -276,6 +275,18 @@ def export_to_csv(job, alignment):
     output.headers['Content-Type'] = 'text/csv'
 
     return output
+
+
+def validation_filter_helper(args):
+    validation_filter = 0
+    if args.get('accepted', default=False) == 'true':
+        validation_filter |= Validation.ACCEPTED
+    if args.get('declined', default=False) == 'true':
+        validation_filter |= Validation.DECLINED
+    if args.get('not_validated', default=False) == 'true':
+        validation_filter |= Validation.NOT_VALIDATED
+
+    return validation_filter if validation_filter != 0 else Validation.ALL
 
 
 if __name__ == '__main__':

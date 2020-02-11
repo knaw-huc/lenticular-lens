@@ -170,21 +170,26 @@ def get_property_field(graph, joins, cur_resource, cur_columns, property_path):
     return PropertyField(property_path_copy[0], parent_label=cur_resource, columns=cur_columns)
 
 
-def get_linkset_join_sql(linkset_table_name, cluster_id=None, limit=None, offset=0):
+def get_linkset_join_sql(linkset_table_name, where_sql=None, limit=None, offset=0):
     limit_offset_sql = get_pagination_sql(limit, offset)
-
-    cluster_criteria = sql.SQL('WHERE cluster_id = {}').format(sql.Literal(cluster_id)) \
-        if cluster_id else sql.SQL('')
 
     return sql.SQL('''
         INNER JOIN (
-            (SELECT source_uri AS uri FROM {linkset} {cluster_criteria} {limit_offset})
+            (
+                SELECT source_uri AS uri 
+                FROM {linkset} {where_sql} 
+                ORDER BY sort_order ASC {limit_offset}
+            )
             UNION
-            (SELECT target_uri AS uri FROM {linkset} {cluster_criteria} {limit_offset})
+            (
+                SELECT target_uri AS uri 
+                FROM {linkset} {where_sql} 
+                ORDER BY sort_order ASC {limit_offset}
+            )
         ) AS linkset ON target.uri = linkset.uri
     ''').format(
         linkset=sql.Identifier(linkset_table_name),
-        cluster_criteria=cluster_criteria,
+        where_sql=where_sql if where_sql else sql.SQL(''),
         limit_offset=sql.SQL(limit_offset_sql)
     )
 

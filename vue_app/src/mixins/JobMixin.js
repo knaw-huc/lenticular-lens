@@ -218,8 +218,19 @@ export default {
             return callApi(`/job/${this.job.job_id}/kill_clustering/${alignment}`, {});
         },
 
-        async getAlignment(alignment, clusterId = undefined, limit = undefined, offset = 0) {
+        async getAlignmentTotals(alignment, clusterId = undefined) {
             const params = [];
+            if (clusterId) params.push(`cluster_id=${clusterId}`);
+
+            return callApi(`/job/${this.job.job_id}/alignment_totals/${alignment}?${params.join('&')}`);
+        },
+
+        async getAlignment(alignment, accepted, declined, notValidated,
+                           clusterId = undefined, limit = undefined, offset = 0) {
+            const params = [];
+            if (accepted) params.push('accepted=true');
+            if (declined) params.push('declined=true');
+            if (notValidated) params.push('not_validated=true');
             if (clusterId) params.push(`cluster_id=${clusterId}`);
             if (limit) params.push(`limit=${limit}`);
             if (offset) params.push(`offset=${offset}`);

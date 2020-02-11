@@ -17,7 +17,7 @@ from ll.util.config_db import db_conn, fetch_one
 from ll.util.helpers import hash_string, hasher, get_pagination_sql
 
 
-class ExportLinks(IntFlag):
+class Validation(IntFlag):
     ALL = 7
     ACCEPTED = 4
     DECLINED = 2
@@ -197,23 +197,23 @@ class Job:
 
         return fetch_one(query, dict=True)
 
-    def get_links(self, alignment, export_links=ExportLinks.ALL, cluster_id=None, uri=None,
+    def get_links(self, alignment, validation_filter=Validation.ALL, cluster_id=None, uri=None,
                   limit=None, offset=0, include_props=False):
-        export_links_sql = []
-        if export_links < ExportLinks.ALL and ExportLinks.ACCEPTED in export_links:
-            export_links_sql.append('valid = true')
-        if export_links < ExportLinks.ALL and ExportLinks.DECLINED in export_links:
-            export_links_sql.append('valid = false')
-        if export_links < ExportLinks.ALL and ExportLinks.NOT_VALIDATED in export_links:
-            export_links_sql.append('valid IS NULL')
+        validation_filter_sql = []
+        if validation_filter < Validation.ALL and Validation.ACCEPTED in validation_filter:
+            validation_filter_sql.append('valid = true')
+        if validation_filter < Validation.ALL and Validation.DECLINED in validation_filter:
+            validation_filter_sql.append('valid = false')
+        if validation_filter < Validation.ALL and Validation.NOT_VALIDATED in validation_filter:
+            validation_filter_sql.append('valid IS NULL')
 
         conditions = []
         if cluster_id:
             conditions.append(sql.SQL('cluster_id = {cluster_id}').format(cluster_id=sql.Literal(cluster_id)))
         if uri:
             conditions.append(sql.SQL('(source_uri = {uri} OR target_uri = {uri})').format(uri=sql.Literal(uri)))
-        if len(export_links_sql) > 0:
-            conditions.append(sql.SQL('(' + ' OR '.join(export_links_sql) + ')'))
+        if len(validation_filter_sql) > 0:
+            conditions.append(sql.SQL('(' + ' OR '.join(validation_filter_sql) + ')'))
 
         linkset_table = self.get_linkset_table(alignment)
         limit_offset_sql = get_pagination_sql(limit, offset)
@@ -225,14 +225,15 @@ class Job:
             match = self.config.get_match_by_id(alignment)
             targets = self.value_targets_for_match(match)
             if targets:
-                initial_join = get_linkset_join_sql(linkset_table, cluster_id, limit, offset)
+                initial_join = get_linkset_join_sql(linkset_table, where_sql, limit, offset)
                 queries = get_property_values_queries(targets, initial_join=initial_join)
                 values = get_property_values(queries, dict=True)
 
         with db_conn() as conn, conn.cursor() as cur:
             cur.itersize = 1000
             cur.execute(sql.SQL('SELECT source_uri, target_uri, strengths, cluster_id, valid '
-                                'FROM {linkset} {where_sql} {limit_offset}').format(
+                                'FROM {linkset} {where_sql} '
+                                'ORDER BY sort_order ASC {limit_offset}').format(
                 linkset=sql.Identifier(linkset_table),
                 where_sql=where_sql,
                 limit_offset=sql.SQL(limit_offset_sql)
@@ -249,6 +250,26 @@ class Job:
                     'cluster_id': link[3],
                     'valid': link[4]
                 }
+
+    def get_links_totals(self, alignment, cluster_id=None, uri=None):
+        conditions = []
+        if cluster_id:
+            conditions.append(sql.SQL('cluster_id = {cluster_id}').format(cluster_id=sql.Literal(cluster_id)))
+        if uri:
+            conditions.append(sql.SQL('(source_uri = {uri} OR target_uri = {uri})').format(uri=sql.Literal(uri)))
+
+        linkset_table = self.get_linkset_table(alignment)
+        where_sql = sql.SQL('WHERE {}').format(sql.SQL(' AND ').join(conditions)) \
+            if len(conditions) > 0 else sql.SQL('')
+
+        with db_conn() as conn, conn.cursor() as cur:
+            cur.execute(sql.SQL('SELECT valid, count(*) AS valid_count '
+                                'FROM {linkset} {where_sql} '
+                                'GROUP BY valid')
+                        .format(linkset=sql.Identifier(linkset_table), where_sql=where_sql))
+
+            return {'accepted' if row[0] is True else 'declined' if row[0] is False else 'not_validated': row[1]
+                    for row in cur.fetchall()}
 
     def get_clusters(self, alignment, limit=None, offset=0, include_props=False):
         linkset_table = self.get_linkset_table(alignment)

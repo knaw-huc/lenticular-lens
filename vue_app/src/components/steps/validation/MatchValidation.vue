@@ -94,6 +94,41 @@
               </div>
             </div>
           </div>
+
+          <div v-if="showLinks" class="row justify-content-center mt-2">
+            <div class="col-auto">
+              <div class="btn-toolbar" role="toolbar" aria-label="Toolbar">
+                <div class="btn-group btn-group-toggle ml-auto">
+                  <label class="btn btn-sm btn-secondary" v-bind:class="{'active': showAcceptedLinks}">
+                    <input type="checkbox" autocomplete="off" v-model="showAcceptedLinks" @change="resetLinks()"/>
+                    {{ showAcceptedLinks ? 'Hide accepted' : 'Show accepted' }}
+
+                    <span v-if="acceptedLinks !== null" class="badge badge-light ml-1">
+                      {{ acceptedLinks.toLocaleString('en') }}
+                    </span>
+                  </label>
+
+                  <label class="btn btn-sm btn-secondary" v-bind:class="{'active': showDeclinedLinks}">
+                    <input type="checkbox" autocomplete="off" v-model="showDeclinedLinks" @change="resetLinks()"/>
+                    {{ showDeclinedLinks ? 'Hide declined' : 'Show declined' }}
+
+                    <span v-if="declinedLinks !== null" class="badge badge-light ml-1">
+                      {{ declinedLinks.toLocaleString('en') }}
+                    </span>
+                  </label>
+
+                  <label class="btn btn-sm btn-secondary" v-bind:class="{'active': showNotValidatedLinks}">
+                    <input type="checkbox" autocomplete="off" v-model="showNotValidatedLinks" @change="resetLinks()"/>
+                    {{ showNotValidatedLinks ? 'Hide not validated' : 'Show not validated' }}
+
+                    <span v-if="notValidatedLinks !== null" class="badge badge-light ml-1">
+                      {{ notValidatedLinks.toLocaleString('en') }}
+                    </span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
         </sub-card>
 
         <alignment-spec v-if="showInfo" :match="match"/>
@@ -245,6 +280,14 @@
                 showAllLinks: false,
                 showClusters: false,
 
+                showAcceptedLinks: false,
+                showDeclinedLinks: false,
+                showNotValidatedLinks: true,
+
+                acceptedLinks: null,
+                declinedLinks: null,
+                notValidatedLinks: null,
+
                 links: [],
                 linksIdentifier: +new Date(),
 
@@ -319,10 +362,8 @@
                     this.showAllLinks = false;
                 }
 
-                if (this.showAllLinks || this.showClusters) {
-                    this.links = [];
-                    this.linksIdentifier += 1;
-                }
+                if (this.showAllLinks || this.showClusters)
+                    this.resetLinks();
 
                 if (this.showInfo || this.showPropertySelection || this.showAllLinks || this.showClusters)
                     this.$emit('show');
@@ -333,30 +374,45 @@
             selectClusterId(clusterId) {
                 this.openClusters = false;
                 this.clusterIdSelected = clusterId;
-
-                this.links = [];
-                this.linksIdentifier += 1;
+                this.resetLinks();
             },
 
             showVisualization() {
                 this.$refs.visualization.showVisualization();
             },
 
-            async saveProperties() {
-                await this.$root.submit();
-
-                this.clusterIdSelected = null;
+            async resetLinks(resetClusters = false) {
+                await this.getLinkTotals();
 
                 this.links = [];
-                this.clusters = [];
-
                 this.linksIdentifier += 1;
-                this.clustersIdentifier += 1;
+
+                if (resetClusters) {
+                    this.clusters = [];
+                    this.clustersIdentifier += 1;
+                }
+            },
+
+            async saveProperties() {
+                await this.$root.submit();
+                this.clusterIdSelected = null;
+                await this.resetLinks(true);
+            },
+
+            async getLinkTotals() {
+                const clusterId = this.showClusterLinks ? this.clusterIdSelected : undefined;
+                const totals = await this.$root.getAlignmentTotals(this.match.id, clusterId);
+
+                this.acceptedLinks = totals.accepted || 0;
+                this.declinedLinks = totals.declined || 0;
+                this.notValidatedLinks = totals.not_validated || 0;
             },
 
             async getLinks(state) {
                 const clusterId = this.showClusterLinks ? this.clusterIdSelected : undefined;
-                const links = await this.$root.getAlignment(this.match.id, clusterId, 50, this.links.length);
+                const links = await this.$root.getAlignment(this.match.id,
+                    this.showAcceptedLinks, this.showDeclinedLinks, this.showNotValidatedLinks,
+                    clusterId, 50, this.links.length);
 
                 if (links !== null)
                     this.links.push(...links);
@@ -394,15 +450,43 @@
             async acceptLink(link) {
                 const accepted = link.valid === true ? null : true;
 
-                link.valid = accepted;
-                await this.$root.validateLink(this.match.id, link.source, link.target, accepted);
+                link.updating = true;
+                const result = await this.$root.validateLink(this.match.id, link.source, link.target, accepted);
+                link.updating = false;
+
+                if (result !== null) {
+                    link.valid = accepted;
+
+                    if (accepted !== null) {
+                        this.acceptedLinks++;
+                        this.notValidatedLinks--;
+                    }
+                    else {
+                        this.acceptedLinks--;
+                        this.notValidatedLinks++;
+                    }
+                }
             },
 
             async declineLink(link) {
                 const declined = link.valid === false ? null : false;
 
-                link.valid = declined;
-                await this.$root.validateLink(this.match.id, link.source, link.target, declined);
+                link.updating = true;
+                const result = await this.$root.validateLink(this.match.id, link.source, link.target, declined);
+                link.updating = false;
+
+                if (result !== null) {
+                    link.valid = declined;
+
+                    if (declined !== null) {
+                        this.declinedLinks++;
+                        this.notValidatedLinks--;
+                    }
+                    else {
+                        this.declinedLinks--;
+                        this.notValidatedLinks++;
+                    }
+                }
             },
         }
     };

@@ -57,14 +57,16 @@
       <div class="col-auto">
         <div class="row flex-column align-items-center">
           <div class="col-auto">
-            <button type="button" class="btn btn-sm btn-success m-1" @click="$emit('accepted')">
+            <button type="button" class="btn btn-sm btn-success m-1" :disabled="isUpdating"
+                    @click="$emit('accepted')">
               <fa-icon icon="check"/>
               Accept
             </button>
           </div>
 
           <div class="col-auto">
-            <button type="button" class="btn btn-sm btn-danger m-1" @click="$emit('declined')">
+            <button type="button" class="btn btn-sm btn-danger m-1" :disabled="isUpdating"
+                    @click="$emit('declined')">
               <fa-icon icon="times"/>
               Decline
             </button>
@@ -94,6 +96,10 @@
 
             targetValues() {
                 return this.link.target_values || [];
+            },
+
+            isUpdating() {
+                return this.link.updating;
             },
 
             bgColor() {
