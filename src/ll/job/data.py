@@ -231,7 +231,7 @@ class Job:
 
         with db_conn() as conn, conn.cursor() as cur:
             cur.itersize = 1000
-            cur.execute(sql.SQL('SELECT source_uri, target_uri, strengths, cluster_id, valid '
+            cur.execute(sql.SQL('SELECT source_uri, target_uri, link_order, similarity, cluster_id, valid '
                                 'FROM {linkset} {where_sql} '
                                 'ORDER BY sort_order ASC {limit_offset}').format(
                 linkset=sql.Identifier(linkset_table),
@@ -245,10 +245,10 @@ class Job:
                     'source_values': values[link[0]] if values else None,
                     'target': link[1],
                     'target_values': values[link[1]] if values else None,
-                    'strengths': [float(strength) if isinstance(strength, Decimal)
-                                  else strength for strength in link[2]],
-                    'cluster_id': link[3],
-                    'valid': link[4]
+                    'link_order': link[2],
+                    'similarity': link[3] if link[3] else {},
+                    'cluster_id': link[4],
+                    'valid': link[5]
                 }
 
     def get_links_totals(self, alignment, cluster_id=None, uri=None):
@@ -327,19 +327,6 @@ class Job:
                     } for key, cluster_value in cluster_values.items()] if values else None
                 }
 
-    def get_cluster_nodes(self, alignment):
-        with db_conn() as conn, conn.cursor() as cur:
-            cur.execute("""
-                SELECT DISTINCT ON nodes.node, nodes.node AS node, nodes.cluster_id AS cluster_id
-                FROM (
-                    SELECT source_uri AS node, cluster_id FROM {}
-                    UNION
-                    SELECT target_uri AS node, cluster_id FROM {}
-                ) AS nodes
-            """.format(self.get_linkset_table(alignment)))
-
-            return {cluster_node[0]: cluster_node[1] for cluster_node in cur}
-
     def cluster(self, alignment, cluster_id=None, uri=None):
         all_links = []
         strengths = {}
@@ -349,11 +336,11 @@ class Job:
             source = '<' + link['source'] + '>'
             target = '<' + link['target'] + '>'
 
-            current_link = (source, target) if source < target else (target, source)
-            link_hash = "key_{}".format(str(hasher(current_link)).replace("-", "N"))
-
             all_links.append([source, target])
-            strengths[link_hash] = link['strengths']
+            link_hash = "key_{}".format(str(hasher((source, target))).replace("-", "N"))
+            strengths[link_hash] = list(link['similarity'].values())
+            if not strengths[link_hash]:
+                strengths[link_hash] = [1]
 
             if source not in nodes:
                 nodes.append(source)

@@ -67,8 +67,8 @@ class MatchingSql:
             """
         ) + '\n').format(
             source=self.config.match_to_run.source_sql,
-            source_name=sql.Identifier(self.config.match_to_run.name + '_source'),
-            source_sequence_name=sql.Identifier(self.config.match_to_run.name + '_source_count'),
+            source_name=sql.Identifier('source'),
+            source_sequence_name=sql.Identifier('source_count'),
         )
 
     def generate_match_target_sql(self):
@@ -85,8 +85,8 @@ class MatchingSql:
             """
         ) + '\n').format(
             target=self.config.match_to_run.target_sql,
-            target_name=sql.Identifier(self.config.match_to_run.name + '_target'),
-            target_sequence_name=sql.Identifier(self.config.match_to_run.name + '_target_count'),
+            target_name=sql.Identifier('target'),
+            target_sequence_name=sql.Identifier('target_count'),
         )
 
     def generate_match_linkset_sql(self):
@@ -96,23 +96,27 @@ class MatchingSql:
                 
                 DROP TABLE IF EXISTS public.{view_name} CASCADE;
                 CREATE TABLE public.{view_name} AS
-                SELECT source.uri AS source_uri, target.uri AS target_uri, 
-                {strengths_field} AS strengths
+                SELECT  CASE WHEN source.uri < target.uri THEN source.uri ELSE target.uri END AS source_uri,
+                        CASE WHEN source.uri < target.uri THEN target.uri ELSE source.uri END AS target_uri,
+                        CASE WHEN every(source.uri < target.uri) THEN 'source_target'::link_order
+                             WHEN every(target.uri < source.uri) THEN 'target_source'::link_order
+                             ELSE 'both'::link_order END AS link_order,
+                        ARRAY_AGG(DISTINCT combined.collection) AS collections,
+                        {similarity_field} AS similarity
                 FROM {source_name} AS source
                 JOIN {target_name} AS target
-                ON (source.collection != target.collection OR source.uri > target.uri)
+                ON (source.uri != target.uri) 
                 AND {conditions} {match_against}
                 AND increment_counter({sequence})
-                GROUP BY source.uri, target.uri;
-                
+                CROSS JOIN LATERAL (VALUES (source.collection), (target.collection)) AS combined(collection)
+                GROUP BY source_uri, target_uri;
+
                 ALTER TABLE public.{view_name}
                 ADD PRIMARY KEY (source_uri, target_uri),
                 ADD COLUMN sort_order serial,
                 ADD COLUMN cluster_id text,
                 ADD COLUMN valid boolean;
 
-                CREATE INDEX ON public.{view_name} USING hash (source_uri);
-                CREATE INDEX ON public.{view_name} USING hash (target_uri);
                 CREATE INDEX ON public.{view_name} USING hash (cluster_id);
                 CREATE INDEX ON public.{view_name} USING hash (valid);
                 CREATE INDEX ON public.{view_name} USING btree (sort_order);
@@ -120,14 +124,14 @@ class MatchingSql:
                 ANALYZE public.{view_name};
             """
         ) + '\n').format(
-            strengths_field=self.config.match_to_run.similarity_fields_agg_sql,
+            similarity_field=self.config.match_to_run.similarity_fields_agg_sql,
             conditions=self.config.match_to_run.conditions_sql,
             match_against=self.config.match_to_run.match_against_sql,
             view_name=sql.Identifier(self.config.linkset_table_name),
-            source_name=sql.Identifier(self.config.match_to_run.name + '_source'),
-            target_name=sql.Identifier(self.config.match_to_run.name + '_target'),
-            sequence_name=sql.Identifier(self.config.match_to_run.name + '_count'),
-            sequence=sql.Literal(self.config.match_to_run.name + '_count')
+            source_name=sql.Identifier('source'),
+            target_name=sql.Identifier('target'),
+            sequence_name=sql.Identifier('linkset_count'),
+            sequence=sql.Literal('linkset_count')
         )
 
     @property

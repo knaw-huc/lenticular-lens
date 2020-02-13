@@ -19,7 +19,6 @@ class MatchingFunction:
         self.__targets = []
 
         self.field_name = hash_string(json.dumps(function_obj))
-
         self.function_name = function_obj['method_name']
         self.parameters = function_obj['method_value']
 
@@ -55,7 +54,7 @@ class MatchingFunction:
             template = re.sub(r'{source}', 'source.{field_name}', template)
             template = re.sub(r'{target}', 'target.{field_name}', template)
 
-        return psycopg2_sql.SQL(str(template))
+        return psycopg2_sql.SQL(template)
 
     @property
     def sql(self):
