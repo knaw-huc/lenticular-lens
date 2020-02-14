@@ -107,9 +107,10 @@ class MatchingSql:
                 
                 ALTER TABLE public.{view_name}
                 ADD PRIMARY KEY (source_uri, target_uri),
-                ADD COLUMN sort_order serial,
                 ADD COLUMN cluster_id text,
                 ADD COLUMN valid boolean;
+
+                ALTER TABLE public.{view_name} ADD COLUMN sort_order serial;
 
                 CREATE INDEX ON public.{view_name} USING hash (source_uri);
                 CREATE INDEX ON public.{view_name} USING hash (target_uri);
