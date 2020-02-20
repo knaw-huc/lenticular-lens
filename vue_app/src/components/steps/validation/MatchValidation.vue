@@ -100,7 +100,8 @@
               <div class="btn-toolbar" role="toolbar" aria-label="Toolbar">
                 <div class="btn-group btn-group-toggle ml-auto">
                   <label class="btn btn-sm btn-secondary" v-bind:class="{'active': showAcceptedLinks}">
-                    <input type="checkbox" autocomplete="off" v-model="showAcceptedLinks" @change="resetLinks()"/>
+                    <input type="checkbox" autocomplete="off" v-model="showAcceptedLinks"
+                           :disabled="loadingTotals" @change="resetLinks()"/>
                     {{ showAcceptedLinks ? 'Hide accepted' : 'Show accepted' }}
 
                     <span v-if="acceptedLinks !== null" class="badge badge-light ml-1">
@@ -109,7 +110,8 @@
                   </label>
 
                   <label class="btn btn-sm btn-secondary" v-bind:class="{'active': showDeclinedLinks}">
-                    <input type="checkbox" autocomplete="off" v-model="showDeclinedLinks" @change="resetLinks()"/>
+                    <input type="checkbox" autocomplete="off" v-model="showDeclinedLinks"
+                           :disabled="loadingTotals" @change="resetLinks()"/>
                     {{ showDeclinedLinks ? 'Hide declined' : 'Show declined' }}
 
                     <span v-if="declinedLinks !== null" class="badge badge-light ml-1">
@@ -118,13 +120,21 @@
                   </label>
 
                   <label class="btn btn-sm btn-secondary" v-bind:class="{'active': showNotValidatedLinks}">
-                    <input type="checkbox" autocomplete="off" v-model="showNotValidatedLinks" @change="resetLinks()"/>
+                    <input type="checkbox" autocomplete="off" v-model="showNotValidatedLinks"
+                           :disabled="loadingTotals" @change="resetLinks()"/>
                     {{ showNotValidatedLinks ? 'Hide not validated' : 'Show not validated' }}
 
                     <span v-if="notValidatedLinks !== null" class="badge badge-light ml-1">
                       {{ notValidatedLinks.toLocaleString('en') }}
                     </span>
                   </label>
+                </div>
+
+                <div v-if="resetShownLinks" class="btn-group ml-4" role="group">
+                  <button type="button" class="btn btn-sm btn-white border" @click="resetLinks()">
+                    <fa-icon icon="sync"/>
+                    Reset
+                  </button>
                 </div>
               </div>
             </div>
@@ -283,10 +293,12 @@
                 showAcceptedLinks: false,
                 showDeclinedLinks: false,
                 showNotValidatedLinks: true,
+                resetShownLinks: false,
 
                 acceptedLinks: null,
                 declinedLinks: null,
                 notValidatedLinks: null,
+                loadingTotals: false,
 
                 links: [],
                 linksIdentifier: +new Date(),
@@ -386,6 +398,7 @@
 
                 this.links = [];
                 this.linksIdentifier += 1;
+                this.resetShownLinks = false;
 
                 if (resetClusters) {
                     this.clusters = [];
@@ -400,12 +413,19 @@
             },
 
             async getLinkTotals() {
+                if (this.loadingTotals)
+                    return;
+
+                this.loadingTotals = true;
+
                 const clusterId = this.showClusterLinks ? this.clusterIdSelected : undefined;
                 const totals = await this.$root.getAlignmentTotals(this.match.id, clusterId);
 
                 this.acceptedLinks = totals.accepted || 0;
                 this.declinedLinks = totals.declined || 0;
                 this.notValidatedLinks = totals.not_validated || 0;
+
+                this.loadingTotals = false;
             },
 
             async getLinks(state) {
@@ -448,44 +468,56 @@
             },
 
             async acceptLink(link) {
-                const accepted = link.valid === true ? null : true;
+                const before = link.valid;
+                const after = (before === true) ? null : true;
 
                 link.updating = true;
-                const result = await this.$root.validateLink(this.match.id, link.source, link.target, accepted);
+                const result = await this.$root.validateLink(this.match.id, link.source, link.target, after);
                 link.updating = false;
 
                 if (result !== null) {
-                    link.valid = accepted;
+                    link.valid = after;
 
-                    if (accepted !== null) {
-                        this.acceptedLinks++;
-                        this.notValidatedLinks--;
-                    }
-                    else {
+                    if (before === true)
                         this.acceptedLinks--;
+                    else
+                        this.acceptedLinks++;
+
+                    if (before === null)
+                        this.notValidatedLinks--;
+                    else if (before === true)
                         this.notValidatedLinks++;
-                    }
+                    else
+                        this.declinedLinks--;
+
+                    this.resetShownLinks = true;
                 }
             },
 
             async declineLink(link) {
-                const declined = link.valid === false ? null : false;
+                const before = link.valid;
+                const after = (before === false) ? null : false;
 
                 link.updating = true;
-                const result = await this.$root.validateLink(this.match.id, link.source, link.target, declined);
+                const result = await this.$root.validateLink(this.match.id, link.source, link.target, after);
                 link.updating = false;
 
                 if (result !== null) {
-                    link.valid = declined;
+                    link.valid = after;
 
-                    if (declined !== null) {
-                        this.declinedLinks++;
-                        this.notValidatedLinks--;
-                    }
-                    else {
+                    if (before === false)
                         this.declinedLinks--;
+                    else
+                        this.declinedLinks++;
+
+                    if (before === null)
+                        this.notValidatedLinks--;
+                    else if (before === false)
                         this.notValidatedLinks++;
-                    }
+                    else
+                        this.acceptedLinks--;
+
+                    this.resetShownLinks = true;
                 }
             },
         }
