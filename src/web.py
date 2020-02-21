@@ -32,7 +32,7 @@ app.url_map.converters['job'] = JobConverter
 
 @app.route('/')
 def index():
-    return app.send_static_file('core/index.html')
+    return app.send_static_file('index.html')
 
 
 @app.route('/datasets')

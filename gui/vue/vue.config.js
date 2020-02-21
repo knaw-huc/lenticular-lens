@@ -1,6 +1,6 @@
 module.exports = {
-    publicPath: '/static/core/',
-    outputDir: '../src/static/core',
+    publicPath: '/static/',
+    outputDir: '../../src/static',
     configureWebpack: {
         devtool: 'source-map'
     }

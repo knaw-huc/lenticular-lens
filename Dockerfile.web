@@ -1,7 +1,7 @@
 FROM node:alpine AS builder
 
-COPY ./vue_app /vue_app
-WORKDIR /vue_app
+COPY ./gui/vue /build
+WORKDIR /build
 
 RUN npm install
 RUN npm run build
@@ -26,7 +26,7 @@ ENV LANG en_US.UTF-8
 ENV LANGUAGE en_US.UTF-8
 
 COPY ./src /app
-COPY --from=builder /src/static/core /app/static/core
+COPY --from=builder /src/static /app/static
 
 ENV FLASK_APP=/app/web_server/app.py
 ENV FLASK_ENV=production

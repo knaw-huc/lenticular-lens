@@ -1,8 +1,8 @@
 docker
 venv
 pgdata
-vue_app/node_modules
-src/static/core
+src/static
 .idea
 *.iml
+**/node_modules
 **/__pycache__/**
