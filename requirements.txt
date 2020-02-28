@@ -5,7 +5,7 @@ schema>=0.7.1
 kitchen>=1.2.6
 psycopg2-binary
 networkx>=2.3
-python-intervals
+python-intervals<2.0.0
 rdflib>=4.2.2
 requests>=2.22.0
 unidecode>=1.1.1
