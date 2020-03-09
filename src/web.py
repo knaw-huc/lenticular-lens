@@ -266,9 +266,9 @@ def export_to_csv(job, alignment):
     stream = io.StringIO()
     writer = csv.writer(stream)
 
-    writer.writerow(['Source URI', 'Target URI', 'Strengths', 'Valid'])
+    writer.writerow(['Source URI', 'Target URI', 'Valid'])
     for link in job.get_links(alignment, validation_filter=validation_filter_helper(request.args)):
-        writer.writerow([link['source'], link['target'], link['strengths'], link['valid']])
+        writer.writerow([link['source'], link['target'], link['valid']])
 
     output = make_response(stream.getvalue())
     output.headers['Content-Disposition'] = 'attachment; filename=' + job.job_id + '_' + alignment + '.csv'

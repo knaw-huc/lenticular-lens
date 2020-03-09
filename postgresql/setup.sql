@@ -77,11 +77,13 @@ CREATE TABLE IF NOT EXISTS clusterings
     PRIMARY KEY (job_id, alignment)
 );
 
+CREATE TYPE link_order AS ENUM ('source_target', 'both', 'target_source');
+
 CREATE OR REPLACE FUNCTION increment_counter(sequence_name text) RETURNS boolean
     COST 10000 STRICT VOLATILE AS
 $$
 BEGIN
-    RETURN nextval(sequence_name) != 0;
+    RETURN nextval(sequence_name) > -1;
 END;
 $$ LANGUAGE plpgsql;
 

@@ -52,8 +52,7 @@ class Match:
             template = matching_function.index_template['template']
             template_sql = psycopg_sql.SQL(template) \
                 .format(target=psycopg_sql.Identifier(resource_field_name), **matching_function.sql_parameters)
-            table_name = self.config.match_to_run.name + '_' \
-                         + ('target' if len(matching_function.targets) > 0 else 'source')
+            table_name = 'target' if len(matching_function.targets) > 0 else 'source'
 
             index_sqls.append(psycopg_sql.SQL('CREATE INDEX ON {} USING {};').format(
                 psycopg_sql.Identifier(table_name), template_sql
@@ -101,29 +100,31 @@ class Match:
 
     @property
     def similarity_fields_agg_sql(self):
-        fields = []
+        fields = {}
         fields_added = []
 
-        for matching_function in self.conditions.matching_functions:
-            if matching_function.similarity_sql:
-                field_name = psycopg_sql.Identifier(matching_function.field_name)
+        for match_func in self.conditions.matching_functions:
+            if match_func.similarity_sql:
+                name = match_func.field_name
 
                 # Add source and target values; if not done already
-                if field_name not in fields_added:
-                    fields_added.append(field_name)
-                    fields.append(psycopg_sql.SQL('array_agg({})::numeric[]').format(
-                        matching_function.similarity_sql.format(field_name=field_name)
-                    ))
+                if name not in fields_added:
+                    fields_added.append(name)
+                    fields[name] = match_func.similarity_sql.format(field_name=psycopg_sql.Identifier(name))
 
-        return psycopg_sql.SQL(' || ').join(fields) if fields else psycopg_sql.SQL('ARRAY[1]')
+        fields_sql = [psycopg_sql.Composed([psycopg_sql.Literal(name), psycopg_sql.SQL(', '), sim])
+                      for name, sim in fields.items()]
+
+        return psycopg_sql.SQL('jsonb_object_agg({})').format(psycopg_sql.SQL(', ').join(fields_sql)) \
+            if fields_sql else psycopg_sql.SQL('NULL')
 
     @property
     def source_sql(self):
-        return self.get_combined_resources_sql('sources', self.name + '_source_count')
+        return self.get_combined_resources_sql('sources', 'source_count')
 
     @property
     def target_sql(self):
-        return self.get_combined_resources_sql('targets', self.name + '_target_count') \
+        return self.get_combined_resources_sql('targets', 'target_count') \
             if 'targets' in self.__data else self.source_sql
 
     @property

@@ -83,9 +83,7 @@ class AlignmentJob(Job):
         with db_conn() as conn, conn.cursor() as cur:
             data = {'status_message': self.status}
 
-            for suffix in ('_count', '_source_count', '_target_count'):
-                sequence_name = self.config.match_to_run.name + suffix
-
+            for sequence_name in ('linkset_count', 'source_count', 'target_count'):
                 try:
                     cur.execute(psycopg2_sql.SQL('SELECT last_value FROM {}.{}').format(
                         psycopg2_sql.Identifier(self.config.linkset_schema_name),
@@ -94,9 +92,9 @@ class AlignmentJob(Job):
 
                     inserted = cur.fetchone()[0]
                     if inserted:
-                        if suffix == '_source_count':
+                        if sequence_name == 'source_count':
                             data['sources_count'] = inserted
-                        elif suffix == '_target_count':
+                        elif sequence_name == 'target_count':
                             data['targets_count'] = inserted
                         else:
                             data['links_count'] = inserted
@@ -133,13 +131,11 @@ class AlignmentJob(Job):
             links = cur.fetchone()[0]
 
             cur.execute(psycopg2_sql.SQL('SELECT count(*) FROM {}.{}').format(
-                psycopg2_sql.Identifier(self.config.linkset_schema_name),
-                psycopg2_sql.Identifier(self.config.match_to_run.name + '_source')))
+                psycopg2_sql.Identifier(self.config.linkset_schema_name), psycopg2_sql.Identifier('source')))
             sources = cur.fetchone()[0]
 
             cur.execute(psycopg2_sql.SQL('SELECT count(*) FROM {}.{}').format(
-                psycopg2_sql.Identifier(self.config.linkset_schema_name),
-                psycopg2_sql.Identifier(self.config.match_to_run.name + '_target')))
+                psycopg2_sql.Identifier(self.config.linkset_schema_name), psycopg2_sql.Identifier('target')))
             targets = cur.fetchone()[0]
 
             cur.execute(psycopg2_sql.SQL('DROP SCHEMA {} CASCADE')
