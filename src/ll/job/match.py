@@ -112,11 +112,10 @@ class Match:
                     fields_added.append(name)
                     fields[name] = match_func.similarity_sql.format(field_name=psycopg_sql.Identifier(name))
 
-        fields_sql = [psycopg_sql.Composed([psycopg_sql.Literal(name), psycopg_sql.SQL(', '), sim])
+        fields_sql = [psycopg_sql.SQL('jsonb_object_agg({}, {})').format(psycopg_sql.Literal(name), sim)
                       for name, sim in fields.items()]
 
-        return psycopg_sql.SQL('jsonb_object_agg({})').format(psycopg_sql.SQL(', ').join(fields_sql)) \
-            if fields_sql else psycopg_sql.SQL('NULL')
+        return psycopg_sql.SQL(' || ').join(fields_sql) if fields_sql else psycopg_sql.SQL('NULL')
 
     @property
     def source_sql(self):
