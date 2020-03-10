@@ -1,3 +1,3 @@
-requests
-unidecode
-python-levenshtein
+requests==2.23.0
+unidecode==1.1.1
+python-levenshtein==0.12.0
