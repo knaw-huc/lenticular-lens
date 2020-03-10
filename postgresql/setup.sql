@@ -157,14 +157,14 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION levenshtein_distance(source text, target text) RETURNS integer
+CREATE OR REPLACE FUNCTION levenshtein_distance(source text, target text, max_distance integer) RETURNS integer
     STRICT IMMUTABLE PARALLEL SAFE AS
 $$
 BEGIN
     IF greatest(octet_length(source), octet_length(target)) > 255 THEN
         RETURN levenshtein_python($1, $2);
     ELSE
-        RETURN levenshtein($1, $2);
+        RETURN levenshtein_less_equal($1, $2, $3);
     END IF;
 END
 $$ LANGUAGE plpgsql;

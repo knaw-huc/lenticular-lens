@@ -27,25 +27,25 @@
     "index_using": "btree (get_date_part({date_part}, {target}))"
   },
   "LEVENSHTEIN": {
-    "sql_template": "levenshtein_distance({source}, {target}) <= {max_distance}",
-    "similarity": "similarity({source}, {target}, levenshtein_distance({source}, {target}))"
+    "sql_template": "levenshtein_distance({source}, {target}, {max_distance}) <= {max_distance}",
+    "similarity": "similarity({source}, {target}, levenshtein_distance({source}, {target}, {max_distance}))"
   },
   "LEVENSHTEIN_APPROX": {
-    "sql_template": "similarity({source}, {target}, levenshtein_distance({source}, {target})) >= {threshold}",
-    "similarity": "similarity({source}, {target}, levenshtein_distance({source}, {target}))"
+    "sql_template": "similarity({source}, {target}, levenshtein_distance({source}, {target}, -1)) >= {threshold}",
+    "similarity": "similarity({source}, {target}, levenshtein_distance({source}, {target}, -1))"
   },
   "LL_SOUNDEX": {
-    "sql_template": "ll_soundex({source}) = ll_soundex({target}) AND similarity({source}, {target}, levenshtein_distance({source}, {target})) >= {threshold}",
-    "similarity": "similarity({source}, {target}, levenshtein_distance({source}, {target}))",
+    "sql_template": "ll_soundex({source}) = ll_soundex({target}) AND similarity({source}, {target}, levenshtein_distance({source}, {target}, -1)) >= {threshold}",
+    "similarity": "similarity({source}, {target}, levenshtein_distance({source}, {target}, -1))",
     "index_using": "btree (ll_soundex({target}))"
   },
   "BLOOTHOOFT_REDUCT": {
-    "sql_template": "bloothooft({source}, {name_type}) = bloothooft({target}, {name_type}) AND similarity({source}, {target}, levenshtein_distance({source}, {target})) >= {threshold}",
-    "similarity": "similarity({source}, {target}, levenshtein_distance({source}, {target}))",
+    "sql_template": "bloothooft({source}, {name_type}) = bloothooft({target}, {name_type}) AND similarity({source}, {target}, levenshtein_distance({source}, {target}, -1)) >= {threshold}",
+    "similarity": "similarity({source}, {target}, levenshtein_distance({source}, {target}, -1))",
     "index_using": "btree (bloothooft({target}, {name_type}))"
   },
   "BLOOTHOOFT_REDUCT_APPROX": {
-    "sql_template": "similarity(bloothooft({source}, {name_type}), bloothooft({target}, {name_type}), levenshtein_distance(bloothooft({source}, {name_type}), bloothooft({target}, {name_type}))) >= {bloothooft_threshold} AND similarity({source}, {target}, levenshtein_distance({source}, {target})) >= {threshold}",
-    "similarity": "similarity({source}, {target}, levenshtein_distance({source}, {target}))"
+    "sql_template": "similarity(bloothooft({source}, {name_type}), bloothooft({target}, {name_type}), levenshtein_distance(bloothooft({source}, {name_type}), bloothooft({target}, {name_type}), -1)) >= {bloothooft_threshold} AND similarity({source}, {target}, levenshtein_distance({source}, {target}, -1)) >= {threshold}",
+    "similarity": "similarity({source}, {target}, levenshtein_distance({source}, {target}, -1))"
   }
 }
