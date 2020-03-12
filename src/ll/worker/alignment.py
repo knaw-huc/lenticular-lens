@@ -93,11 +93,11 @@ class AlignmentJob(Job):
                     inserted = cur.fetchone()[0]
                     if inserted:
                         if sequence_name == 'source_count':
-                            data['sources_count'] = inserted
+                            data['sources_count'] = inserted + 1
                         elif sequence_name == 'target_count':
-                            data['targets_count'] = inserted
+                            data['targets_count'] = inserted + 1
                         else:
-                            data['links_count'] = inserted
+                            data['links_count'] = inserted + 1
                 except ProgrammingError:
                     pass
                 finally:

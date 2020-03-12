@@ -101,14 +101,14 @@ class MatchingSql:
                         CASE WHEN every(source.uri < target.uri) THEN 'source_target'::link_order
                              WHEN every(target.uri < source.uri) THEN 'target_source'::link_order
                              ELSE 'both'::link_order END AS link_order,
-                        ARRAY_AGG(DISTINCT combined.collection) AS collections,
+                        ARRAY_AGG(DISTINCT source.collection) AS source_collections,
+                        ARRAY_AGG(DISTINCT target.collection) AS target_collections,
                         {similarity_field} AS similarity
                 FROM {source_name} AS source
                 JOIN {target_name} AS target
                 ON (source.uri != target.uri) 
                 AND {conditions} {match_against}
                 AND increment_counter({sequence})
-                CROSS JOIN LATERAL (VALUES (source.collection), (target.collection)) AS combined(collection)
                 GROUP BY source_uri, target_uri;
 
                 ALTER TABLE public.{view_name}

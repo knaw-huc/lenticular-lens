@@ -28,7 +28,7 @@
   },
   "LEVENSHTEIN": {
     "sql_template": "levenshtein_distance({source}, {target}, {max_distance}) <= {max_distance}",
-    "similarity": "similarity({source}, {target}, levenshtein_distance({source}, {target}, {max_distance}))"
+    "similarity": "similarity({source}, {target}, levenshtein_distance({source}, {target}, -1))"
   },
   "LEVENSHTEIN_APPROX": {
     "sql_template": "similarity({source}, {target}, levenshtein_distance({source}, {target}, -1)) >= {threshold}",
