@@ -44,18 +44,15 @@ To clean up the database and start from scratch, simply remove this folder._
 
 ### Default
 
-**URL**: `/`
-
+**URL**: `/`\
 **Method**: `GET`
 
 Root page. Will return the GUI for the tool. 
 
 ---
 
-**URL**: `/datasets`
-
-**Method**: `GET`
-
+**URL**: `/datasets`\
+**Method**: `GET`\
 **Parameters**: `endpoint`, `hsid`
 
 Returns all available datasets for a specific Timbuctoo GraphQL `endpoint`. 
@@ -65,18 +62,15 @@ _Example: `/datasets?endpoint=https://repository.goldenagents.org/v5/graphql`_
 
 ---
 
-**URL**: `/downloads`
-
+**URL**: `/downloads`\
 **Method**: `GET`
 
 Returns all currently running data downloads and finished data downloads from Timbuctoo.
 
 ---
 
-**URL**: `/download`
-
-**Method**: `GET`
-
+**URL**: `/download`\
+**Method**: `GET`\
 **Parameters**: `endpoint`, `hsid`, `dataset_id`, `collection_id`
 
 Starts a data download from Timbuctoo from the given Timbuctoo GraphQL `endpoint`.
@@ -88,18 +82,15 @@ _Example: `/download?endpoint=https://repository.goldenagents.org/v5/graphql&dat
 
 ---
 
-**URL**: `/association_files`
-
-**Method**: `GET`
+**URL**: `/association_files`\
+**Method**: `GET`\
 
 Returns all available association_files.
 
 ### Job creation and updates
 
-**URL**: `/job/create`
-
-**Method**: `POST`
-
+**URL**: `/job/create`\
+**Method**: `POST`\
 **JSON**: `job_title`, `job_description`
 
 Creates a new job with the given `job_title` and `job_description`. 
@@ -107,10 +98,8 @@ Returns the identifier of this new job.
 
 ---
 
-**URL**: `/job/update`
-
-**Method**: `POST`
-
+**URL**: `/job/update`\
+**Method**: `POST`\
 **JSON**: `job_id`, `job_title`, `job_description`, `job_link`, `resources`, `mappings`
 
 Updates a job with the given `job_id`. 
@@ -118,8 +107,7 @@ Updates the `job_title`, `job_description`, `job_link`, `resources` and `mapping
 
 ---
 
-**URL**: `/job/<job_id>`
-
+**URL**: `/job/<job_id>`\
 **Method**: `GET`
 
 Returns the details of a job with the given `job_id`.
@@ -128,8 +116,7 @@ _Example: `/job/d697ea3869422ce3c7cc1889264d03c7`_
 
 ### Job processes
 
-**URL**: `/job/<job_id>/alignments`
-
+**URL**: `/job/<job_id>/alignments`\
 **Method**: `GET`
 
 Returns the details of all alignment jobs with the given `job_id`.
@@ -138,8 +125,7 @@ _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/alignments`_
 
 ---
 
-**URL**: `/job/<job_id>/clusterings`
-
+**URL**: `/job/<job_id>/clusterings`\
 **Method**: `GET`
 
 Returns the details of all clustering jobs with the given `job_id`.
@@ -148,10 +134,8 @@ _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/clusterings`_
 
 ---
 
-**URL**: `/job/<job_id>/run_alignment/<alignment>`
-
-**Method**: `POST`
-
+**URL**: `/job/<job_id>/run_alignment/<alignment>`\
+**Method**: `POST`\
 **JSON**: `restart`
 
 Start an alignment process for the given `alignment` of a specific `job_id`. 
@@ -161,10 +145,8 @@ _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/run_alignment/0`_
 
 ---
 
-**URL**: `/job/<job_id>/run_clustering/<alignment>`
-
-**Method**: `POST`
-
+**URL**: `/job/<job_id>/run_clustering/<alignment>`\
+**Method**: `POST`\
 **JSON**: `association_file`, `clustering_type`
 
 Start an clustering process for the given `alignment` of a specific `job_id`. 
@@ -175,18 +157,15 @@ _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/run_clustering/0`_
 
 ---
 
-**URL**: `/job/<job_id>/kill_alignment/<alignment>`
-
-**Method**: `POST`
-
+**URL**: `/job/<job_id>/kill_alignment/<alignment>`\
+**Method**: `POST`\
 Stop an alignment process for the given `alignment` of a specific `job_id`. 
 
 _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/kill_alignment/0`_
 
 ---
 
-**URL**: `/job/<job_id>/kill_clustering/<alignment>`
-
+**URL**: `/job/<job_id>/kill_clustering/<alignment>`\
 **Method**: `POST`
 
 Stop an clustering process for the given `alignment` of a specific `job_id`.
@@ -195,10 +174,8 @@ _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/kill_clustering/0`_
 
 ### Data retrieval
 
-**URL**: `/job/<job_id>/resource/<resource_label>`
-
-**Method**: `GET`
-
+**URL**: `/job/<job_id>/resource/<resource_label>`\
+**Method**: `GET`\
 **Parameters**: `total`, `limit`, `offset`
 
 Returns all data for a resource with the label `resource_label` of the given `job_id`.
@@ -209,10 +186,8 @@ _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/resource/LimitedPersons`_
 
 ---
 
-**URL**: `/job/<job_id>/alignment/<alignment>`
-
-**Method**: `GET`
-
+**URL**: `/job/<job_id>/alignment/<alignment>`\
+**Method**: `GET`\
 **Parameters**: `cluster_id`, `limit`, `offset`
 
 Returns the linkset for alignment `alignment` of the given `job_id`.
@@ -223,10 +198,8 @@ _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/alignment/0`_
 
 ---
 
-**URL**: `/job/<job_id>/clusters/<alignment>`
-
-**Method**: `GET`
-
+**URL**: `/job/<job_id>/clusters/<alignment>`\
+**Method**: `GET`\
 **Parameters**: `association`, `limit`, `offset`
 
 Returns the clusters for alignment `alignment` of the given `job_id`.
@@ -237,10 +210,8 @@ _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/clusters/0`_
 
 ### Linksets interaction
 
-**URL**: `/job/<job_id>/validate/<alignment>`
-
-**Method**: `POST`
-
+**URL**: `/job/<job_id>/validate/<alignment>`\
+**Method**: `POST`\
 **JSON**: `source`, `target`, `valid`
 
 Validate a link for alignment `alignment` of the given `job_id`.
@@ -249,10 +220,8 @@ Provide `valid` with either `true` or `false` to validate the link or use `null`
 
 ---
 
-**URL**: `/job/<job_id>/cluster/<alignment>/<cluster_id>/graph`
-
-**Method**: `GET`
-
+**URL**: `/job/<job_id>/cluster/<alignment>/<cluster_id>/graph`\
+**Method**: `GET`\
 **Parameters**: `get_cluster`, `get_cluster_compact`, `get_reconciliation`
 
 Get the visualization information for a cluster with `cluster_id` for alignment `alignment` of the given `job_id`.
@@ -262,10 +231,8 @@ Specify `get_reconciliation` to obtain the reconciled visualization.
 
 ### Export
 
-**URL**: `/job/<job_id>/export/<alignment>/csv`
-
-**Method**: `GET`
-
+**URL**: `/job/<job_id>/export/<alignment>/csv`\
+**Method**: `GET`\
 **Parameters**: `accepted`, `declined`, `not_validated`
 
 Get a CSV export of the linkset for alignment `alignment` of the given `job_id`.
