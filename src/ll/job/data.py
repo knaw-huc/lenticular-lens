@@ -1,6 +1,6 @@
 from json import dumps
 from enum import IntFlag
-from decimal import Decimal
+from uuid import uuid4
 
 from psycopg2 import extras, sql
 from psycopg2.extensions import AsIs
@@ -229,8 +229,7 @@ class Job:
                 queries = get_property_values_queries(targets, initial_join=initial_join)
                 values = get_property_values(queries, dict=True)
 
-        with db_conn() as conn, conn.cursor() as cur:
-            cur.itersize = 1000
+        with db_conn() as conn, conn.cursor(name=uuid4().hex) as cur:
             cur.execute(sql.SQL('SELECT source_uri, target_uri, link_order, similarity, cluster_id, valid '
                                 'FROM {linkset} {where_sql} '
                                 'ORDER BY sort_order ASC {limit_offset}').format(
@@ -239,17 +238,22 @@ class Job:
                 limit_offset=sql.SQL(limit_offset_sql)
             ))
 
-            for link in cur:
-                yield {
-                    'source': link[0],
-                    'source_values': values[link[0]] if values else None,
-                    'target': link[1],
-                    'target_values': values[link[1]] if values else None,
-                    'link_order': link[2],
-                    'similarity': link[3] if link[3] else {},
-                    'cluster_id': link[4],
-                    'valid': link[5]
-                }
+            while True:
+                links = cur.fetchmany(size=2000)
+                if not links:
+                    break
+
+                for link in links:
+                    yield {
+                        'source': link[0],
+                        'source_values': values[link[0]] if values else None,
+                        'target': link[1],
+                        'target_values': values[link[1]] if values else None,
+                        'link_order': link[2],
+                        'similarity': link[3] if link[3] else {},
+                        'cluster_id': link[4],
+                        'valid': link[5]
+                    }
 
     def get_links_totals(self, alignment, cluster_id=None, uri=None):
         conditions = []
@@ -285,8 +289,7 @@ class Job:
                 queries = get_property_values_queries(targets, initial_join=initial_join)
                 values = get_property_values(queries, dict=True)
 
-        with db_conn() as conn, conn.cursor() as cur:
-            cur.itersize = 1000
+        with db_conn() as conn, conn.cursor(name=uuid4().hex) as cur:
             cur.execute("""
                  SELECT ls.cluster_id, COUNT(DISTINCT nodes.uri) AS size, COUNT(ls.*) / 2 AS links {}
                  FROM {} AS ls
@@ -296,36 +299,41 @@ class Job:
                  {}
              """.format(nodes_sql, linkset_table, limit_offset_sql))
 
-            for cluster in cur:
-                cluster_values = {}
-                if values:
-                    for uri, uri_values in values.items():
-                        if uri in cluster[3]:
-                            for prop_value in uri_values:
-                                key = prop_value['dataset'] + '_' + prop_value['entity'] \
-                                      + '_' + prop_value['property'][-1]
+            while True:
+                clusters = cur.fetchmany(size=2000)
+                if not clusters:
+                    break
 
-                                if key not in cluster_values:
-                                    cluster_values[key] = {
-                                        'dataset': prop_value['dataset'],
-                                        'entity': prop_value['entity'],
-                                        'property': prop_value['property'],
-                                        'values': set()
-                                    }
+                for cluster in clusters:
+                    cluster_values = {}
+                    if values:
+                        for uri, uri_values in values.items():
+                            if uri in cluster[3]:
+                                for prop_value in uri_values:
+                                    key = prop_value['dataset'] + '_' + prop_value['entity'] \
+                                          + '_' + prop_value['property'][-1]
 
-                                cluster_values[key]['values'].update(prop_value['values'])
+                                    if key not in cluster_values:
+                                        cluster_values[key] = {
+                                            'dataset': prop_value['dataset'],
+                                            'entity': prop_value['entity'],
+                                            'property': prop_value['property'],
+                                            'values': set()
+                                        }
 
-                yield {
-                    'id': cluster[0],
-                    'size': cluster[1],
-                    'links': cluster[2],
-                    'values': [{
-                        'dataset': cluster_value['dataset'],
-                        'entity': cluster_value['entity'],
-                        'property': cluster_value['property'],
-                        'values': list(cluster_value['values'])
-                    } for key, cluster_value in cluster_values.items()] if values else None
-                }
+                                    cluster_values[key]['values'].update(prop_value['values'])
+
+                    yield {
+                        'id': cluster[0],
+                        'size': cluster[1],
+                        'links': cluster[2],
+                        'values': [{
+                            'dataset': cluster_value['dataset'],
+                            'entity': cluster_value['entity'],
+                            'property': cluster_value['property'],
+                            'values': list(cluster_value['values'])
+                        } for key, cluster_value in cluster_values.items()] if values else None
+                    }
 
     def cluster(self, alignment, cluster_id=None, uri=None):
         all_links = []
