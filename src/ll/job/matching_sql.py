@@ -8,11 +8,12 @@ locale.setlocale(locale.LC_ALL, '')
 
 
 class MatchingSql:
-    def __init__(self, config):
-        self.config = config
+    def __init__(self, job, alignment):
+        self._job = job
+        self._match = job.get_match_by_id(alignment)
 
     def generate_schema_sql(self):
-        schema_name_sql = sql.Identifier(self.config.linkset_schema_name)
+        schema_name_sql = sql.Identifier(self._job.linkset_schema_name(self._match.id))
 
         return sql.Composed([
             sql.SQL('CREATE SCHEMA IF NOT EXISTS {};\n').format(schema_name_sql),
@@ -21,7 +22,7 @@ class MatchingSql:
 
     def generate_resources_sql(self):
         resources_sql = []
-        for resource in self.config.resources_to_run:
+        for resource in self._job.resources_required_for_alignment(self._match.id):
             pre = sql.SQL('SELECT * FROM (') if resource.limit > -1 else sql.SQL('')
 
             resource_sql = sql.SQL(cleandoc(
@@ -39,9 +40,9 @@ class MatchingSql:
             ) + '\n').format(
                 pre=pre,
                 view_name=sql.Identifier(resource.label),
-                matching_fields=resource.matching_fields_sql,
+                matching_fields=resource.matching_fields_sql(self._match),
                 table_name=sql.Identifier(resource.table_name),
-                joins=resource.joins.sql,
+                joins=resource.joins(self._match).sql,
                 wheres=resource.where_sql,
                 limit=resource.limit_sql,
             )
@@ -51,12 +52,12 @@ class MatchingSql:
         return sql.Composed(resources_sql)
 
     def generate_match_index_sql(self):
-        return self.config.match_to_run.index_sql
+        return self._match.index_sql
 
     def generate_match_source_sql(self):
         return sql.SQL(cleandoc(
             """ DROP SEQUENCE IF EXISTS {source_sequence_name} CASCADE;
-                CREATE SEQUENCE {source_sequence_name} MINVALUE 0 START 0;
+                CREATE SEQUENCE {source_sequence_name} MINVALUE 1;
                 
                 DROP MATERIALIZED VIEW IF EXISTS {source_name} CASCADE;
                 CREATE MATERIALIZED VIEW {source_name} AS 
@@ -66,7 +67,7 @@ class MatchingSql:
                 ANALYZE {source_name};
             """
         ) + '\n').format(
-            source=self.config.match_to_run.source_sql,
+            source=self._match.source_sql,
             source_name=sql.Identifier('source'),
             source_sequence_name=sql.Identifier('source_count'),
         )
@@ -74,7 +75,7 @@ class MatchingSql:
     def generate_match_target_sql(self):
         return sql.SQL(cleandoc(
             """ DROP SEQUENCE IF EXISTS {target_sequence_name} CASCADE;
-                CREATE SEQUENCE {target_sequence_name} MINVALUE 0 START 0;
+                CREATE SEQUENCE {target_sequence_name} MINVALUE 1;
                 
                 DROP MATERIALIZED VIEW IF EXISTS {target_name} CASCADE;
                 CREATE MATERIALIZED VIEW {target_name} AS 
@@ -84,7 +85,7 @@ class MatchingSql:
                 ANALYZE {target_name};
             """
         ) + '\n').format(
-            target=self.config.match_to_run.target_sql,
+            target=self._match.target_sql,
             target_name=sql.Identifier('target'),
             target_sequence_name=sql.Identifier('target_count'),
         )
@@ -92,7 +93,7 @@ class MatchingSql:
     def generate_match_linkset_sql(self):
         return sql.SQL(cleandoc(
             """ DROP SEQUENCE IF EXISTS {sequence_name} CASCADE;
-                CREATE SEQUENCE {sequence_name} MINVALUE 0 START 0;
+                CREATE SEQUENCE {sequence_name} MINVALUE 1;
                 
                 DROP TABLE IF EXISTS public.{view_name} CASCADE;
                 CREATE TABLE public.{view_name} AS
@@ -107,14 +108,14 @@ class MatchingSql:
                 FROM {source_name} AS source
                 JOIN {target_name} AS target
                 ON (source.uri != target.uri) 
-                AND {conditions} {match_against}
+                AND {conditions}
                 AND increment_counter({sequence})
                 GROUP BY source_uri, target_uri;
 
                 ALTER TABLE public.{view_name}
                 ADD PRIMARY KEY (source_uri, target_uri),
                 ADD COLUMN cluster_id text,
-                ADD COLUMN valid boolean;
+                ADD COLUMN valid link_validity DEFAULT 'not_validated';
 
                 ALTER TABLE public.{view_name} ADD COLUMN sort_order serial;
 
@@ -127,10 +128,9 @@ class MatchingSql:
                 ANALYZE public.{view_name};
             """
         ) + '\n').format(
-            similarity_field=self.config.match_to_run.similarity_fields_agg_sql,
-            conditions=self.config.match_to_run.conditions_sql,
-            match_against=self.config.match_to_run.match_against_sql,
-            view_name=sql.Identifier(self.config.linkset_table_name),
+            similarity_field=self._match.similarity_fields_agg_sql,
+            conditions=self._match.conditions_sql,
+            view_name=sql.Identifier(self._job.linkset_table_name(self._match.id)),
             source_name=sql.Identifier('source'),
             target_name=sql.Identifier('target'),
             sequence_name=sql.Identifier('linkset_count'),

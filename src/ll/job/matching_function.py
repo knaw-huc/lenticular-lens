@@ -8,26 +8,25 @@ from ll.util.helpers import hash_string, get_json_from_file
 
 
 class MatchingFunction:
-    transformers = get_json_from_file('transformers.json')
-    matching_functions = get_json_from_file('matching_functions.json')
+    _transformers = get_json_from_file('transformers.json')
+    _matching_functions = get_json_from_file('matching_functions.json')
 
-    def __init__(self, function_obj, config):
-        self.function_obj = function_obj
-        self.__data = function_obj
-        self.__config = config
-        self.__sources = []
-        self.__targets = []
+    def __init__(self, function_obj, job):
+        self._data = function_obj
+        self._job = job
+        self._sources = []
+        self._targets = []
 
         self.field_name = hash_string(json.dumps(function_obj))
-        self.function_name = function_obj['method_name']
-        self.parameters = function_obj['method_value']
+        self._function_name = function_obj['method_name']
+        self._parameters = function_obj['method_value']
 
-        if self.function_name in self.matching_functions:
-            self.function_info = self.matching_functions[self.function_name]
+        if self._function_name in self._matching_functions:
+            self.function_info = self._matching_functions[self._function_name]
             if 'similarity' in function_obj:
                 self.function_info['similarity'] = function_obj['similarity']
         else:
-            raise NameError('Matching function %s is not defined' % self.function_name)
+            raise NameError('Matching function %s is not defined' % self._function_name)
 
     @property
     def index_template(self):
@@ -66,36 +65,36 @@ class MatchingFunction:
 
     @property
     def sql_parameters(self):
-        return {key: psycopg2_sql.Literal(value) for (key, value) in self.parameters.items()}
+        return {key: psycopg2_sql.Literal(value) for (key, value) in self._parameters.items()}
 
     @property
     def sources(self):
-        if not self.__sources:
-            self.__sources = self.get_resources('sources')
+        if not self._sources:
+            self._sources = self._get_resources('sources')
 
-        return self.__sources
+        return self._sources
 
     @property
     def targets(self):
-        if not self.__targets:
-            self.__targets = self.get_resources('targets')
+        if not self._targets:
+            self._targets = self._get_resources('targets')
 
-        return self.__targets
+        return self._targets
 
-    def get_resources(self, resources_key):
+    def _get_resources(self, resources_key):
         resources = {}
-        for resource_index, resource in self.__data[resources_key].items():
+        for resource_index, resource in self._data[resources_key].items():
             resources[resource_index] = []
             for field in resource:
                 field_transformers = field.get('transformers', [])
 
                 for transformer in field_transformers:
-                    if transformer['name'] in self.transformers:
-                        transformer['transformer_info'] = self.transformers[transformer['name']]
+                    if transformer['name'] in self._transformers:
+                        transformer['transformer_info'] = self._transformers[transformer['name']]
                     else:
                         raise NameError('Transformer %s is not defined' % transformer['name'])
 
-                columns = self.__config.get_resource_by_label(hash_string(field['property'][0])).columns
+                columns = self._job.get_resource_by_label(hash_string(field['property'][0])).columns
                 property_field = PropertyField(field['property'], columns=columns, transformers=field_transformers)
 
                 resources[resource_index].append(property_field)

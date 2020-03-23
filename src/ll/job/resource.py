@@ -9,14 +9,14 @@ from ll.job.filter_function import FilterFunction
 
 
 class Resource:
-    def __init__(self, resource_data, config):
-        self.__data = resource_data
-        self.config = config
+    def __init__(self, resource_data, job):
+        self._data = resource_data
+        self._job = job
 
         graphql = resource_data['dataset']['timbuctoo_graphql']
         hsid = resource_data['dataset']['timbuctoo_hsid'] if not resource_data['dataset']['published'] else None
-        dataset_id = self.__data['dataset']['dataset_id']
-        collection_id = self.__data['dataset']['collection_id']
+        dataset_id = self._data['dataset']['dataset_id']
+        collection_id = self._data['dataset']['collection_id']
 
         collection = Collection(graphql, hsid, dataset_id, collection_id)
         self.table_name = collection.table_name
@@ -26,70 +26,38 @@ class Resource:
 
     @property
     def dataset_id(self):
-        return self.__data['dataset']['dataset_id']
+        return self._data['dataset']['dataset_id']
 
     @property
     def collection_id(self):
-        return self.__data['dataset']['collection_id']
+        return self._data['dataset']['collection_id']
 
     @property
     def label(self):
-        return hash_string(self.__data['label'])
+        return hash_string(self._data['label'])
 
     @property
     def properties(self):
-        return self.__data['properties']
+        return self._data['properties']
 
     @property
     def filter_sql(self):
-        return self.r_get_filter_sql(self.__data['filter']) \
-            if 'filter' in self.__data and self.__data['filter'] else psycopg2_sql.SQL('')
+        return self._r_get_filter_sql(self._data['filter']) \
+            if 'filter' in self._data and self._data['filter'] else psycopg2_sql.SQL('')
 
     @property
     def limit(self):
-        return self.__data.get('limit', -1)
+        return self._data.get('limit', -1)
 
     @property
     def limit_sql(self):
-        random = '\nORDER BY RANDOM()' if self.__data.get('random', False) else ''
+        random = '\nORDER BY RANDOM()' if self._data.get('random', False) else ''
         return psycopg2_sql.SQL(') AS x%s\nLIMIT %i' % (random, self.limit)) \
             if self.limit > -1 else psycopg2_sql.SQL('')
 
     @property
-    def matching_fields(self):
-        return self.get_fields(only_matching_fields=True)
-
-    @property
-    def fields(self):
-        return self.get_fields(only_matching_fields=False)
-
-    @property
-    def matching_fields_sql(self):
-        matching_fields_sqls = [psycopg2_sql.SQL('{}.uri').format(psycopg2_sql.Identifier(self.label))]
-
-        for property_field in self.matching_fields:
-            matching_fields_sqls.append(psycopg2_sql.SQL('{matching_field} AS {name}').format(
-                matching_field=property_field.sql,
-                name=psycopg2_sql.Identifier(property_field.hash)
-            ))
-
-        return psycopg2_sql.SQL(',\n       ').join(matching_fields_sqls)
-
-    @property
-    def joins(self):
-        joins = Joins()
-        self.set_joins_sql(joins, fields=True, related=True)
-        return joins
-
-    @property
-    def related_joins(self):
-        joins = Joins()
-        self.set_joins_sql(joins, fields=False, related=True)
-        return joins
-
-    @property
     def related(self):
-        return self.__data['related'] if 'related' in self.__data else []
+        return self._data['related'] if 'related' in self._data else []
 
     @property
     def where_sql(self):
@@ -99,11 +67,48 @@ class Resource:
 
         return where_sql
 
-    def get_fields(self, only_matching_fields=True):
+    def fields(self, match):
+        return self._get_fields(match, only_matching_fields=False)
+
+    def matching_fields(self, match):
+        return self._get_fields(match, only_matching_fields=True)
+
+    def matching_fields_sql(self, match):
+        matching_fields_sqls = [psycopg2_sql.SQL('{}.uri').format(psycopg2_sql.Identifier(self.label))]
+
+        for property_field in self.matching_fields(match):
+            matching_fields_sqls.append(psycopg2_sql.SQL('{matching_field} AS {name}').format(
+                matching_field=property_field.sql,
+                name=psycopg2_sql.Identifier(property_field.hash)
+            ))
+
+        return psycopg2_sql.SQL(',\n       ').join(matching_fields_sqls)
+
+    def joins(self, match):
+        joins = Joins()
+        self.set_joins_sql(match, joins, fields=True, related=True)
+        return joins
+
+    def related_joins(self, match):
+        joins = Joins()
+        self.set_joins_sql(match, joins, fields=False, related=True)
+        return joins
+
+    def set_joins_sql(self, match, joins, fields=True, related=True):
+        if fields:
+            for property_field in self.fields(match):
+                if property_field.is_list:
+                    joins.add_join(property_field.left_join, property_field.extended_prop_label)
+
+        if related:
+            for relation in self.related:
+                self._r_get_join_sql(match, relation, joins, fields, related)
+
+    def _get_fields(self, match, only_matching_fields=True):
         matching_fields = []
         matching_fields_hashes = []
 
-        match_fields = self.config.match_to_run.get_fields(only_matching_fields=only_matching_fields)
+        match_fields = match.get_fields(only_matching_fields=only_matching_fields)
         match_resource_fields = match_fields.get(self.label, {})
 
         for match_field_label, match_field in match_resource_fields.items():
@@ -114,36 +119,26 @@ class Resource:
 
         return matching_fields
 
-    def set_joins_sql(self, joins, fields=True, related=True):
-        if fields:
-            for property_field in self.fields:
-                if property_field.is_list:
-                    joins.add_join(property_field.left_join, property_field.extended_prop_label)
-
-        if related:
-            for relation in self.related:
-                self.r_get_join_sql(relation, joins, fields, related)
-
-    def r_get_filter_sql(self, filter_obj):
+    def _r_get_filter_sql(self, filter_obj):
         if filter_obj['type'] in ['AND', 'OR']:
             if not filter_obj['conditions']:
                 return psycopg2_sql.SQL('')
 
-            filter_sqls = map(self.r_get_filter_sql, filter_obj['conditions'])
+            filter_sqls = map(self._r_get_filter_sql, filter_obj['conditions'])
             return psycopg2_sql.SQL('({})').format(psycopg2_sql.SQL('\n %s ' % filter_obj['type']).join(filter_sqls))
 
         property = PropertyField(filter_obj['property'], parent_label=self.label, columns=self.columns)
 
         return FilterFunction(filter_obj, property).sql
 
-    def r_get_join_sql(self, relation, joins, fields, related):
+    def _r_get_join_sql(self, match, relation, joins, fields, related):
         if isinstance(relation, list):
             for sub_relation in relation:
-                self.r_get_join_sql(sub_relation, joins, fields, related)
+                self._r_get_join_sql(match, sub_relation, joins, fields, related)
             return
 
         remote_resource_name = hash_string(relation['resource'])
-        remote_resource = self.config.get_resource_by_label(remote_resource_name)
+        remote_resource = self._job.get_resource_by_label(remote_resource_name)
 
         local_property = PropertyField(relation['local_property'],
                                        parent_label=self.label, columns=self.columns)
@@ -168,4 +163,4 @@ class Resource:
                 extra_filter=extra_filter
             ), remote_resource_name)
 
-        remote_resource.set_joins_sql(joins, fields, related)
+        remote_resource.set_joins_sql(match, joins, fields, related)

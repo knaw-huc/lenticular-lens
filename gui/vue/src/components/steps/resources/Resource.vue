@@ -120,22 +120,19 @@
       </sub-card>
 
       <sub-card v-if="resource.dataset.collection_id !== ''" label="Filter" :has-error="errors.includes('filters')">
-        <conditions-group :conditions-group="resource.filter"
-                          :is-root="true"
-                          group="resource-filters"
-                          :uid="'resource_' + resource.id + '_filter_group_0'"
-                          validate-method-name="validateFilterCondition"
-                          v-slot="curCondition"
-                          @add="addFilterCondition($event)"
-                          ref="filterGroupComponent">
+        <elements-group :elements-group="resource.filter" elements-group-name="conditions" :is-root="true"
+                        group="resource-filters" :uid="'resource_' + resource.id + '_filter_group_0'"
+                        validate-method-name="validateFilterCondition" empty-elements-text="No conditions"
+                        validation-failed-text="Please provide at least one condition" v-slot="curCondition"
+                        @add="addFilterCondition($event)" ref="filterGroupComponent">
           <resource-filter-condition
-              :condition="curCondition.condition"
+              :condition="curCondition.element"
               :index="curCondition.index"
               :resource="resource"
               ref="filterConditionComponents"
               @add="curCondition.add()"
               @remove="curCondition.remove()"/>
-        </conditions-group>
+        </elements-group>
       </sub-card>
 
       <sub-card v-if="resource.dataset.collection_id !== ''" label="Sample" :hasError="errors.includes('limit')">
@@ -243,7 +240,7 @@
 </template>
 
 <script>
-    import ConditionsGroup from "../../helpers/ConditionsGroup";
+    import ElementsGroup from "../../helpers/ElementsGroup";
     import ValidationMixin from "../../../mixins/ValidationMixin";
 
     import ResourceSampleView from "./ResourceSampleView";
@@ -253,7 +250,7 @@
         name: "Resource",
         mixins: [ValidationMixin],
         components: {
-            ConditionsGroup,
+            ElementsGroup,
             ResourceSampleView,
             ResourceFilterCondition,
         },
@@ -323,7 +320,7 @@
             },
 
             filteredConditions() {
-                return this.$root.getRecursiveConditions(this.resource.filter);
+                return this.$root.getRecursiveElements(this.resource.filter, 'conditions');
             },
 
             allCollections() {
@@ -389,7 +386,7 @@
 
                 let filtersGroupsValid = true;
                 if (this.$refs.filterGroupComponent)
-                    filtersGroupsValid = this.$refs.filterGroupComponent.validateConditionsGroup();
+                    filtersGroupsValid = this.$refs.filterGroupComponent.validateElementsGroup();
                 filtersGroupsValid = this.validateField('filters', filtersGroupsValid);
 
                 return collectionValid && datasetValid && limitValid && relatedValid && filtersGroupsValid;

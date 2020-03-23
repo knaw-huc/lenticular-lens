@@ -6,6 +6,7 @@ export default {
             clusterings: [],
             resources: [],
             matches: [],
+            lenses: [],
             datasets: {},
             downloaded: [],
             downloading: [],
@@ -47,12 +48,24 @@ export default {
                 label: 'Alignment ' + (this.matches.length + 1),
                 description: '',
                 is_association: false,
-                match_against: null,
                 sources: [],
                 targets: [],
                 methods: {
                     type: 'AND',
                     conditions: [],
+                },
+                properties: []
+            });
+        },
+
+        addLens() {
+            this.lenses.unshift({
+                id: findId(this.lenses),
+                label: 'Lens ' + (this.lenses.length + 1),
+                description: '',
+                elements: {
+                    type: 'UNION',
+                    alignments: [],
                 },
                 properties: []
             });
@@ -78,12 +91,26 @@ export default {
             });
         },
 
+        duplicateLens(lens) {
+            const index = this.lenses.findIndex(m => m.id === lens.id);
+            const duplicate = copy(lens);
+            this.lenses.splice(index, 0, {
+                ...duplicate,
+                id: findId(this.lenses),
+                label: 'Lens ' + (this.lenses.length + 1),
+            });
+        },
+
         getResourceById(resourceId) {
             return this.resources.find(res => res.id === parseInt(resourceId));
         },
 
         getMatchById(matchId) {
             return this.matches.find(match => match.id === parseInt(matchId));
+        },
+
+        getLensById(lensId) {
+            return this.lenses.find(lens => lens.id === parseInt(lensId));
         },
 
         getCleanPropertyName(property, propInfo) {
@@ -95,26 +122,27 @@ export default {
             return property;
         },
 
-        exportCsvLink(alignment, accepted, declined, notValidated) {
+        exportCsvLink(type, alignment, accepted, rejected, notValidated, mixed) {
             const params = [];
-            if (accepted) params.push('accepted=true');
-            if (declined) params.push('declined=true');
-            if (notValidated) params.push('not_validated=true');
+            if (accepted) params.push('valid=accepted');
+            if (rejected) params.push('valid=rejected');
+            if (notValidated) params.push('valid=not_validated');
+            if (mixed) params.push('valid=mixed');
 
-            return `/job/${this.job.job_id}/export/${alignment}/csv?${params.join('&')}`;
+            return `/job/${this.job.job_id}/export/${type}/${alignment}/csv?${params.join('&')}`;
         },
 
-        getRecursiveConditions(conditionsGroup) {
-            let conditions;
-            if (Array.isArray(conditionsGroup))
-                conditions = conditionsGroup;
-            else if (Array.isArray(conditionsGroup.conditions))
-                conditions = conditionsGroup.conditions;
+        getRecursiveElements(elementsGroup, groupName) {
+            let elements;
+            if (Array.isArray(elementsGroup))
+                elements = elementsGroup;
+            else if (Array.isArray(elementsGroup[groupName]))
+                elements = elementsGroup[groupName];
 
-            if (conditions)
-                return conditions.reduce((acc, condition) => acc.concat(this.getRecursiveConditions(condition)), []);
+            if (elements)
+                return elements.reduce((acc, element) => acc.concat(this.getRecursiveElements(element, groupName)), []);
 
-            return [conditionsGroup];
+            return [elementsGroup];
         },
 
         async submit() {
@@ -125,6 +153,7 @@ export default {
                 job_link: this.job.job_link,
                 resources: this.resources,
                 mappings: this.matches,
+                lenses: this.lenses,
             });
         },
 
@@ -155,6 +184,9 @@ export default {
 
             if (this.job.mappings)
                 this.matches = copy(this.job.mappings);
+
+            if (this.job.lenses)
+                this.lenses = copy(this.job.lenses);
 
             await Promise.all([this.loadAlignments(), this.loadClusterings()]);
         },
@@ -218,24 +250,25 @@ export default {
             return callApi(`/job/${this.job.job_id}/kill_clustering/${alignment}`, {});
         },
 
-        async getAlignmentTotals(alignment, clusterId = undefined) {
+        async getAlignmentTotals(type, alignment, clusterId = undefined) {
             const params = [];
             if (clusterId) params.push(`cluster_id=${clusterId}`);
 
-            return callApi(`/job/${this.job.job_id}/alignment_totals/${alignment}?${params.join('&')}`);
+            return callApi(`/job/${this.job.job_id}/alignment_totals/${type}/${alignment}?${params.join('&')}`);
         },
 
-        async getAlignment(alignment, accepted, declined, notValidated,
+        async getAlignment(type, alignment, accepted, rejected, notValidated, mixed,
                            clusterId = undefined, limit = undefined, offset = 0) {
             const params = [];
-            if (accepted) params.push('accepted=true');
-            if (declined) params.push('declined=true');
-            if (notValidated) params.push('not_validated=true');
+            if (accepted) params.push('valid=accepted');
+            if (rejected) params.push('valid=rejected');
+            if (notValidated) params.push('valid=not_validated');
+            if (mixed) params.push('valid=mixed');
             if (clusterId) params.push(`cluster_id=${clusterId}`);
             if (limit) params.push(`limit=${limit}`);
             if (offset) params.push(`offset=${offset}`);
 
-            return callApi(`/job/${this.job.job_id}/alignment/${alignment}?${params.join('&')}`);
+            return callApi(`/job/${this.job.job_id}/alignment/${type}/${alignment}?${params.join('&')}`);
         },
 
         async getClusters(alignment, association, limit = undefined, offset = 0) {
@@ -261,8 +294,8 @@ export default {
             return callApi(`/job/${this.job.job_id}/cluster/${alignment}/${clusterId}/graph?${params.join('&')}`);
         },
 
-        async validateLink(alignment, source, target, valid) {
-            return callApi(`/job/${this.job.job_id}/validate/${alignment}`, {source, target, valid});
+        async validateLink(type, alignment, source, target, valid) {
+            return callApi(`/job/${this.job.job_id}/validate/${type}/${alignment}`, {source, target, valid});
         },
 
         async loadDatasets(graphqlEndpoint, hsid) {
@@ -314,7 +347,7 @@ function findId(objs) {
 
 async function callApi(path, body) {
     try {
-        let response = null;
+        let response;
 
         if (body) {
             response = await fetch(path, {

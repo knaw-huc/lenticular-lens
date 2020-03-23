@@ -29,18 +29,18 @@ class WorkerType(Enum):
 
 class Worker:
     def __init__(self, type):
-        self.type = type
-        self.job = None
-        self.job_data = None
+        self.__type = type
+        self.__job = None
+        self.__job_data = None
 
     def teardown(self):
-        print('Worker %s stopped.' % str(self.type))
+        print('Worker %s stopped.' % str(self.__type))
 
-        if self.job:
-            self.job.kill()
+        if self.__job:
+            self.__job.kill()
 
     def run(self):
-        if self.type == WorkerType.TIMBUCTOO:
+        if self.__type == WorkerType.TIMBUCTOO:
             watch_query = """
                 SELECT *
                 FROM timbuctoo_tables
@@ -57,10 +57,10 @@ class Worker:
             update_status = lambda cur: cur.execute("""
                 UPDATE timbuctoo_tables 
                 SET update_start_time = now() 
-                WHERE "table_name" = %s""", (self.job_data['table_name'],))
+                WHERE "table_name" = %s""", (self.__job_data['table_name'],))
 
             self.watch_for_jobs("timbuctoo_tables", watch_query, update_status, self.run_timbuctoo_job)
-        elif self.type == WorkerType.ALIGNMENT:
+        elif self.__type == WorkerType.ALIGNMENT:
             watch_query = """
                 SELECT *
                 FROM alignments aj
@@ -73,10 +73,10 @@ class Worker:
             update_status = lambda cur: cur.execute("""
                 UPDATE alignments
                 SET status = 'running', processing_at = now()
-                WHERE job_id = %s AND alignment = %s""", (self.job_data['job_id'], self.job_data['alignment']))
+                WHERE job_id = %s AND alignment = %s""", (self.__job_data['job_id'], self.__job_data['alignment']))
 
             self.watch_for_jobs("alignments", watch_query, update_status, self.run_alignment_job)
-        elif self.type == WorkerType.CLUSTERING:
+        elif self.__type == WorkerType.CLUSTERING:
             watch_query = """
                 SELECT *
                 FROM clusterings cl
@@ -88,10 +88,10 @@ class Worker:
             update_status = lambda cur: cur.execute("""
                 UPDATE clusterings
                 SET status = 'running', processing_at = now()
-                WHERE job_id = %s AND alignment = %s""", (self.job_data['job_id'], self.job_data['alignment']))
+                WHERE job_id = %s AND alignment = %s""", (self.__job_data['job_id'], self.__job_data['alignment']))
 
             self.watch_for_jobs("clusterings", watch_query, update_status, self.run_clustering_job)
-        elif self.type == WorkerType.RECONCILIATION:
+        elif self.__type == WorkerType.RECONCILIATION:
             watch_query = """
                 SELECT *
                 FROM clusterings cl
@@ -103,7 +103,7 @@ class Worker:
             update_status = lambda cur: cur.execute("""
                 UPDATE clusterings
                 SET status = 'running', processing_at = now()
-                WHERE job_id = %s AND alignment = %s""", (self.job_data['job_id'], self.job_data['alignment']))
+                WHERE job_id = %s AND alignment = %s""", (self.__job_data['job_id'], self.__job_data['alignment']))
 
             self.watch_for_jobs("clusterings", watch_query, update_status, self.run_reconciliation_job)
 
@@ -116,7 +116,7 @@ class Worker:
 
                     job_data = cur.fetchone()
                     if job_data:
-                        self.job_data = job_data
+                        self.__job_data = job_data
                         update_status(cur)
 
                     conn.commit()
@@ -129,37 +129,37 @@ class Worker:
                 time.sleep(random.randint(0, 1000) / 1000)
 
     def run_timbuctoo_job(self):
-        self.job = TimbuctooJob(table_name=self.job_data['table_name'],
-                                graphql_endpoint=self.job_data['graphql_endpoint'],
-                                hsid=self.job_data['hsid'],
-                                dataset_id=self.job_data['dataset_id'],
-                                collection_id=self.job_data['collection_id'],
-                                columns=self.job_data['columns'],
-                                cursor=self.job_data['next_page'],
-                                rows_count=self.job_data['rows_count'],
-                                rows_per_page=1000)
-        self.job.run()
+        self.__job = TimbuctooJob(table_name=self.__job_data['table_name'],
+                                  graphql_endpoint=self.__job_data['graphql_endpoint'],
+                                  hsid=self.__job_data['hsid'],
+                                  dataset_id=self.__job_data['dataset_id'],
+                                  collection_id=self.__job_data['collection_id'],
+                                  columns=self.__job_data['columns'],
+                                  cursor=self.__job_data['next_page'],
+                                  rows_count=self.__job_data['rows_count'],
+                                  rows_per_page=1000)
+        self.__job.run()
         self.cleanup()
 
     def run_alignment_job(self):
-        self.job = AlignmentJob(job_id=self.job_data['job_id'], alignment=self.job_data['alignment'])
-        self.job.run()
+        self.__job = AlignmentJob(job_id=self.__job_data['job_id'], alignment=self.__job_data['alignment'])
+        self.__job.run()
         self.cleanup()
 
     def run_clustering_job(self):
-        self.job = ClusteringJob(job_id=self.job_data['job_id'], alignment=self.job_data['alignment'])
-        self.job.run()
+        self.__job = ClusteringJob(job_id=self.__job_data['job_id'], alignment=self.__job_data['alignment'])
+        self.__job.run()
         self.cleanup()
 
     def run_reconciliation_job(self):
-        self.job = ReconciliationJob(job_id=self.job_data['job_id'], alignment=self.job_data['alignment'],
-                                     association_file=self.job_data['association_file'])
-        self.job.run()
+        self.__job = ReconciliationJob(job_id=self.__job_data['job_id'], alignment=self.__job_data['alignment'],
+                                       association_file=self.__job_data['association_file'])
+        self.__job.run()
         self.cleanup()
 
     def cleanup(self):
-        self.job = None
-        self.job_data = None
+        self.__job = None
+        self.__job_data = None
 
 
 if __name__ == '__main__':

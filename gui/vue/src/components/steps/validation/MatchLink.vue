@@ -66,9 +66,9 @@
 
           <div class="col-auto">
             <button type="button" class="btn btn-sm btn-danger m-1" :disabled="isUpdating"
-                    @click="$emit('declined')">
+                    @click="$emit('rejected')">
               <fa-icon icon="times"/>
-              Decline
+              Reject
             </button>
           </div>
         </div>
@@ -112,11 +112,14 @@
             },
 
             bgColor() {
-                if (this.link.valid === true)
+                if (this.link.valid === 'accepted')
                     return 'bg-success';
 
-                if (this.link.valid === false)
+                if (this.link.valid === 'rejected')
                     return 'bg-danger';
+
+                if (this.link.valid === 'mixed')
+                    return 'bg-warning';
 
                 return 'bg-white';
             },

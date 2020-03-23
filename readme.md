@@ -16,7 +16,8 @@ and is also able to report on manual corrections and the amount of manual valida
 1. [Job configuration with JSON](#job-configuration-with-json)
     1. [Resources](#resources)
     1. [Mappings](#mappings)
-    1. [Condition groups](#condition-groups)
+    1. [Lenses](#lenses)
+    1. [Element groups](#element-groups)
     1. [Property paths](#property-paths)
 1. [Matching methods](#matching-methods)
     1. [Levenshtein distance](#levenshtein-distance)
@@ -100,10 +101,10 @@ Returns the identifier of this new job.
 
 **URL**: `/job/update`\
 **Method**: `POST`\
-**JSON**: `job_id`, `job_title`, `job_description`, `job_link`, `resources`, `mappings`
+**JSON**: `job_id`, `job_title`, `job_description`, `job_link`, `resources`, `mappings`, `lenses`
 
 Updates a job with the given `job_id`. 
-Updates the `job_title`, `job_description`, `job_link`, `resources` and `mappings`.
+Updates the `job_title`, `job_description`, `job_link`, `resources`, `mappings` and `lenses`.
 
 ---
 
@@ -186,11 +187,11 @@ _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/resource/LimitedPersons`_
 
 ---
 
-**URL**: `/job/<job_id>/alignment/<alignment>`\
+**URL**: `/job/<job_id>/alignment/<type>/<alignment>`\
 **Method**: `GET`\
 **Parameters**: `cluster_id`, `limit`, `offset`
 
-Returns the linkset for alignment `alignment` of the given `job_id`.
+Returns the linkset for alignment `alignment` of `type` (`match` or `lens`) of the given `job_id`.
 Use `limit` and `offset` for paging.
 Specify `cluster_id` to only return the links of a specific cluster.
 
@@ -210,13 +211,14 @@ _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/clusters/0`_
 
 ### Linksets interaction
 
-**URL**: `/job/<job_id>/validate/<alignment>`\
+**URL**: `/job/<job_id>/validate/<type>/<alignment>`\
 **Method**: `POST`\
 **JSON**: `source`, `target`, `valid`
 
-Validate a link for alignment `alignment` of the given `job_id`.
+Validate a link for alignment `alignment` of `type` (`match` or `lens`) of the given `job_id`.
 Specify the uris of the `source` and `target` to identify the link to be validated.
-Provide `valid` with either `true` or `false` to validate the link or use `null` to reset.  
+
+Provide `valid` with either `accepted` or `declined` to validate the link or use `not_validated` to reset.  
 
 ---
 
@@ -231,14 +233,16 @@ Specify `get_reconciliation` to obtain the reconciled visualization.
 
 ### Export
 
-**URL**: `/job/<job_id>/export/<alignment>/csv`\
+**URL**: `/job/<job_id>/export/<type>/<alignment>/csv`\
 **Method**: `GET`\
-**Parameters**: `accepted`, `declined`, `not_validated`
+**Parameters**: `valid`
 
-Get a CSV export of the linkset for alignment `alignment` of the given `job_id`.
-Specify `accepted` to include the accepted links.
-Specify `declined` to include the declined links.
-Specify `not_validated` to include the links which were not yet validated.
+Get a CSV export of the linkset for alignment `alignment` of `type` (`match` or `lens`) the given `job_id`.
+
+Specify `valid` with `accepted` to include the accepted links.
+Specify `valid` with `declined` to include the declined links.
+Specify `valid` with `not_validated` to include the links which were not yet validated.
+Specify `valid` with `mixed` to include the links which have mixed validations in the various linksets of the lens.
 
 ## Job configuration with JSON
 
@@ -260,12 +264,12 @@ of the specific resources to use for a particular job.
         "timbuctoo_hsid": null                                                          // The hsid if the dataset is not published; optional field
     },
     "filter": {                 // The filter configuration to obtain only a subset of the data from Timbuctoo; optional field
-        "conditions": [{        // The filter is composed of condition groups
+        "conditions": [{        // The filter is composed of element groups
             "property": ["foaf_name"],    // The property path to which this condition applies
             "type": 'not_ilike',          // The type of filtering to apply; see table below for allowed values
             "value": "%...%"              // Depends on type of filtering selected; value to use for filtering
         }],
-        "type": "AND"
+        "type": "AND"           // Whether ALL conditions in this group should match ('AND') or AT LEAST ONE condition in this group has to match ('OR')
     },
     "limit": -1,                // Apply a limit on the number of entities to obtain or -1 for no limit; optional field, defaults to '-1'
     "random": false,            // Randomize the entities to obtain or not; optional field, defaults to 'false'
@@ -296,14 +300,13 @@ of the alignments to perform for a particular job.
 ```json5
 {
     "id": 1,                    // An integer as identifier  
-    "label": "My alignment",    // The label of the resource in the GUI
+    "label": "My alignment",    // The label of the alignment in the GUI
     "description": "",          // A description of this mapping by the user; optional field
     "is_association": false,    // Work in progress; optional field, defaults to 'false'
-    "match_against": 2,         // The resulting linkset of this alignment should be matched against the resulting linkset of another alignment with the given identifier; optional field
     "sources": [1],             // The identifiers of resources to use as source
     "targets": [1],             // The identifiers of resources to use as targets
     "methods": {                // The matching configuration for finding links; requires at least one condition
-        "conditions": [{        // The matching configuration is composed of condition groups
+        "conditions": [{        // The matching configuration is composed of element groups
             "method_name": "=",               // The type of matching to apply; see table below for allowed values
             "method_value": {},               // Some types of matching methods require extra configuration
             "sources": [{                     // The source properties to use during matching
@@ -322,7 +325,7 @@ of the alignments to perform for a particular job.
                 "transformers": []
             }]
         }],
-        "type": "AND"
+        "type": "AND"           // Whether ALL conditions in this group should match ('AND') or AT LEAST ONE condition in this group has to match ('OR')
     },
     "properties": [{            // A list of property paths to use for obtaining data while reviewing the linkset; optional field
         "resource": 1,                        // The identifier of the resource to use
@@ -353,19 +356,49 @@ _Note: See [Matching methods](#matching-methods) for a description and examples 
 | Prefix        | `PREFIX`          | `prefix` (The prefix)     |
 | Suffix        | `SUFFIX`          | `suffix` (The suffix)     |
 
-### Condition groups
+### Lenses
 
-Both the resources (using the filter) and the mappings (using the matching methods) apply condition groups
-to allow the user the express complex conditions.
+Lenses is a list of JSON objects that contain the configuration 
+of the lenses to apply on a combination of linksets.
 
 ```json5
 {
-    "conditions": [],     // The list of conditions; may contain other condition groups
-    "type": "AND"         // Whether ALL conditions in this group should match ('AND') or AT LEAST ONE condition in this group has to match ('OR')
+    "id": 1,                    // An integer as identifier  
+    "label": "My lens",         // The label of the lens in the GUI
+    "description": "",          // A description of this lens by the user; optional field
+    "elements": {               // The lens configuration; requires groups consisting of two elements
+        "alignments": [{        // The lens configuration is composed of element groups
+            "alignnment": 0     // The identifier of the alignment to use
+        }],
+        "type": "UNION"         // Lens type to apply; see table below for allowed values
+    },
+    "properties": [{            // A list of property paths to use for obtaining data while reviewing the lens; optional field
+        "resource": 1,                        // The identifier of the resource to use
+        "property": ["schema_birthDate"]      // The property path
+    }]
 }
 ```
 
-As conditions may contain other conditions, complex conditions can be expressed.
+| Lens type      | Description                                                                              |
+| :------------- | :--------------------------------------------------------------------------------------- |
+| UNION          | Union (A ∪ B) All links of both linksets                                                 |
+| INTERSECTION   | Intersection (A ∩ B) Only links that appear in both linksets                             |
+| DIFFERENCE     | Difference (A - B) Only links from the first linkset, not from the second linkset        |
+| SYM_DIFFERENCE | Symmetric difference (A ∆ B) Only links which appear in either one linkset, but not both |
+
+### Element groups
+
+The resources (using the filter), the mappings (using the matching methods) and the lenses (using the elements) 
+all apply element groups to allow the user the express complex conditions.
+
+```json5
+{
+    "elements": [],       // The list of elements; may contain other element groups (can have any JSON key)
+    "type": "AND"         // The type that combines these elements (usually AND/OR, but can be of any type)
+}
+```
+
+As element groups may contain other element groups, complex conditions can be expressed.
 
 ```json5
 {

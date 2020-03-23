@@ -10,8 +10,10 @@ CREATE TABLE IF NOT EXISTS reconciliation_jobs
     job_link            text,
     resources_form_data json,
     mappings_form_data  json,
+    lenses_form_data    json,
     resources           json,
     mappings            json,
+    lenses              json,
     created_at          timestamp default now() not null,
     updated_at          timestamp default now() not null,
     UNIQUE (job_title, job_description)
@@ -78,6 +80,7 @@ CREATE TABLE IF NOT EXISTS clusterings
 );
 
 CREATE TYPE link_order AS ENUM ('source_target', 'both', 'target_source');
+CREATE TYPE link_validity AS ENUM ('accepted', 'rejected', 'not_validated', 'mixed');
 
 CREATE OR REPLACE FUNCTION increment_counter(sequence_name text) RETURNS boolean
     COST 10000 STRICT VOLATILE AS

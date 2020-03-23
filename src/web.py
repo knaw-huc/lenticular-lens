@@ -78,19 +78,21 @@ def job_update():
     job_id = request.json['job_id']
     job = Job(job_id)
 
-    (resources, mappings) = job.update_data({
+    (resources, mappings, lenses) = job.update_data({
         'job_title': request.json['job_title'],
         'job_description': request.json['job_description'],
         'job_link': request.json['job_link'],
         'resources': request.json['resources'] if 'resources' in request.json else [],
         'mappings': request.json['mappings'] if 'mappings' in request.json else [],
+        'lenses': request.json['lenses'] if 'lenses' in request.json else [],
     })
 
     return jsonify({
         'result': 'updated',
         'job_id': job_id,
         'resources': [resource['id'] for resource in resources if 'id' in resource],
-        'mappings': [mapping['id'] for mapping in mappings if 'id' in mapping]
+        'mappings': [mapping['id'] for mapping in mappings if 'id' in mapping],
+        'lenses': [lens['id'] for lens in lenses if 'id' in lens]
     })
 
 
@@ -104,6 +106,7 @@ def job_data(job):
             'job_link': job.data['job_link'],
             'resources': job.data['resources_form_data'],
             'mappings': job.data['mappings_form_data'],
+            'lenses': job.data['lenses_form_data'],
             'created_at': job.data['created_at'],
             'updated_at': job.data['updated_at']
         })
@@ -157,7 +160,7 @@ def matching_sql(job, alignment):
     from flask import Response
     from ll.job.matching_sql import MatchingSql
 
-    job_sql = MatchingSql(job.config_for_alignment(int(alignment)))
+    job_sql = MatchingSql(job, int(alignment))
     return Response(job_sql.sql_string, mimetype='application/sql')
 
 
@@ -173,18 +176,19 @@ def kill_clustering(job, alignment):
     return jsonify({'result': 'ok'})
 
 
-@app.route('/job/<job:job>/alignment_totals/<alignment>')
-def linkset_totals(job, alignment):
-    return jsonify(job.get_links_totals(int(alignment), cluster_id=request.args.get('cluster_id')))
+@app.route('/job/<job:job>/alignment_totals/<type>/<alignment>')
+def linkset_totals(job, type, alignment):
+    return jsonify(job.get_links_totals(type, int(alignment), cluster_id=request.args.get('cluster_id')))
 
 
-@app.route('/job/<job:job>/alignment/<alignment>')
-def linkset(job, alignment):
+@app.route('/job/<job:job>/alignment/<type>/<alignment>')
+def linkset(job, type, alignment):
     cluster_id = request.args.get('cluster_id')
-    validation_filter = validation_filter_helper(request.args)
+    validation_filter = validation_filter_helper(request.args.getlist('valid'))
 
-    links = [link for link in job.get_links(int(alignment), validation_filter=validation_filter, cluster_id=cluster_id,
-                                            include_props=True, limit=request.args.get('limit', type=int),
+    links = [link for link in job.get_links(type, int(alignment), validation_filter=validation_filter,
+                                            cluster_id=cluster_id, include_props=True,
+                                            limit=request.args.get('limit', type=int),
                                             offset=request.args.get('offset', 0, type=int))]
     return jsonify(links)
 
@@ -221,12 +225,12 @@ def clusters(job, alignment):
     return jsonify(clusters)
 
 
-@app.route('/job/<job:job>/validate/<alignment>', methods=['POST'])
-def validate_link(job, alignment):
+@app.route('/job/<job:job>/validate/<type>/<alignment>', methods=['POST'])
+def validate_link(job, type, alignment):
     source = request.json.get('source')
     target = request.json.get('target')
     valid = request.json.get('valid')
-    job.validate_link(alignment, source, target, valid)
+    job.validate_link(type, int(alignment), source, target, valid)
     return jsonify({'result': 'ok'})
 
 
@@ -261,30 +265,34 @@ def get_cluster_graph_data(job, alignment, cluster_id):
     })
 
 
-@app.route('/job/<job:job>/export/<alignment>/csv')
-def export_to_csv(job, alignment):
+@app.route('/job/<job:job>/export/<type>/<alignment>/csv')
+def export_to_csv(job, type, alignment):
     stream = io.StringIO()
     writer = csv.writer(stream)
 
     writer.writerow(['Source URI', 'Target URI', 'Valid'])
-    for link in job.get_links(alignment, validation_filter=validation_filter_helper(request.args)):
+    for link in job.get_links(type, alignment,
+                              validation_filter=validation_filter_helper(request.args.getlist('valid'))):
         writer.writerow([link['source'], link['target'], link['valid']])
 
     output = make_response(stream.getvalue())
-    output.headers['Content-Disposition'] = 'attachment; filename=' + job.job_id + '_' + alignment + '.csv'
+    output.headers['Content-Disposition'] = 'attachment; filename=' + job.job_id + '_' + type + '_' + alignment + '.csv'
     output.headers['Content-Type'] = 'text/csv'
 
     return output
 
 
-def validation_filter_helper(args):
+def validation_filter_helper(valid):
     validation_filter = 0
-    if args.get('accepted', default=False) == 'true':
-        validation_filter |= Validation.ACCEPTED
-    if args.get('declined', default=False) == 'true':
-        validation_filter |= Validation.DECLINED
-    if args.get('not_validated', default=False) == 'true':
-        validation_filter |= Validation.NOT_VALIDATED
+    for type in valid:
+        if type == 'accepted':
+            validation_filter |= Validation.ACCEPTED
+        if type == 'rejected':
+            validation_filter |= Validation.REJECTED
+        if type == 'not_validated':
+            validation_filter |= Validation.NOT_VALIDATED
+        if type == 'mixed':
+            validation_filter |= Validation.MIXED
 
     return validation_filter if validation_filter != 0 else Validation.ALL
 

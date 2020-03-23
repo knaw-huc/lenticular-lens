@@ -1,10 +1,10 @@
 <template>
-  <card :id="'clusters_match_' + match.id" type="clusters-matches" :label="match.label"
+  <card :id="'clusters_match_' + type + '_' + match.id" type="clusters-matches" :label="match.label"
         :has-extra-row="true" :open-card="show" @show="updateShow('open')" @hide="updateShow('close')">
     <template v-slot:columns>
       <div class="col">
         <sub-card :is-first="true" class="small">
-          <div class="row justify-content-center">
+          <div v-if="alignment" class="row justify-content-center">
             <div class="col-auto">
               <div>
                 <strong>Links: </strong>
@@ -65,7 +65,7 @@
             <div class="col-auto">
               <div class="btn-toolbar" role="toolbar" aria-label="Toolbar">
                 <div class="btn-group btn-group-toggle mr-4">
-                  <label class="btn btn-secondary btn-sm" v-bind:class="{'active': showInfo}">
+                  <label v-if="alignment" class="btn btn-secondary btn-sm" v-bind:class="{'active': showInfo}">
                     <input type="checkbox" autocomplete="off" v-model="showInfo" @change="updateShow"/>
                     <fa-icon icon="info-circle"/>
                     Show alignment specs
@@ -109,13 +109,13 @@
                     </span>
                   </label>
 
-                  <label class="btn btn-sm btn-secondary" v-bind:class="{'active': showDeclinedLinks}">
-                    <input type="checkbox" autocomplete="off" v-model="showDeclinedLinks"
+                  <label class="btn btn-sm btn-secondary" v-bind:class="{'active': showRejectedLinks}">
+                    <input type="checkbox" autocomplete="off" v-model="showRejectedLinks"
                            :disabled="loadingTotals" @change="resetLinks()"/>
-                    {{ showDeclinedLinks ? 'Hide declined' : 'Show declined' }}
+                    {{ showRejectedLinks ? 'Hide rejected' : 'Show rejected' }}
 
-                    <span v-if="declinedLinks !== null" class="badge badge-light ml-1">
-                      {{ declinedLinks.toLocaleString('en') }}
+                    <span v-if="rejectedLinks !== null" class="badge badge-light ml-1">
+                      {{ rejectedLinks.toLocaleString('en') }}
                     </span>
                   </label>
 
@@ -126,6 +126,16 @@
 
                     <span v-if="notValidatedLinks !== null" class="badge badge-light ml-1">
                       {{ notValidatedLinks.toLocaleString('en') }}
+                    </span>
+                  </label>
+
+                  <label v-if="isLens" class="btn btn-sm btn-secondary" v-bind:class="{'active': showMixedLinks}">
+                    <input type="checkbox" autocomplete="off" v-model="showMixedLinks"
+                           :disabled="loadingTotals" @change="resetLinks()"/>
+                    {{ showMixedLinks ? 'Hide mixed' : 'Show mixed' }}
+
+                    <span v-if="mixedLinks !== null" class="badge badge-light ml-1">
+                      {{ mixedLinks.toLocaleString('en') }}
                     </span>
                   </label>
                 </div>
@@ -141,7 +151,7 @@
           </div>
         </sub-card>
 
-        <alignment-spec v-if="showInfo" :match="match"/>
+        <alignment-spec v-if="isMatch && showInfo" :match="match"/>
 
         <sub-card v-if="showPropertySelection" id="properties-card" type="properties" label="Property selection"
                   :has-margin-auto="true" :has-columns="true">
@@ -236,7 +246,7 @@
           :index="idx"
           :link="link"
           @accepted="acceptLink(link)"
-          @declined="declineLink(link)"/>
+          @rejected="rejectLink(link)"/>
 
       <infinite-loading :identifier="linksIdentifier" @infinite="getLinks">
         <template v-slot:spinner>
@@ -291,14 +301,19 @@
                 showClusters: false,
 
                 showAcceptedLinks: false,
-                showDeclinedLinks: false,
+                showRejectedLinks: false,
                 showNotValidatedLinks: true,
+                showMixedLinks: false,
                 resetShownLinks: false,
 
                 acceptedLinks: null,
-                declinedLinks: null,
+                rejectedLinks: null,
                 notValidatedLinks: null,
+                mixedLinks: null,
+
                 loadingTotals: false,
+                loadingLinks: false,
+                loadingClusters: false,
 
                 links: [],
                 linksIdentifier: +new Date(),
@@ -312,6 +327,7 @@
             };
         },
         props: {
+            type: String,
             match: Object,
         },
         computed: {
@@ -319,14 +335,26 @@
                 return !this.match.properties.map(res => res.property[0] !== '').includes(false);
             },
 
+            isMatch() {
+                return this.type === 'match';
+            },
+
+            isLens() {
+                return this.type === 'lens';
+            },
+
             alignment() {
-                return this.$root.alignments.find(alignment => alignment.alignment === this.match.id);
+                return this.isMatch
+                    ? this.$root.alignments.find(alignment => alignment.alignment === this.match.id)
+                    : null;
             },
 
             clustering() {
-                const clustering = this.$root.clusterings.find(clustering => clustering.alignment === this.match.id);
-                if (clustering && clustering.status === 'done')
-                    return clustering;
+                if (this.isMatch) {
+                    const clustering = this.$root.clusterings.find(clustering => clustering.alignment === this.match.id);
+                    if (clustering && clustering.status === 'done')
+                        return clustering;
+                }
 
                 return null;
             },
@@ -419,19 +447,27 @@
                 this.loadingTotals = true;
 
                 const clusterId = this.showClusterLinks ? this.clusterIdSelected : undefined;
-                const totals = await this.$root.getAlignmentTotals(this.match.id, clusterId);
+                const totals = await this.$root.getAlignmentTotals(this.type, this.match.id, clusterId);
 
-                this.acceptedLinks = totals.accepted || 0;
-                this.declinedLinks = totals.declined || 0;
-                this.notValidatedLinks = totals.not_validated || 0;
+                if (totals) {
+                    this.acceptedLinks = totals.accepted || 0;
+                    this.rejectedLinks = totals.rejected || 0;
+                    this.notValidatedLinks = totals.not_validated || 0;
+                    this.mixedLinks = totals.mixed || 0;
+                }
 
                 this.loadingTotals = false;
             },
 
             async getLinks(state) {
+                if (this.loadingLinks)
+                    return;
+
+                this.loadingLinks = true;
+
                 const clusterId = this.showClusterLinks ? this.clusterIdSelected : undefined;
-                const links = await this.$root.getAlignment(this.match.id,
-                    this.showAcceptedLinks, this.showDeclinedLinks, this.showNotValidatedLinks,
+                const links = await this.$root.getAlignment(this.type, this.match.id,
+                    this.showAcceptedLinks, this.showRejectedLinks, this.showNotValidatedLinks, this.showMixedLinks,
                     clusterId, 50, this.links.length);
 
                 if (links !== null)
@@ -445,11 +481,15 @@
                     else
                         state.complete();
                 }
+
+                this.loadingLinks = false;
             },
 
             async getClusters(state) {
-                if (!this.clustering)
+                if (!this.clustering || this.loadingClusters)
                     return;
+
+                this.loadingClusters = true;
 
                 const clusters = await this.$root.getClusters(
                     this.match.id, this.clustering.association, 5, this.clusters.length);
@@ -465,55 +505,61 @@
                     else
                         state.complete();
                 }
+
+                this.loadingClusters = false;
             },
 
             async acceptLink(link) {
                 const before = link.valid;
-                const after = (before === true) ? null : true;
+                const after = (before === 'accepted') ? 'not_validated' : 'accepted';
 
                 link.updating = true;
-                const result = await this.$root.validateLink(this.match.id, link.source, link.target, after);
+                const result = await this.$root.validateLink(this.type, this.match.id, link.source, link.target, after);
                 link.updating = false;
 
                 if (result !== null) {
                     link.valid = after;
 
-                    if (before === true)
+                    if (before === 'accepted')
                         this.acceptedLinks--;
                     else
                         this.acceptedLinks++;
 
-                    if (before === null)
+                    if (before === 'not_validated')
                         this.notValidatedLinks--;
-                    else if (before === true)
+                    else if (before === 'accepted')
                         this.notValidatedLinks++;
+                    else if (before === 'mixed')
+                        this.mixedLinks--;
                     else
-                        this.declinedLinks--;
+                        this.rejectedLinks--;
 
                     this.resetShownLinks = true;
                 }
             },
 
-            async declineLink(link) {
+            async rejectLink(link) {
                 const before = link.valid;
-                const after = (before === false) ? null : false;
+                const after = (before === 'rejected') ? 'not_validated' : 'rejected';
 
                 link.updating = true;
-                const result = await this.$root.validateLink(this.match.id, link.source, link.target, after);
+                const result = await this.$root.validateLink(this.type, this.match.id, link.source, link.target, after);
                 link.updating = false;
 
                 if (result !== null) {
                     link.valid = after;
 
-                    if (before === false)
-                        this.declinedLinks--;
+                    if (before === 'rejected')
+                        this.rejectedLinks--;
                     else
-                        this.declinedLinks++;
+                        this.rejectedLinks++;
 
-                    if (before === null)
+                    if (before === 'not_validated')
                         this.notValidatedLinks--;
-                    else if (before === false)
+                    else if (before === 'rejected')
                         this.notValidatedLinks++;
+                    else if (before === 'mixed')
+                        this.mixedLinks--;
                     else
                         this.acceptedLinks--;
 

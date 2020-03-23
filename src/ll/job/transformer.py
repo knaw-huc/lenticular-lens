@@ -7,32 +7,34 @@ matching_functions = get_json_from_file('matching_functions.json')
 transformers = get_json_from_file('transformers.json')
 
 
-class Condition:
-    def __init__(self, schema):
+class Elements:
+    def __init__(self, schema, group_name, types):
         self.schema = schema
+        self.group_name = group_name
+        self.types = types
 
     def validate(self, data):
         if type(data) is not dict:
             raise SchemaError('not an dict')
 
-        if 'type' in data and data['type'].upper() in ('AND', 'OR') and \
-                'conditions' in data and type(data['conditions']) is list:
-            conditions = [self.validate(c) for c in data['conditions']]
-            if len(conditions) == 0:
+        if 'type' in data and data['type'].lower() in self.types and \
+                self.group_name in data and type(data[self.group_name]) is list:
+            elements = [self.validate(c) for c in data[self.group_name]]
+            if len(elements) == 0:
                 return None
 
-            return {'type': data['type'].upper(), 'conditions': conditions}
+            return {'type': data['type'].upper(), self.group_name: elements}
 
         return self.schema.validate(data)
 
 
-resource_filter_condition_schema = Schema({
+resource_filter_elements_schema = Schema({
     'property': [And(str, len)],
     'type': And(str, Use(str.lower), lambda t: t in filter_functions.keys()),
     Optional('value'): And(str, len),
 }, ignore_extra_keys=True)
 
-mapping_method_condition_schema = Schema({
+mapping_method_elements_schema = Schema({
     'method_name': And(str, Use(str.upper), lambda m: m in matching_functions.keys()),
     'method_value': dict,
     'sources': [{
@@ -53,6 +55,10 @@ mapping_method_condition_schema = Schema({
     }]
 }, ignore_extra_keys=True)
 
+lens_elements_schema = Schema({
+    'alignment': Use(int)
+}, ignore_extra_keys=True)
+
 resource_schema = Schema({
     'id': Use(int),
     'label': And(str, len),
@@ -64,7 +70,7 @@ resource_schema = Schema({
         'timbuctoo_graphql': And(str, len),
         Optional('timbuctoo_hsid'): Or(str, None),
     },
-    Optional('filter', default=None): Or(None, Condition(resource_filter_condition_schema)),
+    Optional('filter', default=None): Or(None, Elements(resource_filter_elements_schema, 'conditions', ('and', 'or'))),
     Optional('limit', default=-1): And(int, lambda n: n > 0 or n == -1),
     Optional('random', default=False): bool,
     Optional('properties', default=list): [[str]],
@@ -77,10 +83,21 @@ mapping_schema = Schema({
     'label': And(str, len),
     Optional('description', default=None): Or(str, None),
     Optional('is_association', default=False): bool,
-    Optional('match_against', default=None): Or(Use(int), None),
     'sources': [Use(int)],
     'targets': [Use(int)],
-    'methods': And(Condition(mapping_method_condition_schema), dict),
+    'methods': And(Elements(mapping_method_elements_schema, 'conditions', ('and', 'or')), dict),
+    Optional('properties', default=list): [{
+        'resource': Use(int),
+        'property': [str],
+    }]
+}, ignore_extra_keys=True)
+
+lenses_schema = Schema({
+    'id': Use(int),
+    'label': And(str, len),
+    Optional('description', default=None): Or(str, None),
+    'elements': And(Elements(lens_elements_schema, 'alignments',
+                             ('union', 'intersection', 'difference', 'sym_difference')), dict),
     Optional('properties', default=list): [{
         'resource': Use(int),
         'property': [str],
@@ -88,7 +105,7 @@ mapping_schema = Schema({
 }, ignore_extra_keys=True)
 
 
-def transform(resources_org, mappings_org):
+def transform(resources_org, mappings_org, lenses_org):
     def create_references_for_property(resource, property):
         if len(property) == 1 or property[1] == '__value__':
             return [resource['label'], property[0]]
@@ -120,18 +137,18 @@ def transform(resources_org, mappings_org):
 
         return create_references_for_property(referenced_resource, property[2:])
 
-    def transform_conditions(conditions_group, with_condition):
-        if type(conditions_group) is list:
-            return [transform_conditions(condition, with_condition) for condition in conditions_group]
+    def transform_elements(elements_group, group_name, with_element):
+        if type(elements_group) is list:
+            return [transform_elements(element, group_name, with_element) for element in elements_group]
 
-        if 'conditions' in conditions_group:
+        if group_name in elements_group:
             return {
-                'type': conditions_group['type'],
-                'conditions': [transform_conditions(condition, with_condition)
-                               for condition in conditions_group['conditions']]
+                'type': elements_group['type'],
+                group_name: [transform_elements(element, group_name, with_element)
+                             for element in elements_group[group_name]]
             }
 
-        return with_condition(conditions_group)
+        return with_element(elements_group)
 
     def transform_resource_condition(condition):
         res_condition = condition.copy()
@@ -188,6 +205,7 @@ def transform(resources_org, mappings_org):
 
     resources = []
     mappings = []
+    lenses = []
 
     for resource_org in resources_org:
         try:
@@ -209,7 +227,7 @@ def transform(resources_org, mappings_org):
         } for rel in resource['related'] if rel['resource'] in resource_label_by_id]
 
         if resource['filter']:
-            resource['filter'] = transform_conditions(resource['filter'], transform_resource_condition)
+            resource['filter'] = transform_elements(resource['filter'], 'conditions', transform_resource_condition)
 
     for mapping_org in mappings_org:
         try:
@@ -221,7 +239,7 @@ def transform(resources_org, mappings_org):
 
             mapping['sources'] = [resource_label_by_id[resource] for resource in mapping['sources']]
             mapping['targets'] = [resource_label_by_id[resource] for resource in mapping['targets']]
-            mapping['methods'] = transform_conditions(mapping['methods'], lambda condition: {
+            mapping['methods'] = transform_elements(mapping['methods'], 'conditions', lambda condition: {
                 'method_name': condition['method_name'],
                 'method_value': condition['method_value'],
                 'sources': reduce(transform_mapping_condition, condition['sources'], {}),
@@ -235,4 +253,16 @@ def transform(resources_org, mappings_org):
 
     resources += ref_resources
 
-    return resources, mappings
+    for lens_org in lenses_org:
+        try:
+            lens = lenses_schema.validate(lens_org)
+
+            lens['properties'] = reduce(transform_mapping_property, lens['properties'], [])
+            lens['elements'] = transform_elements(lens['elements'], 'alignments',
+                                                  lambda element: int(element['alignment']))
+
+            lenses.append(lens)
+        except SchemaError:
+            pass
+
+    return resources, mappings, lenses

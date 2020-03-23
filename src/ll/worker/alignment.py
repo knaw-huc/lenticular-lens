@@ -4,34 +4,32 @@ import time
 from psycopg2 import sql as psycopg2_sql, ProgrammingError
 
 from ll.job.matching_sql import MatchingSql
-from ll.job.data import Job as JobLL
+from ll.job.data import Job
 
-from ll.worker.job import Job
+from ll.worker.job import WorkerJob
 from ll.util.config_db import db_conn
 
 
-class AlignmentJob(Job):
+class AlignmentJob(WorkerJob):
     def __init__(self, job_id, alignment):
-        self.job_id = job_id
-        self.alignment = alignment
+        self._job_id = job_id
+        self._alignment = alignment
 
-        self.job = None
-        self.config = None
-        self.matching_sql = None
+        self._job = None
+        self._matching_sql = None
 
         self.reset()
         super().__init__(self.run_generated_sql)
 
     def reset(self):
-        self.job = JobLL(self.job_id)
-        self.config = self.job.config_for_alignment(self.alignment)
-        self.matching_sql = MatchingSql(self.config)
+        self._job = Job(self._job_id)
+        self._matching_sql = MatchingSql(self._job, self._alignment)
 
     def run(self):
         download_status_set = False
-        while self.config.has_queued_resources and not self.killed:
+        while self._job.has_queued_resources(self._alignment) and not self._killed:
             if not download_status_set:
-                self.job.update_alignment(self.alignment, {'status': 'downloading'})
+                self._job.update_alignment(self._alignment, {'status': 'downloading'})
                 download_status_set = True
 
             time.sleep(1)
@@ -40,31 +38,31 @@ class AlignmentJob(Job):
         super().run()
 
     def run_generated_sql(self):
-        if not self.killed:
-            self.process_sql(self.matching_sql.generate_schema_sql())
+        if not self._killed:
+            self.process_sql(self._matching_sql.generate_schema_sql())
 
-        if not self.killed:
-            self.status = 'Generating collections'
-            self.process_sql(self.matching_sql.generate_resources_sql())
+        if not self._killed:
+            self._status = 'Generating collections'
+            self.process_sql(self._matching_sql.generate_resources_sql())
 
-        if not self.killed:
-            self.status = 'Generating source resources'
-            self.process_sql(self.matching_sql.generate_match_source_sql())
+        if not self._killed:
+            self._status = 'Generating source resources'
+            self.process_sql(self._matching_sql.generate_match_source_sql())
 
-        if not self.killed:
-            self.status = 'Generating target resources'
-            self.process_sql(self.matching_sql.generate_match_target_sql())
+        if not self._killed:
+            self._status = 'Generating target resources'
+            self.process_sql(self._matching_sql.generate_match_target_sql())
 
-        if not self.killed:
-            self.status = 'Generating indexes'
-            self.process_sql(self.matching_sql.generate_match_index_sql())
+        if not self._killed:
+            self._status = 'Generating indexes'
+            self.process_sql(self._matching_sql.generate_match_index_sql())
 
-        if not self.killed:
-            self.status = 'Looking for links'
-            self.process_sql(self.matching_sql.generate_match_linkset_sql())
+        if not self._killed:
+            self._status = 'Looking for links'
+            self.process_sql(self._matching_sql.generate_match_linkset_sql())
 
     def process_sql(self, sql):
-        sql_string = sql.as_string(self.db_conn)
+        sql_string = sql.as_string(self._db_conn)
         for statement in sql_string.split(';\n'):
             statement = statement.strip()
 
@@ -75,50 +73,52 @@ class AlignmentJob(Job):
                 if re.match(r'^\s*SELECT', statement) and not re.search(r'set_config\(', statement):
                     continue
                 else:
-                    with self.db_conn.cursor() as cur:
+                    with self._db_conn.cursor() as cur:
                         cur.execute(statement)
-                        self.db_conn.commit()
+                        self._db_conn.commit()
 
     def watch_process(self):
         with db_conn() as conn, conn.cursor() as cur:
-            data = {'status_message': self.status}
+            data = {'status_message': self._status}
 
             for sequence_name in ('linkset_count', 'source_count', 'target_count'):
                 try:
-                    cur.execute(psycopg2_sql.SQL('SELECT last_value FROM {}.{}').format(
-                        psycopg2_sql.Identifier(self.config.linkset_schema_name),
+                    cur.execute(psycopg2_sql.SQL('SELECT is_called, last_value FROM {}.{}').format(
+                        psycopg2_sql.Identifier(self._job.linkset_schema_name(self._alignment)),
                         psycopg2_sql.Identifier(sequence_name),
                     ))
 
-                    inserted = cur.fetchone()[0]
-                    if inserted:
+                    seq = cur.fetchone()
+                    is_called = seq[0]
+                    if is_called:
+                        inserted = seq[1]
                         if sequence_name == 'source_count':
-                            data['sources_count'] = inserted + 1
+                            data['sources_count'] = inserted
                         elif sequence_name == 'target_count':
-                            data['targets_count'] = inserted + 1
+                            data['targets_count'] = inserted
                         else:
-                            data['links_count'] = inserted + 1
+                            data['links_count'] = inserted
                 except ProgrammingError:
                     pass
                 finally:
                     conn.commit()
 
-        self.job.update_alignment(self.alignment, data)
+        self._job.update_alignment(self._alignment, data)
 
     def watch_kill(self):
-        alignment_job = self.job.alignment(self.alignment)
+        alignment_job = self._job.alignment(self._alignment)
         if alignment_job['kill']:
             self.kill(reset=False)
 
     def on_kill(self, reset):
         job_data = {'status': 'waiting'} if reset else {'status': 'failed', 'status_message': 'Killed manually'}
-        self.job.update_alignment(self.alignment, job_data)
+        self._job.update_alignment(self._alignment, job_data)
 
         self.cleanup()
 
     def on_exception(self):
-        err_message = str(self.exception)
-        self.job.update_alignment(self.alignment, {'status': 'failed', 'status_message': err_message})
+        err_message = str(self._exception)
+        self._job.update_alignment(self._alignment, {'status': 'failed', 'status_message': err_message})
 
         self.cleanup()
 
@@ -127,32 +127,34 @@ class AlignmentJob(Job):
 
         with db_conn() as conn, conn.cursor() as cur:
             cur.execute(psycopg2_sql.SQL('SELECT count(*) FROM {}').format(
-                psycopg2_sql.Identifier(self.config.linkset_table_name)))
+                psycopg2_sql.Identifier(self._job.linkset_table_name(self._alignment))))
             links = cur.fetchone()[0]
 
             cur.execute(psycopg2_sql.SQL('SELECT count(*) FROM {}.{}').format(
-                psycopg2_sql.Identifier(self.config.linkset_schema_name), psycopg2_sql.Identifier('source')))
+                psycopg2_sql.Identifier(self._job.linkset_schema_name(self._alignment)),
+                psycopg2_sql.Identifier('source')))
             sources = cur.fetchone()[0]
 
             cur.execute(psycopg2_sql.SQL('SELECT count(*) FROM {}.{}').format(
-                psycopg2_sql.Identifier(self.config.linkset_schema_name), psycopg2_sql.Identifier('target')))
+                psycopg2_sql.Identifier(self._job.linkset_schema_name(self._alignment)),
+                psycopg2_sql.Identifier('target')))
             targets = cur.fetchone()[0]
 
             cur.execute(psycopg2_sql.SQL('DROP SCHEMA {} CASCADE')
-                        .format(psycopg2_sql.Identifier(self.config.linkset_schema_name)))
+                        .format(psycopg2_sql.Identifier(self._job.linkset_schema_name(self._alignment))))
 
             cur.execute("UPDATE alignments "
                         "SET status = %s, status_message = null, distinct_links_count = %s, "
                         "distinct_sources_count = %s, distinct_targets_count = %s, finished_at = now() "
                         "WHERE job_id = %s AND alignment = %s",
-                        ('done', links, sources, targets, self.job_id, self.alignment))
+                        ('done', links, sources, targets, self._job_id, self._alignment))
 
             if links == 0:
                 cur.execute(psycopg2_sql.SQL('DROP TABLE {} CASCADE')
-                            .format(psycopg2_sql.Identifier(self.config.linkset_table_name)))
+                            .format(psycopg2_sql.Identifier(self._job.linkset_table_name(self._alignment))))
             else:
                 cur.execute('SELECT * FROM clusterings WHERE job_id = %s AND alignment = %s',
-                            (self.job_id, self.alignment))
+                            (self._job_id, self._alignment))
                 clustering = cur.fetchone()
 
                 if clustering:
@@ -162,7 +164,7 @@ class AlignmentJob(Job):
                         WHERE job_id = %s AND alignment = %s
                     """)
 
-                    cur.execute(query, ('waiting', self.job_id, self.alignment))
+                    cur.execute(query, ('waiting', self._job_id, self._alignment))
                 else:
                     query = psycopg2_sql.SQL("""
                         INSERT INTO clusterings 
@@ -170,9 +172,9 @@ class AlignmentJob(Job):
                         VALUES (%s, %s, %s, %s, %s, false, now())
                     """)
 
-                    cur.execute(query, (self.job_id, self.alignment, 'default', None, 'waiting'))
+                    cur.execute(query, (self._job_id, self._alignment, 'default', None, 'waiting'))
 
     def cleanup(self):
         with db_conn() as conn, conn.cursor() as cur:
             cur.execute(psycopg2_sql.SQL('DROP SCHEMA {} CASCADE')
-                        .format(psycopg2_sql.Identifier(self.config.linkset_schema_name)))
+                        .format(psycopg2_sql.Identifier(self._job.linkset_schema_name(self._alignment))))

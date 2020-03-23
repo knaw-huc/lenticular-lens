@@ -133,19 +133,15 @@
           <match-matching-methods-info/>
         </template>
 
-        <conditions-group :conditions-group="match.methods"
-                          :is-root="true"
-                          :should-have-conditions="true"
-                          group="matches-filters"
-                          :uid="'match_' + match.id  + '_group_0'"
-                          validate-method-name="validateMatchCondition"
-                          v-slot="curCondition"
-                          @add="addMatchCondition($event)"
-                          ref="matchingMethodGroupComponent">
+        <elements-group :elements-group="match.methods" elements-group-name="conditions" :is-root="true"
+                        :should-have-elements="true" group="matches-filters" :uid="'match_' + match.id  + '_group_0'"
+                        validate-method-name="validateMatchCondition" empty-elements-text="No conditions"
+                        validation-failed-text="Please provide at least one condition" v-slot="curCondition"
+                        @add="addMatchCondition($event)" ref="matchingMethodGroupComponent">
           <match-condition
-              :condition="curCondition.condition" :index="curCondition.index"
+              :condition="curCondition.element" :index="curCondition.index"
               @add="curCondition.add()" @remove="curCondition.remove()"/>
-        </conditions-group>
+        </elements-group>
       </sub-card>
     </fieldset>
   </card>
@@ -162,7 +158,7 @@
     import MatchResource from "./MatchResource";
     import MatchCondition from "./MatchCondition";
 
-    import ConditionsGroup from "../../helpers/ConditionsGroup";
+    import ElementsGroup from "../../helpers/ElementsGroup";
     import ValidationMixin from '../../../mixins/ValidationMixin';
 
     export default {
@@ -175,7 +171,7 @@
             MatchStatus,
             MatchResource,
             MatchCondition,
-            ConditionsGroup
+            ElementsGroup
         },
         props: {
             match: Object,
@@ -204,7 +200,7 @@
             },
         },
         methods: {
-            validateMatch(matchAgainstValidation = false) {
+            validateMatch() {
                 const sourcesValid = this.validateField('sources', this.match.sources.length > 0);
                 const targetsValid = this.validateField('targets', this.match.targets.length > 0);
 
@@ -221,18 +217,11 @@
 
                 let matchingMethodGroupValid = true;
                 if (this.$refs.matchingMethodGroupComponent)
-                    matchingMethodGroupValid = this.$refs.matchingMethodGroupComponent.validateConditionsGroup();
+                    matchingMethodGroupValid = this.$refs.matchingMethodGroupComponent.validateElementsGroup();
                 matchingMethodGroupValid = this.validateField('matching-methods', matchingMethodGroupValid);
 
-                let matchAgainstValid = true;
-                if (matchAgainstValidation && this.match.match_against) {
-                    const alignment = this.$root.alignments
-                        .find(alignment => alignment.alignment === this.match.match_against);
-                    matchAgainstValid = this.validateField('match-against', alignment && alignment.status === 'done');
-                }
-
                 return sourcesValid && targetsValid
-                    && sourcesSelectValid && targetsSelectValid && matchingMethodGroupValid && matchAgainstValid;
+                    && sourcesSelectValid && targetsSelectValid && matchingMethodGroupValid;
             },
 
             onToggle(isOpen) {
@@ -261,7 +250,7 @@
                 const oldResourceId = this.match[resourcesKey][resourceIndex];
 
                 this.$set(this.match[resourcesKey], resourceIndex, resourceId);
-                this.$root.getRecursiveConditions(this.match.methods).forEach(condition => {
+                this.$root.getRecursiveElements(this.match.methods, 'conditions').forEach(condition => {
                     condition[resourcesKey].push({resource: resourceId, property: [''], transformers: []});
                 });
 
@@ -271,7 +260,7 @@
             deleteMatchResource(resourcesKey, resourceIndex) {
                 const resourceId = this.match[resourcesKey][resourceIndex];
 
-                this.$root.getRecursiveConditions(this.match.methods).forEach(condition => {
+                this.$root.getRecursiveElements(this.match.methods, 'conditions').forEach(condition => {
                     condition[resourcesKey]
                         .map((resourceCondition, idx) => resourceCondition.resource === resourceId ? idx : null)
                         .filter(idx => idx !== null)
@@ -297,8 +286,6 @@
             },
 
             async runAlignment(force = false) {
-                if (!this.validateMatch(true))
-                    return;
                 const data = await this.$root.runAlignment(this.match.id, force);
                 if (data.result === 'exists' && confirm('This Alignment job already exists.\nDo you want to overwrite it with the current configuration?'))
                     await this.runAlignment(true);

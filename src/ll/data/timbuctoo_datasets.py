@@ -5,22 +5,22 @@ from psycopg2 import extras as psycopg2_extras
 
 class TimbuctooDatasets:
     def __init__(self, graphql_uri, hsid):
-        self.graphql_uri = graphql_uri
-        self.hsid = hsid
-        self.__datasets = None
+        self._graphql_uri = graphql_uri
+        self._hsid = hsid
+        self._datasets = None
 
     @property
     def datasets(self):
-        if not self.__datasets:
-            timbuctoo_data = Timbuctoo(self.graphql_uri, self.hsid).datasets
+        if not self._datasets:
+            timbuctoo_data = Timbuctoo(self._graphql_uri, self._hsid).datasets
             database_data = self.datasets_from_database()
-            self.__datasets = self.combine(timbuctoo_data, database_data)
+            self._datasets = self.combine(timbuctoo_data, database_data)
 
-        return self.__datasets
+        return self._datasets
 
     def datasets_from_database(self):
         with db_conn() as conn, conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) as cur:
-            cur.execute('SELECT * FROM timbuctoo_tables WHERE graphql_endpoint = %s', (self.graphql_uri,))
+            cur.execute('SELECT * FROM timbuctoo_tables WHERE graphql_endpoint = %s', (self._graphql_uri,))
 
             datasets = {}
             for table in cur:

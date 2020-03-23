@@ -3,18 +3,18 @@ from psycopg2 import sql
 
 class Joins:
     def __init__(self):
-        self.joins = []
-        self.targets = []
+        self._joins = []
+        self._targets = []
 
     def add_join(self, sql, target):
-        if target not in self.targets:
-            self.joins.append(sql)
-            self.targets.append(target)
+        if target not in self._targets:
+            self._joins.append(sql)
+            self._targets.append(target)
 
     def copy_from(self, other):
-        self.joins = other.joins
-        self.targets = other.targets
+        self._joins = other.joins
+        self._targets = other.targets
 
     @property
     def sql(self):
-        return sql.SQL('\n').join(self.joins)
+        return sql.SQL('\n').join(self._joins)

@@ -9,10 +9,10 @@ from psycopg2 import extras as psycopg2_extras, sql as psycopg2_sql
 
 class Collection:
     def __init__(self, graphql_endpoint, hsid, dataset_id, collection_id):
-        self.graphql_endpoint = graphql_endpoint
-        self.hsid = hsid
-        self.dataset_id = dataset_id
-        self.collection_id = collection_id
+        self._graphql_endpoint = graphql_endpoint
+        self._hsid = hsid
+        self._dataset_id = dataset_id
+        self._collection_id = collection_id
 
         self._table_data = None
 
@@ -23,7 +23,7 @@ class Collection:
 
         self._table_data = fetch_one('SELECT * FROM timbuctoo_tables '
                                      'WHERE graphql_endpoint = %s AND dataset_id = %s AND collection_id = %s',
-                                     (self.graphql_endpoint, self.dataset_id, self.collection_id), dict=True)
+                                      (self._graphql_endpoint, self._dataset_id, self._collection_id), dict=True)
 
         if not self._table_data:
             self.start_download()
@@ -33,7 +33,7 @@ class Collection:
 
     @property
     def table_name(self):
-        return hash_string(self.graphql_endpoint + self.dataset_id + self.collection_id)
+        return hash_string(self._graphql_endpoint + self._dataset_id + self._collection_id)
 
     @property
     def columns(self):
@@ -48,16 +48,16 @@ class Collection:
         return -1
 
     def start_download(self):
-        timbuctoo = Timbuctoo(self.graphql_endpoint, self.hsid)
+        timbuctoo = Timbuctoo(self._graphql_endpoint, self._hsid)
         datasets = timbuctoo.datasets
 
         dataset = None
         collection = None
         for dataset_id, dataset_data in datasets.items():
-            if dataset_id == self.dataset_id:
+            if dataset_id == self._dataset_id:
                 dataset = dataset_data
                 for collection_id, collection_data in dataset_data['collections'].items():
-                    if collection_id == self.collection_id:
+                    if collection_id == self._collection_id:
                         collection = collection_data
                         break
                 break
@@ -77,7 +77,7 @@ class Collection:
                         "table_name", graphql_endpoint, hsid, dataset_id, collection_id, 
                         dataset_name, title, description, collection_title, total, columns, create_time)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, now())
-                ''', (self.table_name, self.graphql_endpoint, self.hsid, self.dataset_id, self.collection_id,
+                ''', (self.table_name, self._graphql_endpoint, self._hsid, self._dataset_id, self._collection_id,
                       dataset['name'], dataset['title'], dataset['description'],
                       collection['title'], collection['total'], dumps(columns)))
 

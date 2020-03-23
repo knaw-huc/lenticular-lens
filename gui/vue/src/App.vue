@@ -80,15 +80,42 @@
         </tab-content-structure>
       </tab-content>
 
+      <tab-content title="Lenses" :before-change="validateLensesTab">
+        <tab-content-structure title="Lenses" :tab-error="tabError" :is-saved="isSaved">
+          <template v-slot:header>
+            <div v-if="lensOpen === null" class="col-auto">
+              <button-add @click="addLens" title="Add an Lens" size="2x"/>
+            </div>
+          </template>
+
+          <draggable v-model="$root.lenses" group="lenses" handle=".handle">
+            <b-collapse v-for="(lens, index) in $root.lenses"
+                        :key="lens.id" :id="'lens_card_' + lens.id"
+                        :visible="lensOpen === lens.id || lensOpen === null">
+              <lens
+                  :lens="lens"
+                  @duplicate="duplicateLens($event)"
+                  @submit="submit"
+                  @remove="$root.lenses.splice(index, 1)"
+                  @update:label="lens.label = $event"
+                  @show="lensOpen = lens.id"
+                  @hide="lensOpen = null"
+                  ref="lensComponents"/>
+            </b-collapse>
+          </draggable>
+        </tab-content-structure>
+      </tab-content>
+
       <tab-content title="Validation">
         <tab-content-structure title="Validation" :tab-error="tabError" :is-saved="isSaved">
-          <b-collapse v-for="match in matchesWithResults"
-                      :key="match.id" :id="'match_validation_card_' + match.id"
-                      :visible="matchValidationOpen === match.id || matchValidationOpen === null">
+          <b-collapse v-for="ls in linksetsAndLenses"
+                      :key="ls.uid" :id="'match_validation_card_' + ls.uid"
+                      :visible="matchValidationOpen === ls.uid || matchValidationOpen === null">
             <match-validation
-                :match="match"
-                :key="match.id"
-                @show="matchValidationOpen = match.id"
+                :type="ls.type"
+                :match="ls.type === 'match' ? ls.match : ls.lens"
+                :key="ls.uid"
+                @show="matchValidationOpen = ls.uid"
                 @hide="matchValidationOpen = null"/>
           </b-collapse>
         </tab-content-structure>
@@ -97,9 +124,10 @@
       <tab-content title="Export">
         <tab-content-structure title="Export" :tab-error="tabError" :is-saved="isSaved">
           <match-export
-              v-for="match in matchesWithResults"
-              :match="match"
-              :key="match.id"/>
+              v-for="ls in linksetsAndLenses"
+              :type="ls.type"
+              :match="ls.type === 'match' ? ls.match : ls.lens"
+              :key="ls.uid"/>
         </tab-content-structure>
       </tab-content>
 
@@ -151,6 +179,7 @@
     import Research from './components/steps/research/Research';
     import Resource from './components/steps/resources/Resource';
     import Match from './components/steps/matches/Match';
+    import Lens from './components/steps/lenses/Lens';
     import MatchValidation from './components/steps/validation/MatchValidation';
     import MatchExport from './components/steps/export/MatchExport';
 
@@ -166,6 +195,7 @@
             Research,
             Resource,
             Match,
+            Lens,
             MatchValidation,
             MatchExport,
         },
@@ -184,23 +214,38 @@
                 isDownloading: false,
                 resourceOpen: null,
                 matchOpen: null,
+                lensOpen: null,
                 matchValidationOpen: null,
-                steps: ['research', 'collections', 'alignments', 'validation', 'export'],
+                steps: ['research', 'collections', 'alignments', 'lenses', 'validation', 'export'],
             };
         },
         computed: {
             hasChanges() {
                 return !Boolean(this.$root.job)
                     || JSON.stringify(this.$root.resources) !== JSON.stringify(this.$root.job['resources'])
-                    || JSON.stringify(this.$root.matches) !== JSON.stringify(this.$root.job['mappings']);
+                    || JSON.stringify(this.$root.matches) !== JSON.stringify(this.$root.job['mappings'])
+                    || JSON.stringify(this.$root.lenses) !== JSON.stringify(this.$root.job['lenses']);
             },
 
-            matchesWithResults() {
-                return this.$root.matches.filter(match => {
+            linksetsAndLenses() {
+                const matches = this.$root.matches.filter(match => {
                     return this.$root.alignments.find(al => {
                         return al.alignment === match.id && al.status === 'done' && al.distinct_links_count > 0;
                     });
                 });
+
+                return [
+                    ...matches.map(match => ({
+                        uid: `match_${match.id}`,
+                        type: 'match',
+                        match: match,
+                    })),
+                    ...this.$root.lenses.map(lens => ({
+                        uid: `lens_${lens.id}`,
+                        type: 'lens',
+                        lens: lens,
+                    }))
+                ];
             },
         },
         methods: {
@@ -241,12 +286,25 @@
                 return isValid;
             },
 
+            validateLensesTab(alwaysSave = false) {
+                const results = this.$refs.lensComponents.map(lensComponent => lensComponent.validateLens());
+
+                const isValid = this.isTabValid(!results.includes(false), alwaysSave,
+                    'One or more lenses contain errors!');
+                if (isValid || alwaysSave)
+                    this.submit();
+
+                return isValid;
+            },
+
             validateAndSave(activeTabIndex) {
                 switch (activeTabIndex) {
                     case 1:
                         return this.validateCollectionsTab(true);
                     case 2:
                         return this.validateAlignmentsTab(true);
+                    case 3:
+                        return this.validateLensesTab(true);
                     default:
                         return false;
                 }
@@ -274,6 +332,10 @@
                 this.$root.addMatch();
             },
 
+            addLens() {
+                this.$root.addLens();
+            },
+
             duplicateResource(resource) {
                 this.$root.duplicateResource(resource);
             },
@@ -282,15 +344,19 @@
                 this.$root.duplicateMatch(match);
             },
 
+            duplicateLens(lens) {
+                this.$root.duplicateLens(lens);
+            },
+
             async createJob(inputs) {
                 const jobId = await this.$root.createJob(inputs);
                 this.setJobId(jobId);
             },
 
-            async updateJob(job_data) {
+            async updateJob(jobData) {
                 this.isUpdating = true;
 
-                await this.$root.updateJob(job_data);
+                await this.$root.updateJob(jobData);
                 await this.getJobData();
 
                 this.isUpdating = false;
@@ -335,8 +401,10 @@
 
                         if (this.$root.matches.length === 0)
                             this.$root.addMatch();
-                        else
+                        else {
                             this.activateStep('alignments');
+                            this.activateStep('lenses');
+                        }
 
                         this.refresh();
                     }
@@ -363,6 +431,7 @@
                 });
 
                 if (hasFinished) {
+                    this.activateStep('lenses');
                     this.activateStep('validation');
                     this.activateStep('export');
                 }

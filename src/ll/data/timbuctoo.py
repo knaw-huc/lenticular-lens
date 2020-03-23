@@ -8,15 +8,15 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 class Timbuctoo:
     def __init__(self, graphql_uri, hsid=None):
-        self.graphql_uri = graphql_uri
-        self.hsid = hsid
+        self._graphql_uri = graphql_uri
+        self._hsid = hsid
 
     def fetch_graph_ql(self, query, variables=None):
         try:
-            response = requests.post(self.graphql_uri, json={
+            response = requests.post(self._graphql_uri, json={
                 'query': query,
                 'variables': variables
-            }, headers={'Authorization': self.hsid} if self.hsid else {}, timeout=60, verify=False)
+            }, headers={'Authorization': self._hsid} if self._hsid else {}, timeout=60, verify=False)
             response.raise_for_status()
 
             result = response.json()

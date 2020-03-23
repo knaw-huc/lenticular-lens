@@ -5,29 +5,29 @@ from ll.util.helpers import hash_string, get_string_from_sql
 
 class PropertyField:
     def __init__(self, data, parent_label=None, columns=None, transformers=None):
-        self.__data = data
-        self.parent_label = parent_label
-        self.columns = columns
-        self.transformers = transformers if transformers else []
+        self._data = data
+        self._parent_label = parent_label
+        self._columns = columns
+        self._transformers = transformers if transformers else []
 
-        self.__hash = hash_string(get_string_from_sql(self.sql))
+        self._hash = hash_string(get_string_from_sql(self.sql))
 
     @property
     def hash(self):
-        return self.__hash
+        return self._hash
 
     @property
     def absolute_property(self):
-        if isinstance(self.__data, list):
-            property_array = self.__data
+        if isinstance(self._data, list):
+            property_array = self._data
         else:
-            property_array = [self.__data]
+            property_array = [self._data]
 
         property_array[len(property_array) - 1] = property_array[len(property_array) - 1].lower()
         property_array = list(map(hash_string, property_array))
 
-        if self.parent_label and len(property_array) == 1:
-            property_array.insert(0, self.parent_label)
+        if self._parent_label and len(property_array) == 1:
+            property_array.insert(0, self._parent_label)
 
         if len(property_array) == 2 and property_array[1] == hash_string('uri'):
             property_array[1] = 'uri'
@@ -44,7 +44,7 @@ class PropertyField:
 
     @property
     def prop_name(self):
-        return self.__data[1]
+        return self._data[1]
 
     @property
     def extended_prop_label(self):
@@ -52,8 +52,8 @@ class PropertyField:
 
     @property
     def is_list(self):
-        if self.columns and self.prop_label in self.columns:
-            return self.columns[self.prop_label]['isList']
+        if self._columns and self.prop_label in self._columns:
+            return self._columns[self.prop_label]['isList']
 
         return False
 
@@ -62,7 +62,7 @@ class PropertyField:
         absolute_property = [self.extended_prop_label] if self.is_list else self.absolute_property
         sql = psycopg2_sql.SQL('.').join(map(psycopg2_sql.Identifier, absolute_property))
 
-        for transformer in self.transformers:
+        for transformer in self._transformers:
             template_sql = psycopg2_sql.SQL(transformer['transformer_info']['sql_template'])
             sql_parameters = {key: psycopg2_sql.Literal(value) for (key, value) in transformer['parameters'].items()}
             sql = template_sql.format(property=sql, **sql_parameters)
