@@ -85,10 +85,8 @@ CREATE TYPE link_validity AS ENUM ('accepted', 'rejected', 'not_validated', 'mix
 CREATE OR REPLACE FUNCTION increment_counter(sequence_name text) RETURNS boolean
     COST 10000 STRICT VOLATILE AS
 $$
-BEGIN
-    RETURN nextval(sequence_name) > -1;
-END;
-$$ LANGUAGE plpgsql;
+SELECT nextval(sequence_name) > -1;
+$$ LANGUAGE sql;
 
 CREATE OR REPLACE FUNCTION to_date_immutable(text, text) RETURNS date
     STRICT IMMUTABLE AS
@@ -163,14 +161,10 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION levenshtein_distance(source text, target text, max_distance integer) RETURNS integer
     STRICT IMMUTABLE PARALLEL SAFE AS
 $$
-BEGIN
-    IF greatest(octet_length(source), octet_length(target)) > 255 THEN
-        RETURN levenshtein_python($1, $2);
-    ELSE
-        RETURN levenshtein_less_equal($1, $2, $3);
-    END IF;
-END
-$$ LANGUAGE plpgsql;
+SELECT CASE WHEN greatest(octet_length(source), octet_length(target)) > 255
+            THEN levenshtein_python(source, target)
+            ELSE levenshtein_less_equal(source, target, max_distance) END;
+$$ LANGUAGE sql;
 
 CREATE OR REPLACE FUNCTION levenshtein_python(source text, target text) RETURNS integer
     STRICT IMMUTABLE PARALLEL SAFE AS
@@ -183,10 +177,8 @@ $$ LANGUAGE plpython3u;
 CREATE OR REPLACE FUNCTION similarity(source text, target text, distance decimal) RETURNS decimal
     STRICT IMMUTABLE PARALLEL SAFE AS
 $$
-BEGIN
-    RETURN 1 - (distance / greatest(char_length(source), char_length(target)));
-END
-$$ LANGUAGE plpgsql;
+SELECT 1 - (distance / greatest(char_length(source), char_length(target)));
+$$ LANGUAGE sql;
 
 CREATE OR REPLACE FUNCTION ll_soundex(input text) RETURNS text
     STRICT IMMUTABLE PARALLEL SAFE AS
