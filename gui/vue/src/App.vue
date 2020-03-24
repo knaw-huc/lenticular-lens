@@ -287,7 +287,9 @@
             },
 
             validateLensesTab(alwaysSave = false) {
-                const results = this.$refs.lensComponents.map(lensComponent => lensComponent.validateLens());
+                const results = this.$refs.lensComponents
+                    ? this.$refs.lensComponents.map(lensComponent => lensComponent.validateLens())
+                    : [];
 
                 const isValid = this.isTabValid(!results.includes(false), alwaysSave,
                     'One or more lenses contain errors!');
@@ -401,10 +403,8 @@
 
                         if (this.$root.matches.length === 0)
                             this.$root.addMatch();
-                        else {
+                        else
                             this.activateStep('alignments');
-                            this.activateStep('lenses');
-                        }
 
                         this.refresh();
                     }
