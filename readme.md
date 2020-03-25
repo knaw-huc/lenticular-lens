@@ -6,6 +6,7 @@ Lenticular Lenses tracks the configuration and the algorithms used in the alignm
 and is also able to report on manual corrections and the amount of manual validation done.
 
 1. [Installation with Docker](#installation-with-docker)
+1. [Definition of terms](#definition-of-terms)
 1. [API](#api)
     1. [Default](#default)
     1. [Job creation and updates](#job-creation-and-updates)
@@ -40,6 +41,39 @@ and is also able to report on manual corrections and the amount of manual valida
 
 _Note: This will create a folder `pgdata` with the database data. 
 To clean up the database and start from scratch, simply remove this folder._
+
+## Definition of terms
+
+*   **Jobs**
+    
+    A **job** defines the scope/context in which linksets are created, analysed, validated and exported.
+
+*   **Resources** _(Collections / Data selection)_
+    
+    A **resource** is a selection of the data that will be used in a job.
+    It resembles the data from a specific entity of a dataset, optionally with various filters applied to it.
+    
+*   **Alignments** 
+    
+    An **alignment** is a specification on how the data from various resources should be matched 
+    using various matching algorithms.
+    Running an alignment will result in a linkset.
+    
+*   **Lenses**
+    
+    A **lens** is a specification on how the linksets of various alignments are to be combined to form a new linkset.
+
+*   **Linksets**
+    
+    A **linkset** is a set of source URIs that match target URIs, according to a matching specification.
+
+*   **Clusterings**
+    
+    A **clustering** is a definition on how a linkset is split up into groups of smaller linksets.
+    
+*   **Clusters**
+    
+    A **cluster** is a group of links from a linkset according to a specific clustering definition.
 
 ## API
 
