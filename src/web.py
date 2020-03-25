@@ -271,7 +271,7 @@ def export_to_csv(job, type, alignment):
     writer = csv.writer(stream)
 
     writer.writerow(['Source URI', 'Target URI', 'Valid'])
-    for link in job.get_links(type, alignment,
+    for link in job.get_links(type, int(alignment),
                               validation_filter=validation_filter_helper(request.args.getlist('valid'))):
         writer.writerow([link['source'], link['target'], link['valid']])
 
