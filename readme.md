@@ -44,36 +44,51 @@ To clean up the database and start from scratch, simply remove this folder._
 
 ## Definition of terms
 
-*   **Jobs**
-    
-    A **job** defines the scope/context in which linksets are created, analysed, validated and exported.
+![](./docs/schema.png)
 
-*   **Resources** _(Collections / Data selection)_
+*   **Job**
     
-    A **resource** is a selection of the data that will be used in a job.
-    It resembles the data from a specific entity of a dataset, optionally with various filters applied to it.
-    
-*   **Alignments** 
-    
-    An **alignment** is a specification on how the data from various resources should be matched 
-    using various matching algorithms.
-    Running an alignment will result in a linkset.
-    
-*   **Lenses**
-    
-    A **lens** is a specification on how the linksets of various alignments are to be combined to form a new linkset.
+    A **job** encloses a research question, which highlights the scope/context 
+    in which _linksets_ and _lenses_ are created, analysed, validated and exported.
 
-*   **Linksets**
+*   **Entity-type selection**
     
-    A **linkset** is a set of source URIs that match target URIs, according to a matching specification.
+    An **entity-type selection** is a selection of entities (stemmed from a dataset) 
+    of a certain type based on zero or more filters. 
+    The set of _entity-type selections_ in a _job_ comprises the entities of interest for a research question.
+    
+*   **Linkset specification** 
+    
+    A **linkset specification** is the specification determining how entities from one or more _entity-type selections_
+    should be matched using one or more entity matching algorithms. 
+    Running a _linkset specification_ will result in a _linkset_.
 
-*   **Clusterings**
+*   **Linkset**
     
-    A **clustering** is a definition on how a linkset is split up into groups of smaller linksets.
+    A **linkset** is a set of paired resources (URIs)
+    that matched according to a _linkset specification_.
     
-*   **Clusters**
+*   **Lens specification**
     
-    A **cluster** is a group of links from a linkset according to a specific clustering definition.
+    A **lens specification** is the specification that specifies one or more modifications 
+    (union, intersection, ...) over a number of _linksets_ or _lenses_. 
+    The _lens_ inherits the specifications of all _linksets_ and _lenses_ it originates from.
+    
+*   **Lens**
+    
+    A **lens** is a set of paired resources (URIs)
+    resulting from one or more modifications according to a _lens specification_.
+
+*   **Clustering**
+    
+    A **clustering** is the partitioning of the resources (URIs) in a _linkset_ or _lens_ 
+    into _clusters_ based on transitivity of the links in the _linkset_ or _lens_.
+    
+*   **Cluster**
+    
+    A **cluster** is a set of potentially similar resources (URIs). 
+    As a _cluster_ originates from the _clustering_ of a _linkset_ or a _lens_, 
+    the _cluster_ holds only with respect to their _linkset specifications_.
 
 ## API
 
