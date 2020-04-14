@@ -1,6 +1,6 @@
 <template>
   <div class="property">
-    <div v-if="resourceInfo" class="property-resource resource-pills">
+    <div v-if="entityTypeSelectionInfo" class="property-resource resource-pills">
       <div class="property-pill read-only" v-bind:class="{'sm': small}">
         {{ dataset.title }}
       </div>
@@ -42,7 +42,8 @@
                 </div>
 
                 <div class="small pt-1">
-                  <download-progress :dataset-id="resource.dataset.dataset_id" :collection-id="option.label"/>
+                  <download-progress :dataset-id="entityTypeSelection.dataset.dataset_id"
+                                     :collection-id="option.label"/>
                 </div>
               </template>
             </div>
@@ -109,7 +110,7 @@
       </button>
     </div>
 
-    <div v-if="!resourceInfo && !singular && !readOnly" class="ml-2">
+    <div v-if="!entityTypeSelectionInfo && !singular && !readOnly" class="ml-2">
       <button-add @click="$emit('clone')" size="sm" title="Add another property"/>
       <button-delete v-if="allowDelete" class="ml-2" @click="$emit('delete')" size="sm" title="Remove this property"/>
     </div>
@@ -124,7 +125,7 @@
         name: "Property",
         mixins: [ValidationMixin],
         props: {
-            resource: Object,
+            entityTypeSelection: Object,
             property: Array,
             readOnly: {
                 type: Boolean,
@@ -142,28 +143,28 @@
                 type: Boolean,
                 default: true,
             },
-            resourceInfo: {
+            entityTypeSelectionInfo: {
                 type: Boolean,
                 default: true,
             }
         },
         computed: {
             datasetId() {
-                return this.resource.dataset.dataset_id;
+                return this.entityTypeSelection.dataset.dataset_id;
             },
 
             collectionId() {
-                return this.resource.dataset.collection_id;
+                return this.entityTypeSelection.dataset.collection_id;
             },
 
             dataset() {
                 const datasets = this.$root.getDatasets(
-                    this.resource.dataset.timbuctoo_graphql, this.resource.dataset.timbuctoo_hsid);
+                    this.entityTypeSelection.dataset.timbuctoo_graphql, this.entityTypeSelection.dataset.timbuctoo_hsid);
                 return datasets[this.datasetId];
             },
 
             collection() {
-                return this.dataset['collections'][this.collectionId];
+                return this.dataset.collections[this.collectionId];
             },
 
             entities() {
@@ -267,8 +268,12 @@
 
             async startDownloading() {
                 const downloads = this.notDownloaded.map(async collection => {
-                    return this.$root.startDownload(this.resource.dataset.dataset_id, collection,
-                        this.resource.dataset.timbuctoo_graphql, this.resource.dataset.timbuctoo_hsid);
+                    return this.$root.startDownload(
+                        this.entityTypeSelection.dataset.dataset_id,
+                        collection,
+                        this.entityTypeSelection.dataset.timbuctoo_graphql,
+                        this.entityTypeSelection.dataset.timbuctoo_hsid
+                    );
                 });
 
                 await Promise.all(downloads);

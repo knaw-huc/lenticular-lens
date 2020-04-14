@@ -70,22 +70,22 @@ class MatchingFunction:
     @property
     def sources(self):
         if not self._sources:
-            self._sources = self._get_resources('sources')
+            self._sources = self._get_entity_type_selections('sources')
 
         return self._sources
 
     @property
     def targets(self):
         if not self._targets:
-            self._targets = self._get_resources('targets')
+            self._targets = self._get_entity_type_selections('targets')
 
         return self._targets
 
-    def _get_resources(self, resources_key):
-        resources = {}
-        for resource_index, resource in self._data[resources_key].items():
-            resources[resource_index] = []
-            for field in resource:
+    def _get_entity_type_selections(self, key):
+        entity_type_selections = {}
+        for idx, entity_type_selection in self._data[key].items():
+            entity_type_selections[idx] = []
+            for field in entity_type_selection:
                 field_transformers = field.get('transformers', [])
 
                 for transformer in field_transformers:
@@ -94,9 +94,9 @@ class MatchingFunction:
                     else:
                         raise NameError('Transformer %s is not defined' % transformer['name'])
 
-                columns = self._job.get_resource_by_label(hash_string(field['property'][0])).columns
+                columns = self._job.get_entity_type_selection_by_label(hash_string(field['property'][0])).columns
                 property_field = PropertyField(field['property'], columns=columns, transformers=field_transformers)
 
-                resources[resource_index].append(property_field)
+                entity_type_selections[idx].append(property_field)
 
-        return resources
+        return entity_type_selections

@@ -1,5 +1,5 @@
 <template>
-  <b-modal id="resource-sample-view" ref="resourceSampleView" size="xl" header-class="flex-column align-items-stretch"
+  <b-modal id="sample-view" ref="sampleView" size="xl" header-class="flex-column align-items-stretch"
            body-class="bg-light" dialog-class="modal-full-height" scrollable hide-footer static>
     <template v-slot:modal-header="{close}">
       <div class="d-flex">
@@ -9,7 +9,7 @@
           <template v-if="!total">Loading total size</template>
           <template v-else>
             <span class="font-weight-bold">Total:</span>
-            {{ total.toLocaleString('en') }} / {{ totalResource.toLocaleString('en') }}
+            {{ total.toLocaleString('en') }} / {{ totalEntities.toLocaleString('en') }}
           </template>
         </span>
 
@@ -37,10 +37,10 @@
       </div>
 
       <property-selection v-if="showPropertySelection" class="mt-2"
-                          :resource="resource" :properties="resource.properties"/>
+                          :entity-type-selection="entityTypeSelection" :properties="entityTypeSelection.properties"/>
     </template>
 
-    <resource-sample v-for="(sample, idx) in samples" :key="idx" :index="idx" :sample="sample"/>
+    <sample v-for="(sample, idx) in samples" :key="idx" :index="idx" :sample="sample"/>
 
     <infinite-loading :identifier="samplesIdentifier" @infinite="getSamples">
       <template v-slot:spinner>
@@ -52,8 +52,8 @@
       </template>
 
       <template v-slot:no-results>
-        <template v-if="(!showFilteredOut && total === 0) || (showFilteredOut && total === totalResource)">
-          This resource has no data
+        <template v-if="(!showFilteredOut && total === 0) || (showFilteredOut && total === total)">
+          This entity-type selection has no data
         </template>
         <template v-else-if="!hasProperties">Please select a property</template>
         <template v-else>Save selected properties to load results</template>
@@ -72,14 +72,14 @@
 <script>
     import InfiniteLoading from 'vue-infinite-loading';
     import PropertySelection from "../../helpers/PropertySelection";
-    import ResourceSample from "./ResourceSample";
+    import Sample from "./Sample";
 
     export default {
-        name: "ResourceSampleView",
+        name: "SampleView",
         components: {
             InfiniteLoading,
             PropertySelection,
-            ResourceSample,
+            Sample,
         },
         data() {
             return {
@@ -91,21 +91,21 @@
             };
         },
         props: {
-            'resource': Object,
+            entityTypeSelection: Object,
         },
         computed: {
-            totalResource() {
+            totalEntities() {
                 const datasets = this.$root.getDatasets(
-                    this.resource.dataset.timbuctoo_graphql, this.resource.dataset.timbuctoo_hsid);
+                    this.entityTypeSelection.dataset.timbuctoo_graphql, this.entityTypeSelection.dataset.timbuctoo_hsid);
 
-                return datasets[this.resource.dataset.dataset_id]
-                    .collections[this.resource.dataset.collection_id]
+                return datasets[this.entityTypeSelection.dataset.dataset_id]
+                    .collections[this.entityTypeSelection.dataset.collection_id]
                     .total;
             },
 
             hasProperties() {
-                return this.resource.properties.length > 0 &&
-                    !this.resource.properties.find(prop => prop[0] === '');
+                return this.entityTypeSelection.properties.length > 0 &&
+                    !this.entityTypeSelection.properties.find(prop => prop[0] === '');
             },
         },
         methods: {
@@ -118,7 +118,7 @@
                     this.getTotal();
                 }
 
-                this.$refs.resourceSampleView.show();
+                this.$refs.sampleView.show();
             },
 
             async saveProperties() {
@@ -127,13 +127,13 @@
             },
 
             async getTotal() {
-                const total = await this.$root.getResourceSample(this.resource.label, true);
+                const total = await this.$root.getEntityTypeSelectionSample(this.entityTypeSelection.label, true);
                 this.total = total !== null ? total.total : null;
             },
 
             async getSamples(state) {
-                const samples = await this.$root.getResourceSample(
-                    this.resource.label, false, this.showFilteredOut, 50, this.samples.length);
+                const samples = await this.$root.getEntityTypeSelectionSample(
+                    this.entityTypeSelection.label, false, this.showFilteredOut, 50, this.samples.length);
 
                 if (samples !== null)
                     this.samples.push(...samples);

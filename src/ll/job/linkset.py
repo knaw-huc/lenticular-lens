@@ -5,7 +5,7 @@ from ll.util.helpers import hash_string
 from ll.job.conditions import Conditions
 
 
-class Match:
+class Linkset:
     def __init__(self, data, job):
         self._data = data
         self._job = job
@@ -48,10 +48,10 @@ class Match:
             if 'template' not in matching_function.index_template:
                 continue
 
-            resource_field_name = matching_function.index_template['field_name']
+            field_name = matching_function.index_template['field_name']
             template = matching_function.index_template['template']
             template_sql = psycopg_sql.SQL(template) \
-                .format(target=psycopg_sql.Identifier(resource_field_name), **matching_function.sql_parameters)
+                .format(target=psycopg_sql.Identifier(field_name), **matching_function.sql_parameters)
             table_name = 'target' if len(matching_function.targets) > 0 else 'source'
 
             index_sqls.append(psycopg_sql.SQL('CREATE INDEX ON {} USING {};').format(
@@ -65,7 +65,7 @@ class Match:
         return hash_string(self._data['label'])
 
     @property
-    def resources(self):
+    def entity_type_selections(self):
         return self.sources + self.targets
 
     @property
@@ -97,49 +97,47 @@ class Match:
 
     @property
     def source_sql(self):
-        return self._get_combined_resources_sql('sources', 'source_count')
+        return self._get_combined_entity_type_selections_sql('sources', 'source_count')
 
     @property
     def target_sql(self):
-        return self._get_combined_resources_sql('targets', 'target_count')
+        return self._get_combined_entity_type_selections_sql('targets', 'target_count')
 
-    def get_fields(self, resources_keys=None, only_matching_fields=True):
-        if not isinstance(resources_keys, list):
-            resources_keys = ['sources', 'targets']
+    def get_fields(self, keys=None, only_matching_fields=True):
+        if not isinstance(keys, list):
+            keys = ['sources', 'targets']
 
-        # Regroup properties by resource instead of by method
-        resources_properties = {}
+        # Regroup properties by entity-type selection instead of by method
+        ets_properties = {}
         for matching_function in self.conditions.matching_functions:
-            for resources_key in resources_keys:
-                for resource_label, resource_properties in getattr(matching_function, resources_key).items():
-                    for resource_property in resource_properties:
-                        res_label = hash_string(resource_label) if only_matching_fields \
-                            else resource_property.resource_label
+            for key in keys:
+                for label, properties in getattr(matching_function, key).items():
+                    for property in properties:
+                        ets_label = hash_string(label) if only_matching_fields \
+                            else property.entity_type_selection_label
 
-                        if res_label not in resources_properties:
-                            resources_properties[res_label] = {}
+                        if ets_label not in ets_properties:
+                            ets_properties[ets_label] = {}
 
-                        props = resources_properties[res_label].get(matching_function.field_name, [])
-                        props.append(resource_property)
+                        props = ets_properties[ets_label].get(matching_function.field_name, [])
+                        props.append(property)
 
-                        resources_properties[res_label][matching_function.field_name] = props
+                        ets_properties[ets_label][matching_function.field_name] = props
 
-        return resources_properties
+        return ets_properties
 
-    def _get_combined_resources_sql(self, resources_key, sequence_key):
-        resources_properties = self.get_fields([resources_key])
+    def _get_combined_entity_type_selections_sql(self, key, sequence_key):
+        properties = self.get_fields([key])
 
-        resources_sql = []
-
-        for resource_label, resource_properties in resources_properties.items():
+        sql = []
+        for ets_label, ets_properties in properties.items():
             property_fields = []
-            for property_label, resource_method_properties in resource_properties.items():
-                if len(resource_method_properties) == 1:
-                    property_field = psycopg_sql.Identifier(resource_method_properties[0].hash)
+            for property_label, ets_method_properties in ets_properties.items():
+                if len(ets_method_properties) == 1:
+                    property_field = psycopg_sql.Identifier(ets_method_properties[0].hash)
                 else:
                     property_field = psycopg_sql.SQL('unnest(ARRAY[{}])').format(psycopg_sql.SQL(', ').join(
-                        [psycopg_sql.Identifier(resource_property.hash)
-                         for resource_property in resource_method_properties]
+                        [psycopg_sql.Identifier(prop.hash) for prop in ets_method_properties]
                     ))
 
                 property_fields.append(psycopg_sql.SQL('{property_field} AS {field_name}').format(
@@ -149,17 +147,17 @@ class Match:
 
             property_fields_sql = psycopg_sql.SQL(',\n           ').join(property_fields)
 
-            resources_sql.append(
+            sql.append(
                 psycopg_sql.SQL(cleandoc(
                     """SELECT DISTINCT {collection} AS collection, uri, {matching_fields}
-                       FROM {resource_label}
+                       FROM {label}
                        WHERE increment_counter({sequence})"""
                 )).format(
-                    collection=psycopg_sql.Literal(resource_label),
+                    collection=psycopg_sql.Literal(ets_label),
                     matching_fields=property_fields_sql,
-                    resource_label=psycopg_sql.Identifier(resource_label),
+                    label=psycopg_sql.Identifier(ets_label),
                     sequence=psycopg_sql.Literal(sequence_key)
                 )
             )
 
-        return psycopg_sql.SQL('\nUNION ALL\n').join(resources_sql)
+        return psycopg_sql.SQL('\nUNION ALL\n').join(sql)

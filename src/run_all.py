@@ -8,7 +8,7 @@ from worker import Worker, WorkerType
 if __name__ == "__main__":
     def teardown(signum=0, stack=None):
         timbuctoo_worker.teardown()
-        alignment_worker.teardown()
+        linkset_worker.teardown()
         clustering_worker.teardown()
         sys.exit(signum)
 
@@ -17,11 +17,11 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, teardown)
 
     timbuctoo_worker = Worker(WorkerType.TIMBUCTOO)
-    alignment_worker = Worker(WorkerType.ALIGNMENT)
+    linkset_worker = Worker(WorkerType.LINKSET)
     clustering_worker = Worker(WorkerType.CLUSTERING)
 
     threading.Thread(target=timbuctoo_worker.run).start()
-    threading.Thread(target=alignment_worker.run).start()
+    threading.Thread(target=linkset_worker.run).start()
     threading.Thread(target=clustering_worker.run).start()
 
     webapp.run()

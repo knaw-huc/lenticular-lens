@@ -68,29 +68,29 @@
       <levenshtein-info v-else-if="condition.method_name === 'LEVENSHTEIN'"/>
     </sub-card>
 
-    <div v-for="resourcesKey in ['sources', 'targets']" class="row pl-5">
+    <div v-for="key in ['sources', 'targets']" class="row pl-5">
       <div class="col">
         <div class="row">
-          <div class="h4 col-auto">{{ resourcesKey | capitalize }} properties</div>
-          <div v-if="unusedResources[resourcesKey].length > 0" class="col-auto form-group">
-            <select-box @input="condition[resourcesKey][$event].push({'property': [$event, '']})">
-              <option value="" disabled selected>Add property for Collection:</option>
-              <option v-for="resource in unusedResources[resourcesKey]" :value="resource">
-                {{ $root.getResourceById(resource).label }}
+          <div class="h4 col-auto">{{ key | capitalize }} properties</div>
+          <div v-if="unusedEntityTypeSelections[key].length > 0" class="col-auto form-group">
+            <select-box @input="condition[key][$event].push({'property': [$event, '']})">
+              <option value="" disabled selected>Add property for Entity-type selection:</option>
+              <option v-for="entityTypeSelection in unusedEntityTypeSelections[key]" :value="entityTypeSelection">
+                {{ $root.getEntityTypeSelectionById(entityTypeSelection).label }}
               </option>
             </select-box>
           </div>
         </div>
 
-        <match-condition-property v-for="(conditionProperty, index) in condition[resourcesKey]"
-                                  :key="index" :condition-property="conditionProperty"
-                                  :allow-delete="allowDeleteForIndex(index, conditionProperty, resourcesKey)"
-                                  :is-first="index === 0"
-                                  @clone="cloneProperty(resourcesKey, index, conditionProperty)"
-                                  @delete="condition[resourcesKey].splice(index, 1)"
-                                  ref="matchConditionProperties"/>
+        <condition-property v-for="(conditionProperty, index) in condition[key]"
+                            :key="index" :condition-property="conditionProperty"
+                            :allow-delete="allowDeleteForIndex(index, conditionProperty, key)"
+                            :is-first="index === 0"
+                            @clone="cloneProperty(key, index, conditionProperty)"
+                            @delete="condition[key].splice(index, 1)"
+                            ref="conditionProperties"/>
 
-        <div class="invalid-feedback mb-2" v-bind:class="{'is-invalid': errors.includes(resourcesKey)}">
+        <div class="invalid-feedback mb-2" v-bind:class="{'is-invalid': errors.includes(key)}">
           Please specify at least one property
         </div>
       </div>
@@ -105,14 +105,14 @@
     import props from "../../../utils/props";
     import ValidationMixin from "../../../mixins/ValidationMixin";
 
-    import MatchConditionProperty from "./MatchConditionProperty";
+    import ConditionProperty from "./ConditionProperty";
 
     export default {
-        name: "MatchCondition",
+        name: "Condition",
         components: {
             ExactMatchInfo,
             LevenshteinInfo,
-            MatchConditionProperty,
+            ConditionProperty,
         },
         mixins: [ValidationMixin],
         data() {
@@ -130,17 +130,16 @@
                 return {label: '', items: []};
             },
 
-            unusedResources() {
-                const resourceKeys = ['sources', 'targets'];
-                const unusedResources = {};
+            unusedEntityTypeSelections() {
+                const entityTypeSelectionKeys = ['sources', 'targets'];
+                const unusedEntityTypeSelections = {};
 
-                resourceKeys.forEach(resourceKey => {
-                    unusedResources[resourceKey] = Object.keys(this.condition[resourceKey]).filter(
-                        resource_id => this.condition[resourceKey][resource_id].length < 1
-                    );
+                entityTypeSelectionKeys.forEach(key => {
+                    unusedEntityTypeSelections[key] = Object.keys(this.condition[key])
+                        .filter(id => this.condition[key][id].length < 1);
                 });
 
-                return unusedResources;
+                return unusedEntityTypeSelections;
             },
 
             conditionProperties() {
@@ -157,7 +156,7 @@
             },
         },
         methods: {
-            validateMatchCondition() {
+            validateCondition() {
                 const methodNameValid = this.validateField('method_name', this.condition.method_name.length > 0);
 
                 let methodValueValid = true;
@@ -182,8 +181,8 @@
                 const sourcesValid = this.validateField('sources', this.condition.sources.length > 0);
                 const targetsValid = this.validateField('targets', this.condition.targets.length > 0);
 
-                const matchConditionPropertiesValid = !this.$refs.matchConditionProperties
-                    .map(propertyComponent => propertyComponent.validateMatchConditionProperty())
+                const conditionPropertiesValid = !this.$refs.conditionProperties
+                    .map(propertyComponent => propertyComponent.validateConditionProperty())
                     .includes(false);
 
                 let transformersValid = true;
@@ -199,7 +198,7 @@
                 this.validateField('transformers', transformersValid);
 
                 return methodNameValid && methodValueValid && sourcesValid && targetsValid
-                    && matchConditionPropertiesValid && transformersValid;
+                    && conditionPropertiesValid && transformersValid;
             },
 
             handleMethodIndexChange() {
@@ -234,11 +233,11 @@
                 return {};
             },
 
-            allowDeleteForIndex(index, prop, resourcesKey) {
-                return this.condition[resourcesKey].findIndex(p => p.resource === prop.resource) !== index;
+            allowDeleteForIndex(index, prop, key) {
+                return this.condition[key].findIndex(p => p.entityTypeSelection === prop.entityTypeSelection) !== index;
             },
 
-            cloneProperty(resourcesKey, index, conditionProperty) {
+            cloneProperty(key, index, conditionProperty) {
                 const transformers = [];
                 if (this.methodValueTemplate.hasOwnProperty('transformers'))
                     this.methodValueTemplate.transformers.forEach(transformer => {
@@ -248,8 +247,8 @@
                         });
                     });
 
-                this.condition[resourcesKey].splice(index + 1, 0, {
-                    resource: conditionProperty.resource,
+                this.condition[key].splice(index + 1, 0, {
+                    entityTypeSelection: conditionProperty.entityTypeSelection,
                     property: [''],
                     transformers
                 });

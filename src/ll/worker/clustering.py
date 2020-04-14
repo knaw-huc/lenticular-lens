@@ -8,9 +8,9 @@ from ll.job.simple_link_clustering import SimpleLinkClustering
 
 
 class ClusteringJob(WorkerJob):
-    def __init__(self, job_id, alignment):
+    def __init__(self, job_id, id):
         self._job_id = job_id
-        self._alignment = alignment
+        self._id = id
 
         self._job = JobLL(job_id)
         self._worker = None
@@ -18,8 +18,8 @@ class ClusteringJob(WorkerJob):
         super().__init__(self.start_clustering)
 
     def start_clustering(self):
-        linkset_table_name = self._job.linkset_table_name(self._alignment)
-        links = self._job.get_links('match', self._alignment)
+        linkset_table_name = self._job.linkset_table_name(self._id)
+        links = self._job.get_links('linket', self._id)
 
         with self._db_conn.cursor() as cur:
             self._worker = SimpleLinkClustering(links)
@@ -40,14 +40,14 @@ class ClusteringJob(WorkerJob):
         if not self._worker:
             return
 
-        self._job.update_clustering(self._alignment, {
+        self._job.update_clustering(self._id, {
             'status_message': 'Processing found clusters' if self._worker.links_processed else 'Processing links',
             'links_count': self._worker.links_processed,
             'clusters_count': len(self._worker.clusters)
         })
 
     def watch_kill(self):
-        clustering_job = self._job.clustering(self._alignment)
+        clustering_job = self._job.clustering(self._id)
         if clustering_job['kill']:
             self.kill(reset=False)
 
@@ -56,11 +56,11 @@ class ClusteringJob(WorkerJob):
             self._worker.stop_clustering()
 
         job_data = {'status': 'waiting'} if reset else {'status': 'failed', 'status_message': 'Killed manually'}
-        self._job.update_clustering(self._alignment, job_data)
+        self._job.update_clustering(self._id, job_data)
 
     def on_exception(self):
         err_message = str(self._exception)
-        self._job.update_clustering(self._alignment, {'status': 'failed', 'status_message': err_message})
+        self._job.update_clustering(self._id, {'status': 'failed', 'status_message': err_message})
 
     def on_finish(self):
         if len(self._worker.clusters) > 0:
@@ -68,5 +68,5 @@ class ClusteringJob(WorkerJob):
                 cur.execute('''
                     UPDATE clusterings
                     SET links_count = %s, clusters_count = %s, status = %s, finished_at = now()
-                    WHERE job_id = %s AND alignment = %s
-                ''', (self._worker.links_processed, len(self._worker.clusters), 'done', self._job_id, self._alignment))
+                    WHERE job_id = %s AND spec_id = %s
+                ''', (self._worker.links_processed, len(self._worker.clusters), 'done', self._job_id, self._id))

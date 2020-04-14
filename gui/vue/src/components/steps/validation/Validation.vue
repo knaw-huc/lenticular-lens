@@ -1,17 +1,17 @@
 <template>
-  <card :id="'clusters_match_' + type + '_' + match.id" type="clusters-matches" :label="match.label"
+  <card :id="'validation_' + type + '_' + spec.id" type="validation" :label="spec.label"
         :has-extra-row="true" :open-card="show" @show="updateShow('open')" @hide="updateShow('close')">
     <template v-slot:columns>
       <div class="col">
         <sub-card :is-first="true" class="small">
-          <div v-if="alignment" class="row justify-content-center">
+          <div v-if="linkset" class="row justify-content-center">
             <div class="col-auto">
               <div>
                 <strong>Links: </strong>
-                {{ alignment.links_count.toLocaleString('en') }}
+                {{ linkset.links_count.toLocaleString('en') }}
 
-                <span v-if="alignment.links_count > alignment.distinct_links_count" class="font-italic text-info">
-                  ({{ alignment.distinct_links_count.toLocaleString('en') }} distinct links)
+                <span v-if="linkset.links_count > linkset.distinct_links_count" class="font-italic text-info">
+                  ({{ linkset.distinct_links_count.toLocaleString('en') }} distinct links)
                 </span>
               </div>
               <div v-if="clustering">
@@ -22,19 +22,19 @@
 
             <div class="col-auto">
               <div>
-                <strong>Resources in source: </strong>
-                {{ alignment.sources_count.toLocaleString('en') }}
+                <strong>Entities in source: </strong>
+                {{ linkset.sources_count.toLocaleString('en') }}
 
-                <span v-if="alignment.sources_count > alignment.distinct_sources_count" class="font-italic text-info">
-                  ({{ alignment.distinct_sources_count.toLocaleString('en') }} distinct resources)
+                <span v-if="linkset.sources_count > linkset.distinct_sources_count" class="font-italic text-info">
+                  ({{ linkset.distinct_sources_count.toLocaleString('en') }} distinct entities)
                 </span>
               </div>
               <div>
-                <strong>Resources in target: </strong>
-                {{ alignment.targets_count.toLocaleString('en') }}
+                <strong>Entities in target: </strong>
+                {{ linkset.targets_count.toLocaleString('en') }}
 
-                <span v-if="alignment.targets_count > alignment.distinct_targets_count" class="font-italic text-info">
-                  ({{ alignment.distinct_targets_count.toLocaleString('en') }} distinct resources)
+                <span v-if="linkset.targets_count > linkset.distinct_targets_count" class="font-italic text-info">
+                  ({{ linkset.distinct_targets_count.toLocaleString('en') }} distinct entities)
                 </span>
               </div>
             </div>
@@ -65,10 +65,10 @@
             <div class="col-auto">
               <div class="btn-toolbar" role="toolbar" aria-label="Toolbar">
                 <div class="btn-group btn-group-toggle mr-4">
-                  <label v-if="alignment" class="btn btn-secondary btn-sm" v-bind:class="{'active': showInfo}">
+                  <label v-if="linkset" class="btn btn-secondary btn-sm" v-bind:class="{'active': showInfo}">
                     <input type="checkbox" autocomplete="off" v-model="showInfo" @change="updateShow"/>
                     <fa-icon icon="info-circle"/>
-                    Show alignment specs
+                    Show linkset specs
                   </label>
 
                   <label class="btn btn-secondary btn-sm" v-bind:class="{'active': showPropertySelection}">
@@ -151,7 +151,7 @@
           </div>
         </sub-card>
 
-        <alignment-spec v-if="isMatch && showInfo" :match="match"/>
+        <linkset-spec v-if="isLinkset && showInfo" :linksetSpec="spec"/>
 
         <sub-card v-if="showPropertySelection" id="properties-card" type="properties" label="Property selection"
                   :has-margin-auto="true" :has-columns="true">
@@ -163,7 +163,7 @@
             </div>
           </template>
 
-          <property-selection class="mt-4" :properties="match.properties"/>
+          <property-selection class="mt-4" :properties="spec.properties"/>
         </sub-card>
 
         <sub-card v-if="showClusters && clustering" label="Clusters" id="clusters-list" type="clusters-list"
@@ -234,13 +234,13 @@
 
     <cluster-visualization
         v-if="showClusters && clustering && clusterIdSelected && hasProperties"
-        :matchId="match.id"
+        :linkset-id="spec.id"
         :cluster="selectedCluster"
         :association="clustering.association"
         ref="visualization"/>
 
     <template v-if="showLinks">
-      <match-link
+      <link-component
           v-for="(link, idx) in links"
           :key="idx"
           :index="idx"
@@ -273,20 +273,20 @@
 
     import Properties from "../../helpers/Properties";
     import PropertySelection from "../../helpers/PropertySelection";
-    import AlignmentSpec from "../../helpers/AlignmentSpec";
+    import LinksetSpec from "../../helpers/LinksetSpec";
 
-    import MatchLink from "./MatchLink";
+    import Link from "./Link";
     import Cluster from "./Cluster";
     import ClusterVisualization from "./ClusterVisualization";
 
     export default {
-        name: "MatchValidation",
+        name: "Validation",
         components: {
             InfiniteLoading,
             Properties,
             PropertySelection,
-            AlignmentSpec,
-            MatchLink,
+            LinksetSpec,
+            LinkComponent: Link,
             Cluster,
             ClusterVisualization,
         },
@@ -328,30 +328,30 @@
         },
         props: {
             type: String,
-            match: Object,
+            spec: Object,
         },
         computed: {
             hasProperties() {
-                return !this.match.properties.map(res => res.property[0] !== '').includes(false);
+                return !this.spec.properties.map(res => res.property[0] !== '').includes(false);
             },
 
-            isMatch() {
-                return this.type === 'match';
+            isLinkset() {
+                return this.type === 'linkset';
             },
 
             isLens() {
                 return this.type === 'lens';
             },
 
-            alignment() {
-                return this.isMatch
-                    ? this.$root.alignments.find(alignment => alignment.alignment === this.match.id)
+            linkset() {
+                return this.isLinkset
+                    ? this.$root.linksets.find(linkset => linkset.spec_id === this.spec.id)
                     : null;
             },
 
             clustering() {
-                if (this.isMatch) {
-                    const clustering = this.$root.clusterings.find(clustering => clustering.alignment === this.match.id);
+                if (this.isLinkset) {
+                    const clustering = this.$root.clusterings.find(clustering => clustering.spec_id === this.spec.id);
                     if (clustering && clustering.status === 'done')
                         return clustering;
                 }
@@ -447,7 +447,7 @@
                 this.loadingTotals = true;
 
                 const clusterId = this.showClusterLinks ? this.clusterIdSelected : undefined;
-                const totals = await this.$root.getAlignmentTotals(this.type, this.match.id, clusterId);
+                const totals = await this.$root.getLinksetTotals(this.type, this.spec.id, clusterId);
 
                 if (totals) {
                     this.acceptedLinks = totals.accepted || 0;
@@ -466,7 +466,7 @@
                 this.loadingLinks = true;
 
                 const clusterId = this.showClusterLinks ? this.clusterIdSelected : undefined;
-                const links = await this.$root.getAlignment(this.type, this.match.id,
+                const links = await this.$root.getLinkset(this.type, this.spec.id,
                     this.showAcceptedLinks, this.showRejectedLinks, this.showNotValidatedLinks, this.showMixedLinks,
                     clusterId, 50, this.links.length);
 
@@ -492,7 +492,7 @@
                 this.loadingClusters = true;
 
                 const clusters = await this.$root.getClusters(
-                    this.match.id, this.clustering.association, 5, this.clusters.length);
+                    this.spec.id, this.clustering.association, 5, this.clusters.length);
 
                 if (clusters !== null)
                     this.clusters.push(...clusters);
@@ -514,7 +514,7 @@
                 const after = (before === 'accepted') ? 'not_validated' : 'accepted';
 
                 link.updating = true;
-                const result = await this.$root.validateLink(this.type, this.match.id, link.source, link.target, after);
+                const result = await this.$root.validateLink(this.type, this.spec.id, link.source, link.target, after);
                 link.updating = false;
 
                 if (result !== null) {
@@ -543,7 +543,7 @@
                 const after = (before === 'rejected') ? 'not_validated' : 'rejected';
 
                 link.updating = true;
-                const result = await this.$root.validateLink(this.type, this.match.id, link.source, link.target, after);
+                const result = await this.$root.validateLink(this.type, this.spec.id, link.source, link.target, after);
                 link.updating = false;
 
                 if (result !== null) {

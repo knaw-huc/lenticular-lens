@@ -30,77 +30,77 @@
         </tab-content-structure>
       </tab-content>
 
-      <tab-content title="Collections" :before-change="validateCollectionsTab">
-        <tab-content-structure title="Collections" :tab-error="tabError" :is-saved="isSaved">
+      <tab-content title="Entity-type selections" :before-change="validateEntityTypeSelectionsTab">
+        <tab-content-structure title="Entity-type selections" :tab-error="tabError" :is-saved="isSaved">
           <template v-slot:header>
-            <div v-if="resourceOpen === null" class="col-auto">
-              <button-add @click="addResource" title="Add a Collection" size="2x"/>
+            <div v-if="entityTypeSelectionOpen === null" class="col-auto">
+              <button-add @click="addEntityTypeSelection" title="Add an Entity-type selection" size="2x"/>
             </div>
           </template>
 
-          <draggable v-model="$root.resources" group="resources" handle=".handle">
-            <b-collapse v-for="(resource, index) in $root.resources"
-                        :key="resource.id" :id="'resource_card_' + resource.id"
-                        :visible="resourceOpen === resource.id || resourceOpen === null">
-              <resource
-                  :resource="resource"
-                  @duplicate="duplicateResource($event)"
-                  @remove="$root.resources.splice(index, 1)"
-                  @show="resourceOpen = resource.id"
-                  @hide="resourceOpen = null"
-                  ref="resourceComponents"/>
+          <draggable v-model="$root.entityTypeSelections" group="entityTypeSelections" handle=".handle">
+            <b-collapse v-for="(entityTypeSelection, index) in $root.entityTypeSelections"
+                        :key="entityTypeSelection.id" :id="'entity_type_selection_card_' + entityTypeSelection.id"
+                        :visible="entityTypeSelectionOpen === entityTypeSelection.id || entityTypeSelectionOpen === null">
+              <entity-type-selection
+                  :entity-type-selection="entityTypeSelection"
+                  @duplicate="duplicateEntityTypeSelection($event)"
+                  @remove="$root.entityTypeSelections.splice(index, 1)"
+                  @show="entityTypeSelectionOpen = entityTypeSelection.id"
+                  @hide="entityTypeSelectionOpen = null"
+                  ref="entityTypeSelectionComponents"/>
             </b-collapse>
           </draggable>
         </tab-content-structure>
       </tab-content>
 
-      <tab-content title="Alignments" :before-change="validateAlignmentsTab">
-        <tab-content-structure title="Alignments" :tab-error="tabError" :is-saved="isSaved">
+      <tab-content title="Linkset specs" :before-change="validateLinksetSpecsTab">
+        <tab-content-structure title="Linkset specs" :tab-error="tabError" :is-saved="isSaved">
           <template v-slot:header>
-            <div v-if="matchOpen === null" class="col-auto">
-              <button-add @click="addMatch" title="Add an Alignment" size="2x"/>
+            <div v-if="linksetSpecOpen === null" class="col-auto">
+              <button-add @click="addLinksetSpec" title="Add a Linkset Spec" size="2x"/>
             </div>
           </template>
 
-          <draggable v-model="$root.matches" group="matches" handle=".handle">
-            <b-collapse v-for="(match, index) in $root.matches"
-                        :key="match.id" :id="'match_card_' + match.id"
-                        :visible="matchOpen === match.id || matchOpen === null">
-              <match
-                  :match="match"
-                  @duplicate="duplicateMatch($event)"
+          <draggable v-model="$root.linksetSpecs" group="linksetSpecs" handle=".handle">
+            <b-collapse v-for="(linksetSpec, index) in $root.linksetSpecs"
+                        :key="linksetSpec.id" :id="'linkset_spec_card_' + linksetSpec.id"
+                        :visible="linksetSpecOpen === linksetSpec.id || linksetSpecOpen === null">
+              <linkset
+                  :linkset-spec="linksetSpec"
+                  @duplicate="duplicateLinksetSpec($event)"
                   @submit="submit"
-                  @remove="$root.matches.splice(index, 1)"
-                  @update:label="match.label = $event"
-                  @show="matchOpen = match.id"
-                  @hide="matchOpen = null"
-                  ref="matchComponents"/>
+                  @remove="$root.linksetSpecs.splice(index, 1)"
+                  @update:label="linksetSpec.label = $event"
+                  @show="linksetSpecOpen = linksetSpec.id"
+                  @hide="linksetSpecOpen = null"
+                  ref="linksetSpecComponents"/>
             </b-collapse>
           </draggable>
         </tab-content-structure>
       </tab-content>
 
-      <tab-content title="Lenses" :before-change="validateLensesTab">
-        <tab-content-structure title="Lenses" :tab-error="tabError" :is-saved="isSaved">
+      <tab-content title="Lens specs" :before-change="validateLensSpecsTab">
+        <tab-content-structure title="Lens specs" :tab-error="tabError" :is-saved="isSaved">
           <template v-slot:header>
-            <div v-if="lensOpen === null" class="col-auto">
-              <button-add @click="addLens" title="Add an Lens" size="2x"/>
+            <div v-if="lensSpecOpen === null" class="col-auto">
+              <button-add @click="addLensSpec" title="Add a Lens Spec" size="2x"/>
             </div>
           </template>
 
-          <draggable v-model="$root.lenses" group="lenses" handle=".handle">
-            <b-collapse v-for="(lens, index) in $root.lenses"
-                        :key="lens.id" :id="'lens_card_' + lens.id"
-                        :visible="lensOpen === lens.id || lensOpen === null">
+          <draggable v-model="$root.lensSpecs" group="lensSpecs" handle=".handle">
+            <b-collapse v-for="(lensSpec, index) in $root.lensSpecs"
+                        :key="lensSpec.id" :id="'lens_spec_card_' + lensSpec.id"
+                        :visible="lensSpecOpen === lensSpec.id || lensSpecOpen === null">
               <lens
-                  :lens="lens"
-                  @duplicate="duplicateLens($event)"
+                  :lens-spec="lensSpec"
+                  @duplicate="duplicateLensSpec($event)"
                   @submit="submit"
-                  @remove="$root.lenses.splice(index, 1)"
-                  @update:label="lens.label = $event"
-                  @show="lensOpen = lens.id"
-                  @hide="lensOpen = null"
-                  ref="lensComponents"/>
+                  @remove="$root.lensSpecs.splice(index, 1)"
+                  @update:label="lensSpec.label = $event"
+                  @show="lensSpecOpen = lensSpec.id"
+                  @hide="lensSpecOpen = null"
+                  ref="lensSpecComponents"/>
             </b-collapse>
           </draggable>
         </tab-content-structure>
@@ -108,30 +108,30 @@
 
       <tab-content title="Validation">
         <tab-content-structure title="Validation" :tab-error="tabError" :is-saved="isSaved">
-          <b-collapse v-for="ls in linksetsAndLenses"
-                      :key="ls.uid" :id="'match_validation_card_' + ls.uid"
-                      :visible="matchValidationOpen === ls.uid || matchValidationOpen === null">
-            <match-validation
-                :type="ls.type"
-                :match="ls.type === 'match' ? ls.match : ls.lens"
-                :key="ls.uid"
-                @show="matchValidationOpen = ls.uid"
-                @hide="matchValidationOpen = null"/>
+          <b-collapse v-for="spec in specsWithResults"
+                      :key="spec.uid" :id="'validation_card_' + spec.uid"
+                      :visible="validationOpen === spec.uid || validationOpen === null">
+            <validation
+                :type="spec.type"
+                :spec="spec.spec"
+                :key="spec.uid"
+                @show="validationOpen = spec.uid"
+                @hide="validationOpen = null"/>
           </b-collapse>
         </tab-content-structure>
       </tab-content>
 
       <tab-content title="Export">
         <tab-content-structure title="Export" :tab-error="tabError" :is-saved="isSaved">
-          <match-export
-              v-for="ls in linksetsAndLenses"
-              :type="ls.type"
-              :match="ls.type === 'match' ? ls.match : ls.lens"
-              :key="ls.uid"/>
+          <export
+              v-for="spec in specsWithResults"
+              :type="spec.type"
+              :spec="spec.spec"
+              :key="spec.uid"/>
         </tab-content-structure>
       </tab-content>
 
-      <template v-if="(props.activeTabIndex === 0  && !$root.job) || [1,2].includes(props.activeTabIndex)"
+      <template v-if="(props.activeTabIndex === 0  && !$root.job) || [1,2,3].includes(props.activeTabIndex)"
                 slot="next" slot-scope="props">
         <template v-if="props.activeTabIndex === 0 && !$root.job">
           <wizard-button
@@ -177,11 +177,11 @@
     import {EventBus} from './eventbus.js';
 
     import Research from './components/steps/research/Research';
-    import Resource from './components/steps/resources/Resource';
-    import Match from './components/steps/matches/Match';
+    import EntityTypeSelection from './components/steps/entity_type_selections/EntityTypeSelection';
+    import Linkset from './components/steps/linksets/Linkset';
     import Lens from './components/steps/lenses/Lens';
-    import MatchValidation from './components/steps/validation/MatchValidation';
-    import MatchExport from './components/steps/export/MatchExport';
+    import Validation from './components/steps/validation/Validation';
+    import Export from './components/steps/export/Export';
 
     import ValidationMixin from "./mixins/ValidationMixin";
     import TabContentStructure from './components/structural/TabContentStructure';
@@ -193,11 +193,11 @@
             Draggable,
             TabContentStructure,
             Research,
-            Resource,
-            Match,
+            EntityTypeSelection,
+            Linkset,
             Lens,
-            MatchValidation,
-            MatchExport,
+            Validation,
+            Export,
         },
         data() {
             return {
@@ -212,38 +212,38 @@
                 isLoading: false,
                 isUpdating: false,
                 isDownloading: false,
-                resourceOpen: null,
-                matchOpen: null,
-                lensOpen: null,
-                matchValidationOpen: null,
-                steps: ['research', 'collections', 'alignments', 'lenses', 'validation', 'export'],
+                entityTypeSelectionOpen: null,
+                linksetSpecOpen: null,
+                lensSpecOpen: null,
+                validationOpen: null,
+                steps: ['research', 'entityTypeSelections', 'linksetSpecs', 'lensSpecs', 'validation', 'export'],
             };
         },
         computed: {
             hasChanges() {
                 return !Boolean(this.$root.job)
-                    || JSON.stringify(this.$root.resources) !== JSON.stringify(this.$root.job['resources'])
-                    || JSON.stringify(this.$root.matches) !== JSON.stringify(this.$root.job['mappings'])
-                    || JSON.stringify(this.$root.lenses) !== JSON.stringify(this.$root.job['lenses']);
+                    || JSON.stringify(this.$root.entityTypeSelections) !== JSON.stringify(this.$root.job['entity_type_selections'])
+                    || JSON.stringify(this.$root.linksetSpecs) !== JSON.stringify(this.$root.job['linkset_specs'])
+                    || JSON.stringify(this.$root.lensSpecs) !== JSON.stringify(this.$root.job['lens_specs']);
             },
 
-            linksetsAndLenses() {
-                const matches = this.$root.matches.filter(match => {
-                    return this.$root.alignments.find(al => {
-                        return al.alignment === match.id && al.status === 'done' && al.distinct_links_count > 0;
+            specsWithResults() {
+                const linksetSpecs = this.$root.linksetSpecs.filter(linksetSpec => {
+                    return this.$root.linksets.find(ls => {
+                        return ls.spec_id === linksetSpec.id && ls.status === 'done' && ls.distinct_links_count > 0;
                     });
                 });
 
                 return [
-                    ...matches.map(match => ({
-                        uid: `match_${match.id}`,
-                        type: 'match',
-                        match: match,
+                    ...linksetSpecs.map(linksetSpec => ({
+                        uid: `linkset_${linksetSpec.id}`,
+                        type: 'linkset',
+                        spec: linksetSpec,
                     })),
-                    ...this.$root.lenses.map(lens => ({
-                        uid: `lens_${lens.id}`,
+                    ...this.$root.lensSpecs.map(lensSpec => ({
+                        uid: `lensSpec_${lensSpec.id}`,
                         type: 'lens',
-                        lens: lens,
+                        spec: lensSpec,
                     }))
                 ];
             },
@@ -259,13 +259,15 @@
                 return this.isTabValid(this.$root.job, false, 'Please update or create your research first!');
             },
 
-            validateCollectionsTab(alwaysSave = false) {
-                const results = this.$refs.resourceComponents
-                    .map(resourceComponent => resourceComponent.validateResource());
+            validateEntityTypeSelectionsTab(alwaysSave = false) {
+                const results = this.$refs.entityTypeSelectionComponents
+                    .map(entityTypeSelectionComponent => entityTypeSelectionComponent.validateEntityTypeSelection());
 
                 const isValid = results.includes(false)
-                    ? this.isTabValid(false, alwaysSave, 'One or more resources contain errors!')
-                    : this.isTabValid(this.$root.resources.length > 0, false, 'Please add at least one resource!');
+                    ? this.isTabValid(false, alwaysSave,
+                        'One or more entity-type selections contain errors!')
+                    : this.isTabValid(this.$root.entityTypeSelections.length > 0, false,
+                        'Please add at least one entity-type selection!');
 
                 if (isValid || alwaysSave)
                     this.submit();
@@ -273,12 +275,15 @@
                 return isValid;
             },
 
-            validateAlignmentsTab(alwaysSave = false) {
-                const results = this.$refs.matchComponents.map(matchComponent => matchComponent.validateMatch());
+            validateLinksetSpecsTab(alwaysSave = false) {
+                const results = this.$refs.linksetSpecComponents
+                    .map(linksetSpecComponent => linksetSpecComponent.validateLinkset());
 
                 const isValid = results.includes(false)
-                    ? this.isTabValid(false, alwaysSave, 'One or more alignments contain errors!')
-                    : this.isTabValid(this.$root.matches.length > 0, false, 'Please add at least one alignment!');
+                    ? this.isTabValid(false, alwaysSave,
+                        'One or more linkset specs contain errors!')
+                    : this.isTabValid(this.$root.linksetSpecs.length > 0, false,
+                        'Please add at least one linkset spec!');
 
                 if (isValid || alwaysSave)
                     this.submit();
@@ -286,13 +291,13 @@
                 return isValid;
             },
 
-            validateLensesTab(alwaysSave = false) {
-                const results = this.$refs.lensComponents
-                    ? this.$refs.lensComponents.map(lensComponent => lensComponent.validateLens())
+            validateLensSpecsTab(alwaysSave = false) {
+                const results = this.$refs.lensSpecComponents
+                    ? this.$refs.lensSpecComponents.map(lensSpecComponent => lensSpecComponent.validateLens())
                     : [];
 
                 const isValid = this.isTabValid(!results.includes(false), alwaysSave,
-                    'One or more lenses contain errors!');
+                    'One or more lensSpec specs contain errors!');
                 if (isValid || alwaysSave)
                     this.submit();
 
@@ -302,11 +307,11 @@
             validateAndSave(activeTabIndex) {
                 switch (activeTabIndex) {
                     case 1:
-                        return this.validateCollectionsTab(true);
+                        return this.validateEntityTypeSelectionsTab(true);
                     case 2:
-                        return this.validateAlignmentsTab(true);
+                        return this.validateLinksetSpecsTab(true);
                     case 3:
-                        return this.validateLensesTab(true);
+                        return this.validateLensSpecsTab(true);
                     default:
                         return false;
                 }
@@ -326,28 +331,28 @@
                     this.$refs.formWizard.changeTab(this.$refs.formWizard.activeTabIndex, stepIndex);
             },
 
-            addResource() {
-                this.$root.addResource();
+            addEntityTypeSelection() {
+                this.$root.addEntityTypeSelection();
             },
 
-            addMatch() {
-                this.$root.addMatch();
+            addLinksetSpec() {
+                this.$root.addLinksetSpec();
             },
 
-            addLens() {
-                this.$root.addLens();
+            addLensSpec() {
+                this.$root.addLensSpec();
             },
 
-            duplicateResource(resource) {
-                this.$root.duplicateResource(resource);
+            duplicateEntityTypeSelection(entityTypeSelection) {
+                this.$root.duplicateEntityTypeSelection(entityTypeSelection);
             },
 
-            duplicateMatch(match) {
-                this.$root.duplicateMatch(match);
+            duplicateLinksetSpec(linksetSpec) {
+                this.$root.duplicateLinksetSpec(linksetSpec);
             },
 
-            duplicateLens(lens) {
-                this.$root.duplicateLens(lens);
+            duplicateLensSpec(lensSpec) {
+                this.$root.duplicateLensSpec(lensSpec);
             },
 
             async createJob(inputs) {
@@ -396,15 +401,15 @@
                         this.jobDescription = this.$root.job.job_description;
                         this.jobLink = this.$root.job.job_link;
 
-                        this.activateStep('collections');
+                        this.activateStep('entityTypeSelections');
 
-                        if (this.$root.resources.length === 0)
-                            this.$root.addResource();
+                        if (this.$root.entityTypeSelections.length === 0)
+                            this.$root.addEntityTypeSelection();
 
-                        if (this.$root.matches.length === 0)
-                            this.$root.addMatch();
+                        if (this.$root.linksetSpecs.length === 0)
+                            this.$root.addLinksetSpec();
                         else
-                            this.activateStep('alignments');
+                            this.activateStep('linksetSpecs');
 
                         this.refresh();
                     }
@@ -413,15 +418,15 @@
 
             async refresh(load = false) {
                 if (load)
-                    await Promise.all([this.$root.loadAlignments(), this.$root.loadClusterings()]);
+                    await Promise.all([this.$root.loadLinksets(), this.$root.loadClusterings()]);
 
                 let hasFinished = false;
                 let hasUnfinished = false;
 
-                this.$root.alignments.forEach(alignment => {
-                    if (alignment.status === 'done' && alignment.distinct_links_count > 0)
+                this.$root.linksets.forEach(linkset => {
+                    if (linkset.status === 'done' && linkset.distinct_links_count > 0)
                         hasFinished = true;
-                    else if (alignment.status !== 'done' && alignment.status !== 'failed')
+                    else if (linkset.status !== 'done' && linkset.status !== 'failed')
                         hasUnfinished = true;
                 });
 
@@ -431,14 +436,14 @@
                 });
 
                 if (hasFinished) {
-                    this.activateStep('lenses');
+                    this.activateStep('lensSpecs');
                     this.activateStep('validation');
                     this.activateStep('export');
                 }
 
                 if (hasUnfinished)
                     setTimeout(() => {
-                        Promise.all([this.$root.loadAlignments(), this.$root.loadClusterings()])
+                        Promise.all([this.$root.loadLinksets(), this.$root.loadClusterings()])
                             .then(() => this.refresh());
                     }, 2000);
             },

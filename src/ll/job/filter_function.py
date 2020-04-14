@@ -19,7 +19,7 @@ class FilterFunction:
             self._parameters['operator'] = psycopg2_sql.SQL(function_obj['operator'])
 
         self._parameters['property'] = property.sql
-        self._parameters['property__0'] = psycopg2_sql.Identifier(property.resource_label)
+        self._parameters['property__0'] = psycopg2_sql.Identifier(property.entity_type_selection_label)
         self._parameters['property__1'] = psycopg2_sql.Identifier(property.prop_label)
 
     @property

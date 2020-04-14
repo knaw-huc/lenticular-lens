@@ -81,7 +81,7 @@
     import Properties from "../../helpers/Properties";
 
     export default {
-        name: "MatchLink",
+        name: "Link",
         components: {
             Properties
         },

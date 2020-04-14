@@ -30,7 +30,7 @@
     import Properties from "../../helpers/Properties";
 
     export default {
-        name: "ResourceSample",
+        name: "Sample",
         components: {
             Properties
         },

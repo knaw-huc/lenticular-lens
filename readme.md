@@ -15,9 +15,9 @@ and is also able to report on manual corrections and the amount of manual valida
     1. [Linksets interaction](#linksets-interaction)
     1. [Export](#export)
 1. [Job configuration with JSON](#job-configuration-with-json)
-    1. [Resources](#resources)
-    1. [Mappings](#mappings)
-    1. [Lenses](#lenses)
+    1. [Entity-type selections](#entity-type-selections)
+    1. [Linkset specs](#linkset-specs)
+    1. [Lens specs](#lens-specs)
     1. [Element groups](#element-groups)
     1. [Property paths](#property-paths)
 1. [Matching methods](#matching-methods)
@@ -150,10 +150,10 @@ Returns the identifier of this new job.
 
 **URL**: `/job/update`\
 **Method**: `POST`\
-**JSON**: `job_id`, `job_title`, `job_description`, `job_link`, `resources`, `mappings`, `lenses`
+**JSON**: `job_id`, `job_title`, `job_description`, `job_link`, `entity_type_selections`, `linkset_specs`, `lens_specs`
 
 Updates a job with the given `job_id`. 
-Updates the `job_title`, `job_description`, `job_link`, `resources`, `mappings` and `lenses`.
+Updates the `job_title`, `job_description`, `job_link`, `entity_type_selections`, `linkset_specs` and `lens_specs`.
 
 ---
 
@@ -166,12 +166,12 @@ _Example: `/job/d697ea3869422ce3c7cc1889264d03c7`_
 
 ### Job processes
 
-**URL**: `/job/<job_id>/alignments`\
+**URL**: `/job/<job_id>/linksets`\
 **Method**: `GET`
 
-Returns the details of all alignment jobs with the given `job_id`.
+Returns the details of all linksets jobs with the given `job_id`.
 
-_Example: `/job/d697ea3869422ce3c7cc1889264d03c7/alignments`_
+_Example: `/job/d697ea3869422ce3c7cc1889264d03c7/linksets`_
 
 ---
 
@@ -184,22 +184,22 @@ _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/clusterings`_
 
 ---
 
-**URL**: `/job/<job_id>/run_alignment/<alignment>`\
+**URL**: `/job/<job_id>/run_linkset/<linkset>`\
 **Method**: `POST`\
 **JSON**: `restart`
 
-Start an alignment process for the given `alignment` of a specific `job_id`. 
+Start a linkset process for the given `linkset` of a specific `job_id`. 
 Specify `restart` to restart the process.
 
-_Example: `/job/d697ea3869422ce3c7cc1889264d03c7/run_alignment/0`_
+_Example: `/job/d697ea3869422ce3c7cc1889264d03c7/run_linkset/0`_
 
 ---
 
-**URL**: `/job/<job_id>/run_clustering/<alignment>`\
+**URL**: `/job/<job_id>/run_clustering/<linkset>`\
 **Method**: `POST`\
 **JSON**: `association_file`, `clustering_type`
 
-Start an clustering process for the given `alignment` of a specific `job_id`. 
+Start an clustering process for the given `linkset` of a specific `job_id`. 
 Specify an `association_file` to reconcile a given cluster.
 Specify `clustering_type`, which is `default` by default.
 
@@ -207,52 +207,52 @@ _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/run_clustering/0`_
 
 ---
 
-**URL**: `/job/<job_id>/kill_alignment/<alignment>`\
+**URL**: `/job/<job_id>/kill_linkset/<linkset>`\
 **Method**: `POST`\
-Stop an alignment process for the given `alignment` of a specific `job_id`. 
+Stop a linkset process for the given `linkset` of a specific `job_id`. 
 
-_Example: `/job/d697ea3869422ce3c7cc1889264d03c7/kill_alignment/0`_
+_Example: `/job/d697ea3869422ce3c7cc1889264d03c7/kill_linkset/0`_
 
 ---
 
-**URL**: `/job/<job_id>/kill_clustering/<alignment>`\
+**URL**: `/job/<job_id>/kill_clustering/<linkset>`\
 **Method**: `POST`
 
-Stop an clustering process for the given `alignment` of a specific `job_id`.
+Stop an clustering process for the given `linkset` of a specific `job_id`.
 
 _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/kill_clustering/0`_
 
 ### Data retrieval
 
-**URL**: `/job/<job_id>/resource/<resource_label>`\
+**URL**: `/job/<job_id>/entity_type_selection/<label>`\
 **Method**: `GET`\
 **Parameters**: `total`, `limit`, `offset`
 
-Returns all data for a resource with the label `resource_label` of the given `job_id`.
+Returns all data for an entity-type selection with the label `label` of the given `job_id`.
 Use `limit` and `offset` for paging.
 Specify `total` to only return the total number of entities.
 
-_Example: `/job/d697ea3869422ce3c7cc1889264d03c7/resource/LimitedPersons`_
+_Example: `/job/d697ea3869422ce3c7cc1889264d03c7/entity_type_selection/LimitedPersons`_
 
 ---
 
-**URL**: `/job/<job_id>/alignment/<type>/<alignment>`\
+**URL**: `/job/<job_id>/links/<type>/<id>`\
 **Method**: `GET`\
 **Parameters**: `cluster_id`, `limit`, `offset`
 
-Returns the linkset for alignment `alignment` of `type` (`match` or `lens`) of the given `job_id`.
+Returns the links of `type` (`linkset` or `lens`) for the linkset/lens with `id` of the given `job_id`.
 Use `limit` and `offset` for paging.
 Specify `cluster_id` to only return the links of a specific cluster.
 
-_Example: `/job/d697ea3869422ce3c7cc1889264d03c7/alignment/0`_
+_Example: `/job/d697ea3869422ce3c7cc1889264d03c7/links/linkset/0`_
 
 ---
 
-**URL**: `/job/<job_id>/clusters/<alignment>`\
+**URL**: `/job/<job_id>/clusters/<linkset>`\
 **Method**: `GET`\
 **Parameters**: `association`, `limit`, `offset`
 
-Returns the clusters for alignment `alignment` of the given `job_id`.
+Returns the clusters for linkset `linkset` of the given `job_id`.
 Use `limit` and `offset` for paging.
 Specify `association` to include reconciliation results with the given association.
 
@@ -260,33 +260,33 @@ _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/clusters/0`_
 
 ### Linksets interaction
 
-**URL**: `/job/<job_id>/validate/<type>/<alignment>`\
+**URL**: `/job/<job_id>/validate/<type>/<id>`\
 **Method**: `POST`\
 **JSON**: `source`, `target`, `valid`
 
-Validate a link for alignment `alignment` of `type` (`match` or `lens`) of the given `job_id`.
+Validate a link of `type` (`linkset` or `lens`) for the linkset/lens with `id` of the given `job_id`.
 Specify the uris of the `source` and `target` to identify the link to be validated.
 
 Provide `valid` with either `accepted` or `declined` to validate the link or use `not_validated` to reset.  
 
 ---
 
-**URL**: `/job/<job_id>/cluster/<alignment>/<cluster_id>/graph`\
+**URL**: `/job/<job_id>/cluster/<linkset>/<cluster_id>/graph`\
 **Method**: `GET`\
 **Parameters**: `get_cluster`, `get_cluster_compact`, `get_reconciliation`
 
-Get the visualization information for a cluster with `cluster_id` for alignment `alignment` of the given `job_id`.
+Get the visualization information for a cluster with `cluster_id` for linkset `linkset` of the given `job_id`.
 Specify `get_cluster` to obtain the default visualization.
 Specify `get_cluster_compact` to obtain the compact visualization.
 Specify `get_reconciliation` to obtain the reconciled visualization.
 
 ### Export
 
-**URL**: `/job/<job_id>/export/<type>/<alignment>/csv`\
+**URL**: `/job/<job_id>/export/<type>/<linkset>/csv`\
 **Method**: `GET`\
 **Parameters**: `valid`
 
-Get a CSV export of the linkset for alignment `alignment` of `type` (`match` or `lens`) the given `job_id`.
+Get a CSV export of the linkset `linkset` of `type` (`match` or `lens`) the given `job_id`.
 
 Specify `valid` with `accepted` to include the accepted links.
 Specify `valid` with `declined` to include the declined links.
@@ -295,16 +295,16 @@ Specify `valid` with `mixed` to include the links which have mixed validations i
 
 ## Job configuration with JSON
 
-### Resources
+### Entity-type selections
 
-Resources is a list of JSON objects that contain the configuration 
-of the specific resources to use for a particular job.
+Entity-type selections is a list of JSON objects that contain the configuration 
+of the specific entity-type selections to use for a particular job.
 
 ```json5
 {
     "id": 1,                    // An integer as identifier  
-    "label": "My dataset",      // The label of the resource in the GUI
-    "description": "",          // A description of this resource by the user; optional field
+    "label": "My dataset",      // The label of the entity-type selection in the GUI
+    "description": "",          // A description of this entity-type selection by the user; optional field
     "dataset": {                // The data to use from Timbuctoo
         "dataset_id": "ufab7d657a250e3461361c982ce9b38f3816e0c4b__ecartico_20190805",   // The identifier of the dataset to use
         "collection_id": "foaf_Person",                                                 // The identifier of the collection from this dataset to use
@@ -341,25 +341,25 @@ of the specific resources to use for a particular job.
 | Contains              | `ilike`               | Yes _(Use % as a wildcard)_   |
 | Does not contain      | `not_ilike`           | Yes _(Use % as a wildcard)_   |
 
-### Mappings
+### Linkset specs
 
-Mappings is a list of JSON objects that contain the configuration 
-of the alignments to perform for a particular job.
+Linkset specs is a list of JSON objects that contain the configuration 
+of the linksets to generate for a particular job.
 
 ```json5
 {
     "id": 1,                    // An integer as identifier  
-    "label": "My alignment",    // The label of the alignment in the GUI
-    "description": "",          // A description of this mapping by the user; optional field
+    "label": "My linkset",      // The label of the linkset in the GUI
+    "description": "",          // A description of this linkset by the user; optional field
     "is_association": false,    // Work in progress; optional field, defaults to 'false'
-    "sources": [1],             // The identifiers of resources to use as source
-    "targets": [1],             // The identifiers of resources to use as targets
+    "sources": [1],             // The identifiers of entity-type selections to use as source
+    "targets": [1],             // The identifiers of entity-type selections to use as targets
     "methods": {                // The matching configuration for finding links; requires at least one condition
         "conditions": [{        // The matching configuration is composed of element groups
             "method_name": "=",               // The type of matching to apply; see table below for allowed values
             "method_value": {},               // Some types of matching methods require extra configuration
             "sources": [{                     // The source properties to use during matching
-                "resource": 1,                      // The identifier of the resource to use
+                "entity_type_selection": 1,         // The identifier of the entity-type selection to use
                 "property": ["schema_birthDate"],   // The property path to which this condition applies
                 "transformers": [{                  // The transformers to apply to transform the value before matching; see table below for allowed values
                     "name": "PARSE_DATE",
@@ -369,7 +369,7 @@ of the alignments to perform for a particular job.
                 }]                  
             }],
             "targets": [{                     // The target properties to use during matching
-                "resource": 1,
+                "entity_type_selection": 1,
                 "property": ["schema_birthDate"],
                 "transformers": []
             }]
@@ -377,7 +377,7 @@ of the alignments to perform for a particular job.
         "type": "AND"           // Whether ALL conditions in this group should match ('AND') or AT LEAST ONE condition in this group has to match ('OR')
     },
     "properties": [{            // A list of property paths to use for obtaining data while reviewing the linkset; optional field
-        "resource": 1,                        // The identifier of the resource to use
+        "entity_type_selection": 1,           // The identifier of the entity-type selection to use
         "property": ["schema_birthDate"]      // The property path
     }]
 }
@@ -405,9 +405,9 @@ _Note: See [Matching methods](#matching-methods) for a description and examples 
 | Prefix        | `PREFIX`          | `prefix` (The prefix)     |
 | Suffix        | `SUFFIX`          | `suffix` (The suffix)     |
 
-### Lenses
+### Lens specs
 
-Lenses is a list of JSON objects that contain the configuration 
+Lens specs is a list of JSON objects that contain the configuration 
 of the lenses to apply on a combination of linksets.
 
 ```json5
@@ -415,14 +415,15 @@ of the lenses to apply on a combination of linksets.
     "id": 1,                    // An integer as identifier  
     "label": "My lens",         // The label of the lens in the GUI
     "description": "",          // A description of this lens by the user; optional field
-    "elements": {               // The lens configuration; requires groups consisting of two elements
-        "alignments": [{        // The lens configuration is composed of element groups
-            "alignnment": 0     // The identifier of the alignment to use
+    "specs": {                  // The lens configuration; requires groups consisting of two elements
+        "elements": [{          // The lens configuration is composed of element groups
+            "id": 0,            // The identifier of the linkset/lens to use
+            "type": "linkset"   // The type (linkset or lens)
         }],
         "type": "UNION"         // Lens type to apply; see table below for allowed values
     },
     "properties": [{            // A list of property paths to use for obtaining data while reviewing the lens; optional field
-        "resource": 1,                        // The identifier of the resource to use
+        "entity_type_selection": 1,           // The identifier of the entity-type selection to use
         "property": ["schema_birthDate"]      // The property path
     }]
 }
@@ -437,8 +438,8 @@ of the lenses to apply on a combination of linksets.
 
 ### Element groups
 
-The resources (using the filter), the mappings (using the matching methods) and the lenses (using the elements) 
-all apply element groups to allow the user the express complex conditions.
+The entity-type selections (using the filter), the linkset specs (using the matching methods) 
+and the lens specs (using the elements) all apply element groups to allow the user the express complex conditions.
 
 ```json5
 {

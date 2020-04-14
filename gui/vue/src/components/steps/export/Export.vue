@@ -1,5 +1,5 @@
 <template>
-  <card :id="'export_match_' + type + '_' + match.id" type="export-matches" :label="match.label" :has-collapse="false">
+  <card :id="'export_' + type + '_' + spec.id" type="export" :label="spec.label" :has-collapse="false">
     <div class="row justify-content-center">
       <div class="col-auto">
         <div class="btn-toolbar" role="toolbar" aria-label="Toolbar">
@@ -24,7 +24,7 @@
               CSV export not validated only
             </a>
 
-            <a v-if="isLens" class="btn btn-secondary btn-sm" :href="exportCSVLink(false, false, false, true)">
+            <a v-if="isLensSpec" class="btn btn-secondary btn-sm" :href="exportCSVLink(false, false, false, true)">
               <fa-icon icon="file-export"/>
               CSV export mixed only
             </a>
@@ -37,19 +37,19 @@
 
 <script>
     export default {
-        name: "MatchExport",
+        name: "Export",
         props: {
             type: String,
-            match: Object,
+            spec: Object,
         },
         computed: {
-            isLens() {
+            isLensSpec() {
                 return this.type === 'lens';
             },
         },
         methods: {
             exportCSVLink(exportAccepted, exportRejected, exportNotValidated, exportMixed) {
-                return this.$root.exportCsvLink(this.type, this.match.id, exportAccepted, exportRejected, exportNotValidated, exportMixed);
+                return this.$root.exportCsvLink(this.type, this.spec.id, exportAccepted, exportRejected, exportNotValidated, exportMixed);
             },
         },
     };

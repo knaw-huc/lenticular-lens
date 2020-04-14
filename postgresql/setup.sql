@@ -2,20 +2,24 @@ CREATE EXTENSION IF NOT EXISTS fuzzystrmatch;
 CREATE EXTENSION IF NOT EXISTS plpython3u;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
-CREATE TABLE IF NOT EXISTS reconciliation_jobs
+CREATE TYPE spec_type AS ENUM ('linkset', 'lens');
+CREATE TYPE link_order AS ENUM ('source_target', 'both', 'target_source');
+CREATE TYPE link_validity AS ENUM ('accepted', 'rejected', 'not_validated', 'mixed');
+
+CREATE TABLE IF NOT EXISTS jobs
 (
-    job_id              text primary key,
-    job_title           text                    not null,
-    job_description     text                    not null,
-    job_link            text,
-    resources_form_data json,
-    mappings_form_data  json,
-    lenses_form_data    json,
-    resources           json,
-    mappings            json,
-    lenses              json,
-    created_at          timestamp default now() not null,
-    updated_at          timestamp default now() not null,
+    job_id                           text primary key,
+    job_title                        text                    not null,
+    job_description                  text                    not null,
+    job_link                         text,
+    entity_type_selections_form_data json,
+    linkset_specs_form_data          json,
+    lens_specs_form_data             json,
+    entity_type_selections           json,
+    linkset_specs                    json,
+    lens_specs                       json,
+    created_at                       timestamp default now() not null,
+    updated_at                       timestamp default now() not null,
     UNIQUE (job_title, job_description)
 );
 
@@ -41,10 +45,10 @@ CREATE TABLE IF NOT EXISTS timbuctoo_tables
     UNIQUE (graphql_endpoint, hsid, dataset_id, collection_id)
 );
 
-CREATE TABLE IF NOT EXISTS alignments
+CREATE TABLE IF NOT EXISTS linksets
 (
     job_id                 text    not null,
-    alignment              int     not null,
+    spec_id                int     not null,
     status                 text    not null,
     status_message         text,
     kill                   boolean not null,
@@ -57,18 +61,19 @@ CREATE TABLE IF NOT EXISTS alignments
     distinct_links_count   bigint,
     distinct_sources_count bigint,
     distinct_targets_count bigint,
-    PRIMARY KEY (job_id, alignment)
+    PRIMARY KEY (job_id, spec_id)
 );
 
 CREATE TABLE IF NOT EXISTS clusterings
 (
-    job_id           text    not null,
-    alignment        int     not null,
-    clustering_type  text    not null,
+    job_id           text      not null,
+    spec_id          int       not null,
+    spec_type        spec_type not null,
+    clustering_type  text      not null,
     association_file text,
-    status           text    not null,
+    status           text      not null,
     status_message   text,
-    kill             boolean not null,
+    kill             boolean   not null,
     requested_at     timestamp,
     processing_at    timestamp,
     finished_at      timestamp,
@@ -76,11 +81,8 @@ CREATE TABLE IF NOT EXISTS clusterings
     clusters_count   bigint,
     extended_count   int,
     cycles_count     int,
-    PRIMARY KEY (job_id, alignment)
+    PRIMARY KEY (job_id, spec_id, spec_type)
 );
-
-CREATE TYPE link_order AS ENUM ('source_target', 'both', 'target_source');
-CREATE TYPE link_validity AS ENUM ('accepted', 'rejected', 'not_validated', 'mixed');
 
 CREATE OR REPLACE FUNCTION increment_counter(sequence_name text) RETURNS boolean
     COST 10000 STRICT VOLATILE AS

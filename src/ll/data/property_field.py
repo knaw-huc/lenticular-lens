@@ -35,7 +35,7 @@ class PropertyField:
         return property_array
 
     @property
-    def resource_label(self):
+    def entity_type_selection_label(self):
         return self.absolute_property[0]
 
     @property
@@ -77,7 +77,7 @@ class PropertyField:
                     AS {column_name_expanded} ON true"""))
 
             return sql.format(
-                table_name=psycopg2_sql.Identifier(self.resource_label),
+                table_name=psycopg2_sql.Identifier(self.entity_type_selection_label),
                 column_name=psycopg2_sql.Identifier(self.prop_label),
                 column_name_expanded=psycopg2_sql.Identifier(self.extended_prop_label)
             )

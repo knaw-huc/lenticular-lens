@@ -1,50 +1,53 @@
 <template>
-  <card :id="'resource_' + resource.id" type="resources" v-model="resource.label"
-        :has-error="errors.length > 0" :has-handle="true" @show="onToggle(true)" @hide="onToggle(false)">
+  <card :id="'entity_type_selection_' + entityTypeSelection.id" type="entityTypeSelections"
+        v-model="entityTypeSelection.label" :has-error="errors.length > 0" :has-handle="true"
+        @show="onToggle(true)" @hide="onToggle(false)">
     <template v-slot:title-columns>
-      <div class="col-auto" v-if="resource.dataset.collection_id !== ''">
+      <div class="col-auto" v-if="entityTypeSelection.dataset.collection_id !== ''">
         <button type="button" class="btn btn-info" @click="runSample">
           Explore sample
         </button>
 
-        <resource-sample-view :resource="resource" ref="resourceSampleView"/>
+        <sample-view :entity-type-selection="entityTypeSelection" ref="sampleView"/>
       </div>
 
       <div v-if="!isOpen" class="col-auto">
-        <b-button variant="info" @click="$emit('duplicate', resource)">Duplicate</b-button>
+        <b-button variant="info" @click="$emit('duplicate', entityTypeSelection)">Duplicate</b-button>
       </div>
 
-      <div v-if="!isOpen && !isUsedInAlignmentResults" class="col-auto">
+      <div v-if="!isOpen && !isUsedInLinkset" class="col-auto">
         <button-delete v-on:click="$emit('remove')" title="Delete Collection"/>
       </div>
     </template>
 
     <sub-card label="Description">
-      <textarea class="form-control mt-3" :id="'description_' + resource.id" v-model="resource.description">
+      <textarea class="form-control mt-3" :id="'description_' + entityTypeSelection.id"
+                v-model="entityTypeSelection.description">
       </textarea>
 
       <small class="form-text text-muted mt-2">
-        Provide a description for this collection
+        Provide a description for this entity-type selection
       </small>
     </sub-card>
 
-    <fieldset :disabled="isUsedInAlignmentResults">
+    <fieldset :disabled="isUsedInLinkset">
       <sub-card label="Dataset" :hasError="errors.includes('dataset') || errors.includes('collection')">
         <div class="row form-group align-items-end mt-3">
-          <label class="col-auto" :for="'timbuctoo_' + resource.id">
+          <label class="col-auto" :for="'timbuctoo_' + entityTypeSelection.id">
             Timbuctoo GraphQL endpoint:
           </label>
 
           <div class="col-5">
-            <input type="text" v-model="resource.dataset.timbuctoo_graphql" class="form-control"
-                   :id="'timbuctoo_' + resource.id" @input="resetDatasets"
+            <input type="text" v-model="entityTypeSelection.dataset.timbuctoo_graphql" class="form-control"
+                   :id="'timbuctoo_' + entityTypeSelection.id" @input="resetDatasets"
                    v-bind:class="{'is-invalid': errors.includes('graphql_endpoint')}"/>
           </div>
 
-          <div v-if="!resource.dataset.timbuctoo_hsid || !datasetsLoaded" class="col-4">
+          <div v-if="!entityTypeSelection.dataset.timbuctoo_hsid || !datasetsLoaded" class="col-4">
             <button v-if="!datasetsLoaded" class="btn btn-primary" @click="loadDatasets">Load datasets</button>
 
-            <form v-if="!resource.dataset.timbuctoo_hsid" class="d-inline-block" :id="'login_' + resource.id"
+            <form v-if="!entityTypeSelection.dataset.timbuctoo_hsid" class="d-inline-block"
+                  :id="'login_' + entityTypeSelection.id"
                   method="post" action="https://secure.huygens.knaw.nl/saml2/login" target="loginWindow">
               <input type="hidden" name="hsurl" :value="hsurl()"/>
               <button class="btn btn-primary" v-bind:class="{'ml-2': !datasetsLoaded}" @click="login">
@@ -60,10 +63,11 @@
 
         <div v-if="datasetsLoaded" class="row">
           <div class="form-group col-8">
-            <label :for="'dataset_' + resource.id">Dataset</label>
+            <label :for="'dataset_' + entityTypeSelection.id">Dataset</label>
 
-            <v-select :id="'dataset_' + resource.id" :value="selectedDataset" label="title" :options="datasetsList"
-                      :clearable="false" :disabled="isUsedInAlignmentResults" autocomplete="off"
+            <v-select :id="'dataset_' + entityTypeSelection.id" :value="selectedDataset" label="title"
+                      :options="datasetsList"
+                      :clearable="false" :disabled="isUsedInLinkset" autocomplete="off"
                       placeholder="Type to search for a dataset" @input="updateDataset"
                       v-bind:class="{'is-invalid': errors.includes('dataset')}">
               <div slot="option" slot-scope="option">
@@ -87,11 +91,11 @@
             </div>
           </div>
 
-          <div v-if="resource.dataset.dataset_id !== ''" class="form-group collection-input col-4">
-            <label :for="'collection_' + resource.id">Entity type</label>
+          <div v-if="entityTypeSelection.dataset.dataset_id !== ''" class="form-group collection-input col-4">
+            <label :for="'collection_' + entityTypeSelection.id">Entity type</label>
 
-            <v-select :id="'collection_' + resource.id" :value="selectedCollection" label="id"
-                      :options="collectionsList" :clearable="false" :disabled="isUsedInAlignmentResults"
+            <v-select :id="'collection_' + entityTypeSelection.id" :value="selectedCollection" label="id"
+                      :options="collectionsList" :clearable="false" :disabled="isUsedInLinkset"
                       autocomplete="off" placeholder="Type to search for an entity type"
                       @input="updateCollection" v-bind:class="{'is-invalid': errors.includes('collection')}">
               <div slot="option" slot-scope="option">
@@ -101,7 +105,7 @@
                 </div>
 
                 <div class="small pt-1">
-                  <download-progress :dataset-id="resource.dataset.dataset_id" :collection-id="option.id"/>
+                  <download-progress :dataset-id="entityTypeSelection.dataset.dataset_id" :collection-id="option.id"/>
                 </div>
               </div>
             </v-select>
@@ -109,7 +113,8 @@
             <small v-if="selectedCollection" class="form-text text-muted mt-2">
               Size: {{ selectedCollection.total }}
               <download-progress class="ml-1"
-                                 :dataset-id="resource.dataset.dataset_id" :collection-id="selectedCollection.id"/>
+                                 :dataset-id="entityTypeSelection.dataset.dataset_id"
+                                 :collection-id="selectedCollection.id"/>
             </small>
 
             <div class="invalid-feedback" v-show="errors.includes('collection')">
@@ -119,30 +124,33 @@
         </div>
       </sub-card>
 
-      <sub-card v-if="resource.dataset.collection_id !== ''" label="Filter" :has-error="errors.includes('filters')">
-        <elements-group :elements-group="resource.filter" elements-group-name="conditions" :is-root="true"
-                        group="resource-filters" :uid="'resource_' + resource.id + '_filter_group_0'"
+      <sub-card v-if="entityTypeSelection.dataset.collection_id !== ''" label="Filter"
+                :has-error="errors.includes('filters')">
+        <elements-group :elements-group="entityTypeSelection.filter" elements-group-name="conditions" :is-root="true"
+                        group="entity-type-selection-filters"
+                        :uid="'entity-type-selection_' + entityTypeSelection.id + '_filter_group_0'"
                         validate-method-name="validateFilterCondition" empty-elements-text="No conditions"
                         validation-failed-text="Please provide at least one condition" v-slot="curCondition"
                         @add="addFilterCondition($event)" ref="filterGroupComponent">
-          <resource-filter-condition
+          <filter-condition
               :condition="curCondition.element"
               :index="curCondition.index"
-              :resource="resource"
+              :entity-type-selection="entityTypeSelection"
               ref="filterConditionComponents"
               @add="curCondition.add()"
               @remove="curCondition.remove()"/>
         </elements-group>
       </sub-card>
 
-      <sub-card v-if="resource.dataset.collection_id !== ''" label="Sample" :hasError="errors.includes('limit')">
+      <sub-card v-if="entityTypeSelection.dataset.collection_id !== ''" label="Sample"
+                :hasError="errors.includes('limit')">
         <div class="form-group row align-items-end mt-3">
-          <label class="col-auto" :for="'resource_' + resource.id + '_limit'">
+          <label class="col-auto" :for="'entity_type_selection_' + entityTypeSelection.id + '_limit'">
             Only use a sample of this amount of records (-1 is no limit):
           </label>
 
-          <input type="number" min="-1" v-model.number="resource.limit" class="form-control col-1"
-                 :id="'resource_' + resource.id + '_limit'"
+          <input type="number" min="-1" v-model.number="entityTypeSelection.limit" class="form-control col-1"
+                 :id="'entity_type_selection_' + entityTypeSelection.id + '_limit'"
                  v-bind:class="{'is-invalid': errors.includes('limit')}">
 
           <div class="invalid-feedback" v-show="errors.includes('limit')">
@@ -151,51 +159,54 @@
         </div>
 
         <div class="form-check">
-          <input v-model.boolean="resource.random" type="checkbox" class="form-check-input"
-                 :id="'resource_' + resource.id + '_random'">
+          <input v-model.boolean="entityTypeSelection.random" type="checkbox" class="form-check-input"
+                 :id="'entity_type_selection_' + entityTypeSelection.id + '_random'">
 
-          <label class="form-check-label" :for="'resource_' + resource.id + '_random'">Randomize order</label>
+          <label class="form-check-label" :for="'entity_type_selection_' + entityTypeSelection.id + '_random'">
+            Randomize order
+          </label>
         </div>
       </sub-card>
 
-      <sub-card v-if="resource.dataset.collection_id !== ''" label="Relations" add-button="Add Relation"
+      <sub-card v-if="entityTypeSelection.dataset.collection_id !== ''" label="Relations" add-button="Add Relation"
                 :hasError="errors.find(err => err.startsWith('relations_'))" @add="addRelation">
-        <div v-if="resource.related.length === 0" class="font-italic mt-3">
+        <div v-if="entityTypeSelection.related.length === 0" class="font-italic mt-3">
           No relations
         </div>
 
-        <div v-if="resource.related.length > 0" class="form-group form-check mt-3">
-          <input :id="resource.label + 'related_array'" class="form-check-input" type="checkbox"
-                 v-model="resource.related_array">
+        <div v-if="entityTypeSelection.related.length > 0" class="form-group form-check mt-3">
+          <input :id="entityTypeSelection.label + 'related_array'" class="form-check-input" type="checkbox"
+                 v-model="entityTypeSelection.related_array">
 
-          <label :for="resource.label + 'related_array'" class="form-check-label">
+          <label :for="entityTypeSelection.label + 'related_array'" class="form-check-label">
             Use relations as combined source
           </label>
         </div>
 
-        <div v-for="(relation, index) in resource.related" class="row">
+        <div v-for="(relation, index) in entityTypeSelection.related" class="row">
           <div class="form-group col-4">
-            <label :for="'resource_' + resource.id + '_related_' + relation.id + '_resource'">
-              Related collection
+            <label :for="'entity_type_selection_' + entityTypeSelection.id + '_related_' + relation.id">
+              Related entity-type selection
             </label>
 
-            <select-box v-model="relation.resource"
-                        :id="'resource_' + resource.id + '_related_' + relation.id + '_resource'"
-                        v-bind:class="{'is-invalid': errors.includes(`relations_resource_${index}`)}">
-              <option disabled selected value="">Choose a collection</option>
-              <option v-for="root_resource in $root.resources" :value="root_resource.id"
-                      v-if="root_resource.id !== resource.id">
-                {{ root_resource.label }}
+            <select-box v-model="relation.entityTypeSelection"
+                        :id="'entity_type_selection_' + entityTypeSelection.id + '_related_' + relation.id"
+                        v-bind:class="{'is-invalid': errors.includes(`relations_entity_type_selection_${index}`)}">
+              <option disabled selected value="">Choose an entity-type selection</option>
+              <option v-if="ets.id !== entityTypeSelection.id"
+                      v-for="ets in $root.entityTypeSelections" :value="ets.id">
+                {{ ets.label }}
               </option>
             </select-box>
 
-            <div class="invalid-feedback" v-show="errors.includes(`relations_resource_${index}`)">
-              Please provide a related collection
+            <div class="invalid-feedback" v-show="errors.includes(`relations_entity_type_selection_${index}`)">
+              Please provide a related entity-type selection
             </div>
           </div>
 
-          <div v-if="relation.resource > 0" class="form-group col-4">
-            <label :for="'resource_' + resource.id + '_related_' + relation.id + '_local_property'">
+          <div v-if="relation.entityTypeSelection > 0" class="form-group col-4">
+            <label
+                :for="'entity_type_selection_' + entityTypeSelection.id + '_related_' + relation.id + '_local_property'">
               Local property
             </label>
 
@@ -212,15 +223,17 @@
             </div>
           </div>
 
-          <div v-if="relation.resource > 0" class="form-group col-3">
-            <label :for="'resource_' + resource.id + '_related_' + relation.id + '_remote_property'">
+          <div v-if="relation.entityTypeSelection > 0" class="form-group col-3">
+            <label
+                :for="'entityTypeSelection_' + entityTypeSelection.id + '_related_' + relation.id + '_remote_property'">
               Remote property
             </label>
 
             <select-box v-model="relation.remote_property"
                         v-bind:class="{'is-invalid': errors.includes(`relations_remote_prop_${index}`)}">
               <option value="" selected disabled>Select remote property</option>
-              <option v-for="(_, property) in getPropertiesForResource(relation.resource)" :value="property">
+              <option v-for="(_, property) in getPropertiesForEntityTypeSelection(relation.entityTypeSelection)"
+                      :value="property">
                 {{ property }}
               </option>
             </select-box>
@@ -231,7 +244,7 @@
           </div>
 
           <div class="form-group col-1 align-self-end">
-            <button-delete size="sm" v-on:click="resource.related.splice(index, 1)"/>
+            <button-delete size="sm" v-on:click="entityTypeSelection.related.splice(index, 1)"/>
           </div>
         </div>
       </sub-card>
@@ -243,16 +256,16 @@
     import ElementsGroup from "../../helpers/ElementsGroup";
     import ValidationMixin from "../../../mixins/ValidationMixin";
 
-    import ResourceSampleView from "./ResourceSampleView";
-    import ResourceFilterCondition from "./ResourceFilterCondition";
+    import SampleView from "./SampleView";
+    import FilterCondition from "./FilterCondition";
 
     export default {
-        name: "Resource",
+        name: "EntityTypeSelection",
         mixins: [ValidationMixin],
         components: {
             ElementsGroup,
-            ResourceSampleView,
-            ResourceFilterCondition,
+            SampleView,
+            FilterCondition,
         },
         data() {
             return {
@@ -262,17 +275,19 @@
             };
         },
         props: {
-            'resource': Object,
+            entityTypeSelection: Object,
         },
         computed: {
             datasets() {
                 return this.datasetsLoaded ? this.$root.getDatasets(
-                    this.resource.dataset.timbuctoo_graphql, this.resource.dataset.timbuctoo_hsid) : {};
+                    this.entityTypeSelection.dataset.timbuctoo_graphql,
+                    this.entityTypeSelection.dataset.timbuctoo_hsid
+                ) : {};
             },
 
             collections() {
-                return this.resource.dataset.dataset_id
-                    ? this.datasets[this.resource.dataset.dataset_id].collections : {};
+                return this.entityTypeSelection.dataset.dataset_id
+                    ? this.datasets[this.entityTypeSelection.dataset.dataset_id].collections : {};
             },
 
             datasetsList() {
@@ -288,30 +303,35 @@
             },
 
             selectedDataset() {
-                return this.datasetsList.find(dataset => dataset.id === this.resource.dataset.dataset_id);
+                return this.datasetsList.find(dataset =>
+                    dataset.id === this.entityTypeSelection.dataset.dataset_id);
             },
 
             selectedCollection() {
-                return this.collectionsList.find(collection => collection.id === this.resource.dataset.collection_id);
+                return this.collectionsList.find(collection =>
+                    collection.id === this.entityTypeSelection.dataset.collection_id);
             },
 
             autoLabel() {
-                if (this.datasetsLoaded && this.resource.dataset.dataset_id && this.resource.dataset.collection_id) {
+                if (this.datasetsLoaded && this.entityTypeSelection.dataset.dataset_id
+                    && this.entityTypeSelection.dataset.collection_id) {
                     const datasetTitle = this.selectedDataset.title;
-                    const collectionTitle = this.selectedCollection.title || this.resource.dataset.collection_id;
+                    const collectionTitle = this.selectedCollection.title
+                        || this.entityTypeSelection.dataset.collection_id;
                     return `${datasetTitle} [type: ${collectionTitle}]`;
                 }
-                return 'Collection ' + (this.resource.id + 1);
+                return 'Entity-type selection ' + (this.entityTypeSelection.id + 1);
             },
 
-            isUsedInAlignmentResults() {
-                const alignmentsInResults = this.$root.alignments.map(alignment => alignment.alignment);
+            isUsedInLinkset() {
+                const ids = this.$root.linksets.map(linkset => linkset.spec_id);
 
-                for (let i = 0; i < this.$root.matches.length; i++) {
-                    const match = this.$root.matches[i];
+                for (let i = 0; i < this.$root.linksetSpecs.length; i++) {
+                    const linksetSpec = this.$root.linksetSpecs[i];
 
-                    if (alignmentsInResults.includes(match.id) &&
-                        (match.sources.includes(this.resource.id) || match.targets.includes(this.resource.id))) {
+                    if (ids.includes(linksetSpec.id) &&
+                        (linksetSpec.sources.includes(this.entityTypeSelection.id) ||
+                            linksetSpec.targets.includes(this.entityTypeSelection.id))) {
                         return true;
                     }
                 }
@@ -320,28 +340,28 @@
             },
 
             filteredConditions() {
-                return this.$root.getRecursiveElements(this.resource.filter, 'conditions');
+                return this.$root.getRecursiveElements(this.entityTypeSelection.filter, 'conditions');
             },
 
             allCollections() {
                 const all = this.filteredConditions.reduce((acc, condition) => {
                     return acc.concat(condition.property.filter((_, idx) => idx > 0 && idx % 2 === 0));
-                }, [this.resource.dataset.collection_id]);
+                }, [this.entityTypeSelection.dataset.collection_id]);
                 return [...new Set(all)];
             },
 
             notDownloaded() {
                 return this.allCollections.filter(collection => {
                     return ![...this.$root.downloading, ...this.$root.downloaded].find(downloadInfo => {
-                        return downloadInfo.dataset_id === this.resource.dataset.dataset_id &&
+                        return downloadInfo.dataset_id === this.entityTypeSelection.dataset.dataset_id &&
                             downloadInfo.collection_id === collection;
                     });
                 });
             },
 
             hasProperties() {
-                return this.resource.properties.length > 0 &&
-                    !this.resource.properties.find(prop => prop[0] === '');
+                return this.entityTypeSelection.properties.length > 0 &&
+                    !this.entityTypeSelection.properties.find(prop => prop[0] === '');
             },
         },
         methods: {
@@ -349,38 +369,39 @@
                 return window.location.origin;
             },
 
-            validateResource() {
+            validateEntityTypeSelection() {
                 const datasetValid = this.validateField('dataset',
-                    this.resource.dataset.dataset_id && this.datasets.hasOwnProperty(this.resource.dataset.dataset_id));
+                    this.entityTypeSelection.dataset.dataset_id &&
+                    this.datasets.hasOwnProperty(this.entityTypeSelection.dataset.dataset_id));
 
-                const dataset = this.datasets[this.resource.dataset.dataset_id];
+                const dataset = this.datasets[this.entityTypeSelection.dataset.dataset_id];
                 const collectionValid = this.validateField('collection',
-                    this.resource.dataset.collection_id &&
-                    dataset && dataset.collections.hasOwnProperty(this.resource.dataset.collection_id));
+                    this.entityTypeSelection.dataset.collection_id &&
+                    dataset && dataset.collections.hasOwnProperty(this.entityTypeSelection.dataset.collection_id));
 
-                const limit = parseInt(this.resource.limit);
+                const limit = parseInt(this.entityTypeSelection.limit);
                 const limitValid = this.validateField('limit', !isNaN(limit) && (limit === -1 || limit > 0));
 
                 let relatedValid = true;
                 this.errors = this.errors.filter(err => !err.startsWith('relations_'));
-                this.resource.related.forEach((related, idx) => {
-                    const remoteResource = this.$root.resources.find(res => res.id === parseInt(related.resource));
-                    const resourceValid = this.validateField(`relations_resource_${idx}`,
-                        related.resource && remoteResource);
+                this.entityTypeSelection.related.forEach((related, idx) => {
+                    const remoteentityTypeSelection = this.$root.entityTypeSelections.find(res => res.id === parseInt(related.entityTypeSelection));
+                    const entityTypeSelectionValid = this.validateField(`relations_entity_type_selection_${idx}`,
+                        related.entityTypeSelection && remoteentityTypeSelection);
 
                     const localProperties = dataset && dataset.collections
-                        [this.resource.dataset.collection_id].properties;
+                        [this.entityTypeSelection.dataset.collection_id].properties;
                     const localPropValid = this.validateField(`relations_local_prop_${idx}`,
                         related.local_property && localProperties && localProperties.hasOwnProperty(related.local_property));
 
-                    const remoteDatasets = remoteResource && this.datasets[remoteResource.dataset.dataset_id];
+                    const remoteDatasets = remoteentityTypeSelection && this.datasets[remoteentityTypeSelection.dataset.dataset_id];
                     const remoteProperties = remoteDatasets && remoteDatasets.collections
-                        [remoteResource.dataset.collection_id].properties;
+                        [remoteentityTypeSelection.dataset.collection_id].properties;
                     const remotePropValid = this.validateField(`relations_remote_prop_${idx}`,
                         related.remote_property && remoteProperties &&
                         remoteProperties.hasOwnProperty(related.remote_property));
 
-                    if (!(resourceValid && localPropValid && remotePropValid))
+                    if (!(entityTypeSelectionValid && localPropValid && remotePropValid))
                         relatedValid = false;
                 });
 
@@ -398,28 +419,28 @@
             },
 
             clearFilter() {
-                this.resource.filter = {
+                this.entityTypeSelection.filter = {
                     type: 'AND',
                     conditions: [],
                 };
             },
 
             updateDataset(dataset) {
-                this.resource.dataset.dataset_id = dataset.id;
-                this.resource.dataset.collection_id = '';
-                this.resource.dataset.published = dataset.published;
+                this.entityTypeSelection.dataset.dataset_id = dataset.id;
+                this.entityTypeSelection.dataset.collection_id = '';
+                this.entityTypeSelection.dataset.published = dataset.published;
 
                 this.clearFilter();
             },
 
             updateCollection(collection) {
-                this.resource.dataset.collection_id = collection.id;
+                this.entityTypeSelection.dataset.collection_id = collection.id;
                 this.clearFilter();
             },
 
             addRelation() {
-                this.resource.related.push({
-                    resource: '',
+                this.entityTypeSelection.related.push({
+                    entityTypeSelection: '',
                     local_property: '',
                     remote_property: '',
                 });
@@ -432,16 +453,16 @@
                 });
             },
 
-            getPropertiesForResource(resourceId) {
-                const resource = this.$root.getResourceById(resourceId);
-                return this.datasets[resource.dataset.dataset_id]['collections']
-                    [resource.dataset.collection_id]['properties'];
+            getPropertiesForEntityTypeSelection(entityTypeSelectionId) {
+                const entityTypeSelection = this.$root.getEntityTypeSelectionById(entityTypeSelectionId);
+                return this.datasets[entityTypeSelection.dataset.dataset_id]['collections']
+                    [entityTypeSelection.dataset.collection_id]['properties'];
             },
 
             resetDatasets() {
                 this.datasetsLoaded = false;
-                this.resource.dataset.dataset_id = '';
-                this.resource.dataset.collection_id = '';
+                this.entityTypeSelection.dataset.dataset_id = '';
+                this.entityTypeSelection.dataset.collection_id = '';
 
                 this.clearFilter();
             },
@@ -454,49 +475,49 @@
                     if (event.origin !== window.location.origin || !event.data.hasOwnProperty('timbuctoo-hsid'))
                         return;
 
-                    this.resource.dataset.timbuctoo_hsid = event.data['timbuctoo-hsid'];
+                    this.entityTypeSelection.dataset.timbuctoo_hsid = event.data['timbuctoo-hsid'];
 
                     loginWindow.close();
                     this.loadDatasets();
                 }, false);
 
-                document.getElementById('login_' + this.resource.id).submit();
+                document.getElementById('login_' + this.entityTypeSelection.id).submit();
             },
 
             async runSample() {
-                if (!this.validateResource())
+                if (!this.validateEntityTypeSelection())
                     return;
 
                 if (!this.hasProperties && this.filteredConditions.length > 0)
-                    this.resource.properties = this.filteredConditions.map(condition => condition.property);
+                    this.entityTypeSelection.properties = this.filteredConditions.map(condition => condition.property);
 
                 await this.$root.submit();
-                this.$refs.resourceSampleView.resetSample();
+                this.$refs.sampleView.resetSample();
             },
 
             async loadDatasets() {
                 await this.$root.loadDatasets(
-                    this.resource.dataset.timbuctoo_graphql, this.resource.dataset.timbuctoo_hsid);
+                    this.entityTypeSelection.dataset.timbuctoo_graphql, this.entityTypeSelection.dataset.timbuctoo_hsid);
                 this.datasetsLoaded = true;
             },
         },
         updated() {
-            if (this.resource.label === this.prevAutoLabel) {
+            if (this.entityTypeSelection.label === this.prevAutoLabel) {
                 this.prevAutoLabel = this.autoLabel;
-                this.$set(this.resource, 'label', this.autoLabel);
+                this.$set(this.entityTypeSelection, 'label', this.autoLabel);
             }
         },
         mounted() {
-            if (!this.resource.label || this.resource.label === this.autoLabel) {
+            if (!this.entityTypeSelection.label || this.entityTypeSelection.label === this.autoLabel) {
                 this.prevAutoLabel = this.autoLabel;
-                this.$set(this.resource, 'label', this.autoLabel);
+                this.$set(this.entityTypeSelection, 'label', this.autoLabel);
             }
 
             if (this.datasetsList.length === 0)
                 this.datasetsLoaded = false;
 
-            if (this.resource.properties.length === 0)
-                this.resource.properties.push(['']);
+            if (this.entityTypeSelection.properties.length === 0)
+                this.entityTypeSelection.properties.push(['']);
         },
     };
 </script>

@@ -54,7 +54,7 @@
             };
         },
         props: {
-            matchId: Number,
+            linksetId: Number,
             cluster: Object,
             association: String,
         },
@@ -83,7 +83,7 @@
             },
 
             async getGraphData(type) {
-                const data = await this.$root.getClusterGraphs(this.matchId, this.cluster.id,
+                const data = await this.$root.getClusterGraphs(this.linksetId, this.cluster.id,
                     type === 'cluster', this.cluster.extended === 'yes');
 
                 this.clusterGraph = data.cluster_graph;

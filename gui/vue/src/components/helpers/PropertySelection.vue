@@ -1,12 +1,12 @@
 <template>
-  <div v-if="resource">
+  <div v-if="entityTypeSelection">
     <property
         v-for="(prop, idx) in properties"
         :key="idx"
-        :resource="resource"
+        :entity-type-selection="entityTypeSelection"
         :property="prop"
         :singular="false"
-        :resource-info="false"
+        :entity-type-selection-info="false"
         :allow-delete="idx !== 0"
         @clone="properties.splice(idx + 1, 0, [''])"
         @delete="$delete(properties, idx)"/>
@@ -16,11 +16,11 @@
     <property
         v-for="(prop, idx) in properties"
         :key="idx"
-        :resource="$root.getResourceById(prop.resource)"
+        :entity-type-selection="$root.getEntityTypeSelectionById(prop.entity_type_selection)"
         :property="prop.property"
         :singular="false"
-        :allow-delete="properties.findIndex(p => p.resource === prop.resource) !== idx"
-        @clone="properties.splice(idx + 1, 0, {resource: properties[idx].resource, property: ['']})"
+        :allow-delete="properties.findIndex(p => p.entity_type_selection === prop.entity_type_selection) !== idx"
+        @clone="properties.splice(idx + 1, 0, {entity_type_selection: properties[idx].entity_type_selection, property: ['']})"
         @delete="$delete(properties, idx)"/>
   </div>
 </template>
@@ -30,7 +30,7 @@
         name: "PropertySelection",
         props: {
             properties: Array,
-            resource: {
+            entityTypeSelection: {
                 type: Object,
                 default: null,
             },

@@ -2,11 +2,11 @@ export default {
     data() {
         return {
             job: null,
-            alignments: [],
+            linksets: [],
             clusterings: [],
-            resources: [],
-            matches: [],
-            lenses: [],
+            entityTypeSelections: [],
+            linksetSpecs: [],
+            lensSpecs: [],
             datasets: {},
             downloaded: [],
             downloading: [],
@@ -19,9 +19,9 @@ export default {
             return this.datasets.hasOwnProperty(id) ? this.datasets[id] : {};
         },
 
-        addResource() {
-            this.resources.unshift({
-                id: findId(this.resources),
+        addEntityTypeSelection() {
+            this.entityTypeSelections.unshift({
+                id: findId(this.entityTypeSelections),
                 description: '',
                 dataset: {
                     dataset_id: '',
@@ -42,10 +42,10 @@ export default {
             });
         },
 
-        addMatch() {
-            this.matches.unshift({
-                id: findId(this.matches),
-                label: 'Alignment ' + (this.matches.length + 1),
+        addLinksetSpec() {
+            this.linksetSpecs.unshift({
+                id: findId(this.linksetSpecs),
+                label: 'Linkset ' + (this.linksetSpecs.length + 1),
                 description: '',
                 is_association: false,
                 sources: [],
@@ -58,59 +58,59 @@ export default {
             });
         },
 
-        addLens() {
-            this.lenses.unshift({
-                id: findId(this.lenses),
-                label: 'Lens ' + (this.lenses.length + 1),
+        addLensSpec() {
+            this.lensSpecs.unshift({
+                id: findId(this.lensSpecs),
+                label: 'Lens ' + (this.lensSpecs.length + 1),
                 description: '',
-                elements: {
+                specs: {
                     type: 'UNION',
-                    alignments: [],
+                    elements: [],
                 },
                 properties: []
             });
         },
 
-        duplicateResource(resource) {
-            const index = this.resources.findIndex(res => res.id === resource.id);
-            const duplicate = copy(resource);
-            this.resources.splice(index, 0, {
+        duplicateEntityTypeSelection(entityTypeSelection) {
+            const index = this.entityTypeSelections.findIndex(res => res.id === entityTypeSelection.id);
+            const duplicate = copy(entityTypeSelection);
+            this.entityTypeSelections.splice(index, 0, {
                 ...duplicate,
-                id: findId(this.resources),
+                id: findId(this.entityTypeSelections),
                 label: undefined,
             });
         },
 
-        duplicateMatch(match) {
-            const index = this.matches.findIndex(m => m.id === match.id);
-            const duplicate = copy(match);
-            this.matches.splice(index, 0, {
+        duplicateLinksetSpec(linksetSpec) {
+            const index = this.linksetSpecs.findIndex(m => m.id === linksetSpec.id);
+            const duplicate = copy(linksetSpec);
+            this.linksetSpecs.splice(index, 0, {
                 ...duplicate,
-                id: findId(this.matches),
-                label: 'Alignment ' + (this.matches.length + 1),
+                id: findId(this.linksetSpecs),
+                label: 'Linkset ' + (this.linksetSpecs.length + 1),
             });
         },
 
-        duplicateLens(lens) {
-            const index = this.lenses.findIndex(m => m.id === lens.id);
-            const duplicate = copy(lens);
-            this.lenses.splice(index, 0, {
+        duplicateLensSpec(lensSpec) {
+            const index = this.lensSpecs.findIndex(m => m.id === lensSpec.id);
+            const duplicate = copy(lensSpec);
+            this.lensSpecs.splice(index, 0, {
                 ...duplicate,
-                id: findId(this.lenses),
-                label: 'Lens ' + (this.lenses.length + 1),
+                id: findId(this.lensSpecs),
+                label: 'Lens ' + (this.lensSpecs.length + 1),
             });
         },
 
-        getResourceById(resourceId) {
-            return this.resources.find(res => res.id === parseInt(resourceId));
+        getEntityTypeSelectionById(id) {
+            return this.entityTypeSelections.find(res => res.id === parseInt(id));
         },
 
-        getMatchById(matchId) {
-            return this.matches.find(match => match.id === parseInt(matchId));
+        getLinksetSpecById(id) {
+            return this.linksetSpecs.find(linksetSpec => linksetSpec.id === parseInt(id));
         },
 
-        getLensById(lensId) {
-            return this.lenses.find(lens => lens.id === parseInt(lensId));
+        getLensSpecById(id) {
+            return this.lensSpecs.find(lensSpec => lensSpec.id === parseInt(id));
         },
 
         getCleanPropertyName(property, propInfo) {
@@ -122,14 +122,14 @@ export default {
             return property;
         },
 
-        exportCsvLink(type, alignment, accepted, rejected, notValidated, mixed) {
+        exportCsvLink(type, id, accepted, rejected, notValidated, mixed) {
             const params = [];
             if (accepted) params.push('valid=accepted');
             if (rejected) params.push('valid=rejected');
             if (notValidated) params.push('valid=not_validated');
             if (mixed) params.push('valid=mixed');
 
-            return `/job/${this.job.job_id}/export/${type}/${alignment}/csv?${params.join('&')}`;
+            return `/job/${this.job.job_id}/export/${type}/${id}/csv?${params.join('&')}`;
         },
 
         getRecursiveElements(elementsGroup, groupName) {
@@ -151,14 +151,14 @@ export default {
                 job_title: this.job.job_title,
                 job_description: this.job.job_description,
                 job_link: this.job.job_link,
-                resources: this.resources,
-                mappings: this.matches,
-                lenses: this.lenses,
+                entity_type_selections: this.entityTypeSelections,
+                linkset_specs: this.linksetSpecs,
+                lens_specs: this.lensSpecs,
             });
         },
 
-        async loadJob(jobId) {
-            const job = await callApi('/job/' + jobId);
+        async loadJob(id) {
+            const job = await callApi('/job/' + id);
             if (!job)
                 return;
 
@@ -166,11 +166,11 @@ export default {
             job.updated_at = job.updated_at ? new Date(job.updated_at) : null;
             this.job = job;
 
-            if (this.job.resources) {
-                const resources = copy(this.job.resources);
+            if (this.job.entity_type_selections) {
+                const entityTypeSelections = copy(this.job.entity_type_selections);
 
-                const graphQlEndpoints = resources
-                    .map(res => ({endpoint: res.dataset.timbuctoo_graphql, hsid: res.dataset.timbuctoo_hsid}))
+                const graphQlEndpoints = entityTypeSelections
+                    .map(ets => ({endpoint: ets.dataset.timbuctoo_graphql, hsid: ets.dataset.timbuctoo_hsid}))
                     .sort((dataA, dataB) => {
                         if (dataA.hsid && !dataB.hsid) return -1;
                         if (dataB.hsid && !dataA.hsid) return 1;
@@ -179,26 +179,81 @@ export default {
                     .filter((data, idx, res) => res.findIndex(data2 => data2.endpoint === data.endpoint) === idx);
                 await Promise.all(graphQlEndpoints.map(data => this.loadDatasets(data.endpoint, data.hsid)));
 
-                this.resources = resources;
+                this.entityTypeSelections = entityTypeSelections;
             }
 
-            if (this.job.mappings)
-                this.matches = copy(this.job.mappings);
+            if (this.job.linkset_specs) {
+                // TODO: temp
+                this.job.linkset_specs.forEach(linksetSpec => {
+                    function renameConditions(group) {
+                        if (group.hasOwnProperty('sources') && group.hasOwnProperty('targets')) {
+                            group.sources = group.sources.map(source => {
+                                if (source.hasOwnProperty('resource'))
+                                    return {
+                                        entity_type_selection: source.resource,
+                                        property: source.property,
+                                        transformers: source.transformers
+                                    };
 
-            if (this.job.lenses)
-                this.lenses = copy(this.job.lenses);
+                                return source;
+                            });
 
-            await Promise.all([this.loadAlignments(), this.loadClusterings()]);
+                            group.targets = group.targets.map(target => {
+                                if (target.hasOwnProperty('resource'))
+                                    return {
+                                        entity_type_selection: target.resource,
+                                        property: target.property,
+                                        transformers: target.transformers
+                                    };
+
+                                return target;
+                            });
+                        }
+                        else if (group.hasOwnProperty('conditions'))
+                            group.conditions.forEach(condition => renameConditions(condition));
+                    }
+
+                    renameConditions(linksetSpec.methods);
+
+                    if (linksetSpec.hasOwnProperty('match_against'))
+                        delete linksetSpec.match_against;
+
+                    linksetSpec.properties.forEach(prop => {
+                        if (prop.hasOwnProperty('resource')) {
+                            prop.entity_type_selection = prop.resource;
+                            delete prop.resource;
+                        }
+                    });
+                });
+
+                this.linksetSpecs = copy(this.job.linkset_specs);
+            }
+
+            if (this.job.lens_specs) {
+                // TODO: temp
+                this.job.lens_specs.forEach(lensSpec => {
+                    lensSpec.properties.forEach(prop => {
+                        if (prop.hasOwnProperty('resource')) {
+                            prop.entity_type_selection = prop.resource;
+                            delete prop.resource;
+                        }
+                    });
+                });
+
+                this.lensSpecs = copy(this.job.lens_specs);
+            }
+
+            await Promise.all([this.loadLinksets(), this.loadClusterings()]);
         },
 
-        async loadAlignments() {
-            const alignments = await callApi(`/job/${this.job.job_id}/alignments`);
-            alignments.forEach(alignment => {
-                alignment.requested_at = alignment.requested_at ? new Date(alignment.requested_at) : null;
-                alignment.processing_at = alignment.processing_at ? new Date(alignment.processing_at) : null;
-                alignment.finished_at = alignment.finished_at ? new Date(alignment.finished_at) : null;
+        async loadLinksets() {
+            const linksets = await callApi(`/job/${this.job.job_id}/linksets`);
+            linksets.forEach(linkset => {
+                linkset.requested_at = linkset.requested_at ? new Date(linkset.requested_at) : null;
+                linkset.processing_at = linkset.processing_at ? new Date(linkset.processing_at) : null;
+                linkset.finished_at = linkset.finished_at ? new Date(linkset.finished_at) : null;
             });
-            this.alignments = alignments;
+            this.linksets = linksets;
         },
 
         async loadClusterings() {
@@ -218,14 +273,15 @@ export default {
             return callApi(`/download?${params.join('&')}`);
         },
 
-        async getResourceSample(resourceLabel, total = false, invert = false, limit = undefined, offset = 0) {
+        async getEntityTypeSelectionSample(label, total = false, invert = false,
+                                           limit = undefined, offset = 0) {
             const params = [];
             if (total) params.push(`total=true`);
             if (!total && invert) params.push(`invert=${invert}`);
             if (!total && limit) params.push(`limit=${limit}`);
             if (!total && offset) params.push(`offset=${offset}`);
 
-            return callApi(`/job/${this.job.job_id}/resource/${resourceLabel}?${params.join('&')}`);
+            return callApi(`/job/${this.job.job_id}/entity_type_selection/${label}?${params.join('&')}`);
         },
 
         async createJob(inputs) {
@@ -237,28 +293,33 @@ export default {
             return callApi('/job/update/', jobData);
         },
 
-        async runAlignment(alignment, restart) {
+        async runLinkset(id, restart) {
             await this.submit();
-            return callApi(`/job/${this.job.job_id}/run_alignment/${alignment}`, {restart});
+            return callApi(`/job/${this.job.job_id}/run_linkset/${id}`, {restart});
         },
 
-        async killAlignment(alignment) {
-            return callApi(`/job/${this.job.job_id}/kill_alignment/${alignment}`, {});
+        async runClustering(id, associationFile) {
+            return callApi(`/job/${this.job.job_id}/run_clustering/${id}`,
+                {association_file: associationFile});
         },
 
-        async killClustering(alignment) {
-            return callApi(`/job/${this.job.job_id}/kill_clustering/${alignment}`, {});
+        async killLinkset(id) {
+            return callApi(`/job/${this.job.job_id}/kill_linkset/${id}`, {});
         },
 
-        async getAlignmentTotals(type, alignment, clusterId = undefined) {
+        async killClustering(id) {
+            return callApi(`/job/${this.job.job_id}/kill_clustering/${id}`, {});
+        },
+
+        async getLinksetTotals(type, id, clusterId = undefined) {
             const params = [];
             if (clusterId) params.push(`cluster_id=${clusterId}`);
 
-            return callApi(`/job/${this.job.job_id}/alignment_totals/${type}/${alignment}?${params.join('&')}`);
+            return callApi(`/job/${this.job.job_id}/links_totals/${type}/${id}?${params.join('&')}`);
         },
 
-        async getAlignment(type, alignment, accepted, rejected, notValidated, mixed,
-                           clusterId = undefined, limit = undefined, offset = 0) {
+        async getLinkset(type, id, accepted, rejected, notValidated, mixed, clusterId = undefined,
+                         limit = undefined, offset = 0) {
             const params = [];
             if (accepted) params.push('valid=accepted');
             if (rejected) params.push('valid=rejected');
@@ -268,34 +329,30 @@ export default {
             if (limit) params.push(`limit=${limit}`);
             if (offset) params.push(`offset=${offset}`);
 
-            return callApi(`/job/${this.job.job_id}/alignment/${type}/${alignment}?${params.join('&')}`);
+            return callApi(`/job/${this.job.job_id}/links/${type}/${id}?${params.join('&')}`);
         },
 
-        async getClusters(alignment, association, limit = undefined, offset = 0) {
+        async getClusters(id, association, limit = undefined, offset = 0) {
             const params = [];
             if (association) params.push(`association=${association}`);
             if (limit) params.push(`limit=${limit}`);
             if (offset) params.push(`offset=${offset}`);
 
-            return callApi(`/job/${this.job.job_id}/clusters/${alignment}?${params.join('&')}`);
+            return callApi(`/job/${this.job.job_id}/clusters/${id}?${params.join('&')}`);
         },
 
-        async runClustering(alignment, association_file) {
-            return callApi(`/job/${this.job.job_id}/run_clustering/${alignment}`, {association_file});
-        },
-
-        async getClusterGraphs(alignment, clusterId,
-                               getCluster = undefined, getClusterCompact = undefined, getReconciliation = undefined) {
+        async getClusterGraphs(id, clusterId, getCluster = undefined, getClusterCompact = undefined,
+                               getReconciliation = undefined) {
             const params = [];
             if (getCluster !== undefined) params.push(`get_cluster=${getCluster}`);
             if (getClusterCompact !== undefined) params.push(`get_cluster_compact=${getClusterCompact}`);
             if (getReconciliation !== undefined) params.push(`get_reconciliation=${getReconciliation}`);
 
-            return callApi(`/job/${this.job.job_id}/cluster/${alignment}/${clusterId}/graph?${params.join('&')}`);
+            return callApi(`/job/${this.job.job_id}/cluster/${id}/${clusterId}/graph?${params.join('&')}`);
         },
 
-        async validateLink(type, alignment, source, target, valid) {
-            return callApi(`/job/${this.job.job_id}/validate/${type}/${alignment}`, {source, target, valid});
+        async validateLink(type, id, source, target, valid) {
+            return callApi(`/job/${this.job.job_id}/validate/${type}/${id}`, {source, target, valid});
         },
 
         async loadDatasets(graphqlEndpoint, hsid) {

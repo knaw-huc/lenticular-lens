@@ -6,8 +6,8 @@ from psycopg2 import extras, sql
 from psycopg2.extensions import AsIs
 
 from ll.job.lens import Lens
-from ll.job.match import Match
-from ll.job.resource import Resource
+from ll.job.linkset import Linkset
+from ll.job.entity_type_selection import EntityTypeSelection
 from ll.job.transformer import transform
 
 from ll.data.collection import Collection
@@ -31,42 +31,45 @@ class Job:
     def __init__(self, job_id):
         self.job_id = job_id
         self._data = None
-        self._resources = None
-        self._matches = None
-        self._lenses = None
+        self._entity_type_selections = None
+        self._linkset_specs = None
+        self._lens_specs = None
 
     @property
     def data(self):
         if not self._data:
-            self._data = fetch_one('SELECT * FROM reconciliation_jobs WHERE job_id = %s', (self.job_id,), dict=True)
+            self._data = fetch_one('SELECT * FROM jobs WHERE job_id = %s', (self.job_id,), dict=True)
 
         return self._data
 
     @property
-    def resources(self):
-        if not self._resources:
-            self._resources = list(map(lambda resource: Resource(resource, self), self.data['resources']))
+    def entity_type_selections(self):
+        if not self._entity_type_selections:
+            self._entity_type_selections = list(map(lambda entity_type_selection:
+                                                    EntityTypeSelection(entity_type_selection, self),
+                                                    self.data['entity_type_selections']))
 
-        return self._resources
-
-    @property
-    def mappings(self):
-        if not self._matches:
-            self._matches = list(map(lambda match: Match(match, self), self.data['mappings']))
-
-        return self._matches
+        return self._entity_type_selections
 
     @property
-    def lenses(self):
-        if not self._lenses:
-            self._lenses = list(map(lambda match: Lens(match, self), self.data['lenses']))
+    def linkset_specs(self):
+        if not self._linkset_specs:
+            self._linkset_specs = list(
+                map(lambda linkset_spec: Linkset(linkset_spec, self), self.data['linkset_specs']))
 
-        return self._lenses
+        return self._linkset_specs
 
     @property
-    def alignments(self):
+    def lens_specs(self):
+        if not self._lens_specs:
+            self._lens_specs = list(map(lambda lens_spec: Lens(lens_spec, self), self.data['lens_specs']))
+
+        return self._lens_specs
+
+    @property
+    def linksets(self):
         with db_conn() as conn, conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
-            cur.execute('SELECT * FROM alignments WHERE job_id = %s', (self.job_id,))
+            cur.execute('SELECT * FROM linksets WHERE job_id = %s', (self.job_id,))
             return cur.fetchall()
 
     @property
@@ -75,32 +78,33 @@ class Job:
             cur.execute('SELECT * FROM clusterings WHERE job_id = %s', (self.job_id,))
             return cur.fetchall()
 
-    def alignment(self, alignment):
-        return fetch_one('SELECT * FROM alignments WHERE job_id = %s AND alignment = %s',
-                         (self.job_id, alignment), dict=True)
+    def linkset(self, id):
+        return fetch_one('SELECT * FROM linksets WHERE job_id = %s AND spec_id = %s',
+                         (self.job_id, id), dict=True)
 
-    def clustering(self, alignment):
-        return fetch_one('SELECT * FROM clusterings WHERE job_id = %s AND alignment = %s',
-                         (self.job_id, alignment), dict=True)
+    def clustering(self, id):
+        return fetch_one('SELECT * FROM clusterings WHERE job_id = %s AND spec_id = %s',
+                         (self.job_id, id), dict=True)
 
     def update_data(self, data):
-        if 'resources' in data and 'mappings' in data:
-            (resources, mappings, lenses) = transform(data['resources'], data['mappings'], data['lenses'])
+        if 'entity_type_selections' in data and 'linkset_specs' in data:
+            (entity_type_selections, linkset_specs, lens_specs) \
+                = transform(data['entity_type_selections'], data['linkset_specs'], data['lens_specs'])
 
-            data['resources_form_data'] = dumps(data['resources'])
-            data['mappings_form_data'] = dumps(data['mappings'])
-            data['lenses_form_data'] = dumps(data['lenses'])
-            data['resources'] = dumps(resources)
-            data['mappings'] = dumps(mappings)
-            data['lenses'] = dumps(lenses)
+            data['entity_type_selections_form_data'] = dumps(data['entity_type_selections'])
+            data['linkset_specs_form_data'] = dumps(data['linkset_specs'])
+            data['lens_specs_form_data'] = dumps(data['lens_specs'])
+            data['entity_type_selections'] = dumps(entity_type_selections)
+            data['linkset_specs'] = dumps(linkset_specs)
+            data['lens_specs'] = dumps(lens_specs)
         else:
-            resources = []
-            mappings = []
-            lenses = []
+            entity_type_selections = []
+            linkset_specs = []
+            lens_specs = []
 
         with db_conn() as conn, conn.cursor() as cur:
             cur.execute(sql.SQL("""
-                INSERT INTO reconciliation_jobs (job_id, %s) VALUES %s
+                INSERT INTO jobs (job_id, %s) VALUES %s
                 ON CONFLICT (job_id) DO 
                 UPDATE SET (%s) = ROW %s, updated_at = NOW()
             """), (
@@ -110,39 +114,39 @@ class Job:
                 tuple(data.values()),
             ))
 
-        return resources, mappings, lenses
+        return entity_type_selections, linkset_specs, lens_specs
 
-    def update_alignment(self, alignment, data):
+    def update_linkset(self, id, data):
         with db_conn() as conn, conn.cursor() as cur:
-            cur.execute(sql.SQL('UPDATE alignments SET (%s) = ROW %s WHERE job_id = %s AND alignment = %s'), (
+            cur.execute(sql.SQL('UPDATE linksets SET (%s) = ROW %s WHERE job_id = %s AND spec_id = %s'), (
                 AsIs(', '.join(data.keys())),
                 tuple(data.values()),
                 self.job_id,
-                alignment
+                id
             ))
 
-    def update_clustering(self, alignment, data):
+    def update_clustering(self, id, data):
         with db_conn() as conn, conn.cursor() as cur:
-            cur.execute(sql.SQL('UPDATE clusterings SET (%s) = ROW %s WHERE job_id = %s AND alignment = %s'), (
+            cur.execute(sql.SQL('UPDATE clusterings SET (%s) = ROW %s WHERE job_id = %s AND spec_id = %s'), (
                 AsIs(', '.join(data.keys())),
                 tuple(data.values()),
                 self.job_id,
-                alignment
+                id
             ))
 
-    def run_alignment(self, alignment, restart=False):
+    def run_linkset(self, id, restart=False):
         with db_conn() as conn, conn.cursor() as cur:
             if restart:
-                cur.execute(sql.SQL("DELETE FROM alignments WHERE job_id = %s AND alignment = %s"),
-                            (self.job_id, alignment))
-                cur.execute(sql.SQL("DELETE FROM clusterings WHERE job_id = %s AND alignment = %s"),
-                            (self.job_id, alignment))
+                cur.execute(sql.SQL("DELETE FROM linksets WHERE job_id = %s AND spec_id = %s"),
+                            (self.job_id, id))
+                cur.execute(sql.SQL("DELETE FROM clusterings WHERE job_id = %s AND spec_id = %s"),
+                            (self.job_id, id))
 
-            cur.execute(sql.SQL("INSERT INTO alignments (job_id, alignment, status, kill, requested_at) "
-                                "VALUES (%s, %s, %s, false, now())"), (self.job_id, alignment, 'waiting'))
+            cur.execute(sql.SQL("INSERT INTO linksets (job_id, spec_id, status, kill, requested_at) "
+                                "VALUES (%s, %s, %s, false, now())"), (self.job_id, id, 'waiting'))
 
-    def run_clustering(self, alignment, association_file, clustering_type='default'):
-        clustering = self.clustering(alignment)
+    def run_clustering(self, id, association_file, clustering_type='default'):
+        clustering = self.clustering(id)
 
         with db_conn() as conn, conn.cursor() as cur:
             if clustering:
@@ -150,131 +154,134 @@ class Job:
                     UPDATE clusterings 
                     SET association_file = %s, status = %s, 
                         kill = false, requested_at = now(), processing_at = null, finished_at = null
-                    WHERE job_id = %s AND alignment = %s
-                """), (association_file, 'waiting', self.job_id, alignment))
+                    WHERE job_id = %s AND spec_id = %s
+                """), (association_file, 'waiting', self.job_id, id))
             else:
                 cur.execute(sql.SQL("""
-                    INSERT INTO clusterings (job_id, alignment, clustering_type, association_file, 
+                    INSERT INTO clusterings (job_id, spec_id, clustering_type, association_file, 
                                              status, kill, requested_at) 
                     VALUES (%s, %s, %s, %s, %s, false, now())
-                """), (self.job_id, alignment, clustering_type, association_file, 'waiting'))
+                """), (self.job_id, id, clustering_type, association_file, 'waiting'))
 
-    def kill_alignment(self, alignment):
+    def kill_linkset(self, id):
         with db_conn() as conn, conn.cursor() as cur:
-            cur.execute('UPDATE alignments SET kill = true WHERE job_id = %s AND alignment = %s',
-                        (self.job_id, alignment))
+            cur.execute('UPDATE linksets SET kill = true WHERE job_id = %s AND spec_id = %s',
+                        (self.job_id, id))
 
-    def kill_clustering(self, alignment):
+    def kill_clustering(self, id):
         with db_conn() as conn, conn.cursor() as cur:
-            cur.execute('UPDATE clusterings SET kill = true WHERE job_id = %s AND alignment = %s',
-                        (self.job_id, alignment))
+            cur.execute('UPDATE clusterings SET kill = true WHERE job_id = %s AND spec_id = %s',
+                        (self.job_id, id))
 
-    def validate_link(self, type, alignment, source_uri, target_uri, valid):
-        alignments = self.get_lens_by_id(alignment).alignments if type == 'lens' else [alignment]
+    def validate_link(self, type, id, source_uri, target_uri, valid):
+        linksets = self.get_lens_spec_by_id(id).linksets if type == 'lens' else [id]
         with db_conn() as conn, conn.cursor() as cur:
-            for alignment in alignments:
+            for id in linksets:
                 query = sql.SQL('UPDATE {} SET valid = %s WHERE source_uri = %s AND target_uri = %s') \
-                    .format(sql.Identifier(self.linkset_table_name(alignment)))
+                    .format(sql.Identifier(self.linkset_table_name(id)))
                 cur.execute(query, (valid, source_uri, target_uri))
 
-    def properties_for_resource(self, resource, downloaded_only=True):
-        return self.properties(resource.dataset_id, resource.properties, None, downloaded_only)
+    def properties_for_entity_type_selection(self, entity_type_selection, downloaded_only=True):
+        return self.properties(entity_type_selection.dataset_id, entity_type_selection.properties, None,
+                               downloaded_only)
 
     def value_targets_for_properties(self, properties, downloaded_only=True):
         return self.value_targets(properties, downloaded_only)
 
-    def linkset_schema_name(self, alignment):
-        return 'job_' + self.job_id + '_' + str(alignment)
+    def linkset_schema_name(self, id):
+        return 'job_' + self.job_id + '_' + str(id)
 
-    def linkset_table_name(self, alignment):
-        return 'linkset_' + self.job_id + '_' + str(alignment)
+    def linkset_table_name(self, id):
+        return 'linkset_' + self.job_id + '_' + str(id)
 
-    def resources_required_for_alignment(self, alignment):
-        match = self.get_match_by_id(alignment)
+    def entity_type_selections_required_for_linkset(self, id):
+        linkset_spec = self.get_linkset_spec_by_id(id)
 
-        resources_to_add = [hash_string(resource) for resource in match.resources]
-        resources_to_run = []
+        to_add = [hash_string(entity_type_selections) for entity_type_selections in linkset_spec.entity_type_selections]
+        to_run = []
 
-        resources_added = []
-        while resources_to_add:
-            resource_to_add = resources_to_add[0]
+        added = []
+        while to_add:
+            ets_to_add = to_add[0]
 
-            if resource_to_add not in resources_added:
-                for resource in self.resources:
-                    if resource.label == resource_to_add:
-                        resources_to_run.append(resource)
+            if ets_to_add not in added:
+                for ets in self.entity_type_selections:
+                    if ets.label == ets_to_add:
+                        to_run.append(ets)
 
-                        resources_to_add += [hash_string(related['resource']) for related in resource.related]
+                        to_add += [hash_string(related['entity_type_selection']) for related in ets.related]
 
-                        resources_to_add.remove(resource_to_add)
-                        resources_added.append(resource_to_add)
+                        to_add.remove(ets_to_add)
+                        added.append(ets_to_add)
             else:
-                resources_to_add.remove(resource_to_add)
+                to_add.remove(ets_to_add)
 
-        return resources_to_run
+        return to_run
 
-    def has_queued_resources(self, alignment=None):
-        resources = self.resources_required_for_alignment(alignment) if alignment else self.resources
-        for resource in resources:
-            if resource.view_queued:
+    def has_queued_entity_type_selections(self, id=None):
+        ets = self.entity_type_selections_required_for_linkset(id) if id else self.entity_type_selections
+        for entity_type_selection in ets:
+            if entity_type_selection.view_queued:
                 return True
 
         return False
 
-    def get_lens_by_id(self, id):
-        for lens in self.lenses:
-            if lens.id == id:
-                return lens
+    def get_lens_spec_by_id(self, id):
+        for lens_spec in self.lens_specs:
+            if lens_spec.id == id:
+                return lens_spec
 
         return None
 
-    def get_match_by_id(self, id):
-        for match in self.mappings:
-            if match.id == id:
-                return match
+    def get_linkset_spec_by_id(self, id):
+        for linkset_spec in self.linkset_specs:
+            if linkset_spec.id == id:
+                return linkset_spec
 
         return None
 
-    def get_resource_by_label(self, label):
-        for resource in self.resources:
-            if resource.label == label:
-                return resource
+    def get_entity_type_selection_by_label(self, label):
+        for entity_type_selection in self.entity_type_selections:
+            if entity_type_selection.label == label:
+                return entity_type_selection
 
         return None
 
-    def get_resource_sample(self, resource_label, invert=False, limit=None, offset=0):
-        resource = self.get_resource_by_label(hash_string(resource_label))
-        if not resource:
+    def get_entity_type_selection_sample(self, label, invert=False, limit=None, offset=0):
+        entity_type_selection = self.get_entity_type_selection_by_label(hash_string(label))
+        if not entity_type_selection:
             return []
 
-        properties = self.properties_for_resource(resource)
+        properties = self.properties_for_entity_type_selection(entity_type_selection)
         if not properties:
             return []
 
-        table_info = get_table_info(resource.dataset_id, resource.collection_id)
-        query = create_query_for_properties(resource.dataset_id, resource.label,
+        table_info = get_table_info(entity_type_selection.dataset_id, entity_type_selection.collection_id)
+        query = create_query_for_properties(entity_type_selection.dataset_id, entity_type_selection.label,
                                             table_info['table_name'], table_info['columns'], properties,
-                                            initial_join=resource.related_joins, condition=resource.filter_sql,
+                                            initial_join=entity_type_selection.related_joins,
+                                            condition=entity_type_selection.filter_sql,
                                             invert=invert, limit=limit, offset=offset)
 
         return get_property_values_for_query(query, None, properties, dict=False)
 
-    def get_resource_sample_total(self, resource_label):
-        resource = self.get_resource_by_label(hash_string(resource_label))
-        if not resource:
+    def get_entity_type_selection_sample_total(self, label):
+        entity_type_selection = self.get_entity_type_selection_by_label(hash_string(label))
+        if not entity_type_selection:
             return {'total': 0}
 
-        table_info = get_table_info(resource.dataset_id, resource.collection_id)
-        query = create_count_query_for_properties(resource.label, table_info['table_name'],
-                                                  initial_join=resource.related_joins, condition=resource.filter_sql)
+        table_info = get_table_info(entity_type_selection.dataset_id, entity_type_selection.collection_id)
+        query = create_count_query_for_properties(entity_type_selection.label, table_info['table_name'],
+                                                  initial_join=entity_type_selection.related_joins,
+                                                  condition=entity_type_selection.filter_sql)
 
         return fetch_one(query, dict=True)
 
-    def get_links(self, type, alignment, validation_filter=Validation.ALL, cluster_id=None, uri=None,
+    def get_links(self, type, id, validation_filter=Validation.ALL, cluster_id=None, uri=None,
                   limit=None, offset=0, include_props=False):
-        linkset = sql.Identifier(self.linkset_table_name(alignment))
+        linkset = sql.Identifier(self.linkset_table_name(id))
         if type == 'lens':
-            lens = self.get_lens_by_id(alignment)
+            lens = self.get_lens_spec_by_id(id)
             linkset = sql.SQL('(\n{sql}\n) AS x').format(sql=lens.joins_sql)
 
         validation_filter_sql = []
@@ -301,8 +308,8 @@ class Job:
 
         values = None
         if include_props:
-            properties = self.get_lens_by_id(alignment).properties if type == 'lens' \
-                else self.get_match_by_id(alignment).properties
+            properties = self.get_lens_spec_by_id(id).properties if type == 'lens' \
+                else self.get_linkset_spec_by_id(id).properties
             targets = self.value_targets_for_properties(properties)
             if targets:
                 initial_join = get_linkset_join_sql(linkset, where_sql, limit, offset)
@@ -335,10 +342,10 @@ class Job:
                         'valid': link[5]
                     }
 
-    def get_links_totals(self, type, alignment, cluster_id=None, uri=None):
-        linkset = sql.Identifier(self.linkset_table_name(alignment))
+    def get_links_totals(self, type, id, cluster_id=None, uri=None):
+        linkset = sql.Identifier(self.linkset_table_name(id))
         if type == 'lens':
-            lens = self.get_lens_by_id(alignment)
+            lens = self.get_lens_spec_by_id(id)
             linkset = sql.SQL('(\n{sql}\n) AS x').format(sql=lens.joins_sql)
 
         conditions = []
@@ -358,15 +365,15 @@ class Job:
 
             return {row[0]: row[1] for row in cur.fetchall()}
 
-    def get_clusters(self, alignment, limit=None, offset=0, include_props=False):
-        linkset_table = self.linkset_table_name(alignment)
+    def get_clusters(self, id, limit=None, offset=0, include_props=False):
+        linkset_table = self.linkset_table_name(id)
         limit_offset_sql = get_pagination_sql(limit, offset)
         nodes_sql = ', ARRAY_AGG(DISTINCT nodes.uri) AS nodes_arr' if include_props else ''
 
         values = None
         if include_props:
-            properties = self.get_lens_by_id(alignment).properties if type == 'lens' \
-                else self.get_match_by_id(alignment).properties
+            properties = self.get_lens_spec_by_id(id).properties if type == 'lens' \
+                else self.get_linkset_spec_by_id(id).properties
             targets = self.value_targets_for_properties(properties)
             if targets:
                 initial_join = get_linkset_cluster_join_sql(linkset_table, limit, offset)
@@ -419,12 +426,12 @@ class Job:
                         } for key, cluster_value in cluster_values.items()] if values else None
                     }
 
-    def cluster(self, alignment, cluster_id=None, uri=None):
+    def cluster(self, id, cluster_id=None, uri=None):
         all_links = []
         strengths = {}
         nodes = []
 
-        for link in self.get_links('match', alignment, cluster_id=cluster_id, uri=uri):
+        for link in self.get_links('match', id, cluster_id=cluster_id, uri=uri):
             source = '<' + link['source'] + '>'
             target = '<' + link['target'] + '>'
 

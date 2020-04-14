@@ -8,24 +8,24 @@ locale.setlocale(locale.LC_ALL, '')
 
 
 class MatchingSql:
-    def __init__(self, job, alignment):
+    def __init__(self, job, id):
         self._job = job
-        self._match = job.get_match_by_id(alignment)
+        self._linkset = job.get_linkset_spec_by_id(id)
 
     def generate_schema_sql(self):
-        schema_name_sql = sql.Identifier(self._job.linkset_schema_name(self._match.id))
+        schema_name_sql = sql.Identifier(self._job.linkset_schema_name(self._linkset.id))
 
         return sql.Composed([
             sql.SQL('CREATE SCHEMA IF NOT EXISTS {};\n').format(schema_name_sql),
             sql.SQL('SET SEARCH_PATH TO "$user", {}, public;').format(schema_name_sql),
         ])
 
-    def generate_resources_sql(self):
-        resources_sql = []
-        for resource in self._job.resources_required_for_alignment(self._match.id):
-            pre = sql.SQL('SELECT * FROM (') if resource.limit > -1 else sql.SQL('')
+    def generate_entity_type_selection_sql(self):
+        entity_type_selections_sql = []
+        for entity_type_selection in self._job.entity_type_selections_required_for_linkset(self._linkset.id):
+            pre = sql.SQL('SELECT * FROM (') if entity_type_selection.limit > -1 else sql.SQL('')
 
-            resource_sql = sql.SQL(cleandoc(
+            entity_type_selection_sql = sql.SQL(cleandoc(
                 """ DROP MATERIALIZED VIEW IF EXISTS {view_name} CASCADE;
                 
                     CREATE MATERIALIZED VIEW {view_name} AS
@@ -39,20 +39,20 @@ class MatchingSql:
                 """
             ) + '\n').format(
                 pre=pre,
-                view_name=sql.Identifier(resource.label),
-                matching_fields=resource.matching_fields_sql(self._match),
-                table_name=sql.Identifier(resource.table_name),
-                joins=resource.joins(self._match).sql,
-                wheres=resource.where_sql,
-                limit=resource.limit_sql,
+                view_name=sql.Identifier(entity_type_selection.label),
+                matching_fields=entity_type_selection.matching_fields_sql(self._linkset),
+                table_name=sql.Identifier(entity_type_selection.table_name),
+                joins=entity_type_selection.joins(self._linkset).sql,
+                wheres=entity_type_selection.where_sql,
+                limit=entity_type_selection.limit_sql,
             )
 
-            resources_sql.append(resource_sql)
+            entity_type_selections_sql.append(entity_type_selection_sql)
 
-        return sql.Composed(resources_sql)
+        return sql.Composed(entity_type_selections_sql)
 
     def generate_match_index_sql(self):
-        return self._match.index_sql
+        return self._linkset.index_sql
 
     def generate_match_source_sql(self):
         return sql.SQL(cleandoc(
@@ -67,7 +67,7 @@ class MatchingSql:
                 ANALYZE {source_name};
             """
         ) + '\n').format(
-            source=self._match.source_sql,
+            source=self._linkset.source_sql,
             source_name=sql.Identifier('source'),
             source_sequence_name=sql.Identifier('source_count'),
         )
@@ -85,7 +85,7 @@ class MatchingSql:
                 ANALYZE {target_name};
             """
         ) + '\n').format(
-            target=self._match.target_sql,
+            target=self._linkset.target_sql,
             target_name=sql.Identifier('target'),
             target_sequence_name=sql.Identifier('target_count'),
         )
@@ -128,9 +128,9 @@ class MatchingSql:
                 ANALYZE public.{view_name};
             """
         ) + '\n').format(
-            similarity_field=self._match.similarity_fields_agg_sql,
-            conditions=self._match.conditions_sql,
-            view_name=sql.Identifier(self._job.linkset_table_name(self._match.id)),
+            similarity_field=self._linkset.similarity_fields_agg_sql,
+            conditions=self._linkset.conditions_sql,
+            view_name=sql.Identifier(self._job.linkset_table_name(self._linkset.id)),
             source_name=sql.Identifier('source'),
             target_name=sql.Identifier('target'),
             sequence_name=sql.Identifier('linkset_count'),
@@ -141,7 +141,7 @@ class MatchingSql:
     def sql_string(self):
         sql_str = get_string_from_sql(self.generate_schema_sql())
         sql_str += '\n\n'
-        sql_str += get_string_from_sql(self.generate_resources_sql())
+        sql_str += get_string_from_sql(self.generate_entity_type_selection_sql())
         sql_str += '\n\n'
         sql_str += get_string_from_sql(self.generate_match_source_sql())
         sql_str += '\n\n'

@@ -1,6 +1,6 @@
 <template>
   <div class="ml-5 p-3" v-bind:class="{'border-top': !isFirst}">
-    <property :resource="$root.getResourceById(conditionProperty.resource)"
+    <property :entity-type-selection="$root.getEntityTypeSelectionById(conditionProperty.entity_type_selection)"
               :property="conditionProperty.property" :allow-delete="allowDelete"
               @clone="$emit('clone')" @delete="$emit('delete')" ref="propertyComponent"/>
 
@@ -55,7 +55,7 @@
     import ValidationMixin from "../../../mixins/ValidationMixin";
 
     export default {
-        name: "MatchConditionProperty",
+        name: "ConditionProperty",
         mixins: [ValidationMixin],
         data() {
             return {
@@ -75,7 +75,7 @@
             },
         },
         methods: {
-            validateMatchConditionProperty() {
+            validateConditionProperty() {
                 const propertyValid = this.$refs.propertyComponent.validateProperty();
 
                 if (!this.conditionProperty.hasOwnProperty('transformers'))

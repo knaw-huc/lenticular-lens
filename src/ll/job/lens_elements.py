@@ -1,8 +1,10 @@
 from inspect import cleandoc
 from psycopg2 import sql as psycopg2_sql
 
+from ll.job.lens_element import LensElement
 
-class Elements:
+
+class LensElements:
     SELECT_SQL = cleandoc('''
         SELECT
             CASE WHEN r.source_uri IS NULL THEN l.source_uri ELSE r.source_uri END AS source_uri,
@@ -32,10 +34,10 @@ class Elements:
     def left(self):
         if not self._left:
             elem = self._data[0]
-            if type(elem) is dict and 'alignments' in elem and 'type' in elem:
-                self._left = Elements(elem['alignments'], elem['type'], self._job)
+            if type(elem) is dict and 'elements' in elem and 'type' in elem:
+                self._left = LensElements(elem['elements'], elem['type'], self._job)
             else:
-                self._left = elem
+                self._left = LensElement(elem, self._job)
 
         return self._left
 
@@ -43,66 +45,66 @@ class Elements:
     def right(self):
         if not self._right:
             elem = self._data[1]
-            if type(elem) is dict and 'alignments' in elem and 'type' in elem:
-                self._right = Elements(elem['alignments'], elem['type'], self._job)
+            if type(elem) is dict and 'elements' in elem and 'type' in elem:
+                self._right = LensElements(elem['elements'], elem['type'], self._job)
             else:
-                self._right = elem
+                self._right = LensElement(elem, self._job)
 
         return self._right
 
     @property
-    def alignments(self):
-        alignments = []
+    def linksets(self):
+        linksets = []
 
-        if isinstance(self.left, int):
-            alignments.append(self.left)
+        if isinstance(self.left, LensElement) and self.left.type == 'linkset':
+            linksets.append(self.left.id)
         else:
-            alignments += self.left.alignments
+            linksets += self.left.linksets
 
-        if isinstance(self.right, int):
-            alignments.append(self.right)
+        if isinstance(self.right, LensElement) and self.right.type == 'linkset':
+            linksets.append(self.right.id)
         else:
-            alignments += self.right.alignments
+            linksets += self.right.linksets
 
-        return alignments
+        return linksets
 
     @property
     def left_sql(self):
-        if isinstance(self.left, int):
-            return psycopg2_sql.Identifier(self._job.linkset_table_name(self.left))
+        if isinstance(self.left, LensElement):
+            return self.left.sql
 
         return psycopg2_sql.SQL('(\n{sql}\n)').format(sql=self.left.joins_sql)
 
     @property
     def right_sql(self):
-        if isinstance(self.right, int):
-            return psycopg2_sql.Identifier(self._job.linkset_table_name(self.right))
+        if isinstance(self.right, LensElement):
+            return self.right.sql
 
         return psycopg2_sql.SQL('(\n{sql}\n)').format(sql=self.right.joins_sql)
 
     @property
     def joins_sql(self):
         if self._type == 'union':
-            return psycopg2_sql.SQL(Elements.SELECT_SQL + cleandoc('''
+            return psycopg2_sql.SQL(LensElements.SELECT_SQL + cleandoc('''
                 FROM {left} AS l
                 FULL JOIN {right} AS r
                 ON l.source_uri = r.source_uri AND l.target_uri = r.target_uri
             ''')).format(left=self.left_sql, right=self.right_sql)
         elif self._type == 'intersection':
-            return psycopg2_sql.SQL(Elements.SELECT_SQL + cleandoc('''
+            return psycopg2_sql.SQL(LensElements.SELECT_SQL + cleandoc('''
                 FROM {left} AS l
                 INNER JOIN {right} AS r
                 ON l.source_uri = r.source_uri AND l.target_uri = r.target_uri
             ''')).format(left=self.left_sql, right=self.right_sql)
         elif self._type == 'difference':
-            return psycopg2_sql.SQL(Elements.SELECT_SQL + cleandoc('''
+            return psycopg2_sql.SQL(LensElements.SELECT_SQL + cleandoc('''
                 FROM {left} AS l
                 LEFT JOIN {right} AS r
                 ON l.source_uri = r.source_uri AND l.target_uri = r.target_uri
                 WHERE r.source_uri IS NULL AND r.target_uri IS NULL
             ''')).format(left=self.left_sql, right=self.right_sql)
         elif self._type == 'sym_difference':
-            return psycopg2_sql.SQL(Elements.SELECT_SQL + cleandoc('''
+            return psycopg2_sql.SQL(LensElements.SELECT_SQL + cleandoc('''
                 FROM {left} AS l
                 FULL JOIN {right} AS r
                 ON l.source_uri = r.source_uri AND l.target_uri = r.target_uri

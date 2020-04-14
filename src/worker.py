@@ -11,7 +11,7 @@ from ll.util.config_db import db_conn
 from ll.util.logging import config_logger
 
 from ll.worker.timbuctoo import TimbuctooJob
-from ll.worker.alignment import AlignmentJob
+from ll.worker.linkset import LinksetJob
 from ll.worker.clustering import ClusteringJob
 from ll.worker.reconciliation import ReconciliationJob
 
@@ -22,7 +22,7 @@ locale.setlocale(locale.LC_ALL, '')
 
 class WorkerType(Enum):
     TIMBUCTOO = 'timbuctoo'
-    ALIGNMENT = 'alignment'
+    LINKSET = 'linkset'
     CLUSTERING = 'clustering'
     RECONCILIATION = 'reconciliation'
 
@@ -60,22 +60,22 @@ class Worker:
                 WHERE "table_name" = %s""", (self.__job_data['table_name'],))
 
             self.watch_for_jobs("timbuctoo_tables", watch_query, update_status, self.run_timbuctoo_job)
-        elif self.__type == WorkerType.ALIGNMENT:
+        elif self.__type == WorkerType.LINKSET:
             watch_query = """
                 SELECT *
-                FROM alignments aj
-                JOIN reconciliation_jobs rj ON aj.job_id = rj.job_id
-                WHERE aj.status = 'waiting' OR aj.status = 'downloading'
-                ORDER BY aj.requested_at
+                FROM linksets ls
+                JOIN jobs rj ON ls.job_id = rj.job_id
+                WHERE ls.status = 'waiting' OR ls.status = 'downloading'
+                ORDER BY ls.requested_at
                 LIMIT 1
             """
 
             update_status = lambda cur: cur.execute("""
-                UPDATE alignments
+                UPDATE linksets
                 SET status = 'running', processing_at = now()
-                WHERE job_id = %s AND alignment = %s""", (self.__job_data['job_id'], self.__job_data['alignment']))
+                WHERE job_id = %s AND spec_id = %s""", (self.__job_data['job_id'], self.__job_data['spec_id']))
 
-            self.watch_for_jobs("alignments", watch_query, update_status, self.run_alignment_job)
+            self.watch_for_jobs("linksets", watch_query, update_status, self.run_linkset_job)
         elif self.__type == WorkerType.CLUSTERING:
             watch_query = """
                 SELECT *
@@ -88,7 +88,7 @@ class Worker:
             update_status = lambda cur: cur.execute("""
                 UPDATE clusterings
                 SET status = 'running', processing_at = now()
-                WHERE job_id = %s AND alignment = %s""", (self.__job_data['job_id'], self.__job_data['alignment']))
+                WHERE job_id = %s AND spec_id = %s""", (self.__job_data['job_id'], self.__job_data['spec_id']))
 
             self.watch_for_jobs("clusterings", watch_query, update_status, self.run_clustering_job)
         elif self.__type == WorkerType.RECONCILIATION:
@@ -103,7 +103,7 @@ class Worker:
             update_status = lambda cur: cur.execute("""
                 UPDATE clusterings
                 SET status = 'running', processing_at = now()
-                WHERE job_id = %s AND alignment = %s""", (self.__job_data['job_id'], self.__job_data['alignment']))
+                WHERE job_id = %s AND spec_id = %s""", (self.__job_data['job_id'], self.__job_data['spec_id']))
 
             self.watch_for_jobs("clusterings", watch_query, update_status, self.run_reconciliation_job)
 
@@ -141,18 +141,18 @@ class Worker:
         self.__job.run()
         self.cleanup()
 
-    def run_alignment_job(self):
-        self.__job = AlignmentJob(job_id=self.__job_data['job_id'], alignment=self.__job_data['alignment'])
+    def run_linkset_job(self):
+        self.__job = LinksetJob(job_id=self.__job_data['job_id'], id=self.__job_data['spec_id'])
         self.__job.run()
         self.cleanup()
 
     def run_clustering_job(self):
-        self.__job = ClusteringJob(job_id=self.__job_data['job_id'], alignment=self.__job_data['alignment'])
+        self.__job = ClusteringJob(job_id=self.__job_data['job_id'], id=self.__job_data['spec_id'])
         self.__job.run()
         self.cleanup()
 
     def run_reconciliation_job(self):
-        self.__job = ReconciliationJob(job_id=self.__job_data['job_id'], alignment=self.__job_data['alignment'],
+        self.__job = ReconciliationJob(job_id=self.__job_data['job_id'], id=self.__job_data['spec_id'],
                                        association_file=self.__job_data['association_file'])
         self.__job.run()
         self.cleanup()

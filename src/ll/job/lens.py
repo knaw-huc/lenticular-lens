@@ -1,27 +1,27 @@
-from ll.job.elements import Elements
 from ll.util.helpers import hash_string
+from ll.job.lens_elements import LensElements
 
 
 class Lens:
     def __init__(self, data, job):
         self._data = data
         self._job = job
-        self._elements = None
+        self._specs = None
 
     @property
-    def elements(self):
-        if not self._elements:
-            elements = self._data['elements']
-            self._elements = Elements(elements['alignments'], elements['type'], self._job)
-        return self._elements
+    def specs(self):
+        if not self._specs:
+            specs = self._data['specs']
+            self._specs = LensElements(specs['elements'], specs['type'], self._job)
+        return self._specs
 
     @property
     def joins_sql(self):
-        return self.elements.joins_sql
+        return self.specs.joins_sql
 
     @property
-    def alignments(self):
-        return self.elements.alignments
+    def linksets(self):
+        return self.specs.linksets
 
     @property
     def id(self):

@@ -28,7 +28,7 @@ class Elements:
         return self.schema.validate(data)
 
 
-resource_filter_elements_schema = Schema({
+entity_type_selection_filter_elements_schema = Schema({
     'property': [And(str, len)],
     'type': And(str, Use(str.lower), lambda t: t in filter_functions.keys()),
     Optional('value'): And(str, len),
@@ -38,7 +38,7 @@ mapping_method_elements_schema = Schema({
     'method_name': And(str, Use(str.upper), lambda m: m in matching_functions.keys()),
     'method_value': dict,
     'sources': [{
-        'resource': Use(int),
+        'entity_type_selection': Use(int),
         'property': [And(str, len)],
         Optional('transformers', default=list): [{
             'name': And(str, Use(str.upper), lambda n: n in transformers.keys()),
@@ -46,7 +46,7 @@ mapping_method_elements_schema = Schema({
         }]
     }],
     'targets': [{
-        'resource': Use(int),
+        'entity_type_selection': Use(int),
         'property': [And(str, len)],
         Optional('transformers', default=list): [{
             'name': And(str, Use(str.upper), lambda n: n in transformers.keys()),
@@ -56,10 +56,11 @@ mapping_method_elements_schema = Schema({
 }, ignore_extra_keys=True)
 
 lens_elements_schema = Schema({
-    'alignment': Use(int)
+    'id': Use(int),
+    'type': Or('linkset', 'lens')
 }, ignore_extra_keys=True)
 
-resource_schema = Schema({
+entity_type_selection_schema = Schema({
     'id': Use(int),
     'label': And(str, len),
     Optional('description', default=None): Or(str, None),
@@ -70,7 +71,8 @@ resource_schema = Schema({
         'timbuctoo_graphql': And(str, len),
         Optional('timbuctoo_hsid'): Or(str, None),
     },
-    Optional('filter', default=None): Or(None, Elements(resource_filter_elements_schema, 'conditions', ('and', 'or'))),
+    Optional('filter', default=None):
+        Or(None, Elements(entity_type_selection_filter_elements_schema, 'conditions', ('and', 'or'))),
     Optional('limit', default=-1): And(int, lambda n: n > 0 or n == -1),
     Optional('random', default=False): bool,
     Optional('properties', default=list): [[str]],
@@ -78,7 +80,7 @@ resource_schema = Schema({
     Optional('related_array', default=False): bool
 }, ignore_extra_keys=True)
 
-mapping_schema = Schema({
+linkset_spec_schema = Schema({
     'id': Use(int),
     'label': And(str, len),
     Optional('description', default=None): Or(str, None),
@@ -87,55 +89,56 @@ mapping_schema = Schema({
     'targets': [Use(int)],
     'methods': And(Elements(mapping_method_elements_schema, 'conditions', ('and', 'or')), dict),
     Optional('properties', default=list): [{
-        'resource': Use(int),
+        'entity_type_selection': Use(int),
         'property': [str],
     }]
 }, ignore_extra_keys=True)
 
-lenses_schema = Schema({
+lens_spec_schema = Schema({
     'id': Use(int),
     'label': And(str, len),
     Optional('description', default=None): Or(str, None),
-    'elements': And(Elements(lens_elements_schema, 'alignments',
-                             ('union', 'intersection', 'difference', 'sym_difference')), dict),
+    'specs': And(Elements(lens_elements_schema, 'elements',
+                          ('union', 'intersection', 'difference', 'sym_difference')), dict),
     Optional('properties', default=list): [{
-        'resource': Use(int),
+        'entity_type_selection': Use(int),
         'property': [str],
     }]
 }, ignore_extra_keys=True)
 
 
-def transform(resources_org, mappings_org, lenses_org):
-    def create_references_for_property(resource, property):
+def transform(entity_type_selections_org, linkset_specs_org, lens_specs_org):
+    def create_references_for_property(entity_type_selection, property):
         if len(property) == 1 or property[1] == '__value__':
-            return [resource['label'], property[0]]
+            return [entity_type_selection['label'], property[0]]
 
-        referenced_resource_label = hash_string(resource['label'] + property[0] + property[1])
-        referenced_resource = next((ref for ref in ref_resources if ref['label'] == referenced_resource_label), {
-            'label': referenced_resource_label,
+        referenced_ets_label = hash_string(entity_type_selection['label'] + property[0] + property[1])
+        referenced_ets = next((ref for ref in ref_entity_type_selections if ref['label'] == referenced_ets_label), {
+            'label': referenced_ets_label,
             'dataset': {
-                'timbuctoo_graphql': resource['dataset']['timbuctoo_graphql'],
-                'timbuctoo_hsid': resource['dataset']['timbuctoo_hsid'],
-                'dataset_id': resource['dataset']['dataset_id'],
+                'timbuctoo_graphql': entity_type_selection['dataset']['timbuctoo_graphql'],
+                'timbuctoo_hsid': entity_type_selection['dataset']['timbuctoo_hsid'],
+                'dataset_id': entity_type_selection['dataset']['dataset_id'],
                 'collection_id': property[1],
-                'published': resource['dataset']['published']
+                'published': entity_type_selection['dataset']['published']
             },
             'related': []
         })
 
-        if not any(ref for ref in ref_resources if ref['label'] == referenced_resource_label):
-            ref_resources.append(referenced_resource)
+        if not any(ref for ref in ref_entity_type_selections if ref['label'] == referenced_ets_label):
+            ref_entity_type_selections.append(referenced_ets)
 
-        if not any(rel for rel in resource['related'] if rel['resource'] == referenced_resource_label
-                                                         and rel['local_property'] == property[0]
-                                                         and rel['remote_property'] == 'uri'):
-            resource['related'].append({
-                'resource': referenced_resource_label,
+        if not any(rel for rel in entity_type_selection['related']
+                   if rel['entity_type_selection'] == referenced_ets_label
+                      and rel['local_property'] == property[0]
+                      and rel['remote_property'] == 'uri'):
+            entity_type_selection['related'].append({
+                'entity_type_selection': referenced_ets_label,
                 'local_property': property[0],
                 'remote_property': 'uri'
             })
 
-        return create_references_for_property(referenced_resource, property[2:])
+        return create_references_for_property(referenced_ets, property[2:])
 
     def transform_elements(elements_group, group_name, with_element):
         if type(elements_group) is list:
@@ -150,119 +153,122 @@ def transform(resources_org, mappings_org, lenses_org):
 
         return with_element(elements_group)
 
-    def transform_resource_condition(condition):
+    def transform_entity_type_selection_condition(condition):
         res_condition = condition.copy()
-        res_condition['property'] = create_references_for_property(resource, condition['property'])
+        res_condition['property'] = create_references_for_property(entity_type_selection, condition['property'])
 
         return res_condition
 
     def transform_mapping_condition(mapping_conditions, condition):
-        if condition['resource'] not in resource_label_by_id:
-            raise SchemaError('resource %s not valid' % condition['resource'])
+        if condition['entity_type_selection'] not in ets_label_by_id:
+            raise SchemaError('entity-type selection %s not valid' % condition['entity_type_selection'])
 
-        resource_label = resource_label_by_id[condition['resource']]
-        resource = next(resource for resource in resources if resource['label'] == resource_label)
-        property = create_references_for_property(resource, condition['property'])
+        ets_label = ets_label_by_id[condition['entity_type_selection']]
+        entity_type_selection = next(ets for ets in entity_type_selections if ets['label'] == ets_label)
+        property = create_references_for_property(entity_type_selection, condition['property'])
 
-        resource_list = mapping_conditions.get(resource_label, [])
-        resource_list.append({
+        entity_type_selection_list = mapping_conditions.get(ets_label, [])
+        entity_type_selection_list.append({
             'property': property,
             'transformers': condition['transformers']
         })
-        mapping_conditions[resource_label] = resource_list
+        mapping_conditions[ets_label] = entity_type_selection_list
 
         return mapping_conditions
 
-    def transform_mapping_property(mapping_properties, property):
-        if '' in property['property'] or property['resource'] not in resource_label_by_id:
-            return mapping_properties
+    def transform_property(properties, property):
+        if '' in property['property'] or property['entity_type_selection'] not in ets_label_by_id:
+            return properties
 
-        resource_label = resource_label_by_id[property['resource']]
-        resource = next(resource for resource in resources if resource['label'] == resource_label)
+        ets_label = ets_label_by_id[property['entity_type_selection']]
+        entity_type_selection = next(ets for ets in entity_type_selections if ets['label'] == ets_label)
 
-        graph = resource['dataset']['dataset_id']
-        entity_type = resource['dataset']['collection_id']
+        graph = entity_type_selection['dataset']['dataset_id']
+        entity_type = entity_type_selection['dataset']['collection_id']
 
-        resource_target = next((prop_group for prop_group in mapping_properties if prop_group['graph'] == graph), {
+        target = next((prop_group for prop_group in properties if prop_group['graph'] == graph), {
             'graph': graph,
             'data': []
         })
 
-        if not any(prop_group for prop_group in mapping_properties if prop_group['graph'] == graph):
-            mapping_properties.append(resource_target)
+        if not any(prop_group for prop_group in properties if prop_group['graph'] == graph):
+            properties.append(target)
 
-        entity_target = next((data for data in resource_target['data'] if data['entity_type'] == entity_type), {
+        entity_target = next((data for data in target['data'] if data['entity_type'] == entity_type), {
             'entity_type': entity_type,
             'properties': []
         })
 
-        if not any(data for data in resource_target['data'] if data['entity_type'] == entity_type):
-            resource_target['data'].append(entity_target)
+        if not any(data for data in target['data'] if data['entity_type'] == entity_type):
+            target['data'].append(entity_target)
 
         entity_target['properties'].append(property['property'])
 
-        return mapping_properties
+        return properties
 
-    resources = []
-    mappings = []
-    lenses = []
+    entity_type_selections = []
+    linkset_specs = []
+    lens_specs = []
 
-    for resource_org in resources_org:
+    for entity_type_selection_org in entity_type_selections_org:
         try:
-            resource = resource_schema.validate(resource_org)
-            resource['properties'] = [prop for prop in resource['properties'] if prop != '']
-            resources.append(resource)
+            entity_type_selection = entity_type_selection_schema.validate(entity_type_selection_org)
+            entity_type_selection['properties'] = [prop for prop in entity_type_selection['properties'] if prop != '']
+            entity_type_selections.append(entity_type_selection)
         except SchemaError:
             pass
 
-    ref_resources = []
-    resource_label_by_id = {resource['id']: resource['label'] for resource in resources
-                            if 'id' in resource and 'label' in resource}
+    ref_entity_type_selections = []
+    ets_label_by_id = {ets['id']: ets['label'] for ets in entity_type_selections if 'id' in ets and 'label' in ets}
 
-    for resource in resources:
-        resource['related'] = [{
-            'resource': resource_label_by_id[rel['resource']],
+    for entity_type_selection in entity_type_selections:
+        entity_type_selection['related'] = [{
+            'entity_type_selection': ets_label_by_id[rel['entity_type_selection']],
             'local_property': rel['local_property'],
             'remote_property': rel['remote_property'],
-        } for rel in resource['related'] if rel['resource'] in resource_label_by_id]
+        } for rel in entity_type_selection['related'] if rel['entity_type_selection'] in ets_label_by_id]
 
-        if resource['filter']:
-            resource['filter'] = transform_elements(resource['filter'], 'conditions', transform_resource_condition)
+        if entity_type_selection['filter']:
+            entity_type_selection['filter'] = \
+                transform_elements(entity_type_selection['filter'], 'conditions',
+                                   transform_entity_type_selection_condition)
 
-    for mapping_org in mappings_org:
+    for linkset_spec_org in linkset_specs_org:
         try:
-            mapping = mapping_schema.validate(mapping_org)
+            linkset_spec = linkset_spec_schema.validate(linkset_spec_org)
 
-            for resource in (mapping['sources'] + mapping['targets']):
-                if resource not in resource_label_by_id:
-                    raise SchemaError('resource %s not valid' % resource)
+            for entity_type_selection in (linkset_spec['sources'] + linkset_spec['targets']):
+                if entity_type_selection not in ets_label_by_id:
+                    raise SchemaError('entity-type selection %s not valid' % entity_type_selection)
 
-            mapping['sources'] = [resource_label_by_id[resource] for resource in mapping['sources']]
-            mapping['targets'] = [resource_label_by_id[resource] for resource in mapping['targets']]
-            mapping['methods'] = transform_elements(mapping['methods'], 'conditions', lambda condition: {
+            linkset_spec['sources'] = [ets_label_by_id[source] for source in linkset_spec['sources']]
+            linkset_spec['targets'] = [ets_label_by_id[target] for target in linkset_spec['targets']]
+            linkset_spec['methods'] = transform_elements(linkset_spec['methods'], 'conditions', lambda condition: {
                 'method_name': condition['method_name'],
                 'method_value': condition['method_value'],
                 'sources': reduce(transform_mapping_condition, condition['sources'], {}),
                 'targets': reduce(transform_mapping_condition, condition['targets'], {}),
             })
-            mapping['properties'] = reduce(transform_mapping_property, mapping['properties'], [])
+            linkset_spec['properties'] = reduce(transform_property, linkset_spec['properties'], [])
 
-            mappings.append(mapping)
+            linkset_specs.append(linkset_spec)
         except SchemaError:
             pass
 
-    resources += ref_resources
+    entity_type_selections += ref_entity_type_selections
 
-    for lens_org in lenses_org:
+    for lens_org in lens_specs_org:
         try:
-            lens = lenses_schema.validate(lens_org)
+            lens = lens_spec_schema.validate(lens_org)
 
-            lens['properties'] = reduce(transform_mapping_property, lens['properties'], [])
-            lens['elements'] = transform_elements(lens['elements'], 'alignments',
-                                                  lambda element: int(element['alignment']))
+            lens['properties'] = reduce(transform_property, lens['properties'], [])
+            lens['specs'] = transform_elements(lens['specs'], 'elements', lambda element: {
+                'id': int(element['id']),
+                'type': element['type']
+            })
 
-            lenses.append(lens)
-        except SchemaError:
+            lens_specs.append(lens)
+        except SchemaError as e:
             pass
 
-    return resources, mappings, lenses
+    return entity_type_selections, linkset_specs, lens_specs

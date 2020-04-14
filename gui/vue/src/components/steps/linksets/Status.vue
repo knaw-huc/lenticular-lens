@@ -19,9 +19,9 @@
           </div>
         </div>
 
-        <div v-if="alignmentStatus === 'failed' && alignment.status_message" class="row justify-content-center">
+        <div v-if="linksetStatus === 'failed' && linkset.status_message" class="row justify-content-center">
           <div class="col-auto text-danger font-italic">
-            {{ alignment.status_message }}
+            {{ linkset.status_message }}
           </div>
         </div>
 
@@ -31,7 +31,7 @@
           </div>
         </div>
 
-        <div v-if="alignmentStatus === 'downloading' && downloads.length > 0" class="row justify-content-center">
+        <div v-if="linksetStatus === 'downloading' && downloads.length > 0" class="row justify-content-center">
           <div class="col-auto clearfix">
             <ul class="font-italic text-info inline-list px-0">
               <li v-for="download in downloads">
@@ -46,12 +46,12 @@
           <div class="col-auto">
             <div>
               <strong>Links found: </strong>
-              {{ alignment.links_count ? alignment.links_count.toLocaleString('en') : 0 }}
+              {{ linkset.links_count ? linkset.links_count.toLocaleString('en') : 0 }}
 
               <span
-                  v-if="alignment.links_count && alignment.distinct_links_count && alignment.links_count > alignment.distinct_links_count"
+                  v-if="linkset.links_count && linkset.distinct_links_count && linkset.links_count > linkset.distinct_links_count"
                   class="font-italic text-info">
-                ({{ alignment.distinct_links_count.toLocaleString('en') }} distinct links)
+                ({{ linkset.distinct_links_count.toLocaleString('en') }} distinct links)
               </span>
             </div>
 
@@ -69,50 +69,50 @@
 
           <div class="col-auto">
             <div>
-              <strong>Resources in source: </strong>
-              {{ alignment.sources_count ? alignment.sources_count.toLocaleString('en') : 0 }}
+              <strong>Entities in source: </strong>
+              {{ linkset.sources_count ? linkset.sources_count.toLocaleString('en') : 0 }}
 
               <span
-                  v-if="alignment.sources_count && alignment.distinct_sources_count && alignment.sources_count > alignment.distinct_sources_count"
+                  v-if="linkset.sources_count && linkset.distinct_sources_count && linkset.sources_count > linkset.distinct_sources_count"
                   class="font-italic text-info">
-                  ({{ alignment.distinct_sources_count.toLocaleString('en') }} distinct resources)
+                  ({{ linkset.distinct_sources_count.toLocaleString('en') }} distinct entities)
               </span>
             </div>
 
             <div>
-              <strong>Resources in target: </strong>
-              {{ alignment.targets_count ? alignment.targets_count.toLocaleString('en') : 0 }}
+              <strong>Entities in target: </strong>
+              {{ linkset.targets_count ? linkset.targets_count.toLocaleString('en') : 0 }}
 
               <span
-                  v-if="alignment.targets_count && alignment.distinct_targets_count && alignment.targets_count > alignment.distinct_targets_count"
+                  v-if="linkset.targets_count && linkset.distinct_targets_count && linkset.targets_count > linkset.distinct_targets_count"
                   class="font-italic text-info">
-                  ({{ alignment.distinct_targets_count.toLocaleString('en') }} distinct resources)
+                  ({{ linkset.distinct_targets_count.toLocaleString('en') }} distinct entities)
               </span>
             </div>
           </div>
 
           <div class="col-auto">
-            <div v-if="alignmentStatus === 'waiting'">
+            <div v-if="linksetStatus === 'waiting'">
               <strong>Request: </strong>
-              {{ alignment.requested_at | moment("MMMM Do YYYY, hh:mm") }}
+              {{ linkset.requested_at | moment("MMMM Do YYYY, hh:mm") }}
 
               <span class="font-italic">
-                (<duration :from="alignment.requested_at"/>)
+                (<duration :from="linkset.requested_at"/>)
               </span>
             </div>
 
-            <div v-else-if="alignmentStatus === 'downloading' || alignmentStatus === 'running'">
+            <div v-else-if="linksetStatus === 'downloading' || linksetStatus === 'running'">
               <strong>Start: </strong>
-              {{ alignment.processing_at | moment("MMMM Do YYYY, hh:mm") }}
+              {{ linkset.processing_at | moment("MMMM Do YYYY, hh:mm") }}
 
               <span class="font-italic">
-                (<duration :from="alignment.processing_at"/>)
+                (<duration :from="linkset.processing_at"/>)
               </span>
             </div>
 
-            <div v-else-if="alignment && alignment.finished_at">
+            <div v-else-if="linkset && linkset.finished_at">
               <strong>Matching duration: </strong>
-              <duration :from="alignment.processing_at" :until="alignment.finished_at"/>
+              <duration :from="linkset.processing_at" :until="linkset.finished_at"/>
             </div>
 
             <div v-if="clusteringStatus === 'waiting'">
@@ -148,24 +148,24 @@
     import {EventBus} from "../../../eventbus";
 
     export default {
-        name: "MatchStatus",
-        props: ['match'],
+        name: "Status",
+        props: ['linksetSpec'],
         data() {
             return {
                 refreshDownloadsInProgress: false,
             };
         },
         computed: {
-            alignment() {
-                return this.$root.alignments.find(alignment => alignment.alignment === this.match.id);
+            linkset() {
+                return this.$root.linksets.find(linkset => linkset.spec_id === this.linksetSpec.id);
             },
 
             clustering() {
-                return this.$root.clusterings.find(clustering => clustering.alignment === this.match.id);
+                return this.$root.clusterings.find(clustering => clustering.spec_id === this.linksetSpec.id);
             },
 
-            alignmentStatus() {
-                return this.alignment ? this.alignment.status : null;
+            linksetStatus() {
+                return this.linkset ? this.linkset.status : null;
             },
 
             clusteringStatus() {
@@ -173,13 +173,13 @@
             },
 
             running() {
-                return this.alignmentStatus === 'downloading' ||
-                    this.alignmentStatus === 'running' ||
-                    this.clusteringStatus === 'running';
+                return this.linksetStatus === 'downloading'
+                    || this.linksetStatus === 'running'
+                    || this.clusteringStatus === 'running';
             },
 
             failed() {
-                return this.alignmentStatus === 'failed' || this.clusteringStatus === 'failed';
+                return this.linksetStatus === 'failed' || this.clusteringStatus === 'failed';
             },
 
             status() {
@@ -189,17 +189,17 @@
                 if (this.clusteringStatus === 'running')
                     return this.clustering.status_message;
 
-                if (['waiting', 'downloading', 'failed'].includes(this.alignmentStatus))
-                    return `Alignment ${this.alignmentStatus}`;
+                if (['waiting', 'downloading', 'failed'].includes(this.linksetStatus))
+                    return `Matching ${this.linksetStatus}`;
 
-                if (this.alignmentStatus === 'running')
-                    return this.alignment.status_message;
+                if (this.linksetStatus === 'running')
+                    return this.linkset.status_message;
 
                 return null;
             },
 
             downloads() {
-                if (this.alignmentStatus !== 'downloading')
+                if (this.linksetStatus !== 'downloading')
                     return [];
 
                 if (!this.refreshDownloadsInProgress) {
@@ -208,9 +208,9 @@
                 }
 
                 const datasets = [];
-                [...this.match.sources, ...this.match.targets].forEach(resourceId => {
-                    const resource = this.$root.getResourceById(resourceId);
-                    const datasetId = resource.dataset.dataset_id;
+                [...this.linksetSpec.sources, ...this.linksetSpec.targets].forEach(entityTypeSelectionId => {
+                    const entityTypeSelection = this.$root.getEntityTypeSelectionById(entityTypeSelectionId);
+                    const datasetId = entityTypeSelection.dataset.dataset_id;
                     if (!datasets.includes(datasetId))
                         datasets.push(datasetId);
                 });

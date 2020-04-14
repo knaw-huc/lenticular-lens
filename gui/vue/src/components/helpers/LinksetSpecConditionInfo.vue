@@ -1,28 +1,28 @@
 <template>
   <div class="border shadow p-2">
-    <div v-for="resource in condition.sources" class="row align-items-center">
+    <div v-for="source in condition.sources" class="row align-items-center">
       <div class="col-auto">
-        <property :resource="$root.getResourceById(resource.resource)"
-                  :property="resource.property" :read-only="true" :small="true"/>
+        <property :entity-type-selection="$root.getEntityTypeSelectionById(source.entity_type_selection)"
+                  :property="source.property" :read-only="true" :small="true"/>
       </div>
 
-      <div class="col-auto font-weight-bold p-0" v-if="resource.transformers && resource.transformers.length > 0">
+      <div class="col-auto font-weight-bold p-0" v-if="source.transformers && source.transformers.length > 0">
         with transformer
-        <span v-html="resourceTransformersHumanReadable(resource)"/>
+        <span v-html="transformersHumanReadable(source)"/>
       </div>
     </div>
 
     <p class="font-weight-bold m-0">against</p>
 
-    <div v-for="resource in condition.targets" class="row align-items-center">
+    <div v-for="target in condition.targets" class="row align-items-center">
       <div class="col-auto">
-        <property :resource="$root.getResourceById(resource.resource)"
-                  :property="resource.property" :read-only="true" :small="true"/>
+        <property :entity-type-selection="$root.getEntityTypeSelectionById(target.entity_type_selection)"
+                  :property="target.property" :read-only="true" :small="true"/>
       </div>
 
-      <div class="col-auto font-weight-bold p-0" v-if="resource.transformers && resource.transformers.length > 0">
+      <div class="col-auto font-weight-bold p-0" v-if="target.transformers && target.transformers.length > 0">
         with transformer
-        <span v-html="resourceTransformersHumanReadable(resource)"/>
+        <span v-html="transformersHumanReadable(target)"/>
       </div>
     </div>
 
@@ -42,7 +42,7 @@
     import props from "../../utils/props";
 
     export default {
-        name: "AlignmentSpecConditionInfo",
+        name: "LinksetSpecConditionInfo",
         data() {
             return {
                 transformers: props.transformers,
@@ -50,7 +50,7 @@
             };
         },
         props: {
-            'condition': Object,
+            condition: Object,
         },
         computed: {
             methodValueTemplate() {
@@ -77,8 +77,8 @@
             },
         },
         methods: {
-            resourceTransformersHumanReadable(resource) {
-                return resource.transformers
+            transformersHumanReadable(entityTypeSelection) {
+                return entityTypeSelection.transformers
                     .map(transformer => {
                         const info = this.transformers[transformer.name];
                         const params = info.items

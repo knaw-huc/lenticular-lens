@@ -78,21 +78,23 @@ def job_update():
     job_id = request.json['job_id']
     job = Job(job_id)
 
-    (resources, mappings, lenses) = job.update_data({
+    (entity_type_selections, linkset_specs, lens_specs) = job.update_data({
         'job_title': request.json['job_title'],
         'job_description': request.json['job_description'],
         'job_link': request.json['job_link'],
-        'resources': request.json['resources'] if 'resources' in request.json else [],
-        'mappings': request.json['mappings'] if 'mappings' in request.json else [],
-        'lenses': request.json['lenses'] if 'lenses' in request.json else [],
+        'entity_type_selections':
+            request.json['entity_type_selections'] if 'entity_type_selections' in request.json else [],
+        'linkset_specs': request.json['linkset_specs'] if 'linkset_specs' in request.json else [],
+        'lens_specs': request.json['lens_specs'] if 'lens_specs' in request.json else [],
     })
 
     return jsonify({
         'result': 'updated',
         'job_id': job_id,
-        'resources': [resource['id'] for resource in resources if 'id' in resource],
-        'mappings': [mapping['id'] for mapping in mappings if 'id' in mapping],
-        'lenses': [lens['id'] for lens in lenses if 'id' in lens]
+        'entity_type_selections': [entity_type_selection['id'] for entity_type_selection in entity_type_selections
+                                   if 'id' in entity_type_selection],
+        'linkset_specs': [linkset_spec['id'] for linkset_spec in linkset_specs if 'id' in linkset_spec],
+        'lens_specs': [lens_spec['id'] for lens_spec in lens_specs if 'id' in lens_spec]
     })
 
 
@@ -104,9 +106,9 @@ def job_data(job):
             'job_title': job.data['job_title'],
             'job_description': job.data['job_description'],
             'job_link': job.data['job_link'],
-            'resources': job.data['resources_form_data'],
-            'mappings': job.data['mappings_form_data'],
-            'lenses': job.data['lenses_form_data'],
+            'entity_type_selections': job.data['entity_type_selections_form_data'],
+            'linkset_specs': job.data['linkset_specs_form_data'],
+            'lens_specs': job.data['lens_specs_form_data'],
             'created_at': job.data['created_at'],
             'updated_at': job.data['updated_at']
         })
@@ -114,10 +116,10 @@ def job_data(job):
     return abort(404)
 
 
-@app.route('/job/<job:job>/alignments')
-def job_alignments(job):
-    job_alignments = job.alignments
-    return jsonify(job_alignments if job_alignments else [])
+@app.route('/job/<job:job>/linksets')
+def job_linksets(job):
+    job_linksets = job.linksets
+    return jsonify(job_linksets if job_linksets else [])
 
 
 @app.route('/job/<job:job>/clusterings')
@@ -126,75 +128,75 @@ def job_clusterings(job):
     return jsonify(job_clusterings if job_clusterings else [])
 
 
-@app.route('/job/<job:job>/resource/<resource_label>')
-def resource_sample(job, resource_label):
+@app.route('/job/<job:job>/entity_type_selection/<label>')
+def entity_type_selection_sample(job, label):
     if request.args.get('total', default=False) == 'true':
-        return jsonify(job.get_resource_sample_total(resource_label))
+        return jsonify(job.get_entity_type_selection_sample_total(label))
 
-    return jsonify(job.get_resource_sample(resource_label,
-                                           invert=request.args.get('invert', default=False) == 'true',
-                                           limit=request.args.get('limit', type=int),
-                                           offset=request.args.get('offset', 0, type=int)))
+    return jsonify(job.get_entity_type_selection_sample(label,
+                                                        invert=request.args.get('invert', default=False) == 'true',
+                                                        limit=request.args.get('limit', type=int),
+                                                        offset=request.args.get('offset', 0, type=int)))
 
 
-@app.route('/job/<job:job>/run_alignment/<alignment>', methods=['POST'])
-def run_alignment(job, alignment):
+@app.route('/job/<job:job>/run_linkset/<id>', methods=['POST'])
+def run_linkset(job, id):
     try:
         restart = 'restart' in request.json and request.json['restart'] is True
-        job.run_alignment(alignment, restart)
+        job.run_linkset(id, restart)
         return jsonify({'result': 'ok'})
     except psycopg2.errors.UniqueViolation:
         return jsonify({'result': 'exists'})
 
 
-@app.route('/job/<job:job>/run_clustering/<alignment>', methods=['POST'])
-def run_clustering(job, alignment):
+@app.route('/job/<job:job>/run_clustering/<id>', methods=['POST'])
+def run_clustering(job, id):
     association_file = request.json['association_file']
     clustering_type = request.json.get('clustering_type', 'default')
-    job.run_clustering(alignment, association_file, clustering_type)
+    job.run_clustering(id, association_file, clustering_type)
     return jsonify({'result': 'ok'})
 
 
-@app.route('/job/<job:job>/matching_sql/<alignment>')
-def matching_sql(job, alignment):
+@app.route('/job/<job:job>/matching_sql/<id>')
+def matching_sql(job, id):
     from flask import Response
     from ll.job.matching_sql import MatchingSql
 
-    job_sql = MatchingSql(job, int(alignment))
+    job_sql = MatchingSql(job, int(id))
     return Response(job_sql.sql_string, mimetype='application/sql')
 
 
-@app.route('/job/<job:job>/kill_alignment/<alignment>', methods=['POST'])
-def kill_alignment(job, alignment):
-    job.kill_alignment(alignment)
+@app.route('/job/<job:job>/kill_linkset/<id>', methods=['POST'])
+def kill_linkset(job, id):
+    job.kill_linkset(id)
     return jsonify({'result': 'ok'})
 
 
-@app.route('/job/<job:job>/kill_clustering/<alignment>', methods=['POST'])
-def kill_clustering(job, alignment):
-    job.kill_clustering(alignment)
+@app.route('/job/<job:job>/kill_clustering/<id>', methods=['POST'])
+def kill_clustering(job, id):
+    job.kill_clustering(id)
     return jsonify({'result': 'ok'})
 
 
-@app.route('/job/<job:job>/alignment_totals/<type>/<alignment>')
-def linkset_totals(job, type, alignment):
-    return jsonify(job.get_links_totals(type, int(alignment), cluster_id=request.args.get('cluster_id')))
+@app.route('/job/<job:job>/links_totals/<type>/<id>')
+def links_totals(job, type, id):
+    return jsonify(job.get_links_totals(type, int(id), cluster_id=request.args.get('cluster_id')))
 
 
-@app.route('/job/<job:job>/alignment/<type>/<alignment>')
-def linkset(job, type, alignment):
+@app.route('/job/<job:job>/links/<type>/<id>')
+def links(job, type, id):
     cluster_id = request.args.get('cluster_id')
     validation_filter = validation_filter_helper(request.args.getlist('valid'))
 
-    links = [link for link in job.get_links(type, int(alignment), validation_filter=validation_filter,
+    links = [link for link in job.get_links(type, int(id), validation_filter=validation_filter,
                                             cluster_id=cluster_id, include_props=True,
                                             limit=request.args.get('limit', type=int),
                                             offset=request.args.get('offset', 0, type=int))]
     return jsonify(links)
 
 
-@app.route('/job/<job:job>/clusters/<alignment>')
-def clusters(job, alignment):
+@app.route('/job/<job:job>/clusters/<id>')
+def clusters(job, id):
     if request.args.get('association'):
         extended_data = []
         cycles_data = []
@@ -209,7 +211,7 @@ def clusters(job, alignment):
         cycles_data = []
 
     clusters = []
-    for cluster in job.get_clusters(int(alignment), include_props=True,
+    for cluster in job.get_clusters(int(id), include_props=True,
                                     limit=request.args.get('limit', type=int),
                                     offset=request.args.get('offset', 0, type=int)):
         clusters.append({
@@ -225,21 +227,21 @@ def clusters(job, alignment):
     return jsonify(clusters)
 
 
-@app.route('/job/<job:job>/validate/<type>/<alignment>', methods=['POST'])
-def validate_link(job, type, alignment):
+@app.route('/job/<job:job>/validate/<type>/<id>', methods=['POST'])
+def validate_link(job, type, id):
     source = request.json.get('source')
     target = request.json.get('target')
     valid = request.json.get('valid')
-    job.validate_link(type, int(alignment), source, target, valid)
+    job.validate_link(type, int(id), source, target, valid)
     return jsonify({'result': 'ok'})
 
 
-@app.route('/job/<job:job>/cluster/<alignment>/<cluster_id>/graph')
-def get_cluster_graph_data(job, alignment, cluster_id):
-    cluster_data = job.cluster(alignment, cluster_id=cluster_id)
-    clustering = job.clustering(alignment)
-    match = job.config.get_match_by_id(int(alignment))
-    properties = job.value_targets_for_match(match)
+@app.route('/job/<job:job>/cluster/<id>/<cluster_id>/graph')
+def get_cluster_graph_data(job, id, cluster_id):
+    cluster_data = job.cluster(id, cluster_id=cluster_id)
+    clustering = job.clustering(id)
+    match = job.get_linkset_spec_by_id(int(id))
+    properties = job.value_targets_for_properties(match.properties)
 
     specifications = {
         "data_store": "POSTGRESQL",
@@ -265,18 +267,18 @@ def get_cluster_graph_data(job, alignment, cluster_id):
     })
 
 
-@app.route('/job/<job:job>/export/<type>/<alignment>/csv')
-def export_to_csv(job, type, alignment):
+@app.route('/job/<job:job>/export/<type>/<id>/csv')
+def export_to_csv(job, type, id):
     stream = io.StringIO()
     writer = csv.writer(stream)
 
     writer.writerow(['Source URI', 'Target URI', 'Valid'])
-    for link in job.get_links(type, int(alignment),
+    for link in job.get_links(type, int(id),
                               validation_filter=validation_filter_helper(request.args.getlist('valid'))):
         writer.writerow([link['source'], link['target'], link['valid']])
 
     output = make_response(stream.getvalue())
-    output.headers['Content-Disposition'] = 'attachment; filename=' + job.job_id + '_' + type + '_' + alignment + '.csv'
+    output.headers['Content-Disposition'] = 'attachment; filename=' + job.job_id + '_' + type + '_' + id + '.csv'
     output.headers['Content-Type'] = 'text/csv'
 
     return output

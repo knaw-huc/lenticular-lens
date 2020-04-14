@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
 timbuctoo_worker_instances=5
-alignments_worker_instances=2
-clusterings_worker_instances=2
+linkset_worker_instances=2
+clustering_worker_instances=2
 
 . .env >/dev/null 2>&1
 
@@ -15,6 +15,6 @@ fi
 docker-compose up \
     --build \
     --scale timbuctoo_worker=${timbuctoo_worker_instances} \
-    --scale alignments_worker=${alignments_worker_instances} \
-    --scale clusterings_worker=${clusterings_worker_instances} \
+    --scale linkset_worker=${linkset_worker_instances} \
+    --scale clustering_worker=${clustering_worker_instances} \
     "$@"
