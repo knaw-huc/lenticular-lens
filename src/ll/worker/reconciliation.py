@@ -16,9 +16,10 @@ CLUSTER_SERIALISATION_DIR = ''
 
 
 class ReconciliationJob(WorkerJob):
-    def __init__(self, job_id, id, association_file):
+    def __init__(self, job_id, id, type, association_file):
         self._job_id = job_id
         self._id = id
+        self._type = type
         self._association_file = association_file
 
         self._job = JobLL(job_id)
@@ -39,23 +40,23 @@ class ReconciliationJob(WorkerJob):
         pass
 
     def watch_kill(self):
-        clustering_job = self._job.clustering(self._id)
+        clustering_job = self._job.clustering(self._id, self._type)
         if clustering_job['kill']:
             self.kill(reset=False)
 
     def on_kill(self, reset):
         job_data = {'status': 'waiting'} if reset else {'status': 'failed', 'status_message': 'Killed manually'}
-        self._job.update_clustering(self._id, job_data)
+        self._job.update_clustering(self._id, self._type, job_data)
 
     def on_exception(self):
         err_message = str(self._exception)
-        self._job.update_clustering(self._id, {'status': 'failed', 'status_message': err_message})
+        self._job.update_clustering(self._id, self._type, {'status': 'failed', 'status_message': err_message})
 
     def on_finish(self):
         with db_conn() as conn, conn.cursor() as cur:
             cur.execute('''
                 UPDATE clusterings
                 SET extended_count = %s, cycles_count = %s, status = %s, finished_at = now()
-                WHERE job_id = %s AND spec_id = %s
+                WHERE job_id = %s AND spec_id = %s AND spec_type = %s
             ''', (self._result['extended_clusters_count'], self._result['cycles_count'], 'done',
-                  self._job_id, self._id))
+                  self._job_id, self._id, self._type))

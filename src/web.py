@@ -3,7 +3,7 @@ import csv
 import psycopg2
 
 from flask import Flask, jsonify, request, abort, make_response
-from werkzeug.routing import BaseConverter
+from werkzeug.routing import BaseConverter, ValidationError
 
 from ll.job.data import Job, Validation
 
@@ -20,14 +20,19 @@ class JobConverter(BaseConverter):
     def to_python(self, job_id):
         return Job(job_id)
 
-    def to_url(self, job):
-        return job.job_id
+
+class TypeConverter(BaseConverter):
+    def to_python(self, type):
+        if type == 'linkset' or type == 'lens':
+            return type
+        raise ValidationError()
 
 
 config_logger()
 
 app = Flask(__name__)
 app.url_map.converters['job'] = JobConverter
+app.url_map.converters['type'] = TypeConverter
 
 
 @app.route('/')
@@ -122,10 +127,82 @@ def job_linksets(job):
     return jsonify(job_linksets if job_linksets else [])
 
 
+@app.route('/job/<job:job>/lenses')
+def job_lenses(job):
+    job_lenses = job.lenses
+    return jsonify(job_lenses if job_lenses else [])
+
+
 @app.route('/job/<job:job>/clusterings')
 def job_clusterings(job):
     job_clusterings = job.clusterings
     return jsonify(job_clusterings if job_clusterings else [])
+
+
+@app.route('/job/<job:job>/run_linkset/<int:id>', methods=['POST'])
+def run_linkset(job, id):
+    try:
+        restart = 'restart' in request.json and request.json['restart'] is True
+        job.run_linkset(id, restart)
+        return jsonify({'result': 'ok'})
+    except psycopg2.errors.UniqueViolation:
+        return jsonify({'result': 'exists'})
+
+
+@app.route('/job/<job:job>/run_lens/<int:id>', methods=['POST'])
+def run_lens(job, id):
+    try:
+        restart = 'restart' in request.json and request.json['restart'] is True
+        job.run_lens(id, restart)
+        return jsonify({'result': 'ok'})
+    except psycopg2.errors.UniqueViolation:
+        return jsonify({'result': 'exists'})
+
+
+@app.route('/job/<job:job>/run_clustering/<type:type>/<int:id>', methods=['POST'])
+def run_clustering(job, type, id):
+    association_file = request.json['association_file']
+    clustering_type = request.json.get('clustering_type', 'default')
+    job.run_clustering(id, type, association_file, clustering_type)
+    return jsonify({'result': 'ok'})
+
+
+@app.route('/job/<job:job>/sql/<type:type>/<int:id>')
+def sql(job, type, id):
+    from flask import Response
+    from ll.job.matching_sql import MatchingSql
+    from ll.job.lens_sql import LensSql
+
+    job_sql = MatchingSql(job, id) if type == 'linkset' else LensSql(job, id)
+    return Response(job_sql.sql_string, mimetype='application/sql')
+
+
+@app.route('/job/<job:job>/kill_linkset/<int:id>', methods=['POST'])
+def kill_linkset(job, id):
+    job.kill_linkset(id)
+    return jsonify({'result': 'ok'})
+
+
+@app.route('/job/<job:job>/kill_lens/<int:id>', methods=['POST'])
+def kill_lens(job, id):
+    job.kill_lens(id)
+    return jsonify({'result': 'ok'})
+
+
+@app.route('/job/<job:job>/kill_clustering/<type:type>/<int:id>', methods=['POST'])
+def kill_clustering(job, type, id):
+    job.kill_clustering(id, type)
+    return jsonify({'result': 'ok'})
+
+
+@app.route('/job/<job:job>/entity_type_selection_total/<label>')
+def entity_type_selection_total(job, label):
+    return jsonify(job.get_entity_type_selection_sample_total(label))
+
+
+@app.route('/job/<job:job>/links_totals/<type:type>/<int:id>')
+def links_totals(job, type, id):
+    return jsonify(job.get_links_totals(id, type, cluster_id=request.args.get('cluster_id')))
 
 
 @app.route('/job/<job:job>/entity_type_selection/<label>')
@@ -139,64 +216,20 @@ def entity_type_selection_sample(job, label):
                                                         offset=request.args.get('offset', 0, type=int)))
 
 
-@app.route('/job/<job:job>/run_linkset/<id>', methods=['POST'])
-def run_linkset(job, id):
-    try:
-        restart = 'restart' in request.json and request.json['restart'] is True
-        job.run_linkset(id, restart)
-        return jsonify({'result': 'ok'})
-    except psycopg2.errors.UniqueViolation:
-        return jsonify({'result': 'exists'})
-
-
-@app.route('/job/<job:job>/run_clustering/<id>', methods=['POST'])
-def run_clustering(job, id):
-    association_file = request.json['association_file']
-    clustering_type = request.json.get('clustering_type', 'default')
-    job.run_clustering(id, association_file, clustering_type)
-    return jsonify({'result': 'ok'})
-
-
-@app.route('/job/<job:job>/matching_sql/<id>')
-def matching_sql(job, id):
-    from flask import Response
-    from ll.job.matching_sql import MatchingSql
-
-    job_sql = MatchingSql(job, int(id))
-    return Response(job_sql.sql_string, mimetype='application/sql')
-
-
-@app.route('/job/<job:job>/kill_linkset/<id>', methods=['POST'])
-def kill_linkset(job, id):
-    job.kill_linkset(id)
-    return jsonify({'result': 'ok'})
-
-
-@app.route('/job/<job:job>/kill_clustering/<id>', methods=['POST'])
-def kill_clustering(job, id):
-    job.kill_clustering(id)
-    return jsonify({'result': 'ok'})
-
-
-@app.route('/job/<job:job>/links_totals/<type>/<id>')
-def links_totals(job, type, id):
-    return jsonify(job.get_links_totals(type, int(id), cluster_id=request.args.get('cluster_id')))
-
-
-@app.route('/job/<job:job>/links/<type>/<id>')
+@app.route('/job/<job:job>/links/<type:type>/<int:id>')
 def links(job, type, id):
     cluster_id = request.args.get('cluster_id')
     validation_filter = validation_filter_helper(request.args.getlist('valid'))
 
-    links = [link for link in job.get_links(type, int(id), validation_filter=validation_filter,
+    links = [link for link in job.get_links(id, type, validation_filter=validation_filter,
                                             cluster_id=cluster_id, include_props=True,
                                             limit=request.args.get('limit', type=int),
                                             offset=request.args.get('offset', 0, type=int))]
     return jsonify(links)
 
 
-@app.route('/job/<job:job>/clusters/<id>')
-def clusters(job, id):
+@app.route('/job/<job:job>/clusters/<type:type>/<int:id>')
+def clusters(job, type, id):
     if request.args.get('association'):
         extended_data = []
         cycles_data = []
@@ -211,7 +244,7 @@ def clusters(job, id):
         cycles_data = []
 
     clusters = []
-    for cluster in job.get_clusters(int(id), include_props=True,
+    for cluster in job.get_clusters(id, type, include_props=True,
                                     limit=request.args.get('limit', type=int),
                                     offset=request.args.get('offset', 0, type=int)):
         clusters.append({
@@ -227,21 +260,21 @@ def clusters(job, id):
     return jsonify(clusters)
 
 
-@app.route('/job/<job:job>/validate/<type>/<id>', methods=['POST'])
+@app.route('/job/<job:job>/validate/<type:type>/<int:id>', methods=['POST'])
 def validate_link(job, type, id):
     source = request.json.get('source')
     target = request.json.get('target')
     valid = request.json.get('valid')
-    job.validate_link(type, int(id), source, target, valid)
+    job.validate_link(id, type, source, target, valid)
     return jsonify({'result': 'ok'})
 
 
-@app.route('/job/<job:job>/cluster/<id>/<cluster_id>/graph')
-def get_cluster_graph_data(job, id, cluster_id):
-    cluster_data = job.cluster(id, cluster_id=cluster_id)
-    clustering = job.clustering(id)
-    match = job.get_linkset_spec_by_id(int(id))
-    properties = job.value_targets_for_properties(match.properties)
+@app.route('/job/<job:job>/cluster/<type:type>/<int:id>/<cluster_id>/graph')
+def get_cluster_graph_data(job, type, id, cluster_id):
+    cluster_data = job.cluster(id, type, cluster_id=cluster_id)
+    clustering = job.clustering(id, type)
+    spec = job.get_linkset_spec_by_id(id) if type == 'linkset' else job.get_lens_spec_by_id(id)
+    properties = job.value_targets_for_properties(spec.properties)
 
     specifications = {
         "data_store": "POSTGRESQL",
@@ -267,13 +300,13 @@ def get_cluster_graph_data(job, id, cluster_id):
     })
 
 
-@app.route('/job/<job:job>/export/<type>/<id>/csv')
+@app.route('/job/<job:job>/export/<type:type>/<int:id>/csv')
 def export_to_csv(job, type, id):
     stream = io.StringIO()
     writer = csv.writer(stream)
 
     writer.writerow(['Source URI', 'Target URI', 'Valid'])
-    for link in job.get_links(type, int(id),
+    for link in job.get_links(id, type,
                               validation_filter=validation_filter_helper(request.args.getlist('valid'))):
         writer.writerow([link['source'], link['target'], link['valid']])
 

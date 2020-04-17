@@ -1,8 +1,12 @@
 <template>
-  <sub-card class="linkset-spec-info" label="Linkset specifications">
-    <linkset-spec-group-info :method-group="linksetSpec.methods" :is-root="true">
+  <sub-card v-if="type === 'linkset'" class="spec-info" label="Linkset specifications">
+    <linkset-spec-group-info :method-group="spec.methods" :is-root="true">
       <p class="font-weight-bold mb-1">Matching</p>
     </linkset-spec-group-info>
+  </sub-card>
+
+  <sub-card v-else class="spec-info" label="Lens specifications">
+
   </sub-card>
 </template>
 
@@ -10,18 +14,19 @@
     import LinksetSpecGroupInfo from "./LinksetSpecGroupInfo";
 
     export default {
-        name: "LinksetSpec",
+        name: "SpecInfo",
         components: {
             LinksetSpecGroupInfo
         },
         props: {
-            linksetSpec: Object,
+            type: String,
+            spec: Object
         },
     };
 </script>
 
 <style>
-  .linkset-spec-info {
+  .spec-info {
     font-size: 0.875rem;
   }
 </style>

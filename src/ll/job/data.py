@@ -73,6 +73,12 @@ class Job:
             return cur.fetchall()
 
     @property
+    def lenses(self):
+        with db_conn() as conn, conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
+            cur.execute('SELECT * FROM lenses WHERE job_id = %s', (self.job_id,))
+            return cur.fetchall()
+
+    @property
     def clusterings(self):
         with db_conn() as conn, conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
             cur.execute('SELECT * FROM clusterings WHERE job_id = %s', (self.job_id,))
@@ -82,9 +88,13 @@ class Job:
         return fetch_one('SELECT * FROM linksets WHERE job_id = %s AND spec_id = %s',
                          (self.job_id, id), dict=True)
 
-    def clustering(self, id):
-        return fetch_one('SELECT * FROM clusterings WHERE job_id = %s AND spec_id = %s',
+    def lens(self, id):
+        return fetch_one('SELECT * FROM lenses WHERE job_id = %s AND spec_id = %s',
                          (self.job_id, id), dict=True)
+
+    def clustering(self, id, type):
+        return fetch_one('SELECT * FROM clusterings WHERE job_id = %s AND spec_id = %s AND spec_type = %s',
+                         (self.job_id, id, type), dict=True)
 
     def update_data(self, data):
         if 'entity_type_selections' in data and 'linkset_specs' in data:
@@ -125,28 +135,52 @@ class Job:
                 id
             ))
 
-    def update_clustering(self, id, data):
+    def update_lens(self, id, data):
         with db_conn() as conn, conn.cursor() as cur:
-            cur.execute(sql.SQL('UPDATE clusterings SET (%s) = ROW %s WHERE job_id = %s AND spec_id = %s'), (
+            cur.execute(sql.SQL('UPDATE lenses SET (%s) = ROW %s WHERE job_id = %s AND spec_id = %s'), (
                 AsIs(', '.join(data.keys())),
                 tuple(data.values()),
                 self.job_id,
                 id
             ))
 
+    def update_clustering(self, id, type, data):
+        with db_conn() as conn, conn.cursor() as cur:
+            cur.execute(sql.SQL('UPDATE clusterings SET (%s) = ROW %s '
+                                'WHERE job_id = %s AND spec_id = %s AND spec_type = %s'), (
+                            AsIs(', '.join(data.keys())),
+                            tuple(data.values()),
+                            self.job_id,
+                            id,
+                            type
+                        ))
+
     def run_linkset(self, id, restart=False):
         with db_conn() as conn, conn.cursor() as cur:
             if restart:
                 cur.execute(sql.SQL("DELETE FROM linksets WHERE job_id = %s AND spec_id = %s"),
                             (self.job_id, id))
-                cur.execute(sql.SQL("DELETE FROM clusterings WHERE job_id = %s AND spec_id = %s"),
+                cur.execute(sql.SQL("DELETE FROM clusterings "
+                                    "WHERE job_id = %s AND spec_id = %s AND spec_type = 'linkset'"),
                             (self.job_id, id))
 
             cur.execute(sql.SQL("INSERT INTO linksets (job_id, spec_id, status, kill, requested_at) "
                                 "VALUES (%s, %s, %s, false, now())"), (self.job_id, id, 'waiting'))
 
-    def run_clustering(self, id, association_file, clustering_type='default'):
-        clustering = self.clustering(id)
+    def run_lens(self, id, restart=False):
+        with db_conn() as conn, conn.cursor() as cur:
+            if restart:
+                cur.execute(sql.SQL("DELETE FROM lenses WHERE job_id = %s AND spec_id = %s"),
+                            (self.job_id, id))
+                cur.execute(sql.SQL("DELETE FROM clusterings "
+                                    "WHERE job_id = %s AND spec_id = %s AND spec_type = 'lens'"),
+                            (self.job_id, id))
+
+            cur.execute(sql.SQL("INSERT INTO lenses (job_id, spec_id, status, kill, requested_at) "
+                                "VALUES (%s, %s, %s, false, now())"), (self.job_id, id, 'waiting'))
+
+    def run_clustering(self, id, type, association_file, clustering_type='default'):
+        clustering = self.clustering(type, id)
 
         with db_conn() as conn, conn.cursor() as cur:
             if clustering:
@@ -154,27 +188,41 @@ class Job:
                     UPDATE clusterings 
                     SET association_file = %s, status = %s, 
                         kill = false, requested_at = now(), processing_at = null, finished_at = null
-                    WHERE job_id = %s AND spec_id = %s
-                """), (association_file, 'waiting', self.job_id, id))
+                    WHERE job_id = %s AND spec_id = %s AND spec_type = %s
+                """), (association_file, 'waiting', self.job_id, id, type))
             else:
                 cur.execute(sql.SQL("""
-                    INSERT INTO clusterings (job_id, spec_id, clustering_type, association_file, 
+                    INSERT INTO clusterings (job_id, spec_id, spec_type, clustering_type, association_file, 
                                              status, kill, requested_at) 
-                    VALUES (%s, %s, %s, %s, %s, false, now())
-                """), (self.job_id, id, clustering_type, association_file, 'waiting'))
+                    VALUES (%s, %s, %s, %s, %s, %s, false, now())
+                """), (self.job_id, id, type, clustering_type, association_file, 'waiting'))
 
     def kill_linkset(self, id):
         with db_conn() as conn, conn.cursor() as cur:
             cur.execute('UPDATE linksets SET kill = true WHERE job_id = %s AND spec_id = %s',
                         (self.job_id, id))
 
-    def kill_clustering(self, id):
+    def kill_lens(self, id):
         with db_conn() as conn, conn.cursor() as cur:
-            cur.execute('UPDATE clusterings SET kill = true WHERE job_id = %s AND spec_id = %s',
+            cur.execute('UPDATE lenses SET kill = true WHERE job_id = %s AND spec_id = %s',
                         (self.job_id, id))
 
-    def validate_link(self, type, id, source_uri, target_uri, valid):
-        linksets = self.get_lens_spec_by_id(id).linksets if type == 'lens' else [id]
+    def kill_clustering(self, id, type):
+        with db_conn() as conn, conn.cursor() as cur:
+            cur.execute('UPDATE clusterings SET kill = true WHERE job_id = %s AND spec_id = %s AND spec_type = %s',
+                        (self.job_id, id, type))
+
+    def validate_link(self, id, type, source_uri, target_uri, valid):
+        linksets = [] if type == 'lens' else [id]
+        if type == 'lens':
+            lenses = [id]
+            while lenses:
+                lens = self.get_lens_spec_by_id(lenses[0])
+                linksets += lens.linksets
+
+                lenses += lens.lenses
+                lenses.remove(lens.id)
+
         with db_conn() as conn, conn.cursor() as cur:
             for id in linksets:
                 query = sql.SQL('UPDATE {} SET valid = %s WHERE source_uri = %s AND target_uri = %s') \
@@ -182,17 +230,23 @@ class Job:
                 cur.execute(query, (valid, source_uri, target_uri))
 
     def properties_for_entity_type_selection(self, entity_type_selection, downloaded_only=True):
-        return self.properties(entity_type_selection.dataset_id, entity_type_selection.properties, None,
-                               downloaded_only)
+        return self._properties(entity_type_selection.dataset_id, entity_type_selection.properties,
+                                None, downloaded_only)
 
     def value_targets_for_properties(self, properties, downloaded_only=True):
-        return self.value_targets(properties, downloaded_only)
+        return self._value_targets(properties, downloaded_only)
 
     def linkset_schema_name(self, id):
         return 'job_' + self.job_id + '_' + str(id)
 
     def linkset_table_name(self, id):
         return 'linkset_' + self.job_id + '_' + str(id)
+
+    def lens_table_name(self, id):
+        return 'lens_' + self.job_id + '_' + str(id)
+
+    def lens_view_name(self, id):
+        return 'lens_view_' + self.job_id + '_' + str(id)
 
     def entity_type_selections_required_for_linkset(self, id):
         linkset_spec = self.get_linkset_spec_by_id(id)
@@ -226,10 +280,10 @@ class Job:
 
         return False
 
-    def get_lens_spec_by_id(self, id):
-        for lens_spec in self.lens_specs:
-            if lens_spec.id == id:
-                return lens_spec
+    def get_entity_type_selection_by_label(self, label):
+        for entity_type_selection in self.entity_type_selections:
+            if entity_type_selection.label == label:
+                return entity_type_selection
 
         return None
 
@@ -240,10 +294,10 @@ class Job:
 
         return None
 
-    def get_entity_type_selection_by_label(self, label):
-        for entity_type_selection in self.entity_type_selections:
-            if entity_type_selection.label == label:
-                return entity_type_selection
+    def get_lens_spec_by_id(self, id):
+        for lens_spec in self.lens_specs:
+            if lens_spec.id == id:
+                return lens_spec
 
         return None
 
@@ -277,12 +331,10 @@ class Job:
 
         return fetch_one(query, dict=True)
 
-    def get_links(self, type, id, validation_filter=Validation.ALL, cluster_id=None, uri=None,
+    def get_links(self, id, type, validation_filter=Validation.ALL, cluster_id=None, uri=None,
                   limit=None, offset=0, include_props=False):
-        linkset = sql.Identifier(self.linkset_table_name(id))
-        if type == 'lens':
-            lens = self.get_lens_spec_by_id(id)
-            linkset = sql.SQL('(\n{sql}\n) AS x').format(sql=lens.joins_sql)
+        view_name = sql.Identifier(self.linkset_table_name(id)) \
+            if type == 'linkset' else sql.Identifier(self.lens_table_name(id))
 
         validation_filter_sql = []
         if validation_filter < Validation.ALL and Validation.ACCEPTED in validation_filter:
@@ -306,21 +358,28 @@ class Job:
         where_sql = sql.SQL('WHERE {}').format(sql.SQL(' AND ').join(conditions)) \
             if len(conditions) > 0 else sql.SQL('')
 
+        joins_sql = sql.SQL('LEFT JOIN {lens_view} AS lens_view '
+                            'ON links.source_uri = lens_view.source_uri '
+                            'AND links.target_uri = lens_view.target_uri') \
+            .format(lens_view=sql.Identifier(self.lens_view_name(id))) if type == 'lens' else None
+
         values = None
         if include_props:
-            properties = self.get_lens_spec_by_id(id).properties if type == 'lens' \
-                else self.get_linkset_spec_by_id(id).properties
+            properties = self.get_lens_spec_by_id(id).properties \
+                if type == 'lens' else self.get_linkset_spec_by_id(id).properties
             targets = self.value_targets_for_properties(properties)
             if targets:
-                initial_join = get_linkset_join_sql(linkset, where_sql, limit, offset)
+                initial_join = get_linkset_join_sql(view_name, joins_sql, where_sql, limit, offset)
                 queries = get_property_values_queries(targets, initial_join=initial_join)
                 values = get_property_values(queries, dict=True)
 
         with db_conn() as conn, conn.cursor(name=uuid4().hex) as cur:
-            cur.execute(sql.SQL('SELECT source_uri, target_uri, link_order, similarity, cluster_id, valid '
-                                'FROM {linkset} {where_sql} '
+            cur.execute(sql.SQL('SELECT links.source_uri, links.target_uri, link_order, similarity, cluster_id, valid '
+                                'FROM {view_name} AS links '
+                                '{joins_sql} {where_sql} '
                                 'ORDER BY sort_order ASC {limit_offset}').format(
-                linkset=linkset,
+                view_name=view_name,
+                joins_sql=joins_sql if joins_sql else sql.SQL(''),
                 where_sql=where_sql,
                 limit_offset=sql.SQL(limit_offset_sql)
             ))
@@ -342,11 +401,9 @@ class Job:
                         'valid': link[5]
                     }
 
-    def get_links_totals(self, type, id, cluster_id=None, uri=None):
-        linkset = sql.Identifier(self.linkset_table_name(id))
-        if type == 'lens':
-            lens = self.get_lens_spec_by_id(id)
-            linkset = sql.SQL('(\n{sql}\n) AS x').format(sql=lens.joins_sql)
+    def get_links_totals(self, id, type, cluster_id=None, uri=None):
+        view_name = sql.Identifier(self.linkset_table_name(id)) \
+            if type == 'linkset' else sql.Identifier(self.lens_table_name(id))
 
         conditions = []
         if cluster_id:
@@ -357,16 +414,25 @@ class Job:
         where_sql = sql.SQL('WHERE {}').format(sql.SQL(' AND ').join(conditions)) \
             if len(conditions) > 0 else sql.SQL('')
 
+        joins_sql = sql.SQL('LEFT JOIN {lens_view} AS lens_view '
+                            'ON links.source_uri = lens_view.source_uri '
+                            'AND links.target_uri = lens_view.target_uri') \
+            .format(lens_view=sql.Identifier(self.lens_view_name(id))) if type == 'lens' else None
+
         with db_conn() as conn, conn.cursor() as cur:
             cur.execute(sql.SQL('SELECT valid, count(*) AS valid_count '
-                                'FROM {linkset} {where_sql} '
-                                'GROUP BY valid')
-                        .format(linkset=linkset, where_sql=where_sql))
+                                'FROM {view_name} AS links '
+                                '{joins_sql} {where_sql} '
+                                'GROUP BY valid').format(
+                view_name=view_name,
+                joins_sql=joins_sql if joins_sql else sql.SQL(''),
+                where_sql=where_sql
+            ))
 
             return {row[0]: row[1] for row in cur.fetchall()}
 
-    def get_clusters(self, id, limit=None, offset=0, include_props=False):
-        linkset_table = self.linkset_table_name(id)
+    def get_clusters(self, id, type, limit=None, offset=0, include_props=False):
+        linkset_table = self.linkset_table_name(id) if type == 'linkset' else self.lens_table_name(id)
         limit_offset_sql = get_pagination_sql(limit, offset)
         nodes_sql = ', ARRAY_AGG(DISTINCT nodes.uri) AS nodes_arr' if include_props else ''
 
@@ -426,12 +492,12 @@ class Job:
                         } for key, cluster_value in cluster_values.items()] if values else None
                     }
 
-    def cluster(self, id, cluster_id=None, uri=None):
+    def cluster(self, id, type, cluster_id=None, uri=None):
         all_links = []
         strengths = {}
         nodes = []
 
-        for link in self.get_links('match', id, cluster_id=cluster_id, uri=uri):
+        for link in self.get_links(id, type, cluster_id=cluster_id, uri=uri):
             source = '<' + link['source'] + '>'
             target = '<' + link['target'] + '>'
 
@@ -449,7 +515,7 @@ class Job:
         return {'links': all_links, 'strengths': strengths, 'nodes': nodes}
 
     @staticmethod
-    def value_targets(properties, downloaded_only=True):
+    def _value_targets(properties, downloaded_only=True):
         value_targets = []
         downloaded = Collection.download_status()['downloaded']
 
@@ -460,8 +526,8 @@ class Job:
             for data_of_entity in prop['data']:
                 entity_type = data_of_entity['entity_type']
 
-                if not downloaded_only or Job.is_downloaded(downloaded, graph, entity_type):
-                    new_properties = Job.properties(graph, data_of_entity['properties'], downloaded, downloaded_only)
+                if not downloaded_only or Job._is_downloaded(downloaded, graph, entity_type):
+                    new_properties = Job._properties(graph, data_of_entity['properties'], downloaded, downloaded_only)
                     if len(new_properties) > 0:
                         new_graph_data.append({'entity_type': entity_type, 'properties': new_properties})
 
@@ -471,7 +537,7 @@ class Job:
         return value_targets
 
     @staticmethod
-    def properties(graph, properties, downloaded=None, downloaded_only=True):
+    def _properties(graph, properties, downloaded=None, downloaded_only=True):
         downloaded = Collection.download_status()['downloaded'] if downloaded is None else downloaded
 
         new_properties = []
@@ -479,12 +545,12 @@ class Job:
             props = [prop for prop in props if prop != '__value__' and prop != '']
 
             if len(props) > 0 and (not downloaded_only or len(props) == 1
-                                   or all(Job.is_downloaded(downloaded, graph, entity) for entity in props[1::2])):
+                                   or all(Job._is_downloaded(downloaded, graph, entity) for entity in props[1::2])):
                 new_properties.append(props)
 
         return new_properties
 
     @staticmethod
-    def is_downloaded(downloaded, dataset_id, collection_id):
+    def _is_downloaded(downloaded, dataset_id, collection_id):
         return any(download['dataset_id'] == dataset_id and download['collection_id'] == collection_id
                    for download in downloaded)

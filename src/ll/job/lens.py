@@ -16,12 +16,20 @@ class Lens:
         return self._specs
 
     @property
-    def joins_sql(self):
-        return self.specs.joins_sql
+    def select_sql(self):
+        return self.specs.select_sql
+
+    @property
+    def select_validity_sql(self):
+        return self.specs.select_validity_sql
 
     @property
     def linksets(self):
         return self.specs.linksets
+
+    @property
+    def lenses(self):
+        return self.specs.lenses
 
     @property
     def id(self):

@@ -3,6 +3,7 @@ export default {
         return {
             job: null,
             linksets: [],
+            lenses: [],
             clusterings: [],
             entityTypeSelections: [],
             linksetSpecs: [],
@@ -182,68 +183,13 @@ export default {
                 this.entityTypeSelections = entityTypeSelections;
             }
 
-            if (this.job.linkset_specs) {
-                // TODO: temp
-                this.job.linkset_specs.forEach(linksetSpec => {
-                    function renameConditions(group) {
-                        if (group.hasOwnProperty('sources') && group.hasOwnProperty('targets')) {
-                            group.sources = group.sources.map(source => {
-                                if (source.hasOwnProperty('resource'))
-                                    return {
-                                        entity_type_selection: source.resource,
-                                        property: source.property,
-                                        transformers: source.transformers
-                                    };
-
-                                return source;
-                            });
-
-                            group.targets = group.targets.map(target => {
-                                if (target.hasOwnProperty('resource'))
-                                    return {
-                                        entity_type_selection: target.resource,
-                                        property: target.property,
-                                        transformers: target.transformers
-                                    };
-
-                                return target;
-                            });
-                        }
-                        else if (group.hasOwnProperty('conditions'))
-                            group.conditions.forEach(condition => renameConditions(condition));
-                    }
-
-                    renameConditions(linksetSpec.methods);
-
-                    if (linksetSpec.hasOwnProperty('match_against'))
-                        delete linksetSpec.match_against;
-
-                    linksetSpec.properties.forEach(prop => {
-                        if (prop.hasOwnProperty('resource')) {
-                            prop.entity_type_selection = prop.resource;
-                            delete prop.resource;
-                        }
-                    });
-                });
-
+            if (this.job.linkset_specs)
                 this.linksetSpecs = copy(this.job.linkset_specs);
-            }
 
-            if (this.job.lens_specs) {
-                // TODO: temp
-                this.job.lens_specs.forEach(lensSpec => {
-                    lensSpec.properties.forEach(prop => {
-                        if (prop.hasOwnProperty('resource')) {
-                            prop.entity_type_selection = prop.resource;
-                            delete prop.resource;
-                        }
-                    });
-                });
-
+            if (this.job.lens_specs)
                 this.lensSpecs = copy(this.job.lens_specs);
-            }
 
-            await Promise.all([this.loadLinksets(), this.loadClusterings()]);
+            await Promise.all([this.loadLinksets(), this.loadLenses(), this.loadClusterings()]);
         },
 
         async loadLinksets() {
@@ -256,6 +202,16 @@ export default {
             this.linksets = linksets;
         },
 
+        async loadLenses() {
+            const lenses = await callApi(`/job/${this.job.job_id}/lenses`);
+            lenses.forEach(lens => {
+                lens.requested_at = lens.requested_at ? new Date(lens.requested_at) : null;
+                lens.processing_at = lens.processing_at ? new Date(lens.processing_at) : null;
+                lens.finished_at = lens.finished_at ? new Date(lens.finished_at) : null;
+            });
+            this.lenses = lenses;
+        },
+
         async loadClusterings() {
             const clusterings = await callApi(`/job/${this.job.job_id}/clusterings`);
             clusterings.forEach(clustering => {
@@ -264,24 +220,6 @@ export default {
                 clustering.finished_at = clustering.finished_at ? new Date(clustering.finished_at) : null;
             });
             this.clusterings = clusterings;
-        },
-
-        async startDownload(datasetId, collectionId, graphqlEndpoint, hsid) {
-            const params = [`dataset_id=${datasetId}`, `collection_id=${collectionId}`, `endpoint=${graphqlEndpoint}`];
-            if (hsid) params.push(`hsid=${hsid}`);
-
-            return callApi(`/download?${params.join('&')}`);
-        },
-
-        async getEntityTypeSelectionSample(label, total = false, invert = false,
-                                           limit = undefined, offset = 0) {
-            const params = [];
-            if (total) params.push(`total=true`);
-            if (!total && invert) params.push(`invert=${invert}`);
-            if (!total && limit) params.push(`limit=${limit}`);
-            if (!total && offset) params.push(`offset=${offset}`);
-
-            return callApi(`/job/${this.job.job_id}/entity_type_selection/${label}?${params.join('&')}`);
         },
 
         async createJob(inputs) {
@@ -298,8 +236,13 @@ export default {
             return callApi(`/job/${this.job.job_id}/run_linkset/${id}`, {restart});
         },
 
-        async runClustering(id, associationFile) {
-            return callApi(`/job/${this.job.job_id}/run_clustering/${id}`,
+        async runLens(id, restart) {
+            await this.submit();
+            return callApi(`/job/${this.job.job_id}/run_lens/${id}`, {restart});
+        },
+
+        async runClustering(type, id, associationFile) {
+            return callApi(`/job/${this.job.job_id}/run_clustering/${type}/${id}`,
                 {association_file: associationFile});
         },
 
@@ -307,19 +250,36 @@ export default {
             return callApi(`/job/${this.job.job_id}/kill_linkset/${id}`, {});
         },
 
-        async killClustering(id) {
-            return callApi(`/job/${this.job.job_id}/kill_clustering/${id}`, {});
+        async killLens(id) {
+            return callApi(`/job/${this.job.job_id}/kill_lens/${id}`, {});
         },
 
-        async getLinksetTotals(type, id, clusterId = undefined) {
+        async killClustering(type, id) {
+            return callApi(`/job/${this.job.job_id}/kill_clustering/${type}/${id}`, {});
+        },
+
+        async getEntityTypeSelectionSampleTotal(label) {
+            return callApi(`/job/${this.job.job_id}/entity_type_selection_total/${label}`);
+        },
+
+        async getEntityTypeSelectionSample(label, invert = false, limit = undefined, offset = 0) {
+            const params = [];
+            if (invert) params.push(`invert=${invert}`);
+            if (limit) params.push(`limit=${limit}`);
+            if (offset) params.push(`offset=${offset}`);
+
+            return callApi(`/job/${this.job.job_id}/entity_type_selection/${label}?${params.join('&')}`);
+        },
+
+        async getLinksTotals(type, id, clusterId = undefined) {
             const params = [];
             if (clusterId) params.push(`cluster_id=${clusterId}`);
 
             return callApi(`/job/${this.job.job_id}/links_totals/${type}/${id}?${params.join('&')}`);
         },
 
-        async getLinkset(type, id, accepted, rejected, notValidated, mixed, clusterId = undefined,
-                         limit = undefined, offset = 0) {
+        async getLinks(type, id, accepted, rejected, notValidated, mixed, clusterId = undefined,
+                       limit = undefined, offset = 0) {
             const params = [];
             if (accepted) params.push('valid=accepted');
             if (rejected) params.push('valid=rejected');
@@ -332,23 +292,23 @@ export default {
             return callApi(`/job/${this.job.job_id}/links/${type}/${id}?${params.join('&')}`);
         },
 
-        async getClusters(id, association, limit = undefined, offset = 0) {
+        async getClusters(type, id, association, limit = undefined, offset = 0) {
             const params = [];
             if (association) params.push(`association=${association}`);
             if (limit) params.push(`limit=${limit}`);
             if (offset) params.push(`offset=${offset}`);
 
-            return callApi(`/job/${this.job.job_id}/clusters/${id}?${params.join('&')}`);
+            return callApi(`/job/${this.job.job_id}/clusters/${type}/${id}?${params.join('&')}`);
         },
 
-        async getClusterGraphs(id, clusterId, getCluster = undefined, getClusterCompact = undefined,
-                               getReconciliation = undefined) {
+        async getClusterGraphs(type, id, clusterId, getCluster = undefined,
+                               getClusterCompact = undefined, getReconciliation = undefined) {
             const params = [];
             if (getCluster !== undefined) params.push(`get_cluster=${getCluster}`);
             if (getClusterCompact !== undefined) params.push(`get_cluster_compact=${getClusterCompact}`);
             if (getReconciliation !== undefined) params.push(`get_reconciliation=${getReconciliation}`);
 
-            return callApi(`/job/${this.job.job_id}/cluster/${id}/${clusterId}/graph?${params.join('&')}`);
+            return callApi(`/job/${this.job.job_id}/cluster/${type}/${id}/${clusterId}/graph?${params.join('&')}`);
         },
 
         async validateLink(type, id, source, target, valid) {
@@ -376,6 +336,13 @@ export default {
 
                 this.datasets[graphqlEndpoint] = datasetsPublished;
             }
+        },
+
+        async startDownload(datasetId, collectionId, graphqlEndpoint, hsid) {
+            const params = [`dataset_id=${datasetId}`, `collection_id=${collectionId}`, `endpoint=${graphqlEndpoint}`];
+            if (hsid) params.push(`hsid=${hsid}`);
+
+            return callApi(`/download?${params.join('&')}`);
         },
 
         async loadDownloadsInProgress() {

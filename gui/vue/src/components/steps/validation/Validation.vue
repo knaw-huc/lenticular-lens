@@ -4,13 +4,14 @@
     <template v-slot:columns>
       <div class="col">
         <sub-card :is-first="true" class="small">
-          <div v-if="linkset" class="row justify-content-center">
+          <div class="row justify-content-center">
             <div class="col-auto">
               <div>
                 <strong>Links: </strong>
-                {{ linkset.links_count.toLocaleString('en') }}
+                {{ isLinkset ? linkset.links_count.toLocaleString('en') : lens.links_count.toLocaleString('en') }}
 
-                <span v-if="linkset.links_count > linkset.distinct_links_count" class="font-italic text-info">
+                <span v-if="isLinkset && linkset.links_count > linkset.distinct_links_count"
+                      class="font-italic text-info">
                   ({{ linkset.distinct_links_count.toLocaleString('en') }} distinct links)
                 </span>
               </div>
@@ -20,7 +21,7 @@
               </div>
             </div>
 
-            <div class="col-auto">
+            <div v-if="isLinkset" class="col-auto">
               <div>
                 <strong>Entities in source: </strong>
                 {{ linkset.sources_count.toLocaleString('en') }}
@@ -65,10 +66,10 @@
             <div class="col-auto">
               <div class="btn-toolbar" role="toolbar" aria-label="Toolbar">
                 <div class="btn-group btn-group-toggle mr-4">
-                  <label v-if="linkset" class="btn btn-secondary btn-sm" v-bind:class="{'active': showInfo}">
+                  <label class="btn btn-secondary btn-sm" v-bind:class="{'active': showInfo}">
                     <input type="checkbox" autocomplete="off" v-model="showInfo" @change="updateShow"/>
                     <fa-icon icon="info-circle"/>
-                    Show linkset specs
+                    Show {{ type }} specs
                   </label>
 
                   <label class="btn btn-secondary btn-sm" v-bind:class="{'active': showPropertySelection}">
@@ -151,7 +152,7 @@
           </div>
         </sub-card>
 
-        <linkset-spec v-if="isLinkset && showInfo" :linksetSpec="spec"/>
+        <spec-info v-if="showInfo" :type="type" :spec="spec"/>
 
         <sub-card v-if="showPropertySelection" id="properties-card" type="properties" label="Property selection"
                   :has-margin-auto="true" :has-columns="true">
@@ -234,7 +235,8 @@
 
     <cluster-visualization
         v-if="showClusters && clustering && clusterIdSelected && hasProperties"
-        :linkset-id="spec.id"
+        :type="type"
+        :spec-id="spec.id"
         :cluster="selectedCluster"
         :association="clustering.association"
         ref="visualization"/>
@@ -273,7 +275,7 @@
 
     import Properties from "../../helpers/Properties";
     import PropertySelection from "../../helpers/PropertySelection";
-    import LinksetSpec from "../../helpers/LinksetSpec";
+    import SpecInfo from "../../helpers/SpecInfo";
 
     import Link from "./Link";
     import Cluster from "./Cluster";
@@ -285,7 +287,7 @@
             InfiniteLoading,
             Properties,
             PropertySelection,
-            LinksetSpec,
+            SpecInfo,
             LinkComponent: Link,
             Cluster,
             ClusterVisualization,
@@ -349,12 +351,17 @@
                     : null;
             },
 
+            lens() {
+                return this.isLens
+                    ? this.$root.lenses.find(lens => lens.spec_id === this.spec.id)
+                    : null;
+            },
+
             clustering() {
-                if (this.isLinkset) {
-                    const clustering = this.$root.clusterings.find(clustering => clustering.spec_id === this.spec.id);
-                    if (clustering && clustering.status === 'done')
-                        return clustering;
-                }
+                const clustering = this.$root.clusterings.find(clustering =>
+                    clustering.spec_type === this.type && clustering.spec_id === this.spec.id);
+                if (clustering && clustering.status === 'done')
+                    return clustering;
 
                 return null;
             },
@@ -447,7 +454,7 @@
                 this.loadingTotals = true;
 
                 const clusterId = this.showClusterLinks ? this.clusterIdSelected : undefined;
-                const totals = await this.$root.getLinksetTotals(this.type, this.spec.id, clusterId);
+                const totals = await this.$root.getLinksTotals(this.type, this.spec.id, clusterId);
 
                 if (totals) {
                     this.acceptedLinks = totals.accepted || 0;
@@ -466,7 +473,7 @@
                 this.loadingLinks = true;
 
                 const clusterId = this.showClusterLinks ? this.clusterIdSelected : undefined;
-                const links = await this.$root.getLinkset(this.type, this.spec.id,
+                const links = await this.$root.getLinks(this.type, this.spec.id,
                     this.showAcceptedLinks, this.showRejectedLinks, this.showNotValidatedLinks, this.showMixedLinks,
                     clusterId, 50, this.links.length);
 
@@ -492,7 +499,7 @@
                 this.loadingClusters = true;
 
                 const clusters = await this.$root.getClusters(
-                    this.spec.id, this.clustering.association, 5, this.clusters.length);
+                    this.type, this.spec.id, this.clustering.association, 5, this.clusters.length);
 
                 if (clusters !== null)
                     this.clusters.push(...clusters);

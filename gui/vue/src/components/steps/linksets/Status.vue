@@ -161,7 +161,8 @@
             },
 
             clustering() {
-                return this.$root.clusterings.find(clustering => clustering.spec_id === this.linksetSpec.id);
+                return this.$root.clusterings.find(clustering =>
+                    clustering.spec_type === 'linkset' && clustering.spec_id === this.linksetSpec.id);
             },
 
             linksetStatus() {

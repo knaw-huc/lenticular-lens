@@ -3,8 +3,8 @@ import time
 
 from psycopg2 import sql as psycopg2_sql, ProgrammingError
 
-from ll.job.matching_sql import MatchingSql
 from ll.job.data import Job
+from ll.job.matching_sql import MatchingSql
 
 from ll.worker.job import WorkerJob
 from ll.util.config_db import db_conn

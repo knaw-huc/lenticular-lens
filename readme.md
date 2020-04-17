@@ -169,9 +169,18 @@ _Example: `/job/d697ea3869422ce3c7cc1889264d03c7`_
 **URL**: `/job/<job_id>/linksets`\
 **Method**: `GET`
 
-Returns the details of all linksets jobs with the given `job_id`.
+Returns the details of all linksets with the given `job_id`.
 
 _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/linksets`_
+
+---
+
+**URL**: `/job/<job_id>/lenses`\
+**Method**: `GET`
+
+Returns the details of all lenses with the given `job_id`.
+
+_Example: `/job/d697ea3869422ce3c7cc1889264d03c7/lenses`_
 
 ---
 
@@ -195,15 +204,27 @@ _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/run_linkset/0`_
 
 ---
 
-**URL**: `/job/<job_id>/run_clustering/<linkset>`\
+**URL**: `/job/<job_id>/run_lens/<lens>`\
+**Method**: `POST`\
+**JSON**: `restart`
+
+Start a lens process for the given `lens` of a specific `job_id`. 
+Specify `restart` to restart the process.
+
+_Example: `/job/d697ea3869422ce3c7cc1889264d03c7/run_lens/0`_
+
+---
+
+**URL**: `/job/<job_id>/run_clustering/<type>/<id>`\
 **Method**: `POST`\
 **JSON**: `association_file`, `clustering_type`
 
-Start an clustering process for the given `linkset` of a specific `job_id`. 
+Start a clustering process of `type` (`linkset` or `lens`) 
+for the linkset/lens with the given `id` of a specific `job_id`. 
 Specify an `association_file` to reconcile a given cluster.
 Specify `clustering_type`, which is `default` by default.
 
-_Example: `/job/d697ea3869422ce3c7cc1889264d03c7/run_clustering/0`_
+_Example: `/job/d697ea3869422ce3c7cc1889264d03c7/run_clustering/linkset/0`_
 
 ---
 
@@ -215,22 +236,51 @@ _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/kill_linkset/0`_
 
 ---
 
-**URL**: `/job/<job_id>/kill_clustering/<linkset>`\
+**URL**: `/job/<job_id>/kill_lens/<lens>`\
+**Method**: `POST`\
+Stop a lens process for the given `lens` of a specific `job_id`. 
+
+_Example: `/job/d697ea3869422ce3c7cc1889264d03c7/kill_lens/0`_
+
+---
+
+**URL**: `/job/<job_id>/kill_clustering/<type>/<linkset>`\
 **Method**: `POST`
 
-Stop an clustering process for the given `linkset` of a specific `job_id`.
+Stop a clustering process of `type` (`linkset` or `lens`) 
+for the linkset/lens with the given `id` of a specific `job_id`.
 
-_Example: `/job/d697ea3869422ce3c7cc1889264d03c7/kill_clustering/0`_
+_Example: `/job/d697ea3869422ce3c7cc1889264d03c7/kill_clustering/lens/0`_
 
 ### Data retrieval
 
+**URL**: `/job/<job_id>/entity_type_selection_total/<label>`\
+**Method**: `GET`
+
+Returns the total number of entities for an entity-type selection with the label `label` of the given `job_id`.
+
+_Example: `/job/d697ea3869422ce3c7cc1889264d03c7/entity_type_selection_total/LimitedPersons`_
+
+---
+
+**URL**: `/job/<job_id>/links_totals/<type>/<id>`\
+**Method**: `GET`\
+**Parameters**: `cluster_id`, `limit`, `offset`
+
+Returns the total number of links of `type` (`linkset` or `lens`) for the linkset/lens with `id` of the given `job_id`.
+Use `limit` and `offset` for paging.
+Specify `cluster_id` to only return the links of a specific cluster.
+
+_Example: `/job/d697ea3869422ce3c7cc1889264d03c7/links_totals/linkset/0`_
+
+---
+
 **URL**: `/job/<job_id>/entity_type_selection/<label>`\
 **Method**: `GET`\
-**Parameters**: `total`, `limit`, `offset`
+**Parameters**: `limit`, `offset`
 
 Returns all data for an entity-type selection with the label `label` of the given `job_id`.
 Use `limit` and `offset` for paging.
-Specify `total` to only return the total number of entities.
 
 _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/entity_type_selection/LimitedPersons`_
 
@@ -248,11 +298,11 @@ _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/links/linkset/0`_
 
 ---
 
-**URL**: `/job/<job_id>/clusters/<linkset>`\
+**URL**: `/job/<job_id>/clusters/<type>/<id>`\
 **Method**: `GET`\
 **Parameters**: `association`, `limit`, `offset`
 
-Returns the clusters for linkset `linkset` of the given `job_id`.
+Returns the clusters of `type` (`linkset` or `lens`) for the linkset/lens with `id` of the given `job_id`.
 Use `limit` and `offset` for paging.
 Specify `association` to include reconciliation results with the given association.
 
@@ -271,22 +321,23 @@ Provide `valid` with either `accepted` or `declined` to validate the link or use
 
 ---
 
-**URL**: `/job/<job_id>/cluster/<linkset>/<cluster_id>/graph`\
+**URL**: `/job/<job_id>/cluster/<type>/<id>/<cluster_id>/graph`\
 **Method**: `GET`\
 **Parameters**: `get_cluster`, `get_cluster_compact`, `get_reconciliation`
 
-Get the visualization information for a cluster with `cluster_id` for linkset `linkset` of the given `job_id`.
+Get the visualization information for a cluster with `cluster_id` of `type` (`linkset` or `lens`) 
+for the linkset/lens with `id` of the given `job_id`.
 Specify `get_cluster` to obtain the default visualization.
 Specify `get_cluster_compact` to obtain the compact visualization.
 Specify `get_reconciliation` to obtain the reconciled visualization.
 
 ### Export
 
-**URL**: `/job/<job_id>/export/<type>/<linkset>/csv`\
+**URL**: `/job/<job_id>/export/<type>/<id>/csv`\
 **Method**: `GET`\
 **Parameters**: `valid`
 
-Get a CSV export of the linkset `linkset` of `type` (`match` or `lens`) the given `job_id`.
+Get a CSV export of `type` (`linkset` or `lens`) for the linkset/lens with `id` the given `job_id`.
 
 Specify `valid` with `accepted` to include the accepted links.
 Specify `valid` with `declined` to include the declined links.
@@ -296,7 +347,7 @@ Specify `valid` with `mixed` to include the links which have mixed validations i
 ## Job configuration with JSON
 
 ### Entity-type selections
-
+~~~~
 Entity-type selections is a list of JSON objects that contain the configuration 
 of the specific entity-type selections to use for a particular job.
 

@@ -188,7 +188,8 @@
             },
 
             clustering() {
-                return this.$root.clusterings.find(clustering => clustering.spec_id === this.linksetSpec.id);
+                return this.$root.clusterings.find(clustering =>
+                    clustering.spec_type === 'linkset' && clustering.spec_id === this.linksetSpec.id);
             },
 
             linksetStatus() {
@@ -296,7 +297,7 @@
 
             async runClustering() {
                 const associationFile = this.association !== '' ? this.association : null;
-                await this.$root.runClustering(this.linksetSpec.id, associationFile);
+                await this.$root.runClustering('linkset', this.linksetSpec.id, associationFile);
                 EventBus.$emit('refresh');
             },
 
@@ -306,7 +307,7 @@
             },
 
             async killClustering() {
-                await this.$root.killClustering(this.linksetSpec.id);
+                await this.$root.killClustering('linkset', this.linksetSpec.id);
                 EventBus.$emit('refresh');
             },
         },
@@ -319,9 +320,3 @@
         },
     };
 </script>
-
-<style>
-  .association-select {
-    width: 160px !important;
-  }
-</style>

@@ -8,9 +8,10 @@ from ll.job.simple_link_clustering import SimpleLinkClustering
 
 
 class ClusteringJob(WorkerJob):
-    def __init__(self, job_id, id):
+    def __init__(self, job_id, id, type):
         self._job_id = job_id
         self._id = id
+        self._type = type
 
         self._job = JobLL(job_id)
         self._worker = None
@@ -18,8 +19,9 @@ class ClusteringJob(WorkerJob):
         super().__init__(self.start_clustering)
 
     def start_clustering(self):
-        linkset_table_name = self._job.linkset_table_name(self._id)
-        links = self._job.get_links('linket', self._id)
+        table_name = self._job.linkset_table_name(self._id) \
+            if self._type == 'linkset' else self._job.lens_table_name(self._id)
+        links = self._job.get_links(self._id, self._type)
 
         with self._db_conn.cursor() as cur:
             self._worker = SimpleLinkClustering(links)
@@ -30,8 +32,10 @@ class ClusteringJob(WorkerJob):
                         source=psycopg2_sql.Literal(link[0]), target=psycopg2_sql.Literal(link[1])
                     ) for link in cluster['links'][i:i + 1000]]
 
-                    cur.execute(psycopg2_sql.SQL('UPDATE {linkset} SET cluster_id = {cluster_id} WHERE {links}').format(
-                        linkset=psycopg2_sql.Identifier(linkset_table_name),
+                    cur.execute(psycopg2_sql.SQL('UPDATE {table_name} '
+                                                 'SET cluster_id = {cluster_id} '
+                                                 'WHERE {links}').format(
+                        table_name=psycopg2_sql.Identifier(table_name),
                         cluster_id=psycopg2_sql.Literal(cluster['id']),
                         links=psycopg2_sql.SQL(' OR ').join(link_sqls)
                     ))
@@ -40,14 +44,14 @@ class ClusteringJob(WorkerJob):
         if not self._worker:
             return
 
-        self._job.update_clustering(self._id, {
+        self._job.update_clustering(self._id, self._type, {
             'status_message': 'Processing found clusters' if self._worker.links_processed else 'Processing links',
             'links_count': self._worker.links_processed,
             'clusters_count': len(self._worker.clusters)
         })
 
     def watch_kill(self):
-        clustering_job = self._job.clustering(self._id)
+        clustering_job = self._job.clustering(self._id, self._type)
         if clustering_job['kill']:
             self.kill(reset=False)
 
@@ -56,11 +60,11 @@ class ClusteringJob(WorkerJob):
             self._worker.stop_clustering()
 
         job_data = {'status': 'waiting'} if reset else {'status': 'failed', 'status_message': 'Killed manually'}
-        self._job.update_clustering(self._id, job_data)
+        self._job.update_clustering(self._id, self._type, job_data)
 
     def on_exception(self):
         err_message = str(self._exception)
-        self._job.update_clustering(self._id, {'status': 'failed', 'status_message': err_message})
+        self._job.update_clustering(self._id, self._type, {'status': 'failed', 'status_message': err_message})
 
     def on_finish(self):
         if len(self._worker.clusters) > 0:
@@ -68,5 +72,6 @@ class ClusteringJob(WorkerJob):
                 cur.execute('''
                     UPDATE clusterings
                     SET links_count = %s, clusters_count = %s, status = %s, finished_at = now()
-                    WHERE job_id = %s AND spec_id = %s
-                ''', (self._worker.links_processed, len(self._worker.clusters), 'done', self._job_id, self._id))
+                    WHERE job_id = %s AND spec_id = %s AND spec_type = %s
+                ''', (self._worker.links_processed, len(self._worker.clusters), 'done',
+                      self._job_id, self._id, self._type))

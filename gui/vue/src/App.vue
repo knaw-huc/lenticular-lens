@@ -229,8 +229,15 @@
 
             specsWithResults() {
                 const linksetSpecs = this.$root.linksetSpecs.filter(linksetSpec => {
-                    return this.$root.linksets.find(ls => {
-                        return ls.spec_id === linksetSpec.id && ls.status === 'done' && ls.distinct_links_count > 0;
+                    return this.$root.linksets.find(linkset => {
+                        return linkset.spec_id === linksetSpec.id
+                            && linkset.status === 'done' && linkset.distinct_links_count > 0;
+                    });
+                });
+
+                const lensSpecs = this.$root.lensSpecs.filter(lensSpec => {
+                    return this.$root.lenses.find(lens => {
+                        return lens.spec_id === lensSpec.id && lens.status === 'done' && lens.links_count > 0;
                     });
                 });
 
@@ -240,7 +247,7 @@
                         type: 'linkset',
                         spec: linksetSpec,
                     })),
-                    ...this.$root.lensSpecs.map(lensSpec => ({
+                    ...lensSpecs.map(lensSpec => ({
                         uid: `lensSpec_${lensSpec.id}`,
                         type: 'lens',
                         spec: lensSpec,
@@ -357,7 +364,7 @@
 
             async createJob(inputs) {
                 const jobId = await this.$root.createJob(inputs);
-                this.setJobId(jobId);
+                await this.setJobId(jobId);
             },
 
             async updateJob(jobData) {
@@ -418,7 +425,7 @@
 
             async refresh(load = false) {
                 if (load)
-                    await Promise.all([this.$root.loadLinksets(), this.$root.loadClusterings()]);
+                    await Promise.all([this.$root.loadLinksets(), this.$root.loadLenses(), this.$root.loadClusterings()]);
 
                 let hasFinished = false;
                 let hasUnfinished = false;
@@ -427,6 +434,11 @@
                     if (linkset.status === 'done' && linkset.distinct_links_count > 0)
                         hasFinished = true;
                     else if (linkset.status !== 'done' && linkset.status !== 'failed')
+                        hasUnfinished = true;
+                });
+
+                this.$root.lenses.forEach(lens => {
+                    if (lens.status !== 'done' && lens.status !== 'failed')
                         hasUnfinished = true;
                 });
 
@@ -443,7 +455,7 @@
 
                 if (hasUnfinished)
                     setTimeout(() => {
-                        Promise.all([this.$root.loadLinksets(), this.$root.loadClusterings()])
+                        Promise.all([this.$root.loadLinksets(), this.$root.loadLenses(), this.$root.loadClusterings()])
                             .then(() => this.refresh());
                     }, 2000);
             },

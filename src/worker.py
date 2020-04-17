@@ -12,6 +12,7 @@ from ll.util.logging import config_logger
 
 from ll.worker.timbuctoo import TimbuctooJob
 from ll.worker.linkset import LinksetJob
+from ll.worker.lens import LensJob
 from ll.worker.clustering import ClusteringJob
 from ll.worker.reconciliation import ReconciliationJob
 
@@ -23,24 +24,25 @@ locale.setlocale(locale.LC_ALL, '')
 class WorkerType(Enum):
     TIMBUCTOO = 'timbuctoo'
     LINKSET = 'linkset'
+    LENS = 'lens'
     CLUSTERING = 'clustering'
     RECONCILIATION = 'reconciliation'
 
 
 class Worker:
     def __init__(self, type):
-        self.__type = type
-        self.__job = None
-        self.__job_data = None
+        self._type = type
+        self._job = None
+        self._job_data = None
 
     def teardown(self):
-        print('Worker %s stopped.' % str(self.__type))
+        print('Worker %s stopped.' % str(self._type))
 
-        if self.__job:
-            self.__job.kill()
+        if self._job:
+            self._job.kill()
 
     def run(self):
-        if self.__type == WorkerType.TIMBUCTOO:
+        if self._type == WorkerType.TIMBUCTOO:
             watch_query = """
                 SELECT *
                 FROM timbuctoo_tables
@@ -57,14 +59,13 @@ class Worker:
             update_status = lambda cur: cur.execute("""
                 UPDATE timbuctoo_tables 
                 SET update_start_time = now() 
-                WHERE "table_name" = %s""", (self.__job_data['table_name'],))
+                WHERE "table_name" = %s""", (self._job_data['table_name'],))
 
             self.watch_for_jobs("timbuctoo_tables", watch_query, update_status, self.run_timbuctoo_job)
-        elif self.__type == WorkerType.LINKSET:
+        elif self._type == WorkerType.LINKSET:
             watch_query = """
                 SELECT *
                 FROM linksets ls
-                JOIN jobs rj ON ls.job_id = rj.job_id
                 WHERE ls.status = 'waiting' OR ls.status = 'downloading'
                 ORDER BY ls.requested_at
                 LIMIT 1
@@ -73,10 +74,25 @@ class Worker:
             update_status = lambda cur: cur.execute("""
                 UPDATE linksets
                 SET status = 'running', processing_at = now()
-                WHERE job_id = %s AND spec_id = %s""", (self.__job_data['job_id'], self.__job_data['spec_id']))
+                WHERE job_id = %s AND spec_id = %s""", (self._job_data['job_id'], self._job_data['spec_id']))
 
             self.watch_for_jobs("linksets", watch_query, update_status, self.run_linkset_job)
-        elif self.__type == WorkerType.CLUSTERING:
+        elif self._type == WorkerType.LENS:
+            watch_query = """
+                SELECT *
+                FROM lenses ls
+                WHERE ls.status = 'waiting'
+                ORDER BY ls.requested_at
+                LIMIT 1
+            """
+
+            update_status = lambda cur: cur.execute("""
+                UPDATE lenses
+                SET status = 'running', processing_at = now()
+                WHERE job_id = %s AND spec_id = %s""", (self._job_data['job_id'], self._job_data['spec_id']))
+
+            self.watch_for_jobs("lenses", watch_query, update_status, self.run_lens_job)
+        elif self._type == WorkerType.CLUSTERING:
             watch_query = """
                 SELECT *
                 FROM clusterings cl
@@ -88,10 +104,11 @@ class Worker:
             update_status = lambda cur: cur.execute("""
                 UPDATE clusterings
                 SET status = 'running', processing_at = now()
-                WHERE job_id = %s AND spec_id = %s""", (self.__job_data['job_id'], self.__job_data['spec_id']))
+                WHERE job_id = %s AND spec_id = %s AND spec_type = %s
+            """, (self._job_data['job_id'], self._job_data['spec_id'], self._job_data['spec_type']))
 
             self.watch_for_jobs("clusterings", watch_query, update_status, self.run_clustering_job)
-        elif self.__type == WorkerType.RECONCILIATION:
+        elif self._type == WorkerType.RECONCILIATION:
             watch_query = """
                 SELECT *
                 FROM clusterings cl
@@ -103,7 +120,8 @@ class Worker:
             update_status = lambda cur: cur.execute("""
                 UPDATE clusterings
                 SET status = 'running', processing_at = now()
-                WHERE job_id = %s AND spec_id = %s""", (self.__job_data['job_id'], self.__job_data['spec_id']))
+                WHERE job_id = %s AND spec_id = %s AND spec_type = %s
+            """, (self._job_data['job_id'], self._job_data['spec_id'], self._job_data['spec_type']))
 
             self.watch_for_jobs("clusterings", watch_query, update_status, self.run_reconciliation_job)
 
@@ -116,7 +134,7 @@ class Worker:
 
                     job_data = cur.fetchone()
                     if job_data:
-                        self.__job_data = job_data
+                        self._job_data = job_data
                         update_status(cur)
 
                     conn.commit()
@@ -129,37 +147,44 @@ class Worker:
                 time.sleep(random.randint(0, 1000) / 1000)
 
     def run_timbuctoo_job(self):
-        self.__job = TimbuctooJob(table_name=self.__job_data['table_name'],
-                                  graphql_endpoint=self.__job_data['graphql_endpoint'],
-                                  hsid=self.__job_data['hsid'],
-                                  dataset_id=self.__job_data['dataset_id'],
-                                  collection_id=self.__job_data['collection_id'],
-                                  columns=self.__job_data['columns'],
-                                  cursor=self.__job_data['next_page'],
-                                  rows_count=self.__job_data['rows_count'],
-                                  rows_per_page=1000)
-        self.__job.run()
+        self._job = TimbuctooJob(table_name=self._job_data['table_name'],
+                                 graphql_endpoint=self._job_data['graphql_endpoint'],
+                                 hsid=self._job_data['hsid'],
+                                 dataset_id=self._job_data['dataset_id'],
+                                 collection_id=self._job_data['collection_id'],
+                                 columns=self._job_data['columns'],
+                                 cursor=self._job_data['next_page'],
+                                 rows_count=self._job_data['rows_count'],
+                                 rows_per_page=1000)
+        self._job.run()
         self.cleanup()
 
     def run_linkset_job(self):
-        self.__job = LinksetJob(job_id=self.__job_data['job_id'], id=self.__job_data['spec_id'])
-        self.__job.run()
+        self._job = LinksetJob(job_id=self._job_data['job_id'], id=self._job_data['spec_id'])
+        self._job.run()
+        self.cleanup()
+
+    def run_lens_job(self):
+        self._job = LensJob(job_id=self._job_data['job_id'], id=self._job_data['spec_id'])
+        self._job.run()
         self.cleanup()
 
     def run_clustering_job(self):
-        self.__job = ClusteringJob(job_id=self.__job_data['job_id'], id=self.__job_data['spec_id'])
-        self.__job.run()
+        self._job = ClusteringJob(job_id=self._job_data['job_id'], id=self._job_data['spec_id'],
+                                  type=self._job_data['spec_type'])
+        self._job.run()
         self.cleanup()
 
     def run_reconciliation_job(self):
-        self.__job = ReconciliationJob(job_id=self.__job_data['job_id'], id=self.__job_data['spec_id'],
-                                       association_file=self.__job_data['association_file'])
-        self.__job.run()
+        self._job = ReconciliationJob(job_id=self._job_data['job_id'], id=self._job_data['spec_id'],
+                                      type=self._job_data['spec_type'],
+                                      association_file=self._job_data['association_file'])
+        self._job.run()
         self.cleanup()
 
     def cleanup(self):
-        self.__job = None
-        self.__job_data = None
+        self._job = None
+        self._job_data = None
 
 
 if __name__ == '__main__':

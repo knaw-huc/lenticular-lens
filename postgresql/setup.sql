@@ -64,6 +64,20 @@ CREATE TABLE IF NOT EXISTS linksets
     PRIMARY KEY (job_id, spec_id)
 );
 
+CREATE TABLE IF NOT EXISTS lenses
+(
+    job_id         text    not null,
+    spec_id        int     not null,
+    status         text    not null,
+    status_message text,
+    kill           boolean not null,
+    requested_at   timestamp,
+    processing_at  timestamp,
+    finished_at    timestamp,
+    links_count    bigint,
+    PRIMARY KEY (job_id, spec_id)
+);
+
 CREATE TABLE IF NOT EXISTS clusterings
 (
     job_id           text      not null,

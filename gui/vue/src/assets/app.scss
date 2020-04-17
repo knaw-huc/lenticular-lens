@@ -205,6 +205,10 @@ ul.inline-list li:not(:first-child):before {
   color: black;
 }
 
+.association-select {
+  width: 160px !important;
+}
+
 .main-card {
   @extend .position-relative;
   @extend .bg-light;
