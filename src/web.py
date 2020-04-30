@@ -207,9 +207,6 @@ def links_totals(job, type, id):
 
 @app.route('/job/<job:job>/entity_type_selection/<label>')
 def entity_type_selection_sample(job, label):
-    if request.args.get('total', default=False) == 'true':
-        return jsonify(job.get_entity_type_selection_sample_total(label))
-
     return jsonify(job.get_entity_type_selection_sample(label,
                                                         invert=request.args.get('invert', default=False) == 'true',
                                                         limit=request.args.get('limit', type=int),

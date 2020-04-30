@@ -127,13 +127,13 @@
             },
 
             async getTotal() {
-                const total = await this.$root.getEntityTypeSelectionSample(this.entityTypeSelection.label, true);
+                const total = await this.$root.getEntityTypeSelectionSampleTotal(this.entityTypeSelection.label);
                 this.total = total !== null ? total.total : null;
             },
 
             async getSamples(state) {
                 const samples = await this.$root.getEntityTypeSelectionSample(
-                    this.entityTypeSelection.label, false, this.showFilteredOut, 50, this.samples.length);
+                    this.entityTypeSelection.label, this.showFilteredOut, 50, this.samples.length);
 
                 if (samples !== null)
                     this.samples.push(...samples);

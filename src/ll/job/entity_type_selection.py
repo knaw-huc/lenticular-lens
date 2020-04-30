@@ -89,7 +89,7 @@ class EntityTypeSelection:
         self.set_joins_sql(linkset_spec, joins, fields=True, related=True)
         return joins
 
-    def related_joins(self, linkset_spec):
+    def related_joins(self, linkset_spec=None):
         joins = Joins()
         self.set_joins_sql(linkset_spec, joins, fields=False, related=True)
         return joins
