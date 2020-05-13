@@ -30,7 +30,7 @@ class Elements:
 
 entity_type_selection_filter_elements_schema = Schema({
     'property': [And(str, len)],
-    'type': And(str, Use(str.lower), lambda t: (t[4:] if t.startswith('not_') else t) in filter_functions.keys()),
+    'type': And(str, Use(str.lower), lambda t: t in filter_functions.keys()),
     Optional('value'): Or(And(str, len), int),
     Optional('format'): And(str, len),
 }, ignore_extra_keys=True)
@@ -216,7 +216,7 @@ def transform(entity_type_selections_org, linkset_specs_org, lens_specs_org):
             entity_type_selection = entity_type_selection_schema.validate(entity_type_selection_org)
             entity_type_selection['properties'] = [prop for prop in entity_type_selection['properties'] if prop != '']
             entity_type_selections.append(entity_type_selection)
-        except SchemaError:
+        except SchemaError as se:
             pass
 
     ref_entity_type_selections = []

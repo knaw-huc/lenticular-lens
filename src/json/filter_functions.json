@@ -8,8 +8,14 @@
   "is_null": {
     "sql_template": "{property} IS NULL"
   },
+  "not_null": {
+    "sql_template": "{property} IS NOT NULL"
+  },
   "ilike": {
     "sql_template": "{property} ILIKE {value}"
+  },
+  "not_ilike": {
+    "sql_template": "{property} NOT ILIKE {value}"
   },
   "minimal": {
     "sql_template": "to_numeric_immutable({property}) IS NOT NULL AND to_numeric_immutable({property}) >= {value}"
