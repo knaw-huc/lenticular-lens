@@ -260,7 +260,7 @@
 
                 this.$set(this.linksetSpec[key], index, id);
                 this.$root.getRecursiveElements(this.linksetSpec.methods, 'conditions').forEach(condition => {
-                    condition[key].push({entityTypeSelection: id, property: [''], transformers: []});
+                    condition[key].push({entity_type_selection: id, property: [''], transformers: []});
                 });
 
                 this.updateProperties(oldId, id);
@@ -271,7 +271,7 @@
 
                 this.$root.getRecursiveElements(this.linksetSpec.methods, 'conditions').forEach(condition => {
                     condition[key]
-                        .map((condition, idx) => condition.entityTypeSelection === id ? idx : null)
+                        .map((condition, idx) => condition.entity_type_selection === id ? idx : null)
                         .filter(idx => idx !== null)
                         .sort((idxA, idxB) => idxA > idxB ? -1 : 1)
                         .forEach(idx => condition[key].splice(idx, 1));
@@ -285,14 +285,14 @@
                 const sourcesHasValue = this.linksetSpec.sources.find(source => source === oldEntityTypeSelection);
                 const targetsHasValue = this.linksetSpec.targets.find(target => target === oldEntityTypeSelection);
                 const oldValueIndex = this.linksetSpec.properties
-                    .findIndex(prop => prop.entityTypeSelection === oldEntityTypeSelection);
+                    .findIndex(prop => prop.entity_type_selection === oldEntityTypeSelection);
 
                 if ((oldValueIndex >= 0) && !sourcesHasValue && !targetsHasValue)
                     this.linksetSpec.properties.splice(oldValueIndex, 1);
 
                 if ((newEntityTypeSelection !== undefined) &&
-                    !this.linksetSpec.properties.find(prop => prop.entityTypeSelection === newEntityTypeSelection))
-                    this.linksetSpec.properties.push({entityTypeSelection: newEntityTypeSelection, property: ['']});
+                    !this.linksetSpec.properties.find(prop => prop.entity_type_selection === newEntityTypeSelection))
+                    this.linksetSpec.properties.push({entity_type_selection: newEntityTypeSelection, property: ['']});
             },
 
             async runLinkset(force = false) {

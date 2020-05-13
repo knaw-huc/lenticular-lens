@@ -234,7 +234,7 @@
             },
 
             allowDeleteForIndex(index, prop, key) {
-                return this.condition[key].findIndex(p => p.entityTypeSelection === prop.entityTypeSelection) !== index;
+                return this.condition[key].findIndex(p => p.entity_type_selection === prop.entity_type_selection) !== index;
             },
 
             cloneProperty(key, index, conditionProperty) {
@@ -248,7 +248,7 @@
                     });
 
                 this.condition[key].splice(index + 1, 0, {
-                    entityTypeSelection: conditionProperty.entityTypeSelection,
+                    entity_type_selection: conditionProperty.entity_type_selection,
                     property: [''],
                     transformers
                 });

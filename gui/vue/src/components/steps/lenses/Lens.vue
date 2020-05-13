@@ -173,12 +173,12 @@
             entityTypeSelectionsInLensElements() {
                 const entityTypeSelections = this.linksetsInLens
                     .flatMap(linksetSpec => linksetSpec.properties)
-                    .flatMap(prop => prop.entityTypeSelection);
+                    .flatMap(prop => prop.entity_type_selection);
                 return [...new Set(entityTypeSelections)];
             },
 
             entityTypeSelectionsInLensProperties() {
-                const entityTypeSelections = this.lensSpec.properties.flatMap(prop => prop.entityTypeSelection);
+                const entityTypeSelections = this.lensSpec.properties.flatMap(prop => prop.entity_type_selection);
                 return [...new Set(entityTypeSelections)];
             },
         },
@@ -212,7 +212,7 @@
 
                 if (entityTypeSelectionsToRemove.length > 0) {
                     const propIdxToRemove = this.properties.reduce((indexes, prop, idx) => {
-                        if (entityTypeSelectionsToRemove.includes(prop.entityTypeSelection))
+                        if (entityTypeSelectionsToRemove.includes(prop.entity_type_selection))
                             indexes.push(idx);
                         return indexes;
                     }, []);
@@ -226,7 +226,7 @@
                     this.linksetsInLens
                         .flatMap(linksetSpec => linksetSpec.properties)
                         .forEach(prop => {
-                            if (entityTypeSelectionsToAdd.includes(prop.entityTypeSelection))
+                            if (entityTypeSelectionsToAdd.includes(prop.entity_type_selection))
                                 this.lensSpec.properties.push(prop);
                         });
                 }
