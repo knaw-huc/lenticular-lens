@@ -366,8 +366,9 @@ of the specific entity-type selections to use for a particular job.
     "filter": {                 // The filter configuration to obtain only a subset of the data from Timbuctoo; optional field
         "conditions": [{        // The filter is composed of element groups
             "property": ["foaf_name"],    // The property path to which this condition applies
-            "type": 'not_ilike',          // The type of filtering to apply; see table below for allowed values
-            "value": "%...%"              // Depends on type of filtering selected; value to use for filtering
+            "type": 'minimal_date',       // The type of filtering to apply; see table below for allowed values
+            "value": "1600",              // Depends on type of filtering selected; value to use for filtering
+            "format": "YYYY-MM-DD"        // Both the types `minimal_date` and `maximum_date` require a date format for parsing
         }],
         "type": "AND"           // Whether ALL conditions in this group should match ('AND') or AT LEAST ONE condition in this group has to match ('OR')
     },
@@ -387,10 +388,14 @@ of the specific entity-type selections to use for a particular job.
 | Not equal to          | `!=`                  | Yes                           |
 | Has no value          | `is_null`             | No                            |
 | Has a value           | `not_null`            | No                            |
-| Date is within        | `date_is_within`      | Yes _(Use * as a wildcard)_   |
-| Date is not within    | `date_is_not_within`  | Yes _(Use * as a wildcard)_   |
 | Contains              | `ilike`               | Yes _(Use % as a wildcard)_   |
 | Does not contain      | `not_ilike`           | Yes _(Use % as a wildcard)_   |
+| Minimal               | `minimal`             | Yes _(An integer)_            |
+| Maximum               | `maximum`             | Yes _(An integer)_            |
+| Minimal date          | `minimal_date`        | Yes _(Use YYYY-MM-DD)_        |
+| Maximum date          | `maximum_date`        | Yes _(Use YYYY-MM-DD)_        |
+| Minimal appearances   | `minimal_appearances` | Yes _(An integer)_            |
+| Maximum appearances   | `maximum_appearances` | Yes _(An integer)_            |
 
 ### Linkset specs
 
