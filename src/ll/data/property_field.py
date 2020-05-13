@@ -9,8 +9,12 @@ class PropertyField:
         self._parent_label = parent_label
         self._columns = columns
         self._transformers = transformers if transformers else []
+        self._extend = True
 
         self._hash = hash_string(get_string_from_sql(self.sql))
+
+    def no_extend(self):
+        self._extend = False
 
     @property
     def hash(self):
@@ -59,7 +63,7 @@ class PropertyField:
 
     @property
     def sql(self):
-        absolute_property = [self.extended_prop_label] if self.is_list else self.absolute_property
+        absolute_property = [self.extended_prop_label] if self._extend and self.is_list else self.absolute_property
         sql = psycopg2_sql.SQL('.').join(map(psycopg2_sql.Identifier, absolute_property))
 
         for transformer in self._transformers:

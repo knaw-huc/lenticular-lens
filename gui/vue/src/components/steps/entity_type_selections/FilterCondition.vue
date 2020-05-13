@@ -21,59 +21,72 @@
 
     <div class="form-row align-items-center">
       <div class="col-3">
-        <select-box :auto-height="false" v-model="condition.type"
+        <select-box :auto-height="false" v-model="condition.type" @input="onTypeSelection"
                     v-bind:class="{'is-invalid': errors.includes('condition')}">
           <option value="" disabled selected>Choose a filter type</option>
           <option value="=">Equal to</option>
           <option value="!=">Not equal to</option>
           <option value="is_null">Has no value</option>
           <option value="not_null">Has a value</option>
-          <option value="date_is_within">Date is within</option>
-          <option value="date_is_not_within">Date is not within</option>
-          <option value="ilike">Contains (use % for wildcard)</option>
-          <option value="not_ilike">Does not contain (use % for wildcard)</option>
-          <option value="appearances">Appearances of property</option>
+          <option value="ilike">Contains</option>
+          <option value="not_ilike">Does not contain</option>
+          <option value="minimal">Has minimal value</option>
+          <option value="maximum">Has maximum value</option>
+          <option value="minimal_date">Has minimal date</option>
+          <option value="maximum_date">Has maximum date</option>
+          <option value="minimal_appearances">Has minimal appearances</option>
+          <option value="maximum_appearances">Has maximum appearances</option>
         </select-box>
       </div>
 
-      <div v-if="requiresValue" class="col-3">
-        <input class="form-control form-control-sm" type="text" v-model="condition.value" placeholder="Enter a value"
-               v-bind:class="{'is-invalid': errors.includes('value')}">
+      <div v-if="requiresStringValue" class="col-3">
+        <input class="form-control form-control-sm" type="text" v-model="condition.value"
+               placeholder="Enter a value" v-bind:class="{'is-invalid': errors.includes('value')}">
+      </div>
+      <div v-else-if="requiresIntegerValue" class="col-1">
+        <input class="form-control form-control-sm" type="number" v-model.number="condition.value"
+               placeholder="Enter a value" v-bind:class="{'is-invalid': errors.includes('value')}">
       </div>
 
-      <div v-if="condition.type === 'appearances'" class="col-2">
-        <select-box :auto-height="false" v-model="condition.operator">
-          <option value="<=" selected>Max.</option>
-          <option value=">=" selected>Min.</option>
-          <option value="=" selected>Exactly</option>
-        </select-box>
-      </div>
-
-      <div v-if="condition.type === 'appearances'" class="col-1">
-        <input class="form-control form-control-sm" type="number" min="0" step="1" v-model.number="condition.value"
-               v-bind:class="{'is-invalid': errors.includes('value')}">
+      <div v-if="condition.type === 'minimal_date' || condition.type === 'maximum_date'" class="col-4 form-inline">
+        <label>
+          Date format
+          <input class="form-control form-control-sm ml-2" v-model="condition.format" value="YYYY-MM-DD"
+                 v-bind:class="{'is-invalid': errors.includes('format')}">
+        </label>
       </div>
     </div>
 
-    <div class="row" v-show="errors.includes('property') || errors.includes('condition') || errors.includes('value')">
+    <div v-if="condition.type === 'ilike' || condition.type === 'not_ilike'" class="row">
+      <small class="form-text text-muted pl-3">
+        Use % as a wildcard character
+      </small>
+    </div>
+    <div v-else-if="condition.type === 'minimal_date' || condition.type === 'maximum_date'" class="row">
+      <small class="form-text text-muted pl-3">
+        Use the format YYYY-MM-DD, YYYY-MM or YYYY for year/month/day, year/month and year respectively
+      </small>
+    </div>
+
+    <div class="row" v-show="errors.includes('property') || hasConditionErrors">
       <div class="invalid-feedback pl-3"
-           v-bind:class="{'is-invalid': errors.includes('property') || errors.includes('condition') || errors.includes('value')}">
+           v-bind:class="{'is-invalid': errors.includes('property') || hasConditionErrors}">
         <template v-if="errors.includes('property')">
           Please select a property
         </template>
 
-        <template v-if="errors.includes('property') && (errors.includes('condition') || errors.includes('value'))">
+        <template v-if="errors.includes('property') && hasConditionErrors">
           <br/>
         </template>
 
         <template v-if="errors.includes('condition')">
           Please provide a filter type
         </template>
-        <template v-else-if="errors.includes('value') && condition.type === 'appearances'">
-          Please provide a number for the condition
-        </template>
         <template v-else-if="errors.includes('value')">
           Please provide a value for the condition
+        </template>
+        <template v-else-if="errors.includes('format')">
+          Please provide a date format
         </template>
       </div>
     </div>
@@ -92,9 +105,20 @@
             index: Number,
         },
         computed: {
-            requiresValue() {
-                return ['=', '!=', 'date_is_within', 'date_is_not_within', 'ilike', 'not_ilike']
-                    .includes(this.condition.type);
+            requiresStringValue() {
+                return ['=', '!=', 'minimal_date', 'maximum_date', 'ilike', 'not_ilike'].includes(this.condition.type);
+            },
+
+            requiresIntegerValue() {
+                return [
+                    'minimal', 'maximum', 'minimal_appearances', 'maximum_appearances'
+                ].includes(this.condition.type);
+            },
+
+            hasConditionErrors() {
+                return this.errors.includes('condition')
+                    || this.errors.includes('value')
+                    || this.errors.includes('format');
             },
         },
         methods: {
@@ -102,16 +126,33 @@
                 const propertyValid = this.validateField('property', this.$refs.propertyComponent.validateProperty());
                 const conditionValid = this.validateField('condition', this.condition.type);
 
-                let valueValid = false;
-                if (this.requiresValue)
+                let valueValid = this.validateField('value', true);
+                if (this.requiresStringValue || this.requiresIntegerValue)
                     valueValid = this.validateField('value', this.condition.value);
-                else if (this.condition.type === 'appearances')
-                    valueValid = this.validateField('value', !isNaN(parseInt(this.condition.value))
-                        && parseInt(this.condition.value) > 0);
-                else
-                    valueValid = this.validateField('value', true);
 
-                return propertyValid && conditionValid && valueValid;
+                const formatValid = this.validateField('format', this.condition.format
+                    || (this.condition.type !== 'minimal_date' && this.condition.type !== 'maximum_date'));
+
+                return propertyValid && conditionValid && valueValid && formatValid;
+            },
+
+            onTypeSelection() {
+                if (!this.condition.format &&
+                    (this.condition.type === 'minimal_date' || this.condition.type === 'maximum_date'))
+                    this.condition.format = 'YYYY-MM-DD';
+                else if (this.condition.type !== 'minimal_date' && this.condition.type !== 'maximum_date')
+                    delete this.condition.format;
+
+                if (this.requiresStringValue && this.condition.value)
+                    this.condition.value = String(this.condition.value);
+                else if (this.requiresIntegerValue && this.condition.value) {
+                    if (!isNaN(parseInt(this.condition.value)))
+                        this.condition.value = parseInt(this.condition.value);
+                    else
+                        delete this.condition.value;
+                }
+                else
+                    delete this.condition.value;
             },
         },
     }

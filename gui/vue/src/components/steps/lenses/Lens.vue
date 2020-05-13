@@ -52,7 +52,7 @@
         </select>
       </div>
 
-      <div v-if="!isOpen && !lensSpec" class="col-auto">
+      <div v-if="!isOpen && !lens" class="col-auto">
         <button-delete @click="$emit('remove')" title="Delete this lens"/>
       </div>
     </template>

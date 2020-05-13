@@ -13,9 +13,9 @@
     "vue-moment": "^4.1.0",
     "vuedraggable": "^2.23.2",
     "vue-infinite-loading": "^2.4.5",
-    "vue-select": "^3.10.2",
+    "vue-select": "^3.10.3",
     "bootstrap": "^4.4.1",
-    "bootstrap-vue": "^2.13.0",
+    "bootstrap-vue": "^2.14.0",
     "d3": "^5.16.0",
     "@fortawesome/vue-fontawesome": "^0.1.9",
     "@fortawesome/fontawesome-svg-core": "^1.2.28",
@@ -24,7 +24,7 @@
   },
   "devDependencies": {
     "@vue/cli-service": "^4.3.1",
-    "node-sass": "^4.14.0",
+    "node-sass": "^4.14.1",
     "sass-loader": "^8.0.2",
     "vue-template-compiler": "^2.6.11"
   }

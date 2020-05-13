@@ -30,8 +30,9 @@ class Elements:
 
 entity_type_selection_filter_elements_schema = Schema({
     'property': [And(str, len)],
-    'type': And(str, Use(str.lower), lambda t: t in filter_functions.keys()),
-    Optional('value'): And(str, len),
+    'type': And(str, Use(str.lower), lambda t: (t[4:] if t.startswith('not_') else t) in filter_functions.keys()),
+    Optional('value'): Or(And(str, len), int),
+    Optional('format'): And(str, len),
 }, ignore_extra_keys=True)
 
 mapping_method_elements_schema = Schema({

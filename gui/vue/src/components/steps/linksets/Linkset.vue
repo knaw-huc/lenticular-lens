@@ -52,7 +52,7 @@
         </select>
       </div>
 
-      <div v-if="!isOpen && !linksetSpec" class="col-auto">
+      <div v-if="!isOpen && !linkset" class="col-auto">
         <button-delete @click="$emit('remove')" title="Delete this linkset"/>
       </div>
     </template>
@@ -236,10 +236,18 @@
                     method_value: {},
                     sources: this.linksetSpec.sources
                         .filter(entityTypeSelection => entityTypeSelection !== '')
-                        .map(entityTypeSelection => ({entityTypeSelection, property: [''], transformers: []})),
+                        .map(entityTypeSelection => ({
+                            entity_type_selection: entityTypeSelection,
+                            property: [''],
+                            transformers: []
+                        })),
                     targets: this.linksetSpec.targets
                         .filter(entityTypeSelection => entityTypeSelection !== '')
-                        .map(entityTypeSelection => ({entityTypeSelection, property: [''], transformers: []})),
+                        .map(entityTypeSelection => ({
+                            entity_type_selection: entityTypeSelection,
+                            property: [''],
+                            transformers: []
+                        })),
                 });
             },
 
