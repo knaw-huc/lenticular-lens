@@ -49,7 +49,7 @@
               {{ linkset.links_count ? linkset.links_count.toLocaleString('en') : 0 }}
 
               <span
-                  v-if="linkset.links_count && linkset.distinct_links_count && linkset.links_count > linkset.distinct_links_count"
+                  v-if="linkset.links_count > -1 && linkset.distinct_links_count > -1 && linkset.links_count > linkset.distinct_links_count"
                   class="font-italic text-info">
                 ({{ linkset.distinct_links_count.toLocaleString('en') }} distinct links)
               </span>
@@ -73,7 +73,7 @@
               {{ linkset.sources_count ? linkset.sources_count.toLocaleString('en') : 0 }}
 
               <span
-                  v-if="linkset.sources_count && linkset.distinct_sources_count && linkset.sources_count > linkset.distinct_sources_count"
+                  v-if="linkset.sources_count > -1 && linkset.distinct_sources_count > -1 && linkset.sources_count > linkset.distinct_sources_count"
                   class="font-italic text-info">
                   ({{ linkset.distinct_sources_count.toLocaleString('en') }} distinct entities)
               </span>
@@ -84,7 +84,7 @@
               {{ linkset.targets_count ? linkset.targets_count.toLocaleString('en') : 0 }}
 
               <span
-                  v-if="linkset.targets_count && linkset.distinct_targets_count && linkset.targets_count > linkset.distinct_targets_count"
+                  v-if="linkset.targets_count > -1 && linkset.distinct_targets_count > -1 && linkset.targets_count > linkset.distinct_targets_count"
                   class="font-italic text-info">
                   ({{ linkset.distinct_targets_count.toLocaleString('en') }} distinct entities)
               </span>

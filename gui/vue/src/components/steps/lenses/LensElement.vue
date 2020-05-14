@@ -1,8 +1,8 @@
 <template>
   <div class="border border-dark p-3 mt-3">
-    <div class="row align-items-start justify-content-between">
-      <div class="col-auto mr-auto ml-4">
-        <v-select :value="selectedSpec" label="label"
+    <div class="row align-items-center justify-content-between">
+      <div class="col-auto ml-4">
+        <v-select :value="selected" label="label"
                   :options="specs" :clearable="false" :disabled="disabled"
                   autocomplete="off" placeholder="Type to search for a linkset or lens"
                   @input="updateLensElement" v-bind:class="{'is-invalid': errors.includes('spec')}">
@@ -17,6 +17,16 @@
         </div>
       </div>
 
+<!--      <div v-if="selectedSpec" class="col-auto">-->
+<!--        <div class="btn-group-toggle" data-toggle="buttons">-->
+<!--          <label class="btn btn-secondary btn-sm" v-bind:class="{'active': showInfo}">-->
+<!--            <input type="checkbox" autocomplete="off" v-model="showInfo"/>-->
+<!--            <fa-icon icon="info-circle"/>-->
+<!--            Show {{ this.element.type }} specs-->
+<!--          </label>-->
+<!--        </div>-->
+<!--      </div>-->
+
       <div class="col-auto ml-auto">
         <div class="row">
           <div class="col-auto">
@@ -25,24 +35,39 @@
         </div>
       </div>
     </div>
+
+<!--    <div v-if="selectedSpec && showInfo" class="row">-->
+<!--      <spec-info :type="this.element.type" :spec="selectedSpec"/>-->
+<!--    </div>-->
   </div>
 </template>
 
 <script>
     import ValidationMixin from "../../../mixins/ValidationMixin";
+    import SpecInfo from "../../spec/SpecInfo";
 
     export default {
         name: "LensElement",
+        components: {
+            SpecInfo
+        },
         mixins: [ValidationMixin],
         props: ['element', 'index', 'disabled'],
+        data() {
+            return {
+                showInfo: false,
+            };
+        },
         computed: {
             selectedSpec() {
-                const spec = (this.element.type === 'linkset')
+                return (this.element.type === 'linkset')
                     ? this.$root.getLinksetSpecById(this.element.id)
                     : this.$root.getLensSpecById(this.element.id);
+            },
 
-                if (spec)
-                    return {type: this.element.type, id: this.element.id, label: spec.label};
+            selected() {
+                if (this.selectedSpec)
+                    return {type: this.element.type, id: this.element.id, label: this.selectedSpec.label};
 
                 return null;
             },

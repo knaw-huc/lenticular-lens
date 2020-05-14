@@ -1,9 +1,9 @@
 <template>
   <div v-if="methodGroup.conditions" class="border p-2" v-bind:class="styleClass">
-    <slot></slot>
+    <p v-if="isLinksetRoot" class="font-weight-bold mb-1">Matching</p>
 
     <template v-for="(condition, idx) in methodGroup.conditions">
-      <linkset-spec-group-info :method-group="condition" :key="idx"/>
+      <linkset-spec-group-info :method-group="condition" :key="idx" :is-root="false" :is-linkset-root="false"/>
 
       <p class="font-weight-bold my-2 text-info" v-if="idx < (methodGroup.conditions.length - 1)">
         {{ methodGroup.type }}
@@ -23,11 +23,15 @@
             LinksetSpecConditionInfo
         },
         props: {
+            methodGroup: Object,
             isRoot: {
                 type: Boolean,
-                default: false,
+                default: true,
             },
-            methodGroup: Object,
+            isLinksetRoot: {
+                type: Boolean,
+                default: true,
+            },
         },
         computed: {
             styleClass() {

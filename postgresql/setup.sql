@@ -101,8 +101,10 @@ CREATE TABLE IF NOT EXISTS clusterings
 CREATE OR REPLACE FUNCTION increment_counter(sequence_name text) RETURNS boolean
     COST 10000 STRICT VOLATILE AS
 $$
-SELECT nextval(sequence_name) > -1;
-$$ LANGUAGE sql;
+BEGIN
+    RETURN nextval(sequence_name) > -1;
+END;
+$$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION to_date_immutable(text, text) RETURNS date
     STRICT IMMUTABLE AS

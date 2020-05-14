@@ -275,7 +275,7 @@
 
     import Properties from "../../helpers/Properties";
     import PropertySelection from "../../helpers/PropertySelection";
-    import SpecInfo from "../../helpers/SpecInfo";
+    import SpecInfo from "../../spec/SpecInfo";
 
     import Link from "./Link";
     import Cluster from "./Cluster";
