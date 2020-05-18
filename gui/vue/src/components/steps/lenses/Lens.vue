@@ -52,7 +52,7 @@
         </select>
       </div>
 
-      <div v-if="!isOpen && !lens" class="col-auto">
+      <div v-if="!isOpen" class="col-auto">
         <button-delete @click="$emit('remove')" title="Delete this lens"/>
       </div>
     </template>
@@ -143,17 +143,15 @@
             },
 
             lensesInLens() {
-                const lensesInSpec = lensSpec => {
-                    return this.$root
-                        .getRecursiveElements(lensSpec.specs, 'elements')
-                        .filter(elem => elem.type === 'lens')
-                        .flatMap(elem => {
-                            const elemLensSpec = this.$root.getLensSpecById(elem.id);
-                            if (elemLensSpec)
-                                return [elemLensSpec, ...lensesInSpec(elemLensSpec)];
-                            return [];
-                        });
-                };
+                const lensesInSpec = lensSpec => this.$root
+                    .getRecursiveElements(lensSpec.specs, 'elements')
+                    .filter(elem => elem.type === 'lens')
+                    .flatMap(elem => {
+                        const elemLensSpec = this.$root.getLensSpecById(elem.id);
+                        if (elemLensSpec)
+                            return [elemLensSpec, ...lensesInSpec(elemLensSpec)];
+                        return [];
+                    });
 
                 const lenses = lensesInSpec(this.lensSpec);
                 return [...new Set(lenses)];

@@ -48,9 +48,7 @@
               <strong>Links found: </strong>
               {{ linkset.links_count ? linkset.links_count.toLocaleString('en') : 0 }}
 
-              <span
-                  v-if="linkset.links_count > -1 && linkset.distinct_links_count > -1 && linkset.links_count > linkset.distinct_links_count"
-                  class="font-italic text-info">
+              <span v-if="hasDistinctLinksCount" class="font-italic text-info">
                 ({{ linkset.distinct_links_count.toLocaleString('en') }} distinct links)
               </span>
             </div>
@@ -72,9 +70,7 @@
               <strong>Entities in source: </strong>
               {{ linkset.sources_count ? linkset.sources_count.toLocaleString('en') : 0 }}
 
-              <span
-                  v-if="linkset.sources_count > -1 && linkset.distinct_sources_count > -1 && linkset.sources_count > linkset.distinct_sources_count"
-                  class="font-italic text-info">
+              <span v-if="hasDistinctSourcesCount" class="font-italic text-info">
                   ({{ linkset.distinct_sources_count.toLocaleString('en') }} distinct entities)
               </span>
             </div>
@@ -83,9 +79,7 @@
               <strong>Entities in target: </strong>
               {{ linkset.targets_count ? linkset.targets_count.toLocaleString('en') : 0 }}
 
-              <span
-                  v-if="linkset.targets_count > -1 && linkset.distinct_targets_count > -1 && linkset.targets_count > linkset.distinct_targets_count"
-                  class="font-italic text-info">
+              <span v-if="hasDistinctTargetsCount" class="font-italic text-info">
                   ({{ linkset.distinct_targets_count.toLocaleString('en') }} distinct entities)
               </span>
             </div>
@@ -217,6 +211,24 @@
                 });
 
                 return this.$root.downloading.filter(collection => datasets.includes(collection.dataset_id));
+            },
+
+            hasDistinctLinksCount() {
+                return (this.linkset.links_count || this.linkset.links_count === 0)
+                    && (this.linkset.distinct_links_count || this.linkset.distinct_links_count === 0)
+                    && this.linkset.links_count > this.linkset.distinct_links_count;
+            },
+
+            hasDistinctSourcesCount() {
+                return (this.linkset.sources_count || this.linkset.sources_count === 0)
+                    && (this.linkset.distinct_sources_count || this.linkset.distinct_sources_count === 0)
+                    && this.linkset.sources_count > this.linkset.distinct_sources_count;
+            },
+
+            hasDistinctTargetsCount() {
+                return (this.linkset.targets_count || this.linkset.targets_count === 0)
+                    && (this.linkset.distinct_targets_count || this.linkset.distinct_targets_count === 0)
+                    && this.linkset.targets_count > this.linkset.distinct_targets_count;
             },
         },
     };

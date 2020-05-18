@@ -212,6 +212,20 @@ class Job:
             cur.execute('UPDATE clusterings SET kill = true WHERE job_id = %s AND spec_id = %s AND spec_type = %s',
                         (self.job_id, id, type))
 
+    def delete(self, id, type):
+        with db_conn() as conn, conn.cursor() as cur:
+            cur.execute('DELETE FROM clusterings WHERE job_id = %s AND spec_id = %s AND spec_type = %s',
+                        (self.job_id, id, type))
+
+            if type == 'linkset':
+                cur.execute('DELETE FROM linksets WHERE job_id = %s AND spec_id = %s', (self.job_id, id))
+                cur.execute(sql.SQL('DROP TABLE IF EXISTS {}').format(sql.Identifier(self.linkset_table_name(id))))
+
+            if type == 'lens':
+                cur.execute('DELETE FROM lenses WHERE job_id = %s AND spec_id = %s', (self.job_id, id))
+                cur.execute(sql.SQL('DROP VIEW IF EXISTS {}').format(sql.Identifier(self.lens_view_name(id))))
+                cur.execute(sql.SQL('DROP TABLE IF EXISTS {}').format(sql.Identifier(self.lens_table_name(id))))
+
     def validate_link(self, id, type, source_uri, target_uri, valid):
         linksets = [] if type == 'lens' else [id]
         if type == 'lens':
@@ -271,6 +285,11 @@ class Job:
                 to_add.remove(ets_to_add)
 
         return to_run
+
+    def spec_lens_uses(self, id, type):
+        return [lens_spec.id for lens_spec in self.lens_specs
+                if (type == 'linkset' and id in lens_spec.linksets)
+                or (type == 'lens' and id in lens_spec.lenses)]
 
     def has_queued_entity_type_selections(self, id=None):
         ets = self.entity_type_selections_required_for_linkset(id) if id else self.entity_type_selections

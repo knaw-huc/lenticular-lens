@@ -258,6 +258,10 @@ export default {
             return callApi(`/job/${this.job.job_id}/kill_clustering/${type}/${id}`, {});
         },
 
+        async deleteResult(type, id) {
+            return callApi(`/job/${this.job.job_id}/${type}/${id}`, undefined, true);
+        },
+
         async getEntityTypeSelectionSampleTotal(label) {
             return callApi(`/job/${this.job.job_id}/entity_type_selection_total/${label}`);
         },
@@ -369,7 +373,7 @@ function findId(objs) {
     return latestId + 1;
 }
 
-async function callApi(path, body) {
+async function callApi(path, body, isDelete = false) {
     try {
         let response;
 
@@ -382,6 +386,9 @@ async function callApi(path, body) {
                 method: 'POST',
                 body: JSON.stringify(body)
             });
+        }
+        else if (isDelete) {
+            response = await fetch(path, {method: 'DELETE'});
         }
         else {
             response = await fetch(path);

@@ -14,7 +14,7 @@
     "vuedraggable": "^2.23.2",
     "vue-infinite-loading": "^2.4.5",
     "vue-select": "^3.10.3",
-    "bootstrap": "^4.4.1",
+    "bootstrap": "^4.5.0",
     "bootstrap-vue": "^2.14.0",
     "d3": "^5.16.0",
     "@fortawesome/vue-fontawesome": "^0.1.9",

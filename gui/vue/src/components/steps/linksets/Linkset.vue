@@ -52,7 +52,7 @@
         </select>
       </div>
 
-      <div v-if="!isOpen && !linkset" class="col-auto">
+      <div v-if="!isOpen" class="col-auto">
         <button-delete @click="$emit('remove')" title="Delete this linkset"/>
       </div>
     </template>

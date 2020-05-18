@@ -63,14 +63,14 @@
           </template>
 
           <draggable v-model="$root.linksetSpecs" group="linksetSpecs" handle=".handle">
-            <b-collapse v-for="(linksetSpec, index) in $root.linksetSpecs"
+            <b-collapse v-for="linksetSpec in $root.linksetSpecs"
                         :key="linksetSpec.id" :id="'linkset_spec_card_' + linksetSpec.id"
                         :visible="linksetSpecOpen === linksetSpec.id || linksetSpecOpen === null">
               <linkset
                   :linkset-spec="linksetSpec"
                   @duplicate="duplicateLinksetSpec($event)"
                   @submit="submit"
-                  @remove="$root.linksetSpecs.splice(index, 1)"
+                  @remove="removeSpec('linkset', linksetSpec.id)"
                   @update:label="linksetSpec.label = $event"
                   @show="linksetSpecOpen = linksetSpec.id"
                   @hide="linksetSpecOpen = null"
@@ -89,14 +89,14 @@
           </template>
 
           <draggable v-model="$root.lensSpecs" group="lensSpecs" handle=".handle">
-            <b-collapse v-for="(lensSpec, index) in $root.lensSpecs"
+            <b-collapse v-for="lensSpec in $root.lensSpecs"
                         :key="lensSpec.id" :id="'lens_spec_card_' + lensSpec.id"
                         :visible="lensSpecOpen === lensSpec.id || lensSpecOpen === null">
               <lens
                   :lens-spec="lensSpec"
                   @duplicate="duplicateLensSpec($event)"
                   @submit="submit"
-                  @remove="$root.lensSpecs.splice(index, 1)"
+                  @remove="removeSpec('lens', lensSpec.id)"
                   @update:label="lensSpec.label = $event"
                   @show="lensSpecOpen = lensSpec.id"
                   @hide="lensSpecOpen = null"
@@ -253,6 +253,28 @@
                         spec: lensSpec,
                     }))
                 ];
+            },
+
+            specsUsedInLens() {
+                const specsInLens = lensSpec => this.$root
+                    .getRecursiveElements(lensSpec.specs, 'elements')
+                    .flatMap(elem => {
+                        if (elem.type === 'lens') {
+                            const elemLensSpec = this.$root.getLensSpecById(elem.id);
+                            if (elemLensSpec)
+                                return [({type: 'lens', id: elemLensSpec.id}), ...specsInLens(elemLensSpec)];
+                        }
+                        else if (elem.type === 'linkset') {
+                            const elemLinksetSpec = this.$root.getLinksetSpecById(elem.id);
+                            if (elemLinksetSpec)
+                                return [({type: 'linkset', id: elemLinksetSpec.id})];
+                        }
+
+                        return [];
+                    });
+
+                const specs = this.$root.lensSpecs.reduce((acc, lensSpec) => acc.concat(specsInLens(lensSpec)), []);
+                return [...new Set(specs)];
             },
         },
         methods: {
@@ -471,6 +493,32 @@
                     setTimeout(_ => this.refreshDownloadsInProgress(), 2000);
                 else
                     this.isDownloading = false;
+            },
+
+            async removeSpec(type, id) {
+                if (this.specsUsedInLens.find(spec => spec.type === type && spec.id === id)) {
+                    alert(`This ${type} is used in another lens. Please remove this lens first!`);
+                    return;
+                }
+
+                if (type === 'linkset') {
+                    if (this.$root.linksets.find(linkset => linkset.spec_id === id))
+                        if (!(await this.$root.deleteResult(type, id))) return;
+
+                    const index = this.$root.linksetSpecs.findIndex(linkset => linkset.id === id);
+                    this.$root.linksetSpecs.splice(index, 1);
+
+                    await this.submit();
+                }
+                else if (type === 'lens') {
+                    if (this.$root.lenses.find(lens => lens.spec_id === id))
+                        if (!(await this.$root.deleteResult(type, id))) return;
+
+                    const index = this.$root.lensSpecs.findIndex(lens => lens.id === id);
+                    this.$root.lensSpecs.splice(index, 1);
+
+                    await this.submit();
+                }
             },
         },
         mounted() {

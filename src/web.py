@@ -195,6 +195,18 @@ def kill_clustering(job, type, id):
     return jsonify({'result': 'ok'})
 
 
+@app.route('/job/<job:job>/<type:type>/<int:id>', methods=['DELETE'])
+def delete(job, type, id):
+    lens_uses = job.spec_lens_uses(id, type)
+    if len(lens_uses) > 0:
+        response = jsonify({'result': 'fail', 'lens_uses': lens_uses})
+        response.status_code = 400
+        return response
+
+    job.delete(id, type)
+    return jsonify({'result': 'ok'})
+
+
 @app.route('/job/<job:job>/entity_type_selection_total/<label>')
 def entity_type_selection_total(job, label):
     return jsonify(job.get_entity_type_selection_sample_total(label))
