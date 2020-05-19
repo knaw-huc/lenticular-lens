@@ -244,13 +244,22 @@ _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/kill_lens/0`_
 
 ---
 
-**URL**: `/job/<job_id>/kill_clustering/<type>/<linkset>`\
+**URL**: `/job/<job_id>/kill_clustering/<type>/<id>`\
 **Method**: `POST`
 
 Stop a clustering process of `type` (`linkset` or `lens`) 
 for the linkset/lens with the given `id` of a specific `job_id`.
 
 _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/kill_clustering/lens/0`_
+
+---
+
+**URL**: `/job/<job_id>/<type>/<id>`\
+**Method**: `DELETE`
+
+Deletion of `type` (`linkset` or `lens`) for the linkset/lens with the given `id` of a specific `job_id`.
+
+_Example: `/job/d697ea3869422ce3c7cc1889264d03c7/lens/0`_
 
 ### Data retrieval
 
