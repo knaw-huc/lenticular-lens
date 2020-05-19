@@ -198,10 +198,10 @@
             },
 
             removeLensElement({group, index}) {
-                const element = group.specs[index].specs[0];
+                const element = group.elements[index].elements[0];
                 const elementCopy = JSON.parse(JSON.stringify(element));
 
-                this.$set(group.specs, index, elementCopy);
+                this.$set(group.elements, index, elementCopy);
             },
 
             updateProperties() {

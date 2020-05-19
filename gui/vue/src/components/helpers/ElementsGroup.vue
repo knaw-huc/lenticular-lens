@@ -185,11 +185,13 @@
                 this.$emit('add', elementsGroup);
             },
 
-            removeElement({group, index}) {
-                if (this.controlledElements)
+            removeElement(idx) {
+                if (this.controlledElements) {
+                    const {group, index} = idx;
                     this.$emit('remove', {group: group || this.elementsGroup, index});
+                }
                 else {
-                    this.elementsGroup[this.elementsGroupName].splice(index, 1);
+                    this.elementsGroup[this.elementsGroupName].splice(idx, 1);
                     if (!this.isRoot && this.elementsGroup[this.elementsGroupName].length === 1)
                         this.$emit('demote', this.index);
                 }

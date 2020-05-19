@@ -101,7 +101,7 @@
               <div slot="option" slot-scope="option">
                 <div>
                   <span class="pr-2">{{ option.title || option.id }}</span>
-                  <span class="font-italic text-muted small">{{ option.total }}</span>
+                  <span class="font-italic text-muted small">{{ option.total.toLocaleString('en') }}</span>
                 </div>
 
                 <div class="small pt-1">
@@ -111,7 +111,7 @@
             </v-select>
 
             <small v-if="selectedCollection" class="form-text text-muted mt-2">
-              Size: {{ selectedCollection.total }}
+              Size: {{ selectedCollection.total.toLocaleString('en') }}
               <download-progress class="ml-1"
                                  :dataset-id="entityTypeSelection.dataset.dataset_id"
                                  :collection-id="selectedCollection.id"/>
