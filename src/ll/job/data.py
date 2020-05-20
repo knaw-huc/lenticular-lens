@@ -332,7 +332,7 @@ class Job:
         table_info = get_table_info(entity_type_selection.dataset_id, entity_type_selection.collection_id)
         query = create_query_for_properties(entity_type_selection.dataset_id, entity_type_selection.label,
                                             table_info['table_name'], table_info['columns'], properties,
-                                            initial_join=entity_type_selection.joins(),
+                                            joins=entity_type_selection.joins(),
                                             condition=entity_type_selection.filter_sql,
                                             invert=invert, limit=limit, offset=offset)
 
@@ -345,7 +345,7 @@ class Job:
 
         table_info = get_table_info(entity_type_selection.dataset_id, entity_type_selection.collection_id)
         query = create_count_query_for_properties(entity_type_selection.label, table_info['table_name'],
-                                                  initial_join=entity_type_selection.joins(),
+                                                  joins=entity_type_selection.joins(),
                                                   condition=entity_type_selection.filter_sql)
 
         return fetch_one(query, dict=True)
@@ -388,8 +388,8 @@ class Job:
                 if type == 'lens' else self.get_linkset_spec_by_id(id).properties
             targets = self.value_targets_for_properties(properties)
             if targets:
-                initial_join = get_linkset_join_sql(view_name, joins_sql, where_sql, limit, offset)
-                queries = get_property_values_queries(targets, initial_join=initial_join)
+                joins = get_linkset_join_sql(view_name, joins_sql, where_sql, limit, offset)
+                queries = get_property_values_queries(targets, joins=joins)
                 values = get_property_values(queries, dict=True)
 
         with db_conn() as conn, conn.cursor(name=uuid4().hex) as cur:
@@ -461,8 +461,8 @@ class Job:
                 else self.get_linkset_spec_by_id(id).properties
             targets = self.value_targets_for_properties(properties)
             if targets:
-                initial_join = get_linkset_cluster_join_sql(linkset_table, limit, offset)
-                queries = get_property_values_queries(targets, initial_join=initial_join)
+                joins = get_linkset_cluster_join_sql(linkset_table, limit, offset)
+                queries = get_property_values_queries(targets, joins=joins)
                 values = get_property_values(queries, dict=True)
 
         with db_conn() as conn, conn.cursor(name=uuid4().hex) as cur:

@@ -46,7 +46,7 @@ def get_property_values_for_query(query, parameters, property_paths, graph=None,
     return property_values
 
 
-def get_property_values_queries(query_data, uris=None, initial_join=None):
+def get_property_values_queries(query_data, uris=None, joins=None):
     condition = None
     if uris:
         condition = sql.SQL('target.uri IN %(uris)s')
@@ -63,7 +63,7 @@ def get_property_values_queries(query_data, uris=None, initial_join=None):
                     = create_query_for_properties(graph_set['graph'], 'target',
                                                   table_info['table_name'], table_info['columns'],
                                                   datatype_set['properties'],
-                                                  initial_join=initial_join, condition=condition)
+                                                  joins=joins, condition=condition)
         queries[graph_set['graph']] = entities
 
     return {
@@ -73,7 +73,7 @@ def get_property_values_queries(query_data, uris=None, initial_join=None):
     }
 
 
-def create_count_query_for_properties(resource, target, initial_join=None, condition=None):
+def create_count_query_for_properties(resource, target, joins=None, condition=None):
     return sql.SQL('''
         SELECT COUNT({parent_resource}.uri) AS total
         FROM {table_name} AS {parent_resource} 
@@ -82,14 +82,14 @@ def create_count_query_for_properties(resource, target, initial_join=None, condi
     ''').format(
         parent_resource=sql.Identifier(resource),
         table_name=sql.Identifier(target),
-        joins=get_initial_joins(initial_join).sql,
+        joins=get_initial_joins(joins).sql,
         condition=sql.SQL('WHERE {}').format(condition) if condition and condition != sql.SQL('') else sql.SQL(''),
     )
 
 
 def create_query_for_properties(graph, resource, target, columns, property_paths,
-                                initial_join=None, condition=None, invert=False, limit=None, offset=0):
-    joins = get_initial_joins(initial_join)
+                                joins=None, condition=None, invert=False, limit=None, offset=0):
+    selection_joins = Joins()
     properties = []
     parent_resource = resource
 
@@ -97,14 +97,14 @@ def create_query_for_properties(graph, resource, target, columns, property_paths
         property_name = hasher(property_path)
         property_path = property_path if type(property_path) is list else [property_path]
 
-        property = get_property_field(graph, joins, resource, columns, property_path)
+        property = get_property_field(graph, selection_joins, resource, columns, property_path)
         property_sql = sql.SQL('ARRAY_AGG(DISTINCT {value}) AS {name}').format(
             value=property.sql,
             name=sql.Identifier(property_name))
         properties.append(property_sql)
 
         if property.is_list:
-            joins.add_join(property.left_join, property.extended_prop_label)
+            selection_joins.add_join(property.left_join, property.extended_prop_label)
 
     condition_sql = sql.SQL('')
     if condition and condition != sql.SQL(''):
@@ -116,15 +116,23 @@ def create_query_for_properties(graph, resource, target, columns, property_paths
     return sql.SQL('''
         SELECT {parent_resource}.uri AS uri, {selection}
         FROM {table_name} AS {parent_resource} 
-        {joins}
-        {condition}
+        {selection_joins}
+        WHERE {parent_resource}.uri IN (
+            SELECT {parent_resource}.uri
+            FROM {table_name} AS {parent_resource}
+            {joins}
+            {condition}
+            GROUP BY {parent_resource}.uri
+            ORDER BY {parent_resource}.uri ASC {limit_offset}
+        )
         GROUP BY {parent_resource}.uri
-        ORDER BY {parent_resource}.uri ASC {limit_offset}
+        ORDER BY {parent_resource}.uri
     ''').format(
         parent_resource=sql.Identifier(parent_resource),
         selection=sql.SQL(', ').join(properties),
         table_name=sql.Identifier(target),
-        joins=joins.sql,
+        selection_joins=selection_joins.sql,
+        joins=get_initial_joins(joins).sql,
         condition=condition_sql,
         limit_offset=sql.SQL(get_pagination_sql(limit, offset))
     )
