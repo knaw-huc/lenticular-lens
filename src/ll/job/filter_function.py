@@ -4,21 +4,30 @@ from ll.util.helpers import get_json_from_file
 
 class FilterFunction:
     def __init__(self, function_obj, property):
-        function_name = function_obj['type']
+        self._function_name = function_obj['type']
+        self._property = property
 
         filter_functions = get_json_from_file('filter_functions.json')
-        if function_name in filter_functions:
-            self._function_info = filter_functions[function_name]
+        if self._function_name in filter_functions:
+            self._function_info = filter_functions[self._function_name]
         else:
-            raise NameError('Filter function %s is not defined' % function_name)
+            raise NameError('Filter function %s is not defined' % self._function_name)
 
-        if function_name == 'minimal_appearances' or function_name == 'maximum_appearances':
-            property.no_extend()
+        if not self.extend:
+            self.property_field.no_extend()
 
         self._parameters = {key: psycopg2_sql.Literal(value) for key, value in function_obj.items()
                             if key not in ['type', 'property']}
 
-        self._parameters['property'] = property.sql
+        self._parameters['property'] = self.property_field.sql
+
+    @property
+    def property_field(self):
+        return self._property
+
+    @property
+    def extend(self):
+        return self._function_name != 'minimal_appearances' and self._function_name != 'maximum_appearances'
 
     @property
     def sql(self):

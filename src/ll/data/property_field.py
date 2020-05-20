@@ -1,34 +1,33 @@
-from inspect import cleandoc
 from psycopg2 import sql as psycopg2_sql
 from ll.util.helpers import hash_string, get_string_from_sql
 
 
 class PropertyField:
-    def __init__(self, data, parent_label=None, columns=None, transformers=None):
-        self._data = data
-        self._parent_label = parent_label
-        self._columns = columns
-        self._transformers = transformers if transformers else []
-        self._extend = True
+    def __init__(self, data, job=None, parent_label=None, columns=None, transformers=None):
+        self._data = data if isinstance(data, list) else [data]
+        self._data[len(self._data) - 1] = self._data[len(self._data) - 1].lower()
 
-        self._hash = hash_string(get_string_from_sql(self.sql))
+        self._parent_label = parent_label
+        self._transformers = transformers if transformers else []
+
+        ets = job.get_entity_type_selection_by_label(self.entity_type_selection_label) if job else None
+        self._columns = ets.columns if ets else columns
+
+        self._extend = True
+        self._hash = None
 
     def no_extend(self):
         self._extend = False
 
     @property
     def hash(self):
+        if not self._hash:
+            self._hash = hash_string(get_string_from_sql(self.sql))
         return self._hash
 
     @property
     def absolute_property(self):
-        if isinstance(self._data, list):
-            property_array = self._data
-        else:
-            property_array = [self._data]
-
-        property_array[len(property_array) - 1] = property_array[len(property_array) - 1].lower()
-        property_array = list(map(hash_string, property_array))
+        property_array = list(map(hash_string, self._data))
 
         if self._parent_label and len(property_array) == 1:
             property_array.insert(0, self._parent_label)
@@ -48,7 +47,7 @@ class PropertyField:
 
     @property
     def prop_name(self):
-        return self._data[1]
+        return self._data[1] if len(self._data) == 2 else self._data[0]
 
     @property
     def extended_prop_label(self):
@@ -76,9 +75,7 @@ class PropertyField:
     @property
     def left_join(self):
         if self.is_list:
-            sql = psycopg2_sql.SQL(cleandoc(
-                """ LEFT JOIN unnest({table_name}.{column_name}) 
-                    AS {column_name_expanded} ON true"""))
+            sql = psycopg2_sql.SQL('LEFT JOIN UNNEST({table_name}.{column_name}) AS {column_name_expanded} ON true')
 
             return sql.format(
                 table_name=psycopg2_sql.Identifier(self.entity_type_selection_label),

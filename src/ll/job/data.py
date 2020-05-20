@@ -332,7 +332,7 @@ class Job:
         table_info = get_table_info(entity_type_selection.dataset_id, entity_type_selection.collection_id)
         query = create_query_for_properties(entity_type_selection.dataset_id, entity_type_selection.label,
                                             table_info['table_name'], table_info['columns'], properties,
-                                            initial_join=entity_type_selection.related_joins(),
+                                            initial_join=entity_type_selection.joins(),
                                             condition=entity_type_selection.filter_sql,
                                             invert=invert, limit=limit, offset=offset)
 
@@ -345,7 +345,7 @@ class Job:
 
         table_info = get_table_info(entity_type_selection.dataset_id, entity_type_selection.collection_id)
         query = create_count_query_for_properties(entity_type_selection.label, table_info['table_name'],
-                                                  initial_join=entity_type_selection.related_joins(),
+                                                  initial_join=entity_type_selection.joins(),
                                                   condition=entity_type_selection.filter_sql)
 
         return fetch_one(query, dict=True)

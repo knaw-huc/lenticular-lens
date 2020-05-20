@@ -60,6 +60,10 @@ class EntityTypeSelection:
         return self._data['related'] if 'related' in self._data else []
 
     @property
+    def filters(self):
+        return self._r_get_filters(self._data['filter']) if 'filter' in self._data and self._data['filter'] else []
+
+    @property
     def where_sql(self):
         where_sql = self.filter_sql
         if where_sql != psycopg2_sql.SQL(''):
@@ -84,25 +88,23 @@ class EntityTypeSelection:
 
         return psycopg2_sql.SQL(',\n       ').join(matching_fields_sqls)
 
-    def joins(self, linkset_spec):
+    def joins(self, linkset_spec=None):
         joins = Joins()
-        self.set_joins_sql(linkset_spec, joins, fields=True, related=True)
+        self.set_joins_sql(linkset_spec, joins)
         return joins
 
-    def related_joins(self, linkset_spec=None):
-        joins = Joins()
-        self.set_joins_sql(linkset_spec, joins, fields=False, related=True)
-        return joins
-
-    def set_joins_sql(self, linkset_spec, joins, fields=True, related=True):
-        if fields:
+    def set_joins_sql(self, linkset_spec, joins):
+        if linkset_spec:
             for property_field in self.fields(linkset_spec):
                 if property_field.is_list:
                     joins.add_join(property_field.left_join, property_field.extended_prop_label)
 
-        if related:
-            for relation in self.related:
-                self._r_get_join_sql(linkset_spec, relation, joins, fields, related)
+        for relation in self.related:
+            self._r_get_join_sql(linkset_spec, relation, joins)
+
+        for filter in self.filters:
+            if filter.extend and filter.property_field.is_list:
+                joins.add_join(filter.property_field.left_join, filter.property_field.extended_prop_label)
 
     def _get_fields(self, linkset_spec, only_matching_fields=True):
         matching_fields = []
@@ -119,6 +121,21 @@ class EntityTypeSelection:
 
         return matching_fields
 
+    def _r_get_filters(self, filter_obj):
+        if filter_obj['type'] in ['AND', 'OR']:
+            filters = []
+            for condition in filter_obj['conditions']:
+                condition_filters = self._r_get_filters(condition)
+                if isinstance(condition_filters, list):
+                    filters += condition_filters
+                else:
+                    filters.append(condition_filters)
+
+            return filters
+
+        property = PropertyField(filter_obj['property'], job=self._job)
+        return FilterFunction(filter_obj, property)
+
     def _r_get_filter_sql(self, filter_obj):
         if filter_obj['type'] in ['AND', 'OR']:
             if not filter_obj['conditions']:
@@ -127,23 +144,20 @@ class EntityTypeSelection:
             filter_sqls = map(self._r_get_filter_sql, filter_obj['conditions'])
             return psycopg2_sql.SQL('({})').format(psycopg2_sql.SQL('\n %s ' % filter_obj['type']).join(filter_sqls))
 
-        property = PropertyField(filter_obj['property'], parent_label=self.label, columns=self.columns)
-
+        property = PropertyField(filter_obj['property'], job=self._job)
         return FilterFunction(filter_obj, property).sql
 
-    def _r_get_join_sql(self, linkset_spec, relation, joins, fields, related):
+    def _r_get_join_sql(self, linkset_spec, relation, joins):
         if isinstance(relation, list):
             for sub_relation in relation:
-                self._r_get_join_sql(linkset_spec, sub_relation, joins, fields, related)
+                self._r_get_join_sql(linkset_spec, sub_relation, joins)
             return
 
         remote_ets_name = hash_string(relation['entity_type_selection'])
         remote_ets = self._job.get_entity_type_selection_by_label(remote_ets_name)
 
-        local_property = PropertyField(relation['local_property'],
-                                       parent_label=self.label, columns=self.columns)
-        remote_property = PropertyField(relation['remote_property'],
-                                        parent_label=remote_ets_name, columns=remote_ets.columns)
+        local_property = PropertyField([self._data['label'], relation['local_property']], job=self._job)
+        remote_property = PropertyField([relation['entity_type_selection'], relation['remote_property']], job=self._job)
 
         if local_property.is_list:
             joins.add_join(local_property.left_join, local_property.extended_prop_label)
@@ -163,4 +177,4 @@ class EntityTypeSelection:
                 extra_filter=extra_filter
             ), remote_ets_name)
 
-        remote_ets.set_joins_sql(linkset_spec, joins, fields, related)
+        remote_ets.set_joins_sql(linkset_spec, joins)

@@ -94,9 +94,7 @@ class MatchingFunction:
                     else:
                         raise NameError('Transformer %s is not defined' % transformer['name'])
 
-                columns = self._job.get_entity_type_selection_by_label(hash_string(field['property'][0])).columns
-                property_field = PropertyField(field['property'], columns=columns, transformers=field_transformers)
-
+                property_field = PropertyField(field['property'], job=self._job, transformers=field_transformers)
                 entity_type_selections[idx].append(property_field)
 
         return entity_type_selections
