@@ -320,7 +320,7 @@ def export_to_csv(job, type, id):
         writer.writerow([link['source'], link['target'], link['valid']])
 
     output = make_response(stream.getvalue())
-    output.headers['Content-Disposition'] = 'attachment; filename=' + job.job_id + '_' + type + '_' + id + '.csv'
+    output.headers['Content-Disposition'] = 'attachment; filename=' + job.job_id + '_' + type + '_' + str(id) + '.csv'
     output.headers['Content-Type'] = 'text/csv'
 
     return output
