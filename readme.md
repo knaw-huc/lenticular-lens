@@ -356,7 +356,7 @@ Specify `valid` with `mixed` to include the links which have mixed validations i
 ## Job configuration with JSON
 
 ### Entity-type selections
-~~~~
+
 Entity-type selections is a list of JSON objects that contain the configuration 
 of the specific entity-type selections to use for a particular job.
 
