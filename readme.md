@@ -494,12 +494,14 @@ of the lenses to apply on a combination of linksets.
 }
 ```
 
-| Lens type      | Description                                                                              |
-| :------------- | :--------------------------------------------------------------------------------------- |
-| UNION          | Union (A ∪ B) All links of both linksets                                                 |
-| INTERSECTION   | Intersection (A ∩ B) Only links that appear in both linksets                             |
-| DIFFERENCE     | Difference (A - B) Only links from the first linkset, not from the second linkset        |
-| SYM_DIFFERENCE | Symmetric difference (A ∆ B) Only links which appear in either one linkset, but not both |
+| Lens type      | Description                                                                                                                               |
+| :------------- | :---------------------------------------------------------------------------------------------------------------------------------------- |
+| UNION          | Union (A ∪ B) All links of both linksets                                                                                                  |
+| INTERSECTION   | Intersection (A ∩ B) Only links that appear in both linksets                                                                              |
+| DIFFERENCE     | Difference (A - B) Only links from the first linkset, not from the second linkset                                                         |
+| SYM_DIFFERENCE | Symmetric difference (A ∆ B) Only links which appear in either one linkset, but not both                                                  |
+| IN_SET_AND     | Both the source and target resource from the first linkset/lens must appear in the the set of resources from the second linkset/lens      |
+| IN_SET_OR      | Either the source or the target resource from the first linkset/lens must appear in the the set of resources from the second linkset/lens |
 
 ### Element groups
 

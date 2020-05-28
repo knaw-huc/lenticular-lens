@@ -118,10 +118,12 @@
         computed: {
             lensOptions() {
                 return {
-                    UNION: "Union (A ∪ B) All links of both linksets/lenses",
-                    INTERSECTION: "Intersection (A ∩ B) Only links that appear in both linksets/lenses",
-                    DIFFERENCE: "Difference (A - B) Only links from the first linkset/lens, not from the second linkset/lens",
-                    SYM_DIFFERENCE: "Symmetric difference (A ∆ B) Only links which appear in either one linkset/lens, but not both"
+                    UNION: 'Union (A ∪ B) All links of both linksets/lenses',
+                    INTERSECTION: 'Intersection (A ∩ B) Only links that appear in both linksets/lenses',
+                    DIFFERENCE: 'Difference (A - B) Only links from the first linkset/lens, not from the second linkset/lens',
+                    SYM_DIFFERENCE: 'Symmetric difference (A ∆ B) Only links which appear in either one linkset/lens, but not both',
+                    IN_SET_AND: 'Both the source and target resource from the first linkset/lens must appear in the the set of resources from the second linkset/lens',
+                    IN_SET_OR: 'Either the source or the target resource from the first linkset/lens must appear in the the set of resources from the second linkset/lens'
                 };
             },
 

@@ -100,7 +100,7 @@ lens_spec_schema = Schema({
     'label': And(str, len),
     Optional('description', default=None): Or(str, None),
     'specs': And(Elements(lens_elements_schema, 'elements',
-                          ('union', 'intersection', 'difference', 'sym_difference')), dict),
+                          ('union', 'intersection', 'difference', 'sym_difference', 'in_set_and', 'in_set_or')), dict),
     Optional('properties', default=list): [{
         'entity_type_selection': Use(int),
         'property': [str],
