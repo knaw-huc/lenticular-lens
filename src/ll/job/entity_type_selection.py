@@ -4,7 +4,6 @@ from ll.data.joins import Joins
 from ll.data.collection import Collection
 from ll.data.property_field import PropertyField
 
-from ll.util.helpers import hash_string
 from ll.job.filter_function import FilterFunction
 
 
@@ -25,16 +24,20 @@ class EntityTypeSelection:
                            and (self.limit < 0 or self.limit > collection.rows_downloaded)
 
     @property
+    def id(self):
+        return self._data.get('id')
+
+    @property
+    def internal_id(self):
+        return self._data['internal_id']
+
+    @property
     def dataset_id(self):
         return self._data['dataset']['dataset_id']
 
     @property
     def collection_id(self):
         return self._data['dataset']['collection_id']
-
-    @property
-    def label(self):
-        return hash_string(self._data['label'])
 
     @property
     def properties(self):
@@ -78,7 +81,7 @@ class EntityTypeSelection:
         return self._get_fields(linkset_spec, only_matching_fields=True)
 
     def matching_fields_sql(self, linkset_spec):
-        matching_fields_sqls = [psycopg2_sql.SQL('{}.uri').format(psycopg2_sql.Identifier(self.label))]
+        matching_fields_sqls = [psycopg2_sql.SQL('{}.uri').format(psycopg2_sql.Identifier(self.internal_id))]
 
         for property_field in self.matching_fields(linkset_spec):
             matching_fields_sqls.append(psycopg2_sql.SQL('{matching_field} AS {name}').format(
@@ -111,7 +114,7 @@ class EntityTypeSelection:
         matching_fields_hashes = []
 
         match_fields = linkset_spec.get_fields(only_matching_fields=only_matching_fields)
-        match_ets_fields = match_fields.get(self.label, {})
+        match_ets_fields = match_fields.get(self.internal_id, {})
 
         for match_field_label, match_field in match_ets_fields.items():
             for match_field_property in match_field:
@@ -153,10 +156,10 @@ class EntityTypeSelection:
                 self._r_get_join_sql(linkset_spec, sub_relation, joins)
             return
 
-        remote_ets_name = hash_string(relation['entity_type_selection'])
-        remote_ets = self._job.get_entity_type_selection_by_label(remote_ets_name)
+        remote_ets_internal_id = relation['entity_type_selection']
+        remote_ets = self._job.get_entity_type_selection_by_internal_id(remote_ets_internal_id)
 
-        local_property = PropertyField([self._data['label'], relation['local_property']], job=self._job)
+        local_property = PropertyField([self._data['internal_id'], relation['local_property']], job=self._job)
         remote_property = PropertyField([relation['entity_type_selection'], relation['remote_property']], job=self._job)
 
         if local_property.is_list:
@@ -172,9 +175,9 @@ class EntityTypeSelection:
         joins.add_join(
             psycopg2_sql.SQL('LEFT JOIN {view} AS {alias}\nON {lhs} = {rhs}{extra_filter}').format(
                 view=psycopg2_sql.Identifier(remote_ets.table_name),
-                alias=psycopg2_sql.Identifier(remote_ets_name),
+                alias=psycopg2_sql.Identifier(remote_ets_internal_id),
                 lhs=lhs, rhs=rhs,
                 extra_filter=extra_filter
-            ), remote_ets_name)
+            ), remote_ets_internal_id)
 
         remote_ets.set_joins_sql(linkset_spec, joins)

@@ -1,7 +1,6 @@
 from inspect import cleandoc
 from psycopg2 import sql as psycopg_sql
 
-from ll.util.helpers import hash_string
 from ll.job.conditions import Conditions
 
 
@@ -10,6 +9,10 @@ class Linkset:
         self._data = data
         self._job = job
         self._conditions = None
+
+    @property
+    def id(self):
+        return self._data['id']
 
     @property
     def conditions(self):
@@ -21,10 +24,6 @@ class Linkset:
     @property
     def conditions_sql(self):
         return self.conditions.conditions_sql
-
-    @property
-    def id(self):
-        return self._data.get('id', '')
 
     @property
     def is_association(self):
@@ -59,10 +58,6 @@ class Linkset:
             ))
 
         return psycopg_sql.SQL('\n').join(index_sqls)
-
-    @property
-    def name(self):
-        return hash_string(self._data['label'])
 
     @property
     def entity_type_selections(self):
@@ -111,18 +106,18 @@ class Linkset:
         ets_properties = {}
         for matching_function in self.conditions.matching_functions:
             for key in keys:
-                for label, properties in getattr(matching_function, key).items():
+                for internal_id, properties in getattr(matching_function, key).items():
                     for property in properties:
-                        ets_label = hash_string(label) if only_matching_fields \
-                            else property.entity_type_selection_label
+                        ets_internal_id = internal_id if only_matching_fields \
+                            else property.entity_type_selection_internal_id
 
-                        if ets_label not in ets_properties:
-                            ets_properties[ets_label] = {}
+                        if ets_internal_id not in ets_properties:
+                            ets_properties[ets_internal_id] = {}
 
-                        props = ets_properties[ets_label].get(matching_function.field_name, [])
+                        props = ets_properties[ets_internal_id].get(matching_function.field_name, [])
                         props.append(property)
 
-                        ets_properties[ets_label][matching_function.field_name] = props
+                        ets_properties[ets_internal_id][matching_function.field_name] = props
 
         return ets_properties
 
@@ -130,7 +125,7 @@ class Linkset:
         properties = self.get_fields([key])
 
         sql = []
-        for ets_label, ets_properties in properties.items():
+        for ets_internal_id, ets_properties in properties.items():
             property_fields = []
             for property_label, ets_method_properties in ets_properties.items():
                 if len(ets_method_properties) == 1:
@@ -150,12 +145,12 @@ class Linkset:
             sql.append(
                 psycopg_sql.SQL(cleandoc(
                     """SELECT DISTINCT {collection} AS collection, uri, {matching_fields}
-                       FROM {label}
+                       FROM {res}
                        WHERE increment_counter({sequence})"""
                 )).format(
-                    collection=psycopg_sql.Literal(ets_label),
+                    collection=psycopg_sql.Literal(ets_internal_id),
                     matching_fields=property_fields_sql,
-                    label=psycopg_sql.Identifier(ets_label),
+                    res=psycopg_sql.Identifier(ets_internal_id),
                     sequence=psycopg_sql.Literal(sequence_key)
                 )
             )

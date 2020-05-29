@@ -8,6 +8,10 @@
           <fa-icon icon="chevron-down" size="2x" v-b-toggle="hasCollapse ? id : {}"></fa-icon>
         </div>
 
+        <div class="col-auto small text-muted p-0">
+          #{{ resId }}
+        </div>
+
         <div class="flex-shrink-1 mr-auto" v-bind:class="[isEditing ? 'col' : 'col-auto']">
           <input v-if="isEditing" type="text" class="form-control border-0 card-title-input" :value="value"
                  ref="editInput" required @blur="editing = false" @input="$emit('input', $event.target.value)"/>
@@ -48,6 +52,7 @@
         props: {
             id: String,
             type: String,
+            resId: Number,
             label: String,
             value: String,
             openCard: {

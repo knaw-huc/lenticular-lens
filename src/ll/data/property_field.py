@@ -10,7 +10,7 @@ class PropertyField:
         self._parent_label = parent_label
         self._transformers = transformers if transformers else []
 
-        ets = job.get_entity_type_selection_by_label(self.entity_type_selection_label) if job else None
+        ets = job.get_entity_type_selection_by_internal_id(self.entity_type_selection_internal_id) if job else None
         self._columns = ets.columns if ets else columns
 
         self._extend = True
@@ -27,18 +27,18 @@ class PropertyField:
 
     @property
     def absolute_property(self):
-        property_array = list(map(hash_string, self._data))
+        if self._parent_label and len(self._data) == 1:
+            property_array = [self._parent_label, self._data[0]]
+        else:
+            property_array = self._data.copy()
 
-        if self._parent_label and len(property_array) == 1:
-            property_array.insert(0, self._parent_label)
-
-        if len(property_array) == 2 and property_array[1] == hash_string('uri'):
-            property_array[1] = 'uri'
+        if len(property_array) == 2 and property_array[1] != 'uri':
+            property_array[1] = hash_string(property_array[1])
 
         return property_array
 
     @property
-    def entity_type_selection_label(self):
+    def entity_type_selection_internal_id(self):
         return self.absolute_property[0]
 
     @property
@@ -78,7 +78,7 @@ class PropertyField:
             sql = psycopg2_sql.SQL('LEFT JOIN UNNEST({table_name}.{column_name}) AS {column_name_expanded} ON true')
 
             return sql.format(
-                table_name=psycopg2_sql.Identifier(self.entity_type_selection_label),
+                table_name=psycopg2_sql.Identifier(self.entity_type_selection_internal_id),
                 column_name=psycopg2_sql.Identifier(self.prop_label),
                 column_name_expanded=psycopg2_sql.Identifier(self.extended_prop_label)
             )

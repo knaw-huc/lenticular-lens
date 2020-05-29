@@ -111,11 +111,11 @@ lens_spec_schema = Schema({
 def transform(entity_type_selections_org, linkset_specs_org, lens_specs_org):
     def create_references_for_property(entity_type_selection, property):
         if len(property) == 1 or property[1] == '__value__':
-            return [entity_type_selection['label'], property[0]]
+            return [entity_type_selection['internal_id'], property[0]]
 
-        referenced_ets_label = hash_string(entity_type_selection['label'] + property[0] + property[1])
-        referenced_ets = next((ref for ref in ref_entity_type_selections if ref['label'] == referenced_ets_label), {
-            'label': referenced_ets_label,
+        referenced_ets_id = hash_string(entity_type_selection['internal_id'] + property[0] + property[1])
+        referenced_ets = next((ref for ref in ref_entity_type_selections if ref['internal_id'] == referenced_ets_id), {
+            'internal_id': referenced_ets_id,
             'dataset': {
                 'timbuctoo_graphql': entity_type_selection['dataset']['timbuctoo_graphql'],
                 'timbuctoo_hsid': entity_type_selection['dataset']['timbuctoo_hsid'],
@@ -126,15 +126,15 @@ def transform(entity_type_selections_org, linkset_specs_org, lens_specs_org):
             'related': []
         })
 
-        if not any(ref for ref in ref_entity_type_selections if ref['label'] == referenced_ets_label):
+        if not any(ref for ref in ref_entity_type_selections if ref['internal_id'] == referenced_ets_id):
             ref_entity_type_selections.append(referenced_ets)
 
         if not any(rel for rel in entity_type_selection['related']
-                   if rel['entity_type_selection'] == referenced_ets_label
+                   if rel['entity_type_selection'] == referenced_ets_id
                       and rel['local_property'] == property[0]
                       and rel['remote_property'] == 'uri'):
             entity_type_selection['related'].append({
-                'entity_type_selection': referenced_ets_label,
+                'entity_type_selection': referenced_ets_id,
                 'local_property': property[0],
                 'remote_property': 'uri'
             })
@@ -161,28 +161,28 @@ def transform(entity_type_selections_org, linkset_specs_org, lens_specs_org):
         return res_condition
 
     def transform_mapping_condition(mapping_conditions, condition):
-        if condition['entity_type_selection'] not in ets_label_by_id:
+        if condition['entity_type_selection'] not in ets_internal_id_by_id:
             raise SchemaError('entity-type selection %s not valid' % condition['entity_type_selection'])
 
-        ets_label = ets_label_by_id[condition['entity_type_selection']]
-        entity_type_selection = next(ets for ets in entity_type_selections if ets['label'] == ets_label)
+        ets_internal_id = ets_internal_id_by_id[condition['entity_type_selection']]
+        entity_type_selection = next(ets for ets in entity_type_selections if ets['internal_id'] == ets_internal_id)
         property = create_references_for_property(entity_type_selection, condition['property'])
 
-        entity_type_selection_list = mapping_conditions.get(ets_label, [])
+        entity_type_selection_list = mapping_conditions.get(ets_internal_id, [])
         entity_type_selection_list.append({
             'property': property,
             'transformers': condition['transformers']
         })
-        mapping_conditions[ets_label] = entity_type_selection_list
+        mapping_conditions[ets_internal_id] = entity_type_selection_list
 
         return mapping_conditions
 
     def transform_property(properties, property):
-        if '' in property['property'] or property['entity_type_selection'] not in ets_label_by_id:
+        if '' in property['property'] or property['entity_type_selection'] not in ets_internal_id_by_id:
             return properties
 
-        ets_label = ets_label_by_id[property['entity_type_selection']]
-        entity_type_selection = next(ets for ets in entity_type_selections if ets['label'] == ets_label)
+        ets_internal_id = ets_internal_id_by_id[property['entity_type_selection']]
+        entity_type_selection = next(ets for ets in entity_type_selections if ets['internal_id'] == ets_internal_id)
 
         graph = entity_type_selection['dataset']['dataset_id']
         entity_type = entity_type_selection['dataset']['collection_id']
@@ -214,20 +214,21 @@ def transform(entity_type_selections_org, linkset_specs_org, lens_specs_org):
     for entity_type_selection_org in entity_type_selections_org:
         try:
             entity_type_selection = entity_type_selection_schema.validate(entity_type_selection_org)
+            entity_type_selection['internal_id'] = hash_string(str(entity_type_selection['id']))
             entity_type_selection['properties'] = [prop for prop in entity_type_selection['properties'] if prop != '']
             entity_type_selections.append(entity_type_selection)
-        except SchemaError as se:
+        except SchemaError:
             pass
 
     ref_entity_type_selections = []
-    ets_label_by_id = {ets['id']: ets['label'] for ets in entity_type_selections if 'id' in ets and 'label' in ets}
+    ets_internal_id_by_id = {ets['id']: ets['internal_id'] for ets in entity_type_selections if 'id' in ets}
 
     for entity_type_selection in entity_type_selections:
         entity_type_selection['related'] = [{
-            'entity_type_selection': ets_label_by_id[rel['entity_type_selection']],
+            'entity_type_selection': ets_internal_id_by_id[rel['entity_type_selection']],
             'local_property': rel['local_property'],
             'remote_property': rel['remote_property'],
-        } for rel in entity_type_selection['related'] if rel['entity_type_selection'] in ets_label_by_id]
+        } for rel in entity_type_selection['related'] if rel['entity_type_selection'] in ets_internal_id_by_id]
 
         if entity_type_selection['filter']:
             entity_type_selection['filter'] = \
@@ -239,11 +240,11 @@ def transform(entity_type_selections_org, linkset_specs_org, lens_specs_org):
             linkset_spec = linkset_spec_schema.validate(linkset_spec_org)
 
             for entity_type_selection in (linkset_spec['sources'] + linkset_spec['targets']):
-                if entity_type_selection not in ets_label_by_id:
+                if entity_type_selection not in ets_internal_id_by_id:
                     raise SchemaError('entity-type selection %s not valid' % entity_type_selection)
 
-            linkset_spec['sources'] = [ets_label_by_id[source] for source in linkset_spec['sources']]
-            linkset_spec['targets'] = [ets_label_by_id[target] for target in linkset_spec['targets']]
+            linkset_spec['sources'] = [ets_internal_id_by_id[source] for source in linkset_spec['sources']]
+            linkset_spec['targets'] = [ets_internal_id_by_id[target] for target in linkset_spec['targets']]
             linkset_spec['methods'] = transform_elements(linkset_spec['methods'], 'conditions', lambda condition: {
                 'method_name': condition['method_name'],
                 'method_value': condition['method_value'],

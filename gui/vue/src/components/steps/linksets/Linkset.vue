@@ -1,5 +1,5 @@
 <template>
-  <card :id="'linkset_spec_' + linksetSpec.id" type="linkset_specs" v-model="linksetSpec.label"
+  <card :id="'linkset_spec_' + linksetSpec.id" type="linkset_specs" :res-id="linksetSpec.id" v-model="linksetSpec.label"
         :has-error="errors.length > 0" :has-handle="true" :has-extra-row="!!linkset"
         @show="onToggle(true)" @hide="onToggle(false)">
     <template v-slot:title-columns>

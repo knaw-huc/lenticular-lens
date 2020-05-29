@@ -207,9 +207,9 @@ def delete(job, type, id):
     return jsonify({'result': 'ok'})
 
 
-@app.route('/job/<job:job>/entity_type_selection_total/<label>')
-def entity_type_selection_total(job, label):
-    return jsonify(job.get_entity_type_selection_sample_total(label))
+@app.route('/job/<job:job>/entity_type_selection_total/<int:id>')
+def entity_type_selection_total(job, id):
+    return jsonify(job.get_entity_type_selection_sample_total(id))
 
 
 @app.route('/job/<job:job>/links_totals/<type:type>/<int:id>')
@@ -217,9 +217,9 @@ def links_totals(job, type, id):
     return jsonify(job.get_links_totals(id, type, cluster_id=request.args.get('cluster_id')))
 
 
-@app.route('/job/<job:job>/entity_type_selection/<label>')
-def entity_type_selection_sample(job, label):
-    return jsonify(job.get_entity_type_selection_sample(label,
+@app.route('/job/<job:job>/entity_type_selection/<int:id>')
+def entity_type_selection_sample(job, id):
+    return jsonify(job.get_entity_type_selection_sample(id,
                                                         invert=request.args.get('invert', default=False) == 'true',
                                                         limit=request.args.get('limit', type=int),
                                                         offset=request.args.get('offset', 0, type=int)))

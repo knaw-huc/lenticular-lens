@@ -262,17 +262,17 @@ export default {
             return callApi(`/job/${this.job.job_id}/${type}/${id}`, undefined, true);
         },
 
-        async getEntityTypeSelectionSampleTotal(label) {
-            return callApi(`/job/${this.job.job_id}/entity_type_selection_total/${label}`);
+        async getEntityTypeSelectionSampleTotal(id) {
+            return callApi(`/job/${this.job.job_id}/entity_type_selection_total/${id}`);
         },
 
-        async getEntityTypeSelectionSample(label, invert = false, limit = undefined, offset = 0) {
+        async getEntityTypeSelectionSample(id, invert = false, limit = undefined, offset = 0) {
             const params = [];
             if (invert) params.push(`invert=${invert}`);
             if (limit) params.push(`limit=${limit}`);
             if (offset) params.push(`offset=${offset}`);
 
-            return callApi(`/job/${this.job.job_id}/entity_type_selection/${label}?${params.join('&')}`);
+            return callApi(`/job/${this.job.job_id}/entity_type_selection/${id}?${params.join('&')}`);
         },
 
         async getLinksTotals(type, id, clusterId = undefined) {

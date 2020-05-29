@@ -263,12 +263,12 @@ _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/lens/0`_
 
 ### Data retrieval
 
-**URL**: `/job/<job_id>/entity_type_selection_total/<label>`\
+**URL**: `/job/<job_id>/entity_type_selection_total/<id>`\
 **Method**: `GET`
 
-Returns the total number of entities for an entity-type selection with the label `label` of the given `job_id`.
+Returns the total number of entities for an entity-type selection with the given `id` of the given `job_id`.
 
-_Example: `/job/d697ea3869422ce3c7cc1889264d03c7/entity_type_selection_total/LimitedPersons`_
+_Example: `/job/d697ea3869422ce3c7cc1889264d03c7/entity_type_selection_total/0`_
 
 ---
 
@@ -284,14 +284,14 @@ _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/links_totals/linkset/0`_
 
 ---
 
-**URL**: `/job/<job_id>/entity_type_selection/<label>`\
+**URL**: `/job/<job_id>/entity_type_selection/<id>`\
 **Method**: `GET`\
 **Parameters**: `limit`, `offset`
 
-Returns all data for an entity-type selection with the label `label` of the given `job_id`.
+Returns all data for an entity-type selection with the given `id` of the given `job_id`.
 Use `limit` and `offset` for paging.
 
-_Example: `/job/d697ea3869422ce3c7cc1889264d03c7/entity_type_selection/LimitedPersons`_
+_Example: `/job/d697ea3869422ce3c7cc1889264d03c7/entity_type_selection/0`_
 
 ---
 

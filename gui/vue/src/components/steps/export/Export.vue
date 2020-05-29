@@ -1,5 +1,5 @@
 <template>
-  <card :id="'export_' + type + '_' + spec.id" type="export" :label="spec.label" :has-collapse="false">
+  <card :id="'export_' + type + '_' + spec.id" type="export" :res-id="spec.id" :label="spec.label" :has-collapse="false">
     <div class="row justify-content-center">
       <div class="col-auto">
         <div class="btn-toolbar" role="toolbar" aria-label="Toolbar">

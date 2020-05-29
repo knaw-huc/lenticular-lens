@@ -229,7 +229,3 @@ def get_table_info(dataset_id, collection_id):
     )
 
     return {'table_name': result[0], 'columns': result[1]} if result else result
-
-
-def get_column_name(property_name):
-    return hash_string(property_name.lower())

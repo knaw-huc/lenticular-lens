@@ -1,5 +1,5 @@
 <template>
-  <card :id="'lens_spec_' + lensSpec.id" type="lens-specs" v-model="lensSpec.label"
+  <card :id="'lens_spec_' + lensSpec.id" type="lens-specs" :res-id="lensSpec.id" v-model="lensSpec.label"
         :has-error="errors.length > 0" :has-handle="true" :has-extra-row="!!lens"
         @show="onToggle(true)" @hide="onToggle(false)">
     <template v-slot:title-columns>

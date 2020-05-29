@@ -1,4 +1,3 @@
-from ll.util.helpers import hash_string
 from ll.job.lens_elements import LensElements
 
 
@@ -7,6 +6,10 @@ class Lens:
         self._data = data
         self._job = job
         self._specs = None
+
+    @property
+    def id(self):
+        return self._data['id']
 
     @property
     def specs(self):
@@ -32,13 +35,5 @@ class Lens:
         return self.specs.lenses
 
     @property
-    def id(self):
-        return self._data.get('id', '')
-
-    @property
     def properties(self):
         return self._data['properties']
-
-    @property
-    def name(self):
-        return hash_string(self._data['label'])

@@ -16,7 +16,7 @@ from ll.data.query import get_property_values, get_property_values_queries, get_
     get_linkset_join_sql, get_linkset_cluster_join_sql, get_table_info
 
 from ll.util.config_db import db_conn, fetch_one
-from ll.util.helpers import hash_string, hasher, get_pagination_sql
+from ll.util.helpers import hasher, get_pagination_sql
 
 
 class Validation(IntFlag):
@@ -265,7 +265,7 @@ class Job:
     def entity_type_selections_required_for_linkset(self, id):
         linkset_spec = self.get_linkset_spec_by_id(id)
 
-        to_add = [hash_string(entity_type_selections) for entity_type_selections in linkset_spec.entity_type_selections]
+        to_add = linkset_spec.entity_type_selections
         to_run = []
 
         added = []
@@ -274,10 +274,10 @@ class Job:
 
             if ets_to_add not in added:
                 for ets in self.entity_type_selections:
-                    if ets.label == ets_to_add:
+                    if ets.internal_id == ets_to_add:
                         to_run.append(ets)
 
-                        to_add += [hash_string(related['entity_type_selection']) for related in ets.related]
+                        to_add += [related['entity_type_selection'] for related in ets.related]
 
                         to_add.remove(ets_to_add)
                         added.append(ets_to_add)
@@ -299,9 +299,16 @@ class Job:
 
         return False
 
-    def get_entity_type_selection_by_label(self, label):
+    def get_entity_type_selection_by_id(self, id):
         for entity_type_selection in self.entity_type_selections:
-            if entity_type_selection.label == label:
+            if entity_type_selection.id == id:
+                return entity_type_selection
+
+        return None
+
+    def get_entity_type_selection_by_internal_id(self, internal_id):
+        for entity_type_selection in self.entity_type_selections:
+            if entity_type_selection.internal_id == internal_id:
                 return entity_type_selection
 
         return None
@@ -320,8 +327,8 @@ class Job:
 
         return None
 
-    def get_entity_type_selection_sample(self, label, invert=False, limit=None, offset=0):
-        entity_type_selection = self.get_entity_type_selection_by_label(hash_string(label))
+    def get_entity_type_selection_sample(self, id, invert=False, limit=None, offset=0):
+        entity_type_selection = self.get_entity_type_selection_by_id(id)
         if not entity_type_selection:
             return []
 
@@ -330,7 +337,7 @@ class Job:
             return []
 
         table_info = get_table_info(entity_type_selection.dataset_id, entity_type_selection.collection_id)
-        query = create_query_for_properties(entity_type_selection.dataset_id, entity_type_selection.label,
+        query = create_query_for_properties(entity_type_selection.dataset_id, entity_type_selection.internal_id,
                                             table_info['table_name'], table_info['columns'], properties,
                                             joins=entity_type_selection.joins(),
                                             condition=entity_type_selection.filter_sql,
@@ -338,13 +345,13 @@ class Job:
 
         return get_property_values_for_query(query, None, properties, dict=False)
 
-    def get_entity_type_selection_sample_total(self, label):
-        entity_type_selection = self.get_entity_type_selection_by_label(hash_string(label))
+    def get_entity_type_selection_sample_total(self, id):
+        entity_type_selection = self.get_entity_type_selection_by_id(id)
         if not entity_type_selection:
             return {'total': 0}
 
         table_info = get_table_info(entity_type_selection.dataset_id, entity_type_selection.collection_id)
-        query = create_count_query_for_properties(entity_type_selection.label, table_info['table_name'],
+        query = create_count_query_for_properties(entity_type_selection.internal_id, table_info['table_name'],
                                                   joins=entity_type_selection.joins(),
                                                   condition=entity_type_selection.filter_sql)
 

@@ -1,5 +1,5 @@
 <template>
-  <card :id="'validation_' + type + '_' + spec.id" type="validation" :label="spec.label"
+  <card :id="'validation_' + type + '_' + spec.id" type="validation" :res-id="spec.id" :label="spec.label"
         :has-extra-row="true" :open-card="show" @show="updateShow('open')" @hide="updateShow('close')">
     <template v-slot:columns>
       <div class="col">

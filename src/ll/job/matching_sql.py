@@ -39,7 +39,7 @@ class MatchingSql:
                 """
             ) + '\n').format(
                 pre=pre,
-                view_name=sql.Identifier(entity_type_selection.label),
+                view_name=sql.Identifier(entity_type_selection.internal_id),
                 matching_fields=entity_type_selection.matching_fields_sql(self._linkset),
                 table_name=sql.Identifier(entity_type_selection.table_name),
                 joins=entity_type_selection.joins(self._linkset).sql,

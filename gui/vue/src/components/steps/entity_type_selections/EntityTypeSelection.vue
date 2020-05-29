@@ -1,6 +1,7 @@
 <template>
   <card :id="'entity_type_selection_' + entityTypeSelection.id" type="entityTypeSelections"
-        v-model="entityTypeSelection.label" :has-error="errors.length > 0" :has-handle="true"
+        :res-id="entityTypeSelection.id" v-model="entityTypeSelection.label"
+        :has-error="errors.length > 0" :has-handle="true"
         @show="onToggle(true)" @hide="onToggle(false)">
     <template v-slot:title-columns>
       <div class="col-auto" v-if="entityTypeSelection.dataset.collection_id !== ''">
