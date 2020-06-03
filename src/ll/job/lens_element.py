@@ -15,8 +15,8 @@ class LensElement:
     def type(self):
         return self._type
 
-    def sql(self, view):
+    def sql(self, is_join_select):
         table = self._job.linkset_table_name(self.id) \
-            if self._type == 'linkset' else self._job.lens_view_name(self.id) \
-            if view else self._job.lens_table_name(self.id)
+            if self._type == 'linkset' else self._job.lens_table_name(self.id) \
+            if is_join_select else self._job.lens_view_name(self.id)
         return psycopg2_sql.Identifier(table)

@@ -58,7 +58,7 @@
           Job ID copied to clipboard
         </span>
 
-        <template v-if="jobId">
+        <template v-if="jobId && !failed">
           <label class="h3 col-auto" for="jobIdCopy">Job ID</label>
 
           <input type="text" class="form-control col-md-3 col-auto" id="jobIdCopy"
