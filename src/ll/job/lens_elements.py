@@ -156,7 +156,7 @@ class LensElements:
                 AND EXISTS (
                     SELECT 1
                     FROM {right} AS in_set 
-                    WHERE l.source_uri IN (in_set.source_uri, in_set.target_uri)
+                    WHERE l.target_uri IN (in_set.source_uri, in_set.target_uri)
                     LIMIT 1
                 )
             ''')).format(left=self._left_sql(is_join_select), right=self._right_sql(is_join_select))
@@ -167,7 +167,7 @@ class LensElements:
                     SELECT 1
                     FROM {right} AS in_set 
                     WHERE l.source_uri IN (in_set.source_uri, in_set.target_uri)
-                    OR l.source_uri IN (in_set.source_uri, in_set.target_uri)
+                    OR l.target_uri IN (in_set.source_uri, in_set.target_uri)
                     LIMIT 1
                 )
             ''')).format(left=self._left_sql(is_join_select), right=self._right_sql(is_join_select))
