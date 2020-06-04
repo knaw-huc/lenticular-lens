@@ -171,3 +171,23 @@ class LensElements:
                     LIMIT 1
                 )
             ''')).format(left=self._left_sql(is_join_select), right=self._right_sql(is_join_select))
+        elif self._type == 'in_set_source':
+            return psycopg2_sql.SQL(select_sql + '\n' + cleandoc('''
+                FROM {left} AS l
+                WHERE EXISTS (
+                    SELECT 1
+                    FROM {right} AS in_set 
+                    WHERE l.source_uri IN (in_set.source_uri, in_set.target_uri)
+                    LIMIT 1
+                )
+            ''')).format(left=self._left_sql(is_join_select), right=self._right_sql(is_join_select))
+        elif self._type == 'in_set_target':
+            return psycopg2_sql.SQL(select_sql + '\n' + cleandoc('''
+                FROM {left} AS l
+                WHERE EXISTS (
+                    SELECT 1
+                    FROM {right} AS in_set 
+                    WHERE l.target_uri IN (in_set.source_uri, in_set.target_uri)
+                    LIMIT 1
+                )
+            ''')).format(left=self._left_sql(is_join_select), right=self._right_sql(is_join_select))

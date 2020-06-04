@@ -133,17 +133,17 @@ export default {
             return `/job/${this.job.job_id}/export/${type}/${id}/csv?${params.join('&')}`;
         },
 
-        getRecursiveElements(elementsGroup, groupName) {
+        getRecursiveElements(element, groupName) {
             let elements;
-            if (Array.isArray(elementsGroup))
-                elements = elementsGroup;
-            else if (Array.isArray(elementsGroup[groupName]))
-                elements = elementsGroup[groupName];
+            if (Array.isArray(element))
+                elements = element;
+            else if (Array.isArray(element[groupName]))
+                elements = element[groupName];
 
             if (elements)
                 return elements.reduce((acc, element) => acc.concat(this.getRecursiveElements(element, groupName)), []);
 
-            return [elementsGroup];
+            return [element];
         },
 
         async submit() {

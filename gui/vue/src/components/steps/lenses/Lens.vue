@@ -74,35 +74,38 @@
 
     <fieldset :disabled="!!lens">
       <sub-card :hasError="errors.includes('elements')">
-        <elements-group :elements-group="lensSpec.specs" elements-group-name="elements" :is-root="true"
-                        :should-have-elements="true" :controlled-elements="true" group="lens-elements"
-                        :uid="'lens_' + lensSpec.id  + '_group_0'" validate-method-name="validateLensElement"
-                        empty-elements-text="No lens elements"
-                        validation-failed-text="Please provide at least one lens element"
-                        :options="lensOptions" v-slot="curElement"
-                        @add="addLensElement($event)" @remove="removeLensElement($event)"
-                        ref="lensGroupComponent">
-          <lens-element :element="curElement.element" :index="curElement.index" :disabled="!!lens"
-                        @add="curElement.add()" @remove="curElement.remove()" @update="updateProperties()"/>
-        </elements-group>
+        <logic-box :element="lensSpec.specs" elements-name="elements" :is-root="true"
+                   :should-have-elements="true" :controlled-elements="true" group="lens-elements"
+                   :uid="'lens_' + lensSpec.id  + '_group_0'" validate-method-name="validateLensElement"
+                   empty-elements-text="No lens elements"
+                   validation-failed-text="Please provide at least one lens element"
+                   :options="lensOptions" :option-groups="lensOptionGroups"
+                   :option-descriptions="lensOptionDescriptions" v-slot="curElement"
+                   @add="addLensElement($event)" @remove="removeLensElement($event)"
+                   ref="lensGroupComponent">
+          <lens-element :type="curElement.type" :element="curElement.element" :index="curElement.index"
+                        :disabled="!!lens" @add="curElement.add()" @remove="curElement.remove()"
+                        @update="updateProperties()"/>
+        </logic-box>
       </sub-card>
     </fieldset>
   </card>
 </template>
 
 <script>
-    import ElementsGroup from "../../helpers/ElementsGroup";
+    import LogicBox from "../../helpers/LogicBox";
     import ValidationMixin from '../../../mixins/ValidationMixin';
 
     import Status from "./Status";
     import LensElement from "./LensElement";
     import {EventBus} from "../../../eventbus";
+    import props from "../../../utils/props";
 
     export default {
         name: "Lens",
         mixins: [ValidationMixin],
         components: {
-            ElementsGroup,
+            LogicBox,
             Status,
             LensElement
         },
@@ -113,20 +116,12 @@
             return {
                 association: '',
                 isOpen: false,
+                lensOptions: props.lensOptions,
+                lensOptionGroups: props.lensOptionGroups,
+                lensOptionDescriptions: props.lensOptionDescriptions,
             };
         },
         computed: {
-            lensOptions() {
-                return {
-                    UNION: 'Union (A ∪ B) All links of both linksets/lenses',
-                    INTERSECTION: 'Intersection (A ∩ B) Only links that appear in both linksets/lenses',
-                    DIFFERENCE: 'Difference (A - B) Only links from the first linkset/lens, not from the second linkset/lens',
-                    SYM_DIFFERENCE: 'Symmetric difference (A ∆ B) Only links which appear in either one linkset/lens, but not both',
-                    IN_SET_AND: 'Both the source and target resource from the first linkset/lens must appear in the the set of resources from the second linkset/lens',
-                    IN_SET_OR: 'Either the source or the target resource from the first linkset/lens must appear in the the set of resources from the second linkset/lens'
-                };
-            },
-
             lens() {
                 return this.$root.lenses.find(lens => lens.spec_id === this.lensSpec.id);
             },
@@ -184,7 +179,7 @@
         },
         methods: {
             validateLens() {
-                return this.$refs.lensGroupComponent.validateElementsGroup();
+                return this.$refs.lensGroupComponent.validateLogicBox();
             },
 
             onToggle(isOpen) {

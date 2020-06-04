@@ -18,7 +18,7 @@ and is also able to report on manual corrections and the amount of manual valida
     1. [Entity-type selections](#entity-type-selections)
     1. [Linkset specs](#linkset-specs)
     1. [Lens specs](#lens-specs)
-    1. [Element groups](#element-groups)
+    1. [Logic boxes](#logic-boxes)
     1. [Property paths](#property-paths)
 1. [Matching methods](#matching-methods)
     1. [Levenshtein distance](#levenshtein-distance)
@@ -373,7 +373,7 @@ of the specific entity-type selections to use for a particular job.
         "timbuctoo_hsid": null                                                          // The hsid if the dataset is not published; optional field
     },
     "filter": {                 // The filter configuration to obtain only a subset of the data from Timbuctoo; optional field
-        "conditions": [{        // The filter is composed of element groups
+        "conditions": [{        // The filter is composed of a logic box
             "property": ["foaf_name"],    // The property path to which this condition applies
             "type": 'minimal_date',       // The type of filtering to apply; see table below for allowed values
             "value": "1600",              // Depends on type of filtering selected; value to use for filtering
@@ -420,7 +420,7 @@ of the linksets to generate for a particular job.
     "sources": [1],             // The identifiers of entity-type selections to use as source
     "targets": [1],             // The identifiers of entity-type selections to use as targets
     "methods": {                // The matching configuration for finding links; requires at least one condition
-        "conditions": [{        // The matching configuration is composed of element groups
+        "conditions": [{        // The matching configuration is composed of a logic box
             "method_name": "=",               // The type of matching to apply; see table below for allowed values
             "method_value": {},               // Some types of matching methods require extra configuration
             "sources": [{                     // The source properties to use during matching
@@ -481,7 +481,7 @@ of the lenses to apply on a combination of linksets.
     "label": "My lens",         // The label of the lens in the GUI
     "description": "",          // A description of this lens by the user; optional field
     "specs": {                  // The lens configuration; requires groups consisting of two elements
-        "elements": [{          // The lens configuration is composed of element groups
+        "elements": [{          // The lens configuration is composed of a logic box
             "id": 0,            // The identifier of the linkset/lens to use
             "type": "linkset"   // The type (linkset or lens)
         }],
@@ -494,28 +494,30 @@ of the lenses to apply on a combination of linksets.
 }
 ```
 
-| Lens type      | Description                                                                                                                               |
-| :------------- | :---------------------------------------------------------------------------------------------------------------------------------------- |
-| UNION          | Union (A ∪ B) All links of both linksets                                                                                                  |
-| INTERSECTION   | Intersection (A ∩ B) Only links that appear in both linksets                                                                              |
-| DIFFERENCE     | Difference (A - B) Only links from the first linkset, not from the second linkset                                                         |
-| SYM_DIFFERENCE | Symmetric difference (A ∆ B) Only links which appear in either one linkset, but not both                                                  |
-| IN_SET_AND     | Both the source and target resource from the first linkset/lens must appear in the the set of resources from the second linkset/lens      |
-| IN_SET_OR      | Either the source or the target resource from the first linkset/lens must appear in the the set of resources from the second linkset/lens |
+| Lens type      | Description                          |
+| :------------- | :----------------------------------- |
+| UNION          | Union (A ∪ B)                        |
+| INTERSECTION   | Intersection (A ∩ B)                 |
+| DIFFERENCE     | Difference (A - B)                   |
+| SYM_DIFFERENCE | Symmetric difference (A ∆ B)         |
+| IN_SET_AND     | Source and target resources match    |
+| IN_SET_OR      | Source or target resources match     |
+| IN_SET_SOURCE  | Source resources match               |
+| IN_SET_TARGET  | Target resources match               |
 
-### Element groups
+### Logic boxes
 
 The entity-type selections (using the filter), the linkset specs (using the matching methods) 
-and the lens specs (using the elements) all apply element groups to allow the user the express complex conditions.
+and the lens specs (using the elements) all apply a logic box to allow the user the express complex conditions.
 
 ```json5
 {
-    "elements": [],       // The list of elements; may contain other element groups (can have any JSON key)
+    "elements": [],       // The list of elements; may contain other logic boxes (can have any JSON key)
     "type": "AND"         // The type that combines these elements (usually AND/OR, but can be of any type)
 }
 ```
 
-As element groups may contain other element groups, complex conditions can be expressed.
+As logic boxes may contain other logic boxes, complex conditions can be expressed.
 
 ```json5
 {

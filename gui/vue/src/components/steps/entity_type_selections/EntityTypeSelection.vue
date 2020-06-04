@@ -127,12 +127,12 @@
 
       <sub-card v-if="entityTypeSelection.dataset.collection_id !== ''" label="Filter"
                 :has-error="errors.includes('filters')">
-        <elements-group :elements-group="entityTypeSelection.filter" elements-group-name="conditions" :is-root="true"
-                        group="entity-type-selection-filters"
-                        :uid="'entity-type-selection_' + entityTypeSelection.id + '_filter_group_0'"
-                        validate-method-name="validateFilterCondition" empty-elements-text="No conditions"
-                        validation-failed-text="Please provide at least one condition" v-slot="curCondition"
-                        @add="addFilterCondition($event)" ref="filterGroupComponent">
+        <logic-box :element="entityTypeSelection.filter" elements-name="conditions" :is-root="true"
+                   group="entity-type-selection-filters"
+                   :uid="'entity-type-selection_' + entityTypeSelection.id + '_filter_group_0'"
+                   validate-method-name="validateFilterCondition" empty-elements-text="No conditions"
+                   validation-failed-text="Please provide at least one condition" v-slot="curCondition"
+                   @add="addFilterCondition($event)" ref="filterGroupComponent">
           <filter-condition
               :condition="curCondition.element"
               :index="curCondition.index"
@@ -140,7 +140,7 @@
               ref="filterConditionComponents"
               @add="curCondition.add()"
               @remove="curCondition.remove()"/>
-        </elements-group>
+        </logic-box>
       </sub-card>
 
       <sub-card v-if="entityTypeSelection.dataset.collection_id !== ''" label="Sample"
@@ -254,7 +254,7 @@
 </template>
 
 <script>
-    import ElementsGroup from "../../helpers/ElementsGroup";
+    import LogicBox from "../../helpers/LogicBox";
     import ValidationMixin from "../../../mixins/ValidationMixin";
 
     import SampleView from "./SampleView";
@@ -264,7 +264,7 @@
         name: "EntityTypeSelection",
         mixins: [ValidationMixin],
         components: {
-            ElementsGroup,
+            LogicBox,
             SampleView,
             FilterCondition,
         },
@@ -408,7 +408,7 @@
 
                 let filtersGroupsValid = true;
                 if (this.$refs.filterGroupComponent)
-                    filtersGroupsValid = this.$refs.filterGroupComponent.validateElementsGroup();
+                    filtersGroupsValid = this.$refs.filterGroupComponent.validateLogicBox();
                 filtersGroupsValid = this.validateField('filters', filtersGroupsValid);
 
                 return collectionValid && datasetValid && limitValid && relatedValid && filtersGroupsValid;

@@ -17,15 +17,11 @@
         </div>
       </div>
 
-<!--      <div v-if="selectedSpec" class="col-auto">-->
-<!--        <div class="btn-group-toggle" data-toggle="buttons">-->
-<!--          <label class="btn btn-secondary btn-sm" v-bind:class="{'active': showInfo}">-->
-<!--            <input type="checkbox" autocomplete="off" v-model="showInfo"/>-->
-<!--            <fa-icon icon="info-circle"/>-->
-<!--            Show {{ this.element.type }} specs-->
-<!--          </label>-->
-<!--        </div>-->
-<!--      </div>-->
+      <div v-if="type === 'DIFFERENCE' || type.startsWith('IN_SET')"
+           class="col-auto small text-muted font-italic">
+        <template v-if="index === 0">Target</template>
+        <template v-else>Filter</template>
+      </div>
 
       <div class="col-auto ml-auto">
         <div class="row">
@@ -35,10 +31,6 @@
         </div>
       </div>
     </div>
-
-<!--    <div v-if="selectedSpec && showInfo" class="row">-->
-<!--      <spec-info :type="this.element.type" :spec="selectedSpec"/>-->
-<!--    </div>-->
   </div>
 </template>
 
@@ -52,7 +44,7 @@
             SpecInfo
         },
         mixins: [ValidationMixin],
-        props: ['element', 'index', 'disabled'],
+        props: ['type', 'element', 'index', 'disabled'],
         data() {
             return {
                 showInfo: false,

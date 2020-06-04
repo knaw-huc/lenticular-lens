@@ -132,16 +132,16 @@
           <matching-methods-info/>
         </template>
 
-        <elements-group :elements-group="linksetSpec.methods" elements-group-name="conditions" :is-root="true"
-                        :should-have-elements="true" group="linkset-filters"
-                        :uid="'linkset_' + linksetSpec.id  + '_group_0'"
-                        validate-method-name="validateCondition" empty-elements-text="No conditions"
-                        validation-failed-text="Please provide at least one condition" v-slot="curCondition"
-                        @add="addCondition($event)" ref="matchingMethodGroupComponent">
+        <logic-box :element="linksetSpec.methods" elements-name="conditions" :is-root="true"
+                   :should-have-elements="true" group="linkset-filters"
+                   :uid="'linkset_' + linksetSpec.id  + '_group_0'"
+                   validate-method-name="validateCondition" empty-elements-text="No conditions"
+                   validation-failed-text="Please provide at least one condition" v-slot="curCondition"
+                   @add="addCondition($event)" ref="matchingMethodGroupComponent">
           <condition
               :condition="curCondition.element" :index="curCondition.index"
               @add="curCondition.add()" @remove="curCondition.remove()"/>
-        </elements-group>
+        </logic-box>
       </sub-card>
     </fieldset>
   </card>
@@ -158,7 +158,7 @@
     import EntityTypeSelection from "./EntityTypeSelection";
     import Condition from "./Condition";
 
-    import ElementsGroup from "../../helpers/ElementsGroup";
+    import LogicBox from "../../helpers/LogicBox";
     import ValidationMixin from '../../../mixins/ValidationMixin';
 
     export default {
@@ -171,7 +171,7 @@
             Status,
             EntityTypeSelection,
             Condition,
-            ElementsGroup
+            LogicBox
         },
         props: {
             linksetSpec: Object,
@@ -218,7 +218,7 @@
 
                 let matchingMethodGroupValid = true;
                 if (this.$refs.matchingMethodGroupComponent)
-                    matchingMethodGroupValid = this.$refs.matchingMethodGroupComponent.validateElementsGroup();
+                    matchingMethodGroupValid = this.$refs.matchingMethodGroupComponent.validateLogicBox();
                 matchingMethodGroupValid = this.validateField('matching-methods', matchingMethodGroupValid);
 
                 return sourcesValid && targetsValid
