@@ -210,7 +210,7 @@ CREATE OR REPLACE FUNCTION soundex_words(input text) RETURNS text
     STRICT IMMUTABLE PARALLEL SAFE AS
 $$
 SELECT string_agg(soundex(word), '_')
-FROM unnest(regexp_split_to_array(input, '\s+')) AS words(word);
+FROM regexp_split_to_table(input, '\s+') AS word;
 $$ LANGUAGE sql;
 
 CREATE OR REPLACE FUNCTION bloothooft(input text, type text) RETURNS text

@@ -53,7 +53,7 @@
       </div>
 
       <div v-if="!isOpen" class="col-auto">
-        <button-delete @click="$emit('remove')" title="Delete this lens"/>
+        <button-delete @click="$emit('remove')" title="Delete this lens" :disabled="!allowDelete"/>
       </div>
     </template>
 
@@ -111,6 +111,7 @@
         },
         props: {
             lensSpec: Object,
+            allowDelete: Boolean,
         },
         data() {
             return {
@@ -228,11 +229,13 @@
             },
 
             async runLens(force = false) {
-                const data = await this.$root.runLens(this.lensSpec.id, force);
-                if (data.result === 'exists' && confirm('This lens already exists.\nDo you want to overwrite it with the current configuration?'))
-                    await this.runLens(true);
+                if (this.validateLens()) {
+                    const data = await this.$root.runLens(this.lensSpec.id, force);
+                    if (data.result === 'exists' && confirm('This lens already exists.\nDo you want to overwrite it with the current configuration?'))
+                        await this.runLens(true);
 
-                EventBus.$emit('refresh');
+                    EventBus.$emit('refresh');
+                }
             },
 
             async runClustering() {

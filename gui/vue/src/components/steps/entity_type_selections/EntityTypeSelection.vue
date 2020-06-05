@@ -16,8 +16,8 @@
         <b-button variant="info" @click="$emit('duplicate', entityTypeSelection)">Duplicate</b-button>
       </div>
 
-      <div v-if="!isOpen && !isUsedInLinkset" class="col-auto">
-        <button-delete v-on:click="$emit('remove')" title="Delete Collection"/>
+      <div v-if="!isOpen" class="col-auto">
+        <button-delete v-on:click="$emit('remove')" title="Delete Collection" :disabled="isUsedInLinkset"/>
       </div>
     </template>
 

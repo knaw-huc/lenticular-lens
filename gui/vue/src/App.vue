@@ -68,6 +68,7 @@
                         :visible="linksetSpecOpen === linksetSpec.id || linksetSpecOpen === null">
               <linkset
                   :linkset-spec="linksetSpec"
+                  :allow-delete="!specsUsedInLens.find(spec => spec.type === 'linkset' && spec.id === linksetSpec.id)"
                   @duplicate="duplicateLinksetSpec($event)"
                   @submit="submit"
                   @remove="removeSpec('linkset', linksetSpec.id)"
@@ -94,6 +95,7 @@
                         :visible="lensSpecOpen === lensSpec.id || lensSpecOpen === null">
               <lens
                   :lens-spec="lensSpec"
+                  :allow-delete="!specsUsedInLens.find(spec => spec.type === 'lens' && spec.id === lensSpec.id)"
                   @duplicate="duplicateLensSpec($event)"
                   @submit="submit"
                   @remove="removeSpec('lens', lensSpec.id)"
@@ -496,28 +498,28 @@
             },
 
             async removeSpec(type, id) {
-                if (this.specsUsedInLens.find(spec => spec.type === type && spec.id === id)) {
-                    alert(`This ${type} is used in another lens. Please remove this lens first!`);
+                if (this.specsUsedInLens.find(spec => spec.type === type && spec.id === id))
                     return;
-                }
 
-                if (type === 'linkset') {
-                    if (this.$root.linksets.find(linkset => linkset.spec_id === id))
-                        if (!(await this.$root.deleteResult(type, id))) return;
+                if (confirm(`Are you sure you want to delete this ${type}?`)) {
+                    if (type === 'linkset') {
+                        if (this.$root.linksets.find(linkset => linkset.spec_id === id))
+                            if (!(await this.$root.deleteResult(type, id))) return;
 
-                    const index = this.$root.linksetSpecs.findIndex(linkset => linkset.id === id);
-                    this.$root.linksetSpecs.splice(index, 1);
+                        const index = this.$root.linksetSpecs.findIndex(linkset => linkset.id === id);
+                        this.$root.linksetSpecs.splice(index, 1);
 
-                    await this.submit();
-                }
-                else if (type === 'lens') {
-                    if (this.$root.lenses.find(lens => lens.spec_id === id))
-                        if (!(await this.$root.deleteResult(type, id))) return;
+                        await this.submit();
+                    }
+                    else if (type === 'lens') {
+                        if (this.$root.lenses.find(lens => lens.spec_id === id))
+                            if (!(await this.$root.deleteResult(type, id))) return;
 
-                    const index = this.$root.lensSpecs.findIndex(lens => lens.id === id);
-                    this.$root.lensSpecs.splice(index, 1);
+                        const index = this.$root.lensSpecs.findIndex(lens => lens.id === id);
+                        this.$root.lensSpecs.splice(index, 1);
 
-                    await this.submit();
+                        await this.submit();
+                    }
                 }
             },
         },

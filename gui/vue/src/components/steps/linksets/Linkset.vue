@@ -53,7 +53,7 @@
       </div>
 
       <div v-if="!isOpen" class="col-auto">
-        <button-delete @click="$emit('remove')" title="Delete this linkset"/>
+        <button-delete @click="$emit('remove')" title="Delete this linkset" :disabled="!allowDelete"/>
       </div>
     </template>
 
@@ -175,6 +175,7 @@
         },
         props: {
             linksetSpec: Object,
+            allowDelete: Boolean,
         },
         data() {
             return {
@@ -296,11 +297,13 @@
             },
 
             async runLinkset(force = false) {
-                const data = await this.$root.runLinkset(this.linksetSpec.id, force);
-                if (data.result === 'exists' && confirm('This linkset already exists.\nDo you want to overwrite it with the current configuration?'))
-                    await this.runLinkset(true);
+                if (this.validateLinkset()) {
+                    const data = await this.$root.runLinkset(this.linksetSpec.id, force);
+                    if (data.result === 'exists' && confirm('This linkset already exists.\nDo you want to overwrite it with the current configuration?'))
+                        await this.runLinkset(true);
 
-                EventBus.$emit('refresh');
+                    EventBus.$emit('refresh');
+                }
             },
 
             async runClustering() {
