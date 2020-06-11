@@ -11,6 +11,7 @@ services:
       - ./pgdata:/pgdata
     environment:
       - PGDATA=/pgdata
+      - POSTGRES_PASSWORD=postgres
 
   timbuctoo_worker:
     build:

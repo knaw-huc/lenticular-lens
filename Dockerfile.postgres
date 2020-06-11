@@ -1,8 +1,8 @@
-FROM postgres:11
+FROM postgres:12
 
 RUN apt-get update && apt-get install -y \
     python3-pip \
-    postgresql-plpython3-11
+    postgresql-plpython3-12
 
 RUN echo listen_addresses='0.0.0.0' >> /usr/lib/tmpfiles.d/postgresql.conf
 

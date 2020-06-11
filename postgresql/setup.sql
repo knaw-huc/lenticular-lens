@@ -176,14 +176,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION levenshtein_distance(source text, target text, max_distance integer) RETURNS integer
-    STRICT IMMUTABLE PARALLEL SAFE AS
-$$
-SELECT CASE WHEN greatest(octet_length(source), octet_length(target)) > 255
-            THEN levenshtein_python(source, target)
-            ELSE levenshtein_less_equal(source, target, max_distance) END;
-$$ LANGUAGE sql;
-
 CREATE OR REPLACE FUNCTION levenshtein_python(source text, target text) RETURNS integer
     STRICT IMMUTABLE PARALLEL SAFE AS
 $$
@@ -191,6 +183,14 @@ import Levenshtein
 
 return Levenshtein.distance(source, target)
 $$ LANGUAGE plpython3u;
+
+CREATE OR REPLACE FUNCTION levenshtein_distance(source text, target text, max_distance integer) RETURNS integer
+    STRICT IMMUTABLE PARALLEL SAFE AS
+$$
+SELECT CASE WHEN greatest(octet_length(source), octet_length(target)) > 255
+                THEN levenshtein_python(source, target)
+            ELSE levenshtein_less_equal(source, target, max_distance) END;
+$$ LANGUAGE sql;
 
 CREATE OR REPLACE FUNCTION similarity(source text, target text, distance decimal) RETURNS decimal
     STRICT IMMUTABLE PARALLEL SAFE AS
