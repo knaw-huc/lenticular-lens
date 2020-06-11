@@ -276,9 +276,6 @@ class Job:
                 for ets in self.entity_type_selections:
                     if ets.internal_id == ets_to_add:
                         to_run.append(ets)
-
-                        to_add += [related['entity_type_selection'] for related in ets.related]
-
                         to_add.remove(ets_to_add)
                         added.append(ets_to_add)
             else:

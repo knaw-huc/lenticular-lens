@@ -75,7 +75,7 @@ class PropertyField:
     @property
     def left_join(self):
         if self.is_list:
-            sql = psycopg2_sql.SQL('LEFT JOIN UNNEST({table_name}.{column_name}) AS {column_name_expanded} ON true')
+            sql = psycopg2_sql.SQL('LEFT JOIN unnest({table_name}.{column_name}) AS {column_name_expanded} ON true')
 
             return sql.format(
                 table_name=psycopg2_sql.Identifier(self.entity_type_selection_internal_id),

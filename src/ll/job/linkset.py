@@ -1,6 +1,7 @@
 from inspect import cleandoc
 from psycopg2 import sql as psycopg_sql
 
+from ll.util.helpers import hash_string
 from ll.job.conditions import Conditions
 
 
@@ -126,31 +127,44 @@ class Linkset:
 
         sql = []
         for ets_internal_id, ets_properties in properties.items():
+            joins = []
             property_fields = []
-            for property_label, ets_method_properties in ets_properties.items():
-                if len(ets_method_properties) == 1:
-                    property_field = psycopg_sql.Identifier(ets_method_properties[0].hash)
-                else:
-                    property_field = psycopg_sql.SQL('unnest(ARRAY[{}])').format(psycopg_sql.SQL(', ').join(
-                        [psycopg_sql.Identifier(prop.hash) for prop in ets_method_properties]
-                    ))
 
-                property_fields.append(psycopg_sql.SQL('{property_field} AS {field_name}').format(
-                    property_field=property_field,
-                    field_name=psycopg_sql.Identifier(property_label)
+            for property_label, ets_method_properties in ets_properties.items():
+                join_name = hash_string(property_label)
+
+                joins.append(psycopg_sql.SQL('INNER JOIN {res} AS {join_name} ON target.uri = {join_name}.uri').format(
+                    res=psycopg_sql.Identifier(ets_internal_id),
+                    join_name=psycopg_sql.Identifier(join_name)
                 ))
 
-            property_fields_sql = psycopg_sql.SQL(',\n           ').join(property_fields)
+                if len(ets_method_properties) == 1:
+                    property_fields.append(psycopg_sql.SQL('{join_name}.{property_field} AS {field_name}').format(
+                        join_name=psycopg_sql.Identifier(join_name),
+                        property_field=psycopg_sql.Identifier(ets_method_properties[0].hash),
+                        field_name=psycopg_sql.Identifier(property_label)
+                    ))
+                else:
+                    property_fields.append(psycopg_sql.SQL('unnest(ARRAY[{}]) AS {}').format(
+                        psycopg_sql.SQL(', ').join(
+                            [psycopg_sql.SQL('{join_name}.{property_field}').format(
+                                join_name=psycopg_sql.Identifier(join_name),
+                                property_field=psycopg_sql.Identifier(prop.hash)
+                            ) for prop in ets_method_properties]
+                        ), psycopg_sql.Identifier(property_label)
+                    ))
 
             sql.append(
                 psycopg_sql.SQL(cleandoc(
-                    """SELECT DISTINCT {collection} AS collection, uri, {matching_fields}
-                       FROM {res}
+                    """SELECT DISTINCT {collection} AS collection, target.uri, {matching_fields}
+                       FROM {res} AS target
+                       {joins}
                        WHERE increment_counter({sequence})"""
                 )).format(
                     collection=psycopg_sql.Literal(ets_internal_id),
-                    matching_fields=property_fields_sql,
+                    matching_fields=psycopg_sql.SQL(',\n           ').join(property_fields),
                     res=psycopg_sql.Identifier(ets_internal_id),
+                    joins=psycopg_sql.SQL('\n').join(joins),
                     sequence=psycopg_sql.Literal(sequence_key)
                 )
             )

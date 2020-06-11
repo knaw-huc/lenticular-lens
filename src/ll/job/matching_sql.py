@@ -27,7 +27,6 @@ class MatchingSql:
 
             entity_type_selection_sql = sql.SQL(cleandoc(
                 """ DROP MATERIALIZED VIEW IF EXISTS {view_name} CASCADE;
-                
                     CREATE MATERIALIZED VIEW {view_name} AS
                     {pre}SELECT DISTINCT {matching_fields}
                     FROM {table_name} AS {view_name} 
