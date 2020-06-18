@@ -49,20 +49,18 @@
             </div>
           </v-select>
 
-          <template v-else>
-            <div v-if="readOnly" class="property-pill read-only" v-bind:class="{'sm': small}">
-              {{ prop.collections[prop.collection].title || prop.collection }}
+          <div v-else-if="readOnly" class="property-pill read-only" v-bind:class="{'sm': small}">
+            {{ prop.collections[prop.collection].title || prop.collection }}
 
-              <download-progress :dataset-id="datasetId" :collection-id="prop.collection" :small="true" class="pl-2"/>
-            </div>
+            <download-progress :dataset-id="datasetId" :collection-id="prop.collection" :small="true" class="pl-2"/>
+          </div>
 
-            <button v-else type="button" class="property-pill"
-                    v-bind:class="{'sm': small}" @click="resetProperty(prop.collectionIdx)">
-              {{ prop.collections[prop.collection].title || prop.collection }}
+          <button v-else type="button" class="property-pill"
+                  v-bind:class="{'sm': small}" @click="resetProperty(prop.collectionIdx)">
+            {{ prop.collections[prop.collection].title || prop.collection }}
 
-              <download-progress :dataset-id="datasetId" :collection-id="prop.collection" :small="true" class="pl-2"/>
-            </button>
-          </template>
+            <download-progress :dataset-id="datasetId" :collection-id="prop.collection" :small="true" class="pl-2"/>
+          </button>
         </template>
 
         <template v-if="prop.properties && prop.property !== '__value__'">

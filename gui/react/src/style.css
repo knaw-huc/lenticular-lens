@@ -1,0 +1,73 @@
+/* LOGIC BOX STYLING */
+
+.logic-box {
+    padding: 2rem;
+    margin: 1rem;
+    border: 1px solid #d9d9d9;
+}
+
+.logic-box.first {
+    background-color: #f2f2f2;
+}
+
+.logic-box.second {
+    background-color: #ffffff;
+}
+
+.logic-box-header {
+    display: flex;
+    margin-bottom: 1rem;
+}
+
+/* PROPERTY STYLING */
+
+.property {
+    display: flex;
+    flex-wrap: wrap;
+    font-size: .85rem;
+    align-items: baseline;
+    padding-left: 3em;
+}
+
+.property .property-pill {
+    font: inherit;
+    padding: 0 0.5em;
+    margin: 0.2em 0.5em;
+    border: 1px solid rgba(0, 0, 0, 0.09);
+    border-radius: 0.3em;
+    color: inherit;
+    background-color: inherit;
+}
+
+.property .property-pill:first-child {
+    margin-left: -3em;
+}
+
+.property .property-pill:last-child {
+    margin-right: 0;
+}
+
+.property .property-resource {
+    text-transform: uppercase;
+    background-color: #f2f2f2;
+}
+
+.property .property-entity {
+    text-transform: uppercase;
+}
+
+.property .property-select {
+    font-style: italic;
+    background-color: #f2f2f2;
+}
+
+.property .property-sep {
+    line-height: 100%;
+    color: #999999;
+    font-size: 1rem;
+}
+
+.property .property-values {
+    flex-shrink: 1;
+    padding: 0;
+}
