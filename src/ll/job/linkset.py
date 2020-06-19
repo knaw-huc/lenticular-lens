@@ -58,7 +58,7 @@ class Linkset:
                 psycopg_sql.Identifier(table_name), template_sql
             ))
 
-        return psycopg_sql.SQL('\n').join(index_sqls)
+        return psycopg_sql.SQL('\n').join(index_sqls) if index_sqls else None
 
     @property
     def entity_type_selections(self):
@@ -93,11 +93,11 @@ class Linkset:
 
     @property
     def source_sql(self):
-        return self._get_combined_entity_type_selections_sql('sources', 'source_count')
+        return self._get_combined_entity_type_selections_sql('sources')
 
     @property
     def target_sql(self):
-        return self._get_combined_entity_type_selections_sql('targets', 'target_count')
+        return self._get_combined_entity_type_selections_sql('targets')
 
     def get_fields(self, keys=None, only_matching_fields=True):
         if not isinstance(keys, list):
@@ -122,7 +122,7 @@ class Linkset:
 
         return ets_properties
 
-    def _get_combined_entity_type_selections_sql(self, key, sequence_key):
+    def _get_combined_entity_type_selections_sql(self, key):
         properties = self.get_fields([key])
 
         sql = []
@@ -164,14 +164,12 @@ class Linkset:
                 psycopg_sql.SQL(cleandoc(
                     """SELECT DISTINCT {collection} AS collection, target.uri, {matching_fields}
                        FROM {res} AS target
-                       {joins}
-                       WHERE increment_counter({sequence})"""
+                       {joins}"""
                 )).format(
                     collection=psycopg_sql.Literal(ets_internal_id),
                     matching_fields=psycopg_sql.SQL(',\n           ').join(property_fields),
                     res=psycopg_sql.Identifier(ets_internal_id),
                     joins=psycopg_sql.SQL('\n').join(joins),
-                    sequence=psycopg_sql.Literal(sequence_key)
                 )
             )
 

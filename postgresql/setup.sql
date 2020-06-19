@@ -47,20 +47,20 @@ CREATE TABLE IF NOT EXISTS timbuctoo_tables
 
 CREATE TABLE IF NOT EXISTS linksets
 (
-    job_id                 text    not null,
-    spec_id                int     not null,
-    status                 text    not null,
-    status_message         text,
-    kill                   boolean not null,
-    requested_at           timestamp,
-    processing_at          timestamp,
-    finished_at            timestamp,
-    links_count            bigint,
-    sources_count          bigint,
-    targets_count          bigint,
-    distinct_links_count   bigint,
-    distinct_sources_count bigint,
-    distinct_targets_count bigint,
+    job_id                         text    not null,
+    spec_id                        int     not null,
+    status                         text    not null,
+    status_message                 text,
+    kill                           boolean not null,
+    requested_at                   timestamp,
+    processing_at                  timestamp,
+    finished_at                    timestamp,
+    links_count                    bigint,
+    distinct_links_count           bigint,
+    distinct_sources_count         bigint,
+    distinct_targets_count         bigint,
+    distinct_linkset_sources_count bigint,
+    distinct_linkset_targets_count bigint,
     PRIMARY KEY (job_id, spec_id)
 );
 
@@ -188,7 +188,7 @@ CREATE OR REPLACE FUNCTION levenshtein_distance(source text, target text, max_di
     STRICT IMMUTABLE PARALLEL SAFE AS
 $$
 SELECT CASE WHEN greatest(octet_length(source), octet_length(target)) > 255
-                THEN levenshtein_python(source, target)
+            THEN levenshtein_python(source, target)
             ELSE levenshtein_less_equal(source, target, max_distance) END;
 $$ LANGUAGE sql;
 

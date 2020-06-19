@@ -67,21 +67,25 @@
 
           <div class="col-auto">
             <div>
-              <strong>Entities in source: </strong>
-              {{ linkset.sources_count ? linkset.sources_count.toLocaleString('en') : 0 }}
+              <strong>Source entities in linkset: </strong>
+              {{ linkset.distinct_linkset_sources_count ? linkset.distinct_linkset_sources_count.toLocaleString('en') : 0 }}
+            </div>
 
-              <span v-if="hasDistinctSourcesCount" class="font-italic text-info">
-                  ({{ linkset.distinct_sources_count.toLocaleString('en') }} distinct entities)
-              </span>
+            <div>
+              <strong>Target entities in linkset: </strong>
+              {{ linkset.distinct_linkset_targets_count ? linkset.distinct_linkset_targets_count.toLocaleString('en') : 0 }}
+            </div>
+          </div>
+
+          <div class="col-auto">
+            <div>
+              <strong>Entities in source: </strong>
+              {{ linkset.distinct_sources_count ? linkset.distinct_sources_count.toLocaleString('en') : 0 }}
             </div>
 
             <div>
               <strong>Entities in target: </strong>
-              {{ linkset.targets_count ? linkset.targets_count.toLocaleString('en') : 0 }}
-
-              <span v-if="hasDistinctTargetsCount" class="font-italic text-info">
-                  ({{ linkset.distinct_targets_count.toLocaleString('en') }} distinct entities)
-              </span>
+              {{ linkset.distinct_targets_count ? linkset.distinct_targets_count.toLocaleString('en') : 0 }}
             </div>
           </div>
 

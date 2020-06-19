@@ -1,4 +1,3 @@
-import re
 import time
 
 from psycopg2 import sql as psycopg2_sql, ProgrammingError
@@ -17,6 +16,7 @@ class LinksetJob(WorkerJob):
 
         self._job = None
         self._matching_sql = None
+        self._distinct_counts = {}
 
         self.reset()
         super().__init__(self.run_generated_sql)
@@ -55,55 +55,59 @@ class LinksetJob(WorkerJob):
 
         if not self._killed:
             self._status = 'Generating indexes'
-            self.process_sql(self._matching_sql.generate_match_index_sql())
+            self.process_sql(self._matching_sql.generate_match_index_and_sequence_sql())
 
         if not self._killed:
             self._status = 'Looking for links'
             self.process_sql(self._matching_sql.generate_match_linkset_sql())
 
+        if not self._killed:
+            self._status = 'Finishing'
+            self.process_sql(self._matching_sql.generate_match_linkset_finish_sql())
+
     def process_sql(self, sql):
-        sql_string = sql.as_string(self._db_conn)
-        for statement in sql_string.split(';\n'):
-            statement = statement.strip()
-
-            if statement.startswith('--'):
-                continue
-
-            if re.search(r'\S', statement):
-                if re.match(r'^\s*SELECT', statement) and not re.search(r'set_config\(', statement):
-                    continue
-                else:
-                    with self._db_conn.cursor() as cur:
-                        cur.execute(statement)
-                        self._db_conn.commit()
+        with self._db_conn.cursor() as cur:
+            cur.execute(sql)
+            self._db_conn.commit()
 
     def watch_process(self):
+        data = {'status_message': self._status}
+
         with db_conn() as conn, conn.cursor() as cur:
-            data = {'status_message': self._status}
-
-            for sequence_name in ('linkset_count', 'source_count', 'target_count'):
-                try:
-                    cur.execute(psycopg2_sql.SQL('SELECT is_called, last_value FROM {}.{}').format(
-                        psycopg2_sql.Identifier(self._job.linkset_schema_name(self._id)),
-                        psycopg2_sql.Identifier(sequence_name),
-                    ))
-
-                    seq = cur.fetchone()
-                    is_called = seq[0]
-                    if is_called:
-                        inserted = seq[1]
-                        if sequence_name == 'source_count':
-                            data['sources_count'] = inserted
-                        elif sequence_name == 'target_count':
-                            data['targets_count'] = inserted
-                        else:
-                            data['links_count'] = inserted
-                except ProgrammingError:
-                    pass
-                finally:
-                    conn.commit()
+            self.get_sequence_count(conn, cur, 'linkset_count', data, 'links_count')
+            self.get_distinct_count(conn, cur, 'source', data, 'distinct_sources_count')
+            self.get_distinct_count(conn, cur, 'target', data, 'distinct_targets_count')
 
         self._job.update_linkset(self._id, data)
+
+    def get_sequence_count(self, conn, cur, sequence, data, key):
+        try:
+            cur.execute(psycopg2_sql.SQL('SELECT is_called, last_value FROM {linkset_schema}.{sequence}').format(
+                linkset_schema=psycopg2_sql.Identifier(self._job.linkset_schema_name(self._id)),
+                sequence=psycopg2_sql.Identifier(sequence)
+            ))
+
+            seq = cur.fetchone()
+            if seq[0]:
+                data[key] = seq[1]
+        except ProgrammingError:
+            pass
+        finally:
+            conn.commit()
+
+    def get_distinct_count(self, conn, cur, table, data, key):
+        try:
+            if table not in self._distinct_counts:
+                cur.execute(psycopg2_sql.SQL('SELECT count(DISTINCT uri) FROM {linkset_schema}.{table_name}').format(
+                    linkset_schema=psycopg2_sql.Identifier(self._job.linkset_schema_name(self._id)),
+                    table_name=psycopg2_sql.Identifier(table)
+                ))
+                self._distinct_counts[table] = cur.fetchone()[0]
+                data[key] = self._distinct_counts[table]
+        except ProgrammingError:
+            pass
+        finally:
+            conn.commit()
 
     def watch_kill(self):
         linkset = self._job.linkset(self._id)
@@ -126,28 +130,47 @@ class LinksetJob(WorkerJob):
         self.watch_process()
 
         with db_conn() as conn, conn.cursor() as cur:
-            cur.execute(psycopg2_sql.SQL('SELECT count(*) FROM {}').format(
-                psycopg2_sql.Identifier(self._job.linkset_table_name(self._id))))
-            links = cur.fetchone()[0]
+            cur.execute(psycopg2_sql.SQL('''
+                SELECT  (SELECT count(*) FROM {linkset_table}) AS links_count,
+                        (SELECT count(DISTINCT uri) FROM {linkset_schema}.source) AS sources_count,
+                        (SELECT count(DISTINCT uri) FROM {linkset_schema}.target) AS targets_count,
+                        (SELECT count(DISTINCT uris.uri) FROM (
+                            SELECT source_uri AS uri FROM {linkset_table} 
+                            WHERE link_order = 'source_target' OR link_order = 'both'
+                            UNION ALL
+                            SELECT target_uri AS uri FROM {linkset_table} 
+                            WHERE link_order = 'target_source' OR link_order = 'both'
+                        ) AS uris) AS linkset_sources_count,
+                        (SELECT count(DISTINCT uris.uri) FROM (
+                            SELECT target_uri AS uri FROM {linkset_table} 
+                            WHERE link_order = 'source_target' OR link_order = 'both'
+                            UNION ALL
+                            SELECT source_uri AS uri FROM {linkset_table} 
+                            WHERE link_order = 'target_source' OR link_order = 'both'
+                        ) AS uris) AS linkset_targets_count
+            ''').format(
+                linkset_table=psycopg2_sql.Identifier(self._job.linkset_table_name(self._id)),
+                linkset_schema=psycopg2_sql.Identifier(self._job.linkset_schema_name(self._id)),
+            ))
 
-            cur.execute(psycopg2_sql.SQL('SELECT count(*) FROM {}.{}').format(
-                psycopg2_sql.Identifier(self._job.linkset_schema_name(self._id)),
-                psycopg2_sql.Identifier('source')))
-            sources = cur.fetchone()[0]
+            result = cur.fetchone()
 
-            cur.execute(psycopg2_sql.SQL('SELECT count(*) FROM {}.{}').format(
-                psycopg2_sql.Identifier(self._job.linkset_schema_name(self._id)),
-                psycopg2_sql.Identifier('target')))
-            targets = cur.fetchone()[0]
+            links = result[0]
+            sources = result[1]
+            targets = result[2]
+            linkset_sources = result[3]
+            linkset_targets = result[4]
 
             cur.execute(psycopg2_sql.SQL('DROP SCHEMA {} CASCADE')
                         .format(psycopg2_sql.Identifier(self._job.linkset_schema_name(self._id))))
 
             cur.execute("UPDATE linksets "
                         "SET status = %s, status_message = null, distinct_links_count = %s, "
-                        "distinct_sources_count = %s, distinct_targets_count = %s, finished_at = now() "
+                        "distinct_sources_count = %s, distinct_targets_count = %s, "
+                        "distinct_linkset_sources_count = %s, distinct_linkset_targets_count = %s, "
+                        "finished_at = now() "
                         "WHERE job_id = %s AND spec_id = %s",
-                        ('done', links, sources, targets, self._job_id, self._id))
+                        ('done', links, sources, targets, linkset_sources, linkset_targets, self._job_id, self._id))
 
             if links == 0:
                 cur.execute(psycopg2_sql.SQL('DROP TABLE {} CASCADE')

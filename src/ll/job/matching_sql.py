@@ -50,15 +50,9 @@ class MatchingSql:
 
         return sql.Composed(entity_type_selections_sql)
 
-    def generate_match_index_sql(self):
-        return self._linkset.index_sql
-
     def generate_match_source_sql(self):
         return sql.SQL(cleandoc(
-            """ DROP SEQUENCE IF EXISTS {source_sequence_name} CASCADE;
-                CREATE SEQUENCE {source_sequence_name} MINVALUE 1;
-                
-                DROP MATERIALIZED VIEW IF EXISTS {source_name} CASCADE;
+            """ DROP MATERIALIZED VIEW IF EXISTS {source_name} CASCADE;
                 CREATE MATERIALIZED VIEW {source_name} AS 
                 {source};
                 
@@ -68,15 +62,11 @@ class MatchingSql:
         ) + '\n').format(
             source=self._linkset.source_sql,
             source_name=sql.Identifier('source'),
-            source_sequence_name=sql.Identifier('source_count'),
         )
 
     def generate_match_target_sql(self):
         return sql.SQL(cleandoc(
-            """ DROP SEQUENCE IF EXISTS {target_sequence_name} CASCADE;
-                CREATE SEQUENCE {target_sequence_name} MINVALUE 1;
-                
-                DROP MATERIALIZED VIEW IF EXISTS {target_name} CASCADE;
+            """ DROP MATERIALIZED VIEW IF EXISTS {target_name} CASCADE;
                 CREATE MATERIALIZED VIEW {target_name} AS 
                 {target};
                 
@@ -86,15 +76,22 @@ class MatchingSql:
         ) + '\n').format(
             target=self._linkset.target_sql,
             target_name=sql.Identifier('target'),
-            target_sequence_name=sql.Identifier('target_count'),
         )
+
+    def generate_match_index_and_sequence_sql(self):
+        sequence_sql = sql.SQL(cleandoc(
+            """ DROP SEQUENCE IF EXISTS linkset_count CASCADE;
+                CREATE SEQUENCE linkset_count MINVALUE 1;
+            """) + '\n')
+
+        if self._linkset.index_sql:
+            return sql.SQL('\n').join([self._linkset.index_sql, sequence_sql])
+
+        return sequence_sql
 
     def generate_match_linkset_sql(self):
         return sql.SQL(cleandoc(
-            """ DROP SEQUENCE IF EXISTS {sequence_name} CASCADE;
-                CREATE SEQUENCE {sequence_name} MINVALUE 1;
-                
-                DROP TABLE IF EXISTS public.{view_name} CASCADE;
+            """ DROP TABLE IF EXISTS public.{view_name} CASCADE;
                 CREATE TABLE public.{view_name} AS
                 SELECT  CASE WHEN source.uri < target.uri THEN source.uri ELSE target.uri END AS source_uri,
                         CASE WHEN source.uri < target.uri THEN target.uri ELSE source.uri END AS target_uri,
@@ -110,8 +107,18 @@ class MatchingSql:
                 AND {conditions}
                 AND increment_counter({sequence})
                 GROUP BY source_uri, target_uri;
+            """) + '\n').format(
+            similarity_field=self._linkset.similarity_fields_agg_sql,
+            conditions=self._linkset.conditions_sql,
+            view_name=sql.Identifier(self._job.linkset_table_name(self._linkset.id)),
+            source_name=sql.Identifier('source'),
+            target_name=sql.Identifier('target'),
+            sequence=sql.Literal('linkset_count')
+        )
 
-                ALTER TABLE public.{view_name}
+    def generate_match_linkset_finish_sql(self):
+        return sql.SQL(cleandoc(
+            """ ALTER TABLE public.{view_name}
                 ADD PRIMARY KEY (source_uri, target_uri),
                 ADD COLUMN cluster_id text,
                 ADD COLUMN valid link_validity DEFAULT 'not_validated';
@@ -125,16 +132,7 @@ class MatchingSql:
                 CREATE INDEX ON public.{view_name} USING btree (sort_order);
 
                 ANALYZE public.{view_name};
-            """
-        ) + '\n').format(
-            similarity_field=self._linkset.similarity_fields_agg_sql,
-            conditions=self._linkset.conditions_sql,
-            view_name=sql.Identifier(self._job.linkset_table_name(self._linkset.id)),
-            source_name=sql.Identifier('source'),
-            target_name=sql.Identifier('target'),
-            sequence_name=sql.Identifier('linkset_count'),
-            sequence=sql.Literal('linkset_count')
-        )
+            """) + '\n').format(view_name=sql.Identifier(self._job.linkset_table_name(self._linkset.id)))
 
     @property
     def sql_string(self):
@@ -146,8 +144,10 @@ class MatchingSql:
         sql_str += '\n\n'
         sql_str += get_string_from_sql(self.generate_match_target_sql())
         sql_str += '\n\n'
-        sql_str += get_string_from_sql(self.generate_match_index_sql())
+        sql_str += get_string_from_sql(self.generate_match_index_and_sequence_sql())
         sql_str += '\n\n'
         sql_str += get_string_from_sql(self.generate_match_linkset_sql())
+        sql_str += '\n\n'
+        sql_str += get_string_from_sql(self.generate_match_linkset_finish_sql())
 
         return sql_str

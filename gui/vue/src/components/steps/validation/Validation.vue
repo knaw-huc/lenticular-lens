@@ -23,20 +23,23 @@
 
             <div v-if="isLinkset" class="col-auto">
               <div>
-                <strong>Entities in source: </strong>
-                {{ linkset.sources_count.toLocaleString('en') }}
+                <strong>Source entities in linkset: </strong>
+                {{ linkset.distinct_linkset_sources_count.toLocaleString('en') }}
+              </div>
+              <div>
+                <strong>Target entities in linkset: </strong>
+                {{ linkset.distinct_linkset_targets_count.toLocaleString('en') }}
+              </div>
+            </div>
 
-                <span v-if="linkset.sources_count > linkset.distinct_sources_count" class="font-italic text-info">
-                  ({{ linkset.distinct_sources_count.toLocaleString('en') }} distinct entities)
-                </span>
+            <div v-if="isLinkset" class="col-auto">
+              <div>
+                <strong>Entities in source: </strong>
+                {{ linkset.distinct_sources_count.toLocaleString('en') }}
               </div>
               <div>
                 <strong>Entities in target: </strong>
-                {{ linkset.targets_count.toLocaleString('en') }}
-
-                <span v-if="linkset.targets_count > linkset.distinct_targets_count" class="font-italic text-info">
-                  ({{ linkset.distinct_targets_count.toLocaleString('en') }} distinct entities)
-                </span>
+                {{ linkset.distinct_targets_count.toLocaleString('en') }}
               </div>
             </div>
 

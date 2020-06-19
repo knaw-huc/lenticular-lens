@@ -24,8 +24,6 @@ class LensJob(WorkerJob):
             self._status = 'Generating lens validity counts'
             cur.execute(lens_sql.generate_lens_view_sql())
 
-            self._db_conn.commit()
-
     def watch_process(self):
         pass
 
