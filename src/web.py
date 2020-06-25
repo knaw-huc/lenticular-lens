@@ -35,6 +35,12 @@ app.url_map.converters['job'] = JobConverter
 app.url_map.converters['type'] = TypeConverter
 
 
+@app.after_request
+def after_request(response):
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    return response
+
+
 @app.route('/')
 def index():
     return app.send_static_file('index.html')
