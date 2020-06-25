@@ -38,6 +38,7 @@ app.url_map.converters['type'] = TypeConverter
 @app.after_request
 def after_request(response):
     response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Headers'] = '*'
     return response
 
 
