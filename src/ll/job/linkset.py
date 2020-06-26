@@ -129,34 +129,40 @@ class Linkset:
         for ets_internal_id, ets_properties in properties.items():
             joins = []
             property_fields = []
+            prev_fields = []
 
             for property_label, ets_method_properties in ets_properties.items():
-                join_name = hash_string(property_label)
-
-                joins.append(psycopg_sql.SQL('INNER JOIN {res} AS {join_name} ON target.uri = {join_name}.uri').format(
-                    res=psycopg_sql.Identifier(ets_internal_id),
-                    join_name=psycopg_sql.Identifier(join_name)
-                ))
-
                 if len(ets_method_properties) == 1:
-                    property_fields.append(psycopg_sql.SQL('{join_name}.{property_field} AS {field_name}').format(
-                        join_name=psycopg_sql.Identifier(join_name),
-                        property_field=psycopg_sql.Identifier(ets_method_properties[0].hash),
-                        field_name=psycopg_sql.Identifier(property_label)
-                    ))
-                else:
-                    joins.append(psycopg_sql.SQL('CROSS JOIN unnest(ARRAY[{fields}]) AS {extended_field_name}').format(
-                        fields=psycopg_sql.SQL(', ').join(
-                            [psycopg_sql.SQL('{join_name}.{property_field}').format(
-                                join_name=psycopg_sql.Identifier(join_name),
-                                property_field=psycopg_sql.Identifier(prop.hash)
-                            ) for prop in ets_method_properties]
-                        ),
-                        extended_field_name=psycopg_sql.Identifier(property_label + '_extended')
-                    ))
+                    property_field = ets_method_properties[0].hash
 
-                    property_fields.append(psycopg_sql.SQL('{extended_field_name} AS {field_name}').format(
-                        extended_field_name=psycopg_sql.Identifier(property_label + '_extended'),
+                    if property_field in prev_fields:
+                        join_name = hash_string(property_label)
+
+                        joins.append(
+                            psycopg_sql.SQL('JOIN {res} AS {join_name} ON target.uri = {join_name}.uri').format(
+                                res=psycopg_sql.Identifier(ets_internal_id),
+                                join_name=psycopg_sql.Identifier(join_name)
+                            )
+                        )
+
+                        property_fields.append(psycopg_sql.SQL('{join_name}.{property_field} AS {field_name}').format(
+                            join_name=psycopg_sql.Identifier(join_name),
+                            property_field=psycopg_sql.Identifier(property_field),
+                            field_name=psycopg_sql.Identifier(property_label)
+                        ))
+                    else:
+                        property_fields.append(psycopg_sql.SQL('target.{property_field} AS {field_name}').format(
+                            property_field=psycopg_sql.Identifier(property_field),
+                            field_name=psycopg_sql.Identifier(property_label)
+                        ))
+
+                    prev_fields.append(property_field)
+                else:
+                    property_fields.append(psycopg_sql.SQL('unnest(ARRAY[{fields}]) AS {field_name}').format(
+                        fields=psycopg_sql.SQL(', ').join(
+                            [psycopg_sql.SQL('target.{}').format(psycopg_sql.Identifier(prop.hash))
+                             for prop in ets_method_properties]
+                        ),
                         field_name=psycopg_sql.Identifier(property_label)
                     ))
 
