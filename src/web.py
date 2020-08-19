@@ -91,13 +91,9 @@ def job_update():
     job = Job(job_id)
 
     (entity_type_selections, linkset_specs, lens_specs) = job.update_data({
-        'job_title': request.json['job_title'],
-        'job_description': request.json['job_description'],
-        'job_link': request.json['job_link'],
-        'entity_type_selections':
-            request.json['entity_type_selections'] if 'entity_type_selections' in request.json else [],
-        'linkset_specs': request.json['linkset_specs'] if 'linkset_specs' in request.json else [],
-        'lens_specs': request.json['lens_specs'] if 'lens_specs' in request.json else [],
+        key: request.json[key]
+        for key in ['job_title', 'job_description', 'job_link', 'entity_type_selections', 'linkset_specs', 'lens_specs']
+        if key in request.json
     })
 
     return jsonify({

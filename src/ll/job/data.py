@@ -97,7 +97,7 @@ class Job:
                          (self.job_id, id, type), dict=True)
 
     def update_data(self, data):
-        if 'entity_type_selections' in data and 'linkset_specs' in data:
+        if 'entity_type_selections' in data and 'linkset_specs' in data and 'lens_specs' in data:
             (entity_type_selections, linkset_specs, lens_specs) \
                 = transform(data['entity_type_selections'], data['linkset_specs'], data['lens_specs'])
 
