@@ -3,6 +3,7 @@ import csv
 import psycopg2
 
 from flask import Flask, jsonify, request, abort, make_response
+from flask_cors import CORS
 from werkzeug.routing import BaseConverter, ValidationError
 
 from ll.job.data import Job, Validation
@@ -31,15 +32,10 @@ class TypeConverter(BaseConverter):
 config_logger()
 
 app = Flask(__name__)
+CORS(app)
+
 app.url_map.converters['job'] = JobConverter
 app.url_map.converters['type'] = TypeConverter
-
-
-@app.after_request
-def after_request(response):
-    response.headers['Access-Control-Allow-Origin'] = '*'
-    response.headers['Access-Control-Allow-Headers'] = '*'
-    return response
 
 
 @app.route('/')
