@@ -67,7 +67,7 @@ def association_files():
     return jsonify(get_association_files())
 
 
-@app.route('/job/create/', methods=['POST'])
+@app.route('/job/create', methods=['POST'])
 def job_create():
     job_id = hash_string(request.json['job_title'] + request.json['job_description'])
     job = Job(job_id)
@@ -81,7 +81,7 @@ def job_create():
     return jsonify({'result': 'created', 'job_id': job_id})
 
 
-@app.route('/job/update/', methods=['POST'])
+@app.route('/job/update', methods=['POST'])
 def job_update():
     job_id = request.json['job_id']
     job = Job(job_id)
@@ -313,10 +313,11 @@ def export_to_csv(job, type, id):
     stream = io.StringIO()
     writer = csv.writer(stream)
 
-    writer.writerow(['Source URI', 'Target URI', 'Valid'])
+    writer.writerow(['Source URI', 'Target URI', 'Max Strength', 'Valid'])
     for link in job.get_links(id, type,
                               validation_filter=validation_filter_helper(request.args.getlist('valid'))):
-        writer.writerow([link['source'], link['target'], link['valid']])
+        writer.writerow([link['source'], link['target'],
+                         max(link['similarity'].values()) if link['similarity'].values() else 1, link['valid']])
 
     output = make_response(stream.getvalue())
     output.headers['Content-Disposition'] = 'attachment; filename=' + job.job_id + '_' + type + '_' + str(id) + '.csv'
