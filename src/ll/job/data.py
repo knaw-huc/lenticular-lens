@@ -180,7 +180,7 @@ class Job:
                                 "VALUES (%s, %s, %s, false, now())"), (self.job_id, id, 'waiting'))
 
     def run_clustering(self, id, type, association_file, clustering_type='default'):
-        clustering = self.clustering(type, id)
+        clustering = self.clustering(id, type)
 
         with db_conn() as conn, conn.cursor() as cur:
             if clustering:
