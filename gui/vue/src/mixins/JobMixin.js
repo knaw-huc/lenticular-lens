@@ -223,12 +223,12 @@ export default {
         },
 
         async createJob(inputs) {
-            const data = await callApi('/job/create/', inputs);
+            const data = await callApi('/job/create', inputs);
             return data.job_id;
         },
 
         async updateJob(jobData) {
-            return callApi('/job/update/', jobData);
+            return callApi('/job/update', jobData);
         },
 
         async runLinkset(id, restart) {
