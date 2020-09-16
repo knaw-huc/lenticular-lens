@@ -3,11 +3,6 @@
     "sql_template": "{source} = {target}",
     "index_using": "btree ({target})"
   },
-  ">": {
-    "sql_template": "{source} > {target}",
-    "similarity": "{source} - {target}",
-    "index_using": "btree ({target})"
-  },
   "TRIGRAM_DISTANCE": {
     "sql_template": "{source} % {target}",
     "similarity": "similarity({source}, {target})",
@@ -15,12 +10,10 @@
     "index_using": "gin ({target} gin_trgm_ops)"
   },
   "DISTANCE_IS_BETWEEN": {
-    "sql_template": "{source} IS NOT NULL AND {target} IS NOT NULL AND {source} - {target} BETWEEN {distance_start} AND {distance_end}",
-    "similarity": "{source} - {target}"
+    "sql_template": "{source} IS NOT NULL AND {target} IS NOT NULL AND {source} - {target} BETWEEN {distance_start} AND {distance_end}"
   },
   "TIME_DELTA": {
-    "sql_template": "{source} IS NOT NULL AND {target} IS NOT NULL AND {source} - {target} BETWEEN -({days} * {multiplier}) AND ({days} * {multiplier})",
-    "similarity": "{source} - {target}"
+    "sql_template": "{source} IS NOT NULL AND {target} IS NOT NULL AND {source} - {target} BETWEEN -({days} * {multiplier}) AND ({days} * {multiplier})"
   },
   "SAME_YEAR_MONTH": {
     "sql_template": "get_date_part({date_part}, {source}) = get_date_part({date_part}, {target})",
