@@ -19,12 +19,8 @@ class Lens:
         return self._specs
 
     @property
-    def select_sql(self):
-        return self.specs.select_sql
-
-    @property
-    def select_validity_sql(self):
-        return self.specs.select_validity_sql
+    def sql(self):
+        return self.specs.sql
 
     @property
     def linksets(self):

@@ -68,17 +68,24 @@ class LensElements:
         return lenses
 
     @property
-    def select_sql(self):
-        return self._join_sql(True)
+    def _left_sql(self):
+        if isinstance(self.left, LensElement):
+            return self.left.sql
+
+        return psycopg2_sql.SQL('(\n{sql}\n)').format(sql=self.left.sql)
 
     @property
-    def select_validity_sql(self):
-        return self._join_sql(False)
+    def _right_sql(self):
+        if isinstance(self.right, LensElement):
+            return self.right.sql
+
+        return psycopg2_sql.SQL('(\n{sql}\n)').format(sql=self.right.sql)
 
     @property
-    def _join_select_sql(self):
-        return cleandoc('''
-            SELECT l.source_uri, l.target_uri, l.link_order, l.source_collections, l.target_collections, l.similarity
+    def sql(self):
+        return self._with_select_sql(cleandoc('''
+            SELECT l.source_uri, l.target_uri, l.link_order, 
+                   l.source_collections, l.target_collections, l.similarity, l.valid
         ''') if self._only_left else cleandoc('''
             SELECT
                 CASE WHEN r.source_uri IS NULL THEN l.source_uri ELSE r.source_uri END AS source_uri,
@@ -88,54 +95,33 @@ class LensElements:
                 ARRAY(SELECT DISTINCT unnest(l.target_collections || r.target_collections)) AS target_collections,
                 CASE WHEN l.similarity IS NULL THEN r.similarity
                      WHEN r.similarity IS NULL THEN l.similarity
-                     ELSE l.similarity || r.similarity END AS similarity
-        ''')
-
-    @property
-    def _validity_select_sql(self):
-        return 'SELECT l.source_uri, l.target_uri, l.valid' if self._only_left else cleandoc('''
-            SELECT
-                CASE WHEN r.source_uri IS NULL THEN l.source_uri ELSE r.source_uri END AS source_uri,
-                CASE WHEN r.target_uri IS NULL THEN l.target_uri ELSE r.target_uri END AS target_uri, 
+                     ELSE l.similarity || r.similarity END AS similarity,
                 CASE WHEN l.valid = r.valid THEN l.valid 
                      WHEN l.valid IS NULL THEN r.valid 
                      WHEN r.valid IS NULL THEN l.valid
                      ELSE 'mixed'::link_validity END AS valid
-        ''')
+        '''))
 
-    def _left_sql(self, is_join_select):
-        if isinstance(self.left, LensElement):
-            return self.left.sql(is_join_select)
-
-        return psycopg2_sql.SQL('(\n{sql}\n)').format(sql=self.left._join_sql(is_join_select))
-
-    def _right_sql(self, is_join_select):
-        if isinstance(self.right, LensElement):
-            return self.right.sql(is_join_select)
-
-        return psycopg2_sql.SQL('(\n{sql}\n)').format(sql=self.right._join_sql(is_join_select))
-
-    def _join_sql(self, is_join_select=True):
-        select_sql = self._join_select_sql if is_join_select else self._validity_select_sql
+    def _with_select_sql(self, select_sql):
         if self._type == 'union':
             return psycopg2_sql.SQL(select_sql + '\n' + cleandoc('''
                 FROM {left} AS l
                 FULL JOIN {right} AS r
                 ON l.source_uri = r.source_uri AND l.target_uri = r.target_uri
-            ''')).format(left=self._left_sql(is_join_select), right=self._right_sql(is_join_select))
+            ''')).format(left=self._left_sql, right=self._right_sql)
         elif self._type == 'intersection':
             return psycopg2_sql.SQL(select_sql + '\n' + cleandoc('''
                 FROM {left} AS l
                 INNER JOIN {right} AS r
                 ON l.source_uri = r.source_uri AND l.target_uri = r.target_uri
-            ''')).format(left=self._left_sql(is_join_select), right=self._right_sql(is_join_select))
+            ''')).format(left=self._left_sql, right=self._right_sql)
         elif self._type == 'difference':
             return psycopg2_sql.SQL(select_sql + '\n' + cleandoc('''
                 FROM {left} AS l
                 LEFT JOIN {right} AS r
                 ON l.source_uri = r.source_uri AND l.target_uri = r.target_uri
                 WHERE r.source_uri IS NULL AND r.target_uri IS NULL
-            ''')).format(left=self._left_sql(is_join_select), right=self._right_sql(is_join_select))
+            ''')).format(left=self._left_sql, right=self._right_sql)
         elif self._type == 'sym_difference':
             return psycopg2_sql.SQL(select_sql + '\n' + cleandoc('''
                 FROM {left} AS l
@@ -143,7 +129,7 @@ class LensElements:
                 ON l.source_uri = r.source_uri AND l.target_uri = r.target_uri
                 WHERE (l.source_uri IS NULL AND l.target_uri IS NULL) 
                 OR (r.source_uri IS NULL AND r.target_uri IS NULL)
-            ''')).format(left=self._left_sql(is_join_select), right=self._right_sql(is_join_select))
+            ''')).format(left=self._left_sql, right=self._right_sql)
         elif self._type == 'in_set_and':
             return psycopg2_sql.SQL(select_sql + '\n' + cleandoc('''
                 FROM {left} AS l
@@ -159,7 +145,7 @@ class LensElements:
                     WHERE l.target_uri IN (in_set.source_uri, in_set.target_uri)
                     LIMIT 1
                 )
-            ''')).format(left=self._left_sql(is_join_select), right=self._right_sql(is_join_select))
+            ''')).format(left=self._left_sql, right=self._right_sql)
         elif self._type == 'in_set_or':
             return psycopg2_sql.SQL(select_sql + '\n' + cleandoc('''
                 FROM {left} AS l
@@ -170,7 +156,7 @@ class LensElements:
                     OR l.target_uri IN (in_set.source_uri, in_set.target_uri)
                     LIMIT 1
                 )
-            ''')).format(left=self._left_sql(is_join_select), right=self._right_sql(is_join_select))
+            ''')).format(left=self._left_sql, right=self._right_sql)
         elif self._type == 'in_set_source':
             return psycopg2_sql.SQL(select_sql + '\n' + cleandoc('''
                 FROM {left} AS l
@@ -180,7 +166,7 @@ class LensElements:
                     WHERE l.source_uri IN (in_set.source_uri, in_set.target_uri)
                     LIMIT 1
                 )
-            ''')).format(left=self._left_sql(is_join_select), right=self._right_sql(is_join_select))
+            ''')).format(left=self._left_sql, right=self._right_sql)
         elif self._type == 'in_set_target':
             return psycopg2_sql.SQL(select_sql + '\n' + cleandoc('''
                 FROM {left} AS l
@@ -190,4 +176,4 @@ class LensElements:
                     WHERE l.target_uri IN (in_set.source_uri, in_set.target_uri)
                     LIMIT 1
                 )
-            ''')).format(left=self._left_sql(is_join_select), right=self._right_sql(is_join_select))
+            ''')).format(left=self._left_sql, right=self._right_sql)

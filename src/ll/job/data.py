@@ -223,25 +223,51 @@ class Job:
 
             if type == 'lens':
                 cur.execute('DELETE FROM lenses WHERE job_id = %s AND spec_id = %s', (self.job_id, id))
-                cur.execute(sql.SQL('DROP VIEW IF EXISTS {}').format(sql.Identifier(self.lens_view_name(id))))
                 cur.execute(sql.SQL('DROP TABLE IF EXISTS {}').format(sql.Identifier(self.lens_table_name(id))))
 
     def validate_link(self, id, type, source_uri, target_uri, valid):
-        linksets = [] if type == 'lens' else [id]
-        if type == 'lens':
-            lenses = [id]
-            while lenses:
-                lens = self.get_lens_spec_by_id(lenses[0])
-                linksets += lens.linksets
+        linksets = set() if type == 'lens' else {id}
+        lenses = set() if type == 'linkset' else {id}
 
-                lenses += lens.lenses
-                lenses.remove(lens.id)
+        lenses_tmp = [] if type == 'linkset' else [id]
+        while lenses_tmp:
+            lens = self.get_lens_spec_by_id(lenses_tmp[0])
+            linksets = linksets.union(lens.linksets)
+            lenses = lenses.union(lens.lenses)
+
+            lenses_tmp += lens.lenses
+            lenses_tmp.remove(lens.id)
 
         with db_conn() as conn, conn.cursor() as cur:
-            for id in linksets:
+            for linkset_id in linksets:
                 query = sql.SQL('UPDATE {} SET valid = %s WHERE source_uri = %s AND target_uri = %s') \
-                    .format(sql.Identifier(self.linkset_table_name(id)))
+                    .format(sql.Identifier(self.linkset_table_name(linkset_id)))
                 cur.execute(query, (valid, source_uri, target_uri))
+
+            if type == 'lens':
+                query = sql.SQL('UPDATE {} SET valid = %s WHERE source_uri = %s AND target_uri = %s') \
+                    .format(sql.Identifier(self.lens_table_name(id)))
+                cur.execute(query, (valid, source_uri, target_uri))
+            else:
+                for lens_spec in self.lens_specs:
+                    if linkset_id in lens_spec.linksets:
+                        validities_sql = sql.SQL(' UNION ALL ').join(
+                            sql.Composed([
+                                sql.SQL('SELECT valid FROM {table} '
+                                        'WHERE source_uri = {source_uri} AND target_uri = {target_uri}').format(
+                                    table=sql.Identifier(self.linkset_table_name(linkset)),
+                                    source_uri=sql.Literal(source_uri), target_uri=sql.Literal(target_uri)
+                                ) for linkset in lens_spec.linksets if linkset != linkset_id
+                            ])
+                        )
+
+                        cur.execute(validities_sql)
+                        validities = [result[0] for result in cur.fetchall()]
+                        valid_lens = 'mixed' if validities and valid not in validities else valid
+
+                        query = sql.SQL('UPDATE {} SET valid = %s WHERE source_uri = %s AND target_uri = %s') \
+                            .format(sql.Identifier(self.lens_table_name(lens_spec.id)))
+                        cur.execute(query, (valid_lens, source_uri, target_uri))
 
     def properties_for_entity_type_selection(self, entity_type_selection, downloaded_only=True):
         return self._properties(entity_type_selection.dataset_id, entity_type_selection.properties,
@@ -258,9 +284,6 @@ class Job:
 
     def lens_table_name(self, id):
         return 'lens_' + self.job_id + '_' + str(id)
-
-    def lens_view_name(self, id):
-        return 'lens_view_' + self.job_id + '_' + str(id)
 
     def entity_type_selections_required_for_linkset(self, id):
         linkset_spec = self.get_linkset_spec_by_id(id)
@@ -381,28 +404,22 @@ class Job:
         where_sql = sql.SQL('WHERE {}').format(sql.SQL(' AND ').join(conditions)) \
             if len(conditions) > 0 else sql.SQL('')
 
-        joins_sql = sql.SQL('LEFT JOIN {lens_view} AS lens_view '
-                            'ON links.source_uri = lens_view.source_uri '
-                            'AND links.target_uri = lens_view.target_uri') \
-            .format(lens_view=sql.Identifier(self.lens_view_name(id))) if type == 'lens' else None
-
         values = None
         if include_props:
             properties = self.get_lens_spec_by_id(id).properties \
                 if type == 'lens' else self.get_linkset_spec_by_id(id).properties
             targets = self.value_targets_for_properties(properties)
             if targets:
-                joins = get_linkset_join_sql(view_name, joins_sql, where_sql, limit, offset)
+                joins = get_linkset_join_sql(view_name, where_sql, limit, offset)
                 queries = get_property_values_queries(targets, joins=joins)
                 values = get_property_values(queries, dict=True)
 
         with db_conn() as conn, conn.cursor(name=uuid4().hex) as cur:
             cur.execute(sql.SQL('SELECT links.source_uri, links.target_uri, link_order, similarity, cluster_id, valid '
                                 'FROM {view_name} AS links '
-                                '{joins_sql} {where_sql} '
+                                '{where_sql} '
                                 'ORDER BY sort_order ASC {limit_offset}').format(
                 view_name=view_name,
-                joins_sql=joins_sql if joins_sql else sql.SQL(''),
                 where_sql=where_sql,
                 limit_offset=sql.SQL(limit_offset_sql)
             ))
@@ -437,18 +454,12 @@ class Job:
         where_sql = sql.SQL('WHERE {}').format(sql.SQL(' AND ').join(conditions)) \
             if len(conditions) > 0 else sql.SQL('')
 
-        joins_sql = sql.SQL('LEFT JOIN {lens_view} AS lens_view '
-                            'ON links.source_uri = lens_view.source_uri '
-                            'AND links.target_uri = lens_view.target_uri') \
-            .format(lens_view=sql.Identifier(self.lens_view_name(id))) if type == 'lens' else None
-
         with db_conn() as conn, conn.cursor() as cur:
             cur.execute(sql.SQL('SELECT valid, count(*) AS valid_count '
                                 'FROM {view_name} AS links '
-                                '{joins_sql} {where_sql} '
+                                '{where_sql} '
                                 'GROUP BY valid').format(
                 view_name=view_name,
-                joins_sql=joins_sql if joins_sql else sql.SQL(''),
                 where_sql=where_sql
             ))
 

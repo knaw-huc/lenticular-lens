@@ -33,26 +33,9 @@ class LensSql:
             """
         ) + '\n').format(
             view_name=sql.Identifier(self._job.lens_table_name(self._lens.id)),
-            lens_sql=self._lens.select_sql
-        )
-
-    def generate_lens_view_sql(self):
-        return sql.SQL(cleandoc(
-            """ DROP VIEW IF EXISTS {view_name} CASCADE;
-                CREATE VIEW {view_name} AS 
-                {lens_sql};
-                
-                ANALYZE {view_name};
-            """
-        ) + '\n').format(
-            view_name=sql.Identifier(self._job.lens_view_name(self._lens.id)),
-            lens_sql=self._lens.select_validity_sql
+            lens_sql=self._lens.sql
         )
 
     @property
     def sql_string(self):
         return get_string_from_sql(self.generate_lens_sql())
-
-    @property
-    def view_sql_string(self):
-        return get_string_from_sql(self.generate_lens_view_sql())
