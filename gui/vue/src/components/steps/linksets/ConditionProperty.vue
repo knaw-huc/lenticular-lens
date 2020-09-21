@@ -91,7 +91,7 @@
                         this.getTransformerTemplate(transformer).items.forEach(transformerItem => {
                             const field = `transformer_value_${idx}_${transformerItem.key}`;
                             const value = transformer.parameters[transformerItem.key];
-                            if (!this.validateField(field, value && value.length > 0))
+                            if (!this.validateField(field, transformerItem.allowEmptyValue || (value && value.length > 0)))
                                 transformersValid = false;
                         });
                     }
@@ -114,7 +114,7 @@
             handleTransformerIndexChange(transformer) {
                 transformer.parameters = {};
                 this.getTransformerTemplate(transformer).items.forEach(valueItem => {
-                    transformer.parameters[valueItem.key] = valueItem.type;
+                    transformer.parameters[valueItem.key] = valueItem.defaultValue;
                 });
             },
         },

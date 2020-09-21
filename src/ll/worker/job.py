@@ -36,6 +36,7 @@ class WorkerJob:
             self._db_conn.commit()
         except Exception as e:
             self._exception = e
+            raise e
         finally:
             return_conn(self._db_conn)
             self._db_conn = None

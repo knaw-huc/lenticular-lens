@@ -8,8 +8,8 @@
 
         <div class="col-auto">
           <div class="btn btn-sm bg-info-light border border-info text-info read-only m-1">
-            <span class="font-weight-bold">Max similarity</span><br>
-            {{ maxSimilarity }}
+            <span class="font-weight-bold">Similarity</span><br>
+            {{ similarity }}
           </div>
         </div>
       </div>
@@ -90,9 +90,13 @@
             link: Object,
         },
         computed: {
-            maxSimilarity() {
-                const similarityValues = Object.values(this.link.similarity);
-                return similarityValues.length > 0 ? Math.max(...similarityValues).toFixed(3) : '1.000';
+            similarity() {
+                if (isNaN(this.link.similarity)) {
+                    const similarityValues = Object.values(this.link.similarity);
+                    return similarityValues.length > 0 ? Math.max(...similarityValues).toFixed(3) : '1.000';
+                }
+
+                return this.link.similarity.toFixed(3);
             },
 
             switchSourceAndTarget() {
@@ -127,12 +131,12 @@
         methods: {
             async copySourceUriToClipboard() {
                 await navigator.clipboard.writeText(
-                    this.switchSourceAndTarget ? this.link.source : this.link.target);
+                    this.switchSourceAndTarget ? this.link.target : this.link.source);
             },
 
             async copyTargetUriToClipboard() {
                 await navigator.clipboard.writeText(
-                    this.switchSourceAndTarget ? this.link.target : this.link.source);
+                    this.switchSourceAndTarget ? this.link.source : this.link.target);
             },
         },
     };

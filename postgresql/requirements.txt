@@ -1,3 +1,4 @@
 requests==2.25.0
 unidecode==1.1.1
+fuzzy==1.2.2
 python-levenshtein==0.12.0

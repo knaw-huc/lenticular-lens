@@ -62,6 +62,8 @@
             :parent-type="element.type"
             :index="elemIdx"
             :options="options"
+            :option-groups="optionGroups"
+            :option-descriptions="optionDescriptions"
             :should-have-elements="shouldHaveElements"
             :controlled-elements="controlledElements"
             @add="addElement($event)"

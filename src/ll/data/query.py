@@ -98,7 +98,7 @@ def create_query_for_properties(graph, resource, target, columns, property_paths
         property_path = property_path if type(property_path) is list else [property_path]
 
         property = get_property_field(graph, selection_joins, resource, columns, property_path)
-        property_sql = sql.SQL('ARRAY_AGG(DISTINCT {value}) AS {name}').format(
+        property_sql = sql.SQL('array_agg(DISTINCT {value}) AS {name}').format(
             value=property.sql,
             name=sql.Identifier(property_name))
         properties.append(property_sql)

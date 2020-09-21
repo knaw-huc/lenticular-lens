@@ -109,6 +109,56 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE FUNCTION logic_ops(operation text, a numeric, b numeric) RETURNS numeric
+    STRICT IMMUTABLE PARALLEL SAFE AS
+$$
+SELECT CASE
+           WHEN operation = 'MINIMUM_T_NORM'
+               THEN least(a, b)
+           WHEN operation = 'PRODUCT_T_NORM'
+               THEN a * b
+           WHEN operation = 'LUKASIEWICZ_T_NORM'
+               THEN greatest(0, a + b - 1)
+           WHEN operation = 'DRASTIC_T_NORM'
+               THEN CASE WHEN b = 1 THEN a WHEN a = 1 THEN b ELSE 0 END
+           WHEN operation = 'NILPOTENT_MINIMUM'
+               THEN CASE WHEN a + b > 1 THEN least(a, b) ELSE 0 END
+           WHEN operation = 'HAMACHER_PRODUCT'
+               THEN CASE WHEN NOT a = 0 AND NOT b = 0 THEN a * b / (a + b - (a * b)) ELSE 0 END
+           WHEN operation = 'MAXIMUM_T_CONORM'
+               THEN greatest(a, b)
+           WHEN operation = 'PROBABILISTIC_SUM'
+               THEN a + b - (a * b)
+           WHEN operation = 'BOUNDED_SUM'
+               THEN least(a + b, 1)
+           WHEN operation = 'DRASTIC_T_CONORM'
+               THEN CASE WHEN b = 0 THEN a WHEN a = 0 THEN b ELSE 1 END
+           WHEN operation = 'NILPOTENT_MAXIMUM'
+               THEN CASE WHEN a + b < 1 THEN greatest(a, b) ELSE 1 END
+           WHEN operation = 'EINSTEIN_SUM'
+               THEN (a + b) / (1 + a * b)
+           END;
+$$ LANGUAGE sql;
+
+CREATE OR REPLACE FUNCTION logic_ops(operation text, similarities numeric[]) RETURNS numeric
+    STRICT IMMUTABLE PARALLEL SAFE AS
+$$
+DECLARE
+    similarity     numeric;
+    cur_similarity numeric;
+BEGIN
+    FOREACH cur_similarity IN ARRAY similarities
+        LOOP
+            IF similarity IS NULL THEN
+                similarity = cur_similarity;
+            ELSE
+                similarity = logic_ops(operation, similarity, cur_similarity);
+            END IF;
+        END LOOP;
+    RETURN similarity;
+END;
+$$ LANGUAGE plpgsql;
+
 CREATE OR REPLACE FUNCTION to_date_immutable(text, text) RETURNS date
     STRICT IMMUTABLE AS
 $$
@@ -144,40 +194,56 @@ BEGIN
     month = substr($2, 6, 2);
 
     CASE $1
-        WHEN 'year' THEN IF year ~ E'^\\d+$' THEN
-            RETURN year;
-        ELSE
-            RETURN NULL;
-        END IF;
-        WHEN 'month' THEN IF month ~ E'^\\d+$' THEN
-            RETURN month;
-        ELSE
-            RETURN NULL;
-        END IF;
-        WHEN 'year_month' THEN IF year ~ E'^\\d+$' AND month ~ E'^\\d+$' THEN
-            RETURN year || '-' || month;
-        ELSE
-            RETURN NULL;
-        END IF;
+        WHEN 'year'
+            THEN IF year ~ E'^\\d+$' THEN
+                RETURN year;
+            ELSE
+                RETURN NULL;
+            END IF;
+        WHEN 'month'
+            THEN IF month ~ E'^\\d+$' THEN
+                RETURN month;
+            ELSE
+                RETURN NULL;
+            END IF;
+        WHEN 'year_month'
+            THEN IF year ~ E'^\\d+$' AND month ~ E'^\\d+$' THEN
+                RETURN year || '-' || month;
+            ELSE
+                RETURN NULL;
+            END IF;
         END CASE;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION ecartico_full_name(text) RETURNS text
+CREATE OR REPLACE FUNCTION similarity(source text, target text, distance decimal) RETURNS decimal
     STRICT IMMUTABLE PARALLEL SAFE AS
 $$
-DECLARE
-    first_name  text;
-    infix       text;
-    family_name text;
-BEGIN
-    first_name = coalesce(trim(substring($1 from ', ([^[]*)')), '');
-    infix = coalesce(trim(substring($1 from '\[(.*)\]')), '');
-    family_name = coalesce(trim(substring($1 from '^[^,]*')), '');
+SELECT 1 - (distance / greatest(char_length(source), char_length(target)));
+$$ LANGUAGE sql;
 
-    RETURN first_name || ' ' || CASE WHEN infix != '' THEN infix || ' ' ELSE '' END || family_name;
-END;
-$$ LANGUAGE plpgsql;
+CREATE OR REPLACE FUNCTION delta(type text, source numeric, target numeric,
+                                 start_delta numeric, end_delta numeric) RETURNS boolean
+    STRICT IMMUTABLE PARALLEL SAFE AS
+$$
+SELECT source IS NOT NULL AND target IS NOT NULL
+           AND abs(source - target) BETWEEN start_delta AND end_delta
+           AND CASE
+                   WHEN type = '<' THEN source <= target
+                   WHEN type = '>' THEN target <= source
+                   ELSE TRUE END;
+$$ LANGUAGE sql;
+
+CREATE OR REPLACE FUNCTION delta(type text, source date, target date, no_days numeric) RETURNS boolean
+    STRICT IMMUTABLE PARALLEL SAFE AS
+$$
+SELECT source IS NOT NULL AND target IS NOT NULL
+           AND abs(source - target) < no_days
+           AND CASE
+                   WHEN type = '<' THEN source <= target
+                   WHEN type = '>' THEN target <= source
+                   ELSE TRUE END;
+$$ LANGUAGE sql;
 
 CREATE OR REPLACE FUNCTION levenshtein_python(source text, target text) RETURNS integer
     STRICT IMMUTABLE PARALLEL SAFE AS
@@ -196,31 +262,59 @@ SELECT CASE
            ELSE levenshtein_less_equal(source, target, max_distance) END;
 $$ LANGUAGE sql;
 
-CREATE OR REPLACE FUNCTION similarity(source text, target text, distance decimal) RETURNS decimal
+CREATE OR REPLACE FUNCTION jaro(source text, target text) RETURNS decimal
     STRICT IMMUTABLE PARALLEL SAFE AS
 $$
-SELECT 1 - (distance / greatest(char_length(source), char_length(target)));
-$$ LANGUAGE sql;
+import Levenshtein
 
-CREATE OR REPLACE FUNCTION ll_soundex(input text) RETURNS text
-    STRICT IMMUTABLE PARALLEL SAFE AS
-$$
-from functions import soundex
-
-return soundex(input)
+return Levenshtein.jaro(source, target)
 $$ LANGUAGE plpython3u;
 
-CREATE OR REPLACE FUNCTION soundex_words(input text) RETURNS text
+CREATE OR REPLACE FUNCTION jaro_winkler(source text, target text, prefix_weight decimal) RETURNS decimal
     STRICT IMMUTABLE PARALLEL SAFE AS
 $$
-SELECT string_agg(soundex(word), '_')
-FROM regexp_split_to_table(input, '\s+') AS word;
+import Levenshtein
+
+return Levenshtein.jaro_winkler(source, target, float(prefix_weight))
+$$ LANGUAGE plpython3u;
+
+CREATE OR REPLACE FUNCTION ll_soundex(input text, size integer) RETURNS text
+    STRICT IMMUTABLE PARALLEL SAFE AS
+$$
+from soundex import soundex
+
+return soundex(input, size)
+$$ LANGUAGE plpython3u;
+
+CREATE OR REPLACE FUNCTION soundex_words(input text, size integer) RETURNS text
+    STRICT IMMUTABLE PARALLEL SAFE AS
+$$
+SELECT string_agg(ll_soundex(word, size), '_')
+FROM regexp_split_to_table(input, '\s+') AS word
+WHERE trim(word) != '';
 $$ LANGUAGE sql;
+
+CREATE OR REPLACE FUNCTION nysiis(input text) RETURNS text
+    STRICT IMMUTABLE PARALLEL SAFE AS
+$$
+import fuzzy
+
+return fuzzy.nysiis(input)
+$$ LANGUAGE plpython3u;
 
 CREATE OR REPLACE FUNCTION bloothooft(input text, type text) RETURNS text
     STRICT IMMUTABLE PARALLEL SAFE AS
 $$
-from functions import bloothooft_reduct
+from bloothooft import bloothooft_reduct
 
 return bloothooft_reduct(input, type)
+$$ LANGUAGE plpython3u;
+
+CREATE OR REPLACE FUNCTION word_intersection(source text, target text, ordered boolean, approximate boolean,
+                                             stop_symbols text) RETURNS decimal
+    STRICT IMMUTABLE PARALLEL SAFE AS
+$$
+from word_intersection import word_intersection
+
+return word_intersection(source, target, ordered, approximate, stop_symbols)
 $$ LANGUAGE plpython3u;

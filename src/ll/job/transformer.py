@@ -7,10 +7,10 @@ matching_functions = get_json_from_file('matching_functions.json')
 transformers = get_json_from_file('transformers.json')
 
 
-class Elements:
-    def __init__(self, schema, group_name, types):
+class LogicBox:
+    def __init__(self, schema, name, types):
         self.schema = schema
-        self.group_name = group_name
+        self.name = name
         self.types = types
 
     def validate(self, data):
@@ -18,26 +18,35 @@ class Elements:
             raise SchemaError('not an dict')
 
         if 'type' in data and data['type'].lower() in self.types and \
-                self.group_name in data and type(data[self.group_name]) is list:
-            elements = [self.validate(c) for c in data[self.group_name]]
+                self.name in data and type(data[self.name]) is list:
+            elements = [self.validate(c) for c in data[self.name]]
             if len(elements) == 0:
                 return None
 
-            return {'type': data['type'].upper(), self.group_name: elements}
+            return {'type': data['type'].upper(), self.name: elements}
 
         return self.schema.validate(data)
 
 
-entity_type_selection_filter_elements_schema = Schema({
+entity_type_selection_filter_logicbox_schema = Schema({
     'property': [And(str, len)],
     'type': And(str, Use(str.lower), lambda t: t in filter_functions.keys()),
     Optional('value'): Or(And(str, len), int),
     Optional('format'): And(str, len),
 }, ignore_extra_keys=True)
 
-mapping_method_elements_schema = Schema({
+mapping_method_logicbox_schema = Schema({
     'method_name': And(str, Use(str.upper), lambda m: m in matching_functions.keys()),
-    'method_value': dict,
+    'method_config': dict,
+    Optional('method_sim_name', default=None): Or(None, And(str, Use(str.upper),
+                                                            lambda m: m in matching_functions.keys())),
+    Optional('method_sim_config', default={}): dict,
+    Optional('method_sim_normalized', default=False): bool,
+    Optional('list_threshold', default=0): int,
+    Optional('list_threshold_unit', default='matches'): And(str, lambda s: s in ('matches', 'percentage')),
+    Optional('t_conorm', default='MAXIMUM_T_CONORM'):
+        lambda s: s in ('MAXIMUM_T_CONORM', 'PROBABILISTIC_SUM', 'BOUNDED_SUM',
+                        'DRASTIC_T_CONORM', 'NILPOTENT_MAXIMUM', 'EINSTEIN_SUM'),
     'sources': [{
         'entity_type_selection': Use(int),
         'property': [And(str, len)],
@@ -56,7 +65,7 @@ mapping_method_elements_schema = Schema({
     }]
 }, ignore_extra_keys=True)
 
-lens_elements_schema = Schema({
+lens_logicbox_schema = Schema({
     'id': Use(int),
     'type': Or('linkset', 'lens')
 }, ignore_extra_keys=True)
@@ -73,7 +82,7 @@ entity_type_selection_schema = Schema({
         Optional('timbuctoo_hsid'): Or(str, None),
     },
     Optional('filter', default=None):
-        Or(None, Elements(entity_type_selection_filter_elements_schema, 'conditions', ('and', 'or'))),
+        Or(None, LogicBox(entity_type_selection_filter_logicbox_schema, 'conditions', ('and', 'or'))),
     Optional('limit', default=-1): And(int, lambda n: n > 0 or n == -1),
     Optional('random', default=False): bool,
     Optional('properties', default=list): [[str]],
@@ -88,7 +97,10 @@ linkset_spec_schema = Schema({
     Optional('is_association', default=False): bool,
     'sources': [Use(int)],
     'targets': [Use(int)],
-    'methods': And(Elements(mapping_method_elements_schema, 'conditions', ('and', 'or')), dict),
+    'methods': And(LogicBox(mapping_method_logicbox_schema, 'conditions',
+                            ('minimum_t_norm', 'product_t_norm', 'lukasiewicz_t_norm', 'drastic_t_norm',
+                             'nilpotent_minimum', 'hamacher_product', 'maximum_t_conorm', 'probabilistic_sum',
+                             'bounded_sum', 'drastic_t_conorm', 'nilpotent_maximum', 'einstein_sum')), dict),
     Optional('properties', default=list): [{
         'entity_type_selection': Use(int),
         'property': [str],
@@ -99,7 +111,7 @@ lens_spec_schema = Schema({
     'id': Use(int),
     'label': And(str, len),
     Optional('description', default=None): Or(str, None),
-    'specs': And(Elements(lens_elements_schema, 'elements',
+    'specs': And(LogicBox(lens_logicbox_schema, 'elements',
                           ('union', 'intersection', 'difference', 'sym_difference', 'in_set_and', 'in_set_or')), dict),
     Optional('properties', default=list): [{
         'entity_type_selection': Use(int),
@@ -141,18 +153,23 @@ def transform(entity_type_selections_org, linkset_specs_org, lens_specs_org):
 
         return create_references_for_property(referenced_ets, property[2:])
 
-    def transform_elements(elements_group, group_name, with_element):
-        if type(elements_group) is list:
-            return [transform_elements(element, group_name, with_element) for element in elements_group]
+    def get_elements(logicbox, name):
+        if name in logicbox:
+            return [element for elements in logicbox[name] for element in get_elements(elements, name)]
 
-        if group_name in elements_group:
+        return [logicbox]
+
+    def transform_elements(logicbox, name, with_element):
+        if type(logicbox) is list:
+            return [transform_elements(elements, name, with_element) for elements in logicbox]
+
+        if name in logicbox:
             return {
-                'type': elements_group['type'],
-                group_name: [transform_elements(element, group_name, with_element)
-                             for element in elements_group[group_name]]
+                'type': logicbox['type'],
+                name: [transform_elements(elements, name, with_element) for elements in logicbox[name]]
             }
 
-        return with_element(elements_group)
+        return with_element(logicbox)
 
     def transform_entity_type_selection_condition(condition):
         res_condition = condition.copy()
@@ -176,6 +193,24 @@ def transform(entity_type_selections_org, linkset_specs_org, lens_specs_org):
         mapping_conditions[ets_internal_id] = entity_type_selection_list
 
         return mapping_conditions
+
+    def transform_method_value(name, values):
+        if name == 'INTERMEDIATE':
+            if values['entity_type_selection'] not in ets_internal_id_by_id:
+                raise SchemaError('entity-type selection %s not valid' % values['entity_type_selection'])
+
+            ets_internal_id = ets_internal_id_by_id[values['entity_type_selection']]
+            entity_type_selection = next(ets for ets in entity_type_selections if ets['internal_id'] == ets_internal_id)
+            source = create_references_for_property(entity_type_selection, values['intermediate_source'])
+            target = create_references_for_property(entity_type_selection, values['intermediate_target'])
+
+            return {
+                'entity_type_selection': ets_internal_id,
+                'intermediate_source': source,
+                'intermediate_target': target
+            }
+
+        return values
 
     def transform_property(properties, property):
         if '' in property['property'] or property['entity_type_selection'] not in ets_internal_id_by_id:
@@ -247,14 +282,25 @@ def transform(entity_type_selections_org, linkset_specs_org, lens_specs_org):
             linkset_spec['targets'] = [ets_internal_id_by_id[target] for target in linkset_spec['targets']]
             linkset_spec['methods'] = transform_elements(linkset_spec['methods'], 'conditions', lambda condition: {
                 'method_name': condition['method_name'],
-                'method_value': condition['method_value'],
+                'method_config': transform_method_value(condition['method_name'],
+                                                        condition['method_config']),
+                'method_sim_name': condition['method_sim_name'],
+                'method_sim_config': transform_method_value(condition['method_sim_name'],
+                                                            condition['method_sim_config']),
+                'method_sim_normalized': condition['method_sim_normalized'],
+                'list_threshold': condition['list_threshold'],
+                'list_threshold_unit': condition['list_threshold_unit'],
+                't_conorm': condition['t_conorm'],
                 'sources': reduce(transform_mapping_condition, condition['sources'], {}),
                 'targets': reduce(transform_mapping_condition, condition['targets'], {}),
             })
             linkset_spec['properties'] = reduce(transform_property, linkset_spec['properties'], [])
+            linkset_spec['intermediates'] = [method['method_value']['entity_type_selection']
+                                             for method in get_elements(linkset_spec['methods'], 'conditions')
+                                             if method['method_name'] == 'INTERMEDIATE']
 
             linkset_specs.append(linkset_spec)
-        except SchemaError:
+        except SchemaError as e:
             pass
 
     entity_type_selections += ref_entity_type_selections

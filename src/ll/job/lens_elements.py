@@ -83,6 +83,7 @@ class LensElements:
 
     @property
     def sql(self):
+        # TODO: Remove 'similarities' for now
         return self._with_select_sql(cleandoc('''
             SELECT l.source_uri, l.target_uri, l.link_order, 
                    l.source_collections, l.target_collections, l.similarity, l.valid
@@ -93,9 +94,9 @@ class LensElements:
                 CASE WHEN l.link_order = r.link_order THEN l.link_order ELSE 'both'::link_order END AS link_order,
                 ARRAY(SELECT DISTINCT unnest(l.source_collections || r.source_collections)) AS source_collections,
                 ARRAY(SELECT DISTINCT unnest(l.target_collections || r.target_collections)) AS target_collections,
-                CASE WHEN l.similarity IS NULL THEN r.similarity
-                     WHEN r.similarity IS NULL THEN l.similarity
-                     ELSE l.similarity || r.similarity END AS similarity,
+                CASE WHEN l.similarity IS NULL OR l.similarity = 1 THEN r.similarity
+                     WHEN r.similarity IS NULL OR r.similarity = 1 THEN l.similarity
+                     ELSE logic_ops('MAXIMUM_T_CONORM', l.similarity, r.similarity) END AS similarity,
                 CASE WHEN l.valid = r.valid THEN l.valid 
                      WHEN l.valid IS NULL THEN r.valid 
                      WHEN r.valid IS NULL THEN l.valid

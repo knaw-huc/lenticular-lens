@@ -52,31 +52,25 @@ class MatchingSql:
 
     def generate_match_source_sql(self):
         return sql.SQL(cleandoc(
-            """ DROP MATERIALIZED VIEW IF EXISTS {source_name} CASCADE;
-                CREATE MATERIALIZED VIEW {source_name} AS 
-                {source};
+            """ DROP MATERIALIZED VIEW IF EXISTS source CASCADE;
+                CREATE MATERIALIZED VIEW source AS 
+                {};
                 
-                CREATE INDEX ON {source_name} (uri);
-                ANALYZE {source_name};
+                CREATE INDEX ON source (uri);
+                ANALYZE source;
             """
-        ) + '\n').format(
-            source=self._linkset.source_sql,
-            source_name=sql.Identifier('source'),
-        )
+        ) + '\n').format(self._linkset.source_sql)
 
     def generate_match_target_sql(self):
         return sql.SQL(cleandoc(
-            """ DROP MATERIALIZED VIEW IF EXISTS {target_name} CASCADE;
-                CREATE MATERIALIZED VIEW {target_name} AS 
-                {target};
+            """ DROP MATERIALIZED VIEW IF EXISTS target CASCADE;
+                CREATE MATERIALIZED VIEW target AS 
+                {};
                 
-                CREATE INDEX ON {target_name} (uri);
-                ANALYZE {target_name};
+                CREATE INDEX ON target (uri);
+                ANALYZE target;
             """
-        ) + '\n').format(
-            target=self._linkset.target_sql,
-            target_name=sql.Identifier('target'),
-        )
+        ) + '\n').format(self._linkset.target_sql)
 
     def generate_match_index_and_sequence_sql(self):
         sequence_sql = sql.SQL(cleandoc(
@@ -98,41 +92,37 @@ class MatchingSql:
                         CASE WHEN every(source.uri < target.uri) THEN 'source_target'::link_order
                              WHEN every(target.uri < source.uri) THEN 'target_source'::link_order
                              ELSE 'both'::link_order END AS link_order,
-                        ARRAY_AGG(DISTINCT source.collection) AS source_collections,
-                        ARRAY_AGG(DISTINCT target.collection) AS target_collections,
-                        {similarity_field} AS similarity
-                FROM {source_name} AS source
-                JOIN {target_name} AS target
-                ON (source.uri != target.uri) 
+                        array_agg(DISTINCT source.collection) AS source_collections,
+                        array_agg(DISTINCT target.collection) AS target_collections,
+                        logic_ops('MAXIMUM_T_CONORM', array_agg({similarity})) AS similarity
+                FROM source
+                JOIN target ON (source.uri != target.uri) 
                 AND {conditions}
-                AND increment_counter({sequence})
+                AND increment_counter('linkset_count')
                 GROUP BY source_uri, target_uri;
             """) + '\n').format(
-            similarity_field=self._linkset.similarity_fields_agg_sql,
+            similarity=self._linkset.similarity_sql,
             conditions=self._linkset.conditions_sql,
-            view_name=sql.Identifier(self._job.linkset_table_name(self._linkset.id)),
-            source_name=sql.Identifier('source'),
-            target_name=sql.Identifier('target'),
-            sequence=sql.Literal('linkset_count')
+            view_name=sql.Identifier(self._job.linkset_table_name(self._linkset.id))
         )
 
     def generate_match_linkset_finish_sql(self):
         return sql.SQL(cleandoc(
-            """ ALTER TABLE public.{view_name}
+            """ ALTER TABLE public.{linkset}
                 ADD PRIMARY KEY (source_uri, target_uri),
                 ADD COLUMN cluster_id text,
                 ADD COLUMN valid link_validity DEFAULT 'not_validated';
 
-                ALTER TABLE public.{view_name} ADD COLUMN sort_order serial;
+                ALTER TABLE public.{linkset} ADD COLUMN sort_order serial;
 
-                CREATE INDEX ON public.{view_name} USING hash (source_uri);
-                CREATE INDEX ON public.{view_name} USING hash (target_uri);
-                CREATE INDEX ON public.{view_name} USING hash (cluster_id);
-                CREATE INDEX ON public.{view_name} USING hash (valid);
-                CREATE INDEX ON public.{view_name} USING btree (sort_order);
+                CREATE INDEX ON public.{linkset} USING hash (source_uri);
+                CREATE INDEX ON public.{linkset} USING hash (target_uri);
+                CREATE INDEX ON public.{linkset} USING hash (cluster_id);
+                CREATE INDEX ON public.{linkset} USING hash (valid);
+                CREATE INDEX ON public.{linkset} USING btree (sort_order);
 
-                ANALYZE public.{view_name};
-            """) + '\n').format(view_name=sql.Identifier(self._job.linkset_table_name(self._linkset.id)))
+                ANALYZE public.{linkset};
+            """) + '\n').format(linkset=sql.Identifier(self._job.linkset_table_name(self._linkset.id)))
 
     @property
     def sql_string(self):

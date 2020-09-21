@@ -63,7 +63,7 @@
             methodValuePropsHumanReadable() {
                 return this.methodValueTemplate.items
                     .map(item => {
-                        let value = this.condition.method_value[item.key];
+                        let value = this.condition.method_config[item.key];
 
                         if (item.choices)
                             value = Object.keys(item.choices).find(key => item.choices[key] === value);

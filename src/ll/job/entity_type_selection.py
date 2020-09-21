@@ -117,7 +117,7 @@ class EntityTypeSelection:
         match_ets_fields = match_fields.get(self.internal_id, {})
 
         for match_field_label, match_field in match_ets_fields.items():
-            for match_field_property in match_field:
+            for match_field_property in match_field['properties']:
                 if match_field_property.hash not in matching_fields_hashes:
                     matching_fields_hashes.append(match_field_property.hash)
                     matching_fields.append(match_field_property)

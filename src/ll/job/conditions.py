@@ -7,7 +7,10 @@ class Conditions:
         self._data = data
         self._type = type
         self._job = job
+
         self._conditions_list = None
+        self._operator = 'AND' if type in ['MINIMUM_T_NORM', 'PRODUCT_T_NORM', 'LUKASIEWICZ_T_NORM',
+                                           'DRASTIC_T_NORM', 'NILPOTENT_MINIMUM', 'HAMACHER_PRODUCT'] else 'OR'
 
     @property
     def conditions_list(self):
@@ -26,16 +29,34 @@ class Conditions:
         filter_sqls = []
         for condition in self.conditions_list:
             if isinstance(condition, MatchingFunction):
-                filter_sqls.append(condition.sql.format(
-                    field_name=psycopg2_sql.Identifier(condition.field_name), **condition.sql_parameters))
+                filter_sqls.append(condition.sql)
             else:
                 filter_sqls.append(condition.conditions_sql)
 
-        return psycopg2_sql.SQL('({})').format(psycopg2_sql.SQL(' %s ' % self._type).join(filter_sqls))
+        return psycopg2_sql.SQL('({})').format(psycopg2_sql.SQL(' %s ' % self._operator).join(filter_sqls))
 
     @property
-    def index_templates(self):
-        return [matching_function.index_template for matching_function in self.matching_functions]
+    def similarity_sql(self):
+        similarity_sqls = []
+        for condition in self.conditions_list:
+            if isinstance(condition, MatchingFunction):
+                if condition.similarity_sql:
+                    similarity_sqls.append(condition.similarity_sql)
+            else:
+                similarity_sqls.append(condition.similarity_sql)
+
+        if not similarity_sqls:
+            return psycopg2_sql.Literal(1)
+
+        sim_sql = similarity_sqls.pop()
+        while similarity_sqls:
+            sim_sql = psycopg2_sql.SQL('logic_ops({operation}, {a}, {b})').format(
+                operation=psycopg2_sql.Literal(self._type),
+                a=sim_sql,
+                b=similarity_sqls.pop()
+            )
+
+        return sim_sql
 
     @property
     def matching_functions(self):

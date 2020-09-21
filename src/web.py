@@ -1,9 +1,11 @@
 import io
 import csv
+import decimal
 import psycopg2
 
 from flask import Flask, jsonify, request, abort, make_response
 from flask_cors import CORS
+from flask.json import JSONEncoder
 from werkzeug.routing import BaseConverter, ValidationError
 
 from ll.job.data import Job, Validation
@@ -15,6 +17,14 @@ from ll.data.collection import Collection
 from ll.data.timbuctoo_datasets import TimbuctooDatasets
 
 from ll.Clustering.IlnVisualisation import plot, plot_compact, plot_reconciliation
+
+
+class DecimalJSONEncoder(JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, decimal.Decimal):
+            # Convert decimal instances to strings.
+            return float(obj)
+        return super(DecimalJSONEncoder, self).default(obj)
 
 
 class JobConverter(BaseConverter):
@@ -34,6 +44,7 @@ config_logger()
 app = Flask(__name__)
 CORS(app)
 
+app.json_encoder = DecimalJSONEncoder
 app.url_map.converters['job'] = JobConverter
 app.url_map.converters['type'] = TypeConverter
 

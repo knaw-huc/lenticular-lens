@@ -52,7 +52,7 @@ export default {
                 sources: [],
                 targets: [],
                 methods: {
-                    type: 'AND',
+                    type: 'MINIMUM_T_NORM',
                     conditions: [],
                 },
                 properties: []
@@ -112,15 +112,6 @@ export default {
 
         getLensSpecById(id) {
             return this.lensSpecs.find(lensSpec => lensSpec.id === parseInt(id));
-        },
-
-        getCleanPropertyName(property, propInfo) {
-            if (propInfo.isList)
-                property = property.replace(/List$/, '');
-            if (propInfo.isInverse)
-                property = property.replace(/^_inverse_/, '');
-
-            return property;
         },
 
         exportCsvLink(type, id, accepted, rejected, notValidated, mixed) {
@@ -183,8 +174,84 @@ export default {
                 this.entityTypeSelections = entityTypeSelections;
             }
 
-            if (this.job.linkset_specs)
-                this.linksetSpecs = copy(this.job.linkset_specs);
+            if (this.job.linkset_specs) {
+                const linksetSpecs = copy(this.job.linkset_specs);
+
+                function updateLogicBoxTypes(conditions) {
+                    if (conditions.hasOwnProperty('type')) {
+                        if (conditions.type === 'AND')
+                            conditions.type = 'MINIMUM_T_NORM';
+                        else if (conditions.type === 'OR')
+                            conditions.type = 'MAXIMUM_T_CONORM';
+                    }
+
+                    if (conditions.hasOwnProperty('conditions'))
+                        conditions.conditions.forEach(condition => updateLogicBoxTypes(condition));
+                }
+
+                linksetSpecs.forEach(linksetSpec => {
+                    updateLogicBoxTypes(linksetSpec.methods);
+
+                    this.getRecursiveElements(linksetSpec.methods, 'conditions').forEach(method => {
+                        if (method.hasOwnProperty('method_value')) {
+                            method.method_config = method.method_value;
+                            delete method.method_value;
+
+                            method.method_sim_name = null;
+                            method.method_sim_config = {};
+                            method.method_sim_normalized = false;
+                            method.list_threshold = 0;
+                            method.list_threshold_unit = 'items';
+                            method.t_conorm = 'MAXIMUM_T_CONORM';
+
+                            if (method.method_name === '=')
+                                method.method_name = 'EXACT';
+                            else if (method.method_name === 'TRIGRAM_DISTANCE')
+                                method.method_name = 'TRIGRAM';
+                            else if (method.method_name === 'DISTANCE_IS_BETWEEN')
+                                method.method_name = 'NUMBERS_DELTA';
+                            else if (method.method_name === 'TIME_DELTA')
+                                method.method_config.format = 'YYYY-MM-DD';
+                            else if (method.method_name === 'LEVENSHTEIN')
+                                method.method_name = 'LEVENSHTEIN_DISTANCE';
+                            else if (method.method_name === 'LEVENSHTEIN_APPROX')
+                                method.method_name = 'LEVENSHTEIN_NORMALIZED';
+                            else if (method.method_name === 'LL_SOUNDEX') {
+                                method.method_name = 'SOUNDEX';
+                                method.method_sim_name = 'LEVENSHTEIN_NORMALIZED';
+                                method.method_sim_config.threshold = method.method_config.threshold;
+                                delete method.method_config.threshold;
+                                method.method_config.size = 4;
+                            }
+                            else if (method.method_name === 'BLOOTHOOFT_REDUCT') {
+                                method.method_name = 'BLOOTHOOFT';
+                                method.method_sim_name = 'LEVENSHTEIN_NORMALIZED';
+                                method.method_sim_config.threshold = method.method_config.threshold;
+                                delete method.method_config.threshold;
+                            }
+                            else if (method.method_name === 'BLOOTHOOFT_REDUCT_APPROX') {
+                                method.method_name = 'BLOOTHOOFT';
+                                method.method_sim_name = 'LEVENSHTEIN_NORMALIZED';
+                                method.method_sim_config.threshold = method.method_config.threshold;
+                                delete method.method_config.threshold;
+                                method.method_sim_normalized = true;
+                            }
+
+                            method.sources.forEach(source => {
+                                source.transformers = source.transformers.filter(transformer =>
+                                    transformer.name !== 'PARSE_DATE' && transformer.name !== 'PARSE_NUMERIC');
+                            });
+
+                            method.targets.forEach(target => {
+                                target.transformers = target.transformers.filter(transformer =>
+                                    transformer.name !== 'PARSE_DATE' && transformer.name !== 'PARSE_NUMERIC');
+                            });
+                        }
+                    });
+                });
+
+                this.linksetSpecs = linksetSpecs;
+            }
 
             if (this.job.lens_specs)
                 this.lensSpecs = copy(this.job.lens_specs);

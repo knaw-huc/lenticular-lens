@@ -415,7 +415,9 @@ class Job:
                 values = get_property_values(queries, dict=True)
 
         with db_conn() as conn, conn.cursor(name=uuid4().hex) as cur:
-            cur.execute(sql.SQL('SELECT links.source_uri, links.target_uri, link_order, similarity, cluster_id, valid '
+            # TODO: Removed 'similarities' for now
+            cur.execute(sql.SQL('SELECT links.source_uri, links.target_uri, link_order, '
+                                '       similarity, cluster_id, valid '
                                 'FROM {view_name} AS links '
                                 '{where_sql} '
                                 'ORDER BY sort_order ASC {limit_offset}').format(
@@ -436,7 +438,8 @@ class Job:
                         'target': link[1],
                         'target_values': values[link[1]] if values and link[1] in values else None,
                         'link_order': link[2],
-                        'similarity': link[3] if link[3] else {},
+                        'similarity': link[3] if link[3] else 1,
+                        #'similarities': link[4] if link[4] else {},
                         'cluster_id': link[4],
                         'valid': link[5]
                     }
@@ -468,7 +471,7 @@ class Job:
     def get_clusters(self, id, type, limit=None, offset=0, include_props=False):
         linkset_table = self.linkset_table_name(id) if type == 'linkset' else self.lens_table_name(id)
         limit_offset_sql = get_pagination_sql(limit, offset)
-        nodes_sql = ', ARRAY_AGG(DISTINCT nodes.uri) AS nodes_arr' if include_props else ''
+        nodes_sql = ', array_agg(DISTINCT nodes.uri) AS nodes_arr' if include_props else ''
 
         values = None
         if include_props:
