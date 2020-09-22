@@ -13,5 +13,8 @@
   },
   "SUFFIX": {
     "sql_template": "{property} || {suffix}"
+  },
+  "REPLACE": {
+    "sql_template": "replace({property}, {from}, {to})"
   }
 }

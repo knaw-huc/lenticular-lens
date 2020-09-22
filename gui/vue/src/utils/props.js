@@ -179,6 +179,18 @@ export default {
                 label: 'Suffix with',
                 type: ''
             }]
+        },
+        'REPLACE': {
+            label: 'Replace',
+            items: [{
+                key: 'from',
+                label: 'From',
+                type: ''
+            }, {
+                key: 'to',
+                label: 'To',
+                type: ''
+            }]
         }
     },
     lensOptions: {
