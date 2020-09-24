@@ -316,8 +316,10 @@ def export_to_csv(job, type, id):
     writer.writerow(['Source URI', 'Target URI', 'Max Strength', 'Valid'])
     for link in job.get_links(id, type,
                               validation_filter=validation_filter_helper(request.args.getlist('valid'))):
-        writer.writerow([link['source'], link['target'],
-                         max(link['similarity'].values()) if link['similarity'].values() else 1, link['valid']])
+        sim_values = [sim for sim in link['similarity'].values() if sim] \
+            if link['similarity'].values() else [1]
+
+        writer.writerow([link['source'], link['target'], max(sim_values), link['valid']])
 
     output = make_response(stream.getvalue())
     output.headers['Content-Disposition'] = 'attachment; filename=' + job.job_id + '_' + type + '_' + str(id) + '.csv'
