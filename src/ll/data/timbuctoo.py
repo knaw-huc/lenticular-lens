@@ -32,6 +32,7 @@ class Timbuctoo:
         datasets_data = self.fetch_graph_ql("""
             {
                 dataSetMetadataList(promotedOnly: false, publishedOnly: false) {
+                    uri
                     dataSetId
                     dataSetName
                     published
@@ -39,11 +40,14 @@ class Timbuctoo:
                     description { value }
                     collectionList {
                         items {
+                            uri
                             collectionId
+                            shortenedUri
                             title { value }
                             total
                             properties {
                                 items {
+                                    uri
                                     name
                                     shortenedUri
                                     isInverse
@@ -72,6 +76,7 @@ class Timbuctoo:
                 if dataset['description'] and dataset['description']['value'] else None
 
             datasets[dataset_id] = {
+                'uri': dataset['uri'],
                 'published': dataset['published'],
                 'name': dataset_name,
                 'title': dataset_title,
@@ -86,11 +91,14 @@ class Timbuctoo:
 
                 if collection_id != 'tim_unknown':
                     datasets[dataset_id]['collections'][collection_id] = {
+                        'uri': collection['uri'],
                         'title': collection_title,
+                        'shortenedUri': collection['shortenedUri'],
                         'total': collection['total'],
                         'downloaded': False,
                         'properties': {
                             'uri': {
+                                'uri': None,
                                 'name': 'uri',
                                 'shortenedUri': 'uri',
                                 'isInverse': False,
@@ -111,6 +119,7 @@ class Timbuctoo:
                             list(filter(lambda ref_col: ref_col != 'tim_unknown', referenced_collections))
 
                         datasets[dataset_id]['collections'][collection_id]['properties'][property_name] = {
+                            'uri':  collection_property['uri'],
                             'name': property_name,
                             'shortenedUri': collection_property['shortenedUri'],
                             'isInverse': collection_property['isInverse'],

@@ -25,23 +25,26 @@ CREATE TABLE IF NOT EXISTS jobs
 
 CREATE TABLE IF NOT EXISTS timbuctoo_tables
 (
-    table_name         text primary key,
-    graphql_endpoint   text          not null,
-    hsid               text          null,
-    dataset_id         text          not null,
-    collection_id      text          not null,
-    dataset_name       text          not null,
-    title              text          not null,
-    description        text,
-    collection_title   text,
-    total              int           not null,
-    columns            json          not null,
-    create_time        timestamp     not null,
-    update_start_time  timestamp,
-    next_page          text,
-    rows_count         int default 0 not null,
-    last_push_time     timestamp,
-    update_finish_time timestamp,
+    table_name               text primary key,
+    graphql_endpoint         text          not null,
+    hsid                     text,
+    dataset_id               text          not null,
+    collection_id            text          not null,
+    dataset_uri              text          not null,
+    dataset_name             text          not null,
+    title                    text          not null,
+    description              text,
+    collection_uri           text          not null,
+    collection_title         text,
+    collection_shortened_uri text          not null,
+    total                    int           not null,
+    columns                  json          not null,
+    create_time              timestamp     not null,
+    update_start_time        timestamp,
+    next_page                text,
+    rows_count               int default 0 not null,
+    last_push_time           timestamp,
+    update_finish_time       timestamp,
     UNIQUE (graphql_endpoint, hsid, dataset_id, collection_id)
 );
 
@@ -156,7 +159,7 @@ BEGIN
         ELSE
             RETURN NULL;
         END IF;
-    END CASE;
+        END CASE;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -187,9 +190,10 @@ $$ LANGUAGE plpython3u;
 CREATE OR REPLACE FUNCTION levenshtein_distance(source text, target text, max_distance integer) RETURNS integer
     STRICT IMMUTABLE PARALLEL SAFE AS
 $$
-SELECT CASE WHEN greatest(octet_length(source), octet_length(target)) > 255
-            THEN levenshtein_python(source, target)
-            ELSE levenshtein_less_equal(source, target, max_distance) END;
+SELECT CASE
+           WHEN greatest(octet_length(source), octet_length(target)) > 255
+               THEN levenshtein_python(source, target)
+           ELSE levenshtein_less_equal(source, target, max_distance) END;
 $$ LANGUAGE sql;
 
 CREATE OR REPLACE FUNCTION similarity(source text, target text, distance decimal) RETURNS decimal

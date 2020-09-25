@@ -26,6 +26,7 @@ class TimbuctooDatasets:
             for table in cur:
                 if not table['dataset_id'] in datasets:
                     datasets[table['dataset_id']] = {
+                        'uri': table['dataset_uri'],
                         'name': table['dataset_name'],
                         'title': table['title'],
                         'description': table['description'],
@@ -34,10 +35,13 @@ class TimbuctooDatasets:
                     }
 
                 datasets[table['dataset_id']]['collections'][table['collection_id']] = {
+                    'uri': table['collection_uri'],
                     'title': table['collection_title'],
+                    'shortenedUri': table['collection_shortened_uri'],
                     'total': table['total'],
                     'properties': {
                         column_info['name']: {
+                            'uri': column_info['uri'],
                             'shortenedUri': column_info['shortenedUri'],
                             'isInverse': column_info['isInverse'],
                             'isList': column_info['isList'],

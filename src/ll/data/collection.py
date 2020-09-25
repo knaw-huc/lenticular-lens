@@ -23,7 +23,7 @@ class Collection:
 
         self._table_data = fetch_one('SELECT * FROM timbuctoo_tables '
                                      'WHERE graphql_endpoint = %s AND dataset_id = %s AND collection_id = %s',
-                                      (self._graphql_endpoint, self._dataset_id, self._collection_id), dict=True)
+                                     (self._graphql_endpoint, self._dataset_id, self._collection_id), dict=True)
 
         if not self._table_data:
             self.start_download()
@@ -75,11 +75,14 @@ class Collection:
                 cur.execute('''
                     INSERT INTO timbuctoo_tables (
                         "table_name", graphql_endpoint, hsid, dataset_id, collection_id, 
-                        dataset_name, title, description, collection_title, total, columns, create_time)
+                        dataset_uri, dataset_name, title, description, 
+                        collection_uri, collection_title, collection_shortened_uri, 
+                        total, columns, create_time)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, now())
                 ''', (self.table_name, self._graphql_endpoint, self._hsid, self._dataset_id, self._collection_id,
-                      dataset['name'], dataset['title'], dataset['description'],
-                      collection['title'], collection['total'], dumps(columns)))
+                      dataset['uri'], dataset['name'], dataset['title'], dataset['description'],
+                      collection['uri'], collection['title'], collection['uri'],
+                      collection['shortenedUri'], dumps(columns)))
 
     @staticmethod
     def columns_sql(columns):
