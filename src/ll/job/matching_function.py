@@ -1,9 +1,7 @@
 import re
 import json
 
-from inspect import cleandoc
 from psycopg2 import sql as psycopg2_sql
-
 from ll.data.property_field import PropertyField
 from ll.util.helpers import hash_string, get_json_from_file
 
@@ -11,7 +9,6 @@ from ll.util.helpers import hash_string, get_json_from_file
 class MatchingFunction:
     _transformers = get_json_from_file('transformers.json')
     _matching_functions = get_json_from_file('matching_functions.json')
-    _similarity_functions = get_json_from_file('similarity_functions.json')
 
     def __init__(self, function_obj, job):
         self._data = function_obj
@@ -32,91 +29,68 @@ class MatchingFunction:
         self._method_sim_name = function_obj['method_sim_name']
         self._method_sim_config = function_obj['method_sim_config']
         self._method_sim_normalized = function_obj['method_sim_normalized']
-
-        if self._method_info['requires_similarity_template']:
-            if self._method_sim_name in self._similarity_functions:
-                self._method_sim_info = self._similarity_functions[self._method_sim_name]
-            else:
-                self._method_sim_normalized = True
-                self._method_sim_info = {
-                    'sql_template': '{source} = {target}',
-                    'similarity': None,
-                    'before_index': None,
-                    'index_using': None
-                }
-        elif self.method_name in self._similarity_functions:
-            self._method_sim_name = self.method_name
-            self._method_sim_info = self._similarity_functions[self.method_name]
-        else:
-            self._method_sim_info = {
-                'sql_template': None,
-                'similarity': None,
-                'before_index': None,
-                'index_using': None
-            }
+        self._method_sim_info = self._matching_functions[self._method_sim_name] \
+            if self._method_sim_name in self._matching_functions else {}
 
         self._t_conorm = function_obj['t_conorm']
         self.list_threshold = function_obj['list_threshold']
         self._list_threshold_unit = function_obj['list_threshold_unit']
 
     @property
-    def sql(self):
-        method_template = self._method_info['sql_template']
-        method_sim_template = self._method_sim_info['sql_template'] \
-            if self.method_name != self._method_sim_name else None
-        template = self._template(method_template, method_sim_template, False, self._method_sim_normalized)
-
-        if self.list_threshold > 0:
-            list_threshold = psycopg2_sql.Literal(self.list_threshold) if self._list_threshold_unit == 'matches' else \
-                psycopg2_sql.SQL('greatest(cardinality(source.{field_name}), ' +
-                                 'cardinality(target.{field_name})) * {threshold}').format(
-                    field_name=psycopg2_sql.Identifier(self.field_name),
-                    threshold=psycopg2_sql.Literal(self.list_threshold / 100)
-                )
-
-            return psycopg2_sql.SQL(cleandoc('''
-                cardinality(ARRAY(
-                    SELECT 1
-                    FROM unnest(source.{field_name}) AS src
-                    JOIN unnest(target.{field_name}) AS trg
-                    ON ''' + template + '''
-                )) >= {list_threshold}
-            ''')).format(
-                field_name=psycopg2_sql.Identifier(self.field_name),
-                field_name_intermediate=psycopg2_sql.Identifier(self.field_name + '_intermediate'),
-                list_threshold=list_threshold,
-                **self._sql_parameters
+    def join_condition_sql(self):
+        if 'match' in self._method_info and 'condition' not in self._method_info:
+            template = self._method_info['match']
+        elif 'field' in self._method_info and not self._method_sim_normalized:
+            template = '{source} = {target}'.format(
+                source=re.sub(r'{field}', '{source}', self._method_info['field']),
+                target=re.sub(r'{field}', '{target}', self._method_info['field'])
             )
+        else:
+            return None
+
+        template = re.sub(r'{source}', 'source.{field_name}', template)
+        template = re.sub(r'{target}', 'target.{field_name}', template)
+        template = re.sub(r'{source_intermediate}', 'source.{field_name_intermediate}', template)
+        template = re.sub(r'{target_intermediate}', 'target.{field_name_intermediate}', template)
 
         return psycopg2_sql.SQL(template).format(
             field_name=psycopg2_sql.Identifier(self.field_name),
             field_name_intermediate=psycopg2_sql.Identifier(self.field_name + '_intermediate'),
+            **self._sql_parameters
+        )
+
+    @property
+    def match_conditions_sql(self):
+        if 'condition' in self._method_info:
+            template = self._method_info['condition']
+        elif 'condition' in self._method_sim_info:
+            template = self._method_sim_info['condition']
+        else:
+            return None
+
+        template = re.sub(r'{similarity}', '{field_name}', template)
+
+        return psycopg2_sql.SQL(template).format(
+            field_name=psycopg2_sql.Identifier(self.field_name + '_similarity'),
             **self._sql_parameters
         )
 
     @property
     def similarity_sql(self):
-        if not self._method_sim_info['similarity']:
+        if 'similarity' in self._method_info:
+            template = self._method_info['similarity']
+        elif 'field' in self._method_info and 'similarity' in self._method_sim_info:
+            template = self._method_sim_info['similarity']
+            if self._method_sim_normalized:
+                template = template.format(
+                    source=re.sub(r'{field}', '{source}', self._method_info['field']),
+                    target=re.sub(r'{field}', '{target}', self._method_info['field'])
+                )
+        else:
             return None
 
-        method_template = self._method_info['sql_template'] \
-            if self.method_name != self._method_sim_name else None
-        method_sim_template = self._method_sim_info['similarity']
-        template = self._template(method_template, method_sim_template, True, self._method_sim_normalized)
-
-        if self.list_threshold > 0:
-            return psycopg2_sql.SQL(cleandoc('''
-                logic_ops({t_conorm}, ARRAY(
-                    SELECT ''' + template + '''
-                    FROM unnest(source.{field_name}) AS src
-                    CROSS JOIN unnest(target.{field_name}) AS trg
-                ))
-            ''')).format(
-                t_conorm=psycopg2_sql.Literal(self._t_conorm),
-                field_name=psycopg2_sql.Identifier(self.field_name),
-                field_name_intermediate=psycopg2_sql.Identifier(self.field_name + '_intermediate'),
-                **self._sql_parameters
-            )
+        template = re.sub(r'{source}', 'source.{field_name}', template)
+        template = re.sub(r'{target}', 'target.{field_name}', template)
 
         return psycopg2_sql.SQL(template).format(
             field_name=psycopg2_sql.Identifier(self.field_name),
@@ -125,13 +99,23 @@ class MatchingFunction:
         )
 
     @property
+    def similarity_grouping_sql(self):
+        if self.similarity_sql:
+            return psycopg2_sql.SQL('logic_ops({operation}, array_agg({field}))').format(
+                operation=psycopg2_sql.Literal(self._t_conorm),
+                field=psycopg2_sql.Identifier(self.field_name + '_similarity')
+            )
+
+        return None
+
+    @property
     def index_sql(self):
-        if not self._method_info['index_using'] and not self._method_sim_info['index_using']:
+        if 'index' not in self._method_info and 'index' not in self._method_sim_info:
             return None
 
         index_sqls = []
 
-        if self._method_info['before_index']:
+        if 'before_index' in self._method_info:
             index_sqls.append(psycopg2_sql.SQL('CREATE INDEX ON target USING {};').format(
                 psycopg2_sql.SQL(self._method_info['before_index']).format(
                     target=psycopg2_sql.Identifier(self.field_name),
@@ -140,7 +124,7 @@ class MatchingFunction:
                 )
             ))
 
-        if self._method_sim_info['before_index'] and self.method_name != self._method_sim_name:
+        if 'before_index' in self._method_sim_info:
             index_sqls.append(psycopg2_sql.SQL('CREATE INDEX ON target USING {};').format(
                 psycopg2_sql.SQL(self._method_sim_info['before_index']).format(
                     target=psycopg2_sql.Identifier(self.field_name),
@@ -149,18 +133,18 @@ class MatchingFunction:
                 )
             ))
 
-        if self._method_info['index_using']:
+        if 'index' in self._method_info:
             index_sqls.append(psycopg2_sql.SQL('CREATE INDEX ON target USING {};').format(
-                psycopg2_sql.SQL(self._method_info['index_using']).format(
+                psycopg2_sql.SQL(self._method_info['index']).format(
                     target=psycopg2_sql.Identifier(self.field_name),
                     target_intermediate=psycopg2_sql.Identifier(self.field_name + '_intermediate'),
                     **self._sql_parameters
                 )
             ))
 
-            if self._method_sim_info['index_using'] and self.method_name != self._method_sim_name:
+            if 'index' in self._method_sim_info:
                 index_sqls.append(psycopg2_sql.SQL('CREATE INDEX ON target USING {};').format(
-                    psycopg2_sql.SQL(self._method_info['index_using']).format(
+                    psycopg2_sql.SQL(self._method_info['index']).format(
                         target=psycopg2_sql.Identifier(self.field_name),
                         target_intermediate=psycopg2_sql.Identifier(self.field_name + '_intermediate'),
                         **self._sql_parameters
@@ -199,42 +183,6 @@ class MatchingFunction:
     def _sql_parameters(self):
         return {key: psycopg2_sql.Literal(value)
                 for (key, value) in {**self._method_config, **self._method_sim_config}.items()}
-
-    def _template(self, matching_template, similarity_template, is_similarity=False, similarity_over_normalized=False):
-        if matching_template:
-            matching_template = re.sub(r'{source_intermediate}', 'source.{field_name_intermediate}', matching_template)
-            matching_template = re.sub(r'{target_intermediate}', 'target.{field_name_intermediate}', matching_template)
-
-        if similarity_template:
-            if matching_template:
-                matching_template_source = re.sub(r'{field}', '{source}', matching_template)
-                matching_template_target = re.sub(r'{field}', '{target}', matching_template)
-
-                if similarity_over_normalized:
-                    template = similarity_template
-                    template = re.sub(r'{source}', matching_template_source, template)
-                    template = re.sub(r'{target}', matching_template_target, template)
-                elif is_similarity:
-                    template = similarity_template
-                else:
-                    template = '{match_source} = {match_target} AND {similarity_match}'.format(
-                        match_source=matching_template_source,
-                        match_target=matching_template_target,
-                        similarity_match=similarity_template
-                    )
-            else:
-                template = similarity_template
-        else:
-            template = matching_template
-
-        if self.list_threshold:
-            template = re.sub(r'{source}', 'src', template)
-            template = re.sub(r'{target}', 'trg', template)
-        else:
-            template = re.sub(r'{source}', 'source.{field_name}', template)
-            template = re.sub(r'{target}', 'target.{field_name}', template)
-
-        return template
 
     def _get_properties(self, key):
         properties = {}

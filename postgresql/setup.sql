@@ -110,9 +110,13 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION logic_ops(operation text, a numeric, b numeric) RETURNS numeric
-    STRICT IMMUTABLE PARALLEL SAFE AS
+    IMMUTABLE PARALLEL SAFE AS
 $$
 SELECT CASE
+           WHEN a IS NULL
+               THEN b
+           WHEN b IS NULL
+               THEN a
            WHEN operation = 'MINIMUM_T_NORM'
                THEN least(a, b)
            WHEN operation = 'PRODUCT_T_NORM'
@@ -141,7 +145,7 @@ SELECT CASE
 $$ LANGUAGE sql;
 
 CREATE OR REPLACE FUNCTION logic_ops(operation text, similarities numeric[]) RETURNS numeric
-    STRICT IMMUTABLE PARALLEL SAFE AS
+    IMMUTABLE PARALLEL SAFE AS
 $$
 DECLARE
     similarity     numeric;

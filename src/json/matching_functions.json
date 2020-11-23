@@ -1,98 +1,69 @@
 {
   "EXACT": {
-    "sql_template": "{field}",
-    "requires_similarity_template": true,
-    "before_index": null,
-    "index_using": "btree ({target})"
+    "match": "{source} = {target}",
+    "index": "btree ({target})"
   },
   "INTERMEDIATE": {
-    "sql_template": "{source_intermediate} = {target_intermediate}",
-    "requires_similarity_template": false,
-    "before_index": null,
-    "index_using": "btree ({target_intermediate})"
-  },
-  "WORD_INTERSECTION": {
-    "sql_template": "word_intersection({source}, {target}, {ordered}, {approximate}, {stop_symbols}) >= {threshold}",
-    "requires_similarity_template": false,
-    "before_index": null,
-    "index_using": null
-  },
-  "LEVENSHTEIN_DISTANCE": {
-    "sql_template": "levenshtein_distance({source}, {target}, {max_distance}) <= {max_distance}",
-    "requires_similarity_template": false,
-    "before_index": null,
-    "index_using": null
-  },
-  "LEVENSHTEIN_NORMALIZED": {
-    "sql_template": "similarity({source}, {target}, levenshtein_distance({source}, {target}, -1)) >= {threshold}",
-    "requires_similarity_template": false,
-    "before_index": null,
-    "index_using": null
-  },
-  "SOUNDEX": {
-    "sql_template": "ll_soundex({field}, {size})",
-    "requires_similarity_template": true,
-    "before_index": null,
-    "index_using": "btree (ll_soundex({target}, {size}))"
-  },
-  "BLOOTHOOFT": {
-    "sql_template": "bloothooft({field}, {name_type})",
-    "requires_similarity_template": true,
-    "before_index": null,
-    "index_using": "btree (bloothooft({target}, {name_type}))"
-  },
-  "NYSIIS_": {
-    "sql_template": "nysiis({field})",
-    "requires_similarity_template": true,
-    "before_index": null,
-    "index_using": "btree (nysiis({target}))"
-  },
-  "METAPHONE": {
-    "sql_template": "metaphone({field}, {max})",
-    "requires_similarity_template": true,
-    "before_index": null,
-    "index_using": "btree (metaphone({target}, {max}))"
-  },
-  "DMETAPHONE": {
-    "sql_template": "dmetaphone({field})",
-    "requires_similarity_template": true,
-    "before_index": null,
-    "index_using": "btree (dmetaphone({target}))"
-  },
-  "TRIGRAM": {
-    "sql_template": "{source} % {target}",
-    "requires_similarity_template": false,
-    "before_index": "SELECT set_config('pg_trgm.similarity_threshold', {threshold}, true);",
-    "index_using": "gin ({target} gin_trgm_ops)"
+    "match": "{source_intermediate} = {target_intermediate}",
+    "index": "btree ({target_intermediate})"
   },
   "NUMBERS_DELTA": {
-    "sql_template": "delta({type}, to_numeric_immutable({source}), to_numeric_immutable({target}), {distance_start}, {distance_end})",
-    "requires_similarity_template": false,
-    "before_index": null,
-    "index_using": null
+    "match": "delta({type}, to_numeric_immutable({source}), to_numeric_immutable({target}), {distance_start}, {distance_end})",
+    "index": "btree (to_numeric_immutable({target}))"
   },
   "TIME_DELTA": {
-    "sql_template": "delta({type}, to_date_immutable({source}, {format}), to_date_immutable({target}, {format}), {days} + ({months} * 30) + ({years} * 365))",
-    "requires_similarity_template": false,
-    "before_index": null,
-    "index_using": null
+    "match": "delta({type}, to_date_immutable({source}, {format}), to_date_immutable({target}, {format}), {days} + ({months} * 30) + ({years} * 365))",
+    "index": "btree (to_date_immutable({target}, {format}))"
   },
   "SAME_YEAR_MONTH": {
-    "sql_template": "get_date_part({date_part}, {source}) = get_date_part({date_part}, {target})",
-    "requires_similarity_template": false,
-    "before_index": null,
-    "index_using": "btree (get_date_part({date_part}, {target}))"
+    "field": "get_date_part({date_part}, {field})",
+    "index": "btree (get_date_part({date_part}, {target}))"
+  },
+  "LEVENSHTEIN_DISTANCE": {
+    "match": "levenshtein_distance({source}, {target}, {max_distance})",
+    "similarity": "similarity({source}, {target}, {match})",
+    "condition": "{similarity} <= {max_distance}"
+  },
+  "LEVENSHTEIN_NORMALIZED": {
+    "similarity": "similarity({source}, {target}, levenshtein_distance({source}, {target}, -1))",
+    "condition": "{similarity} >= {threshold}"
   },
   "JARO": {
-    "sql_template": "jaro({source}, {target}) >= {threshold}",
-    "requires_similarity_template": false,
-    "before_index": null,
-    "index_using": null
+    "similarity": "jaro({source}, {target})",
+    "condition": "{similarity} >= {threshold}"
   },
   "JARO_WINKLER": {
-    "sql_template": "jaro_winkler({source}, {target}, {prefix_weight}) >= {threshold}",
-    "requires_similarity_template": false,
-    "before_index": null,
-    "index_using": null
+    "similarity": "jaro_winkler({source}, {target}, {prefix_weight})",
+    "condition": "{similarity} >= {threshold}"
+  },
+  "WORD_INTERSECTION": {
+    "similarity": "word_intersection({source}, {target}, {ordered}, {approximate}, {stop_symbols})",
+    "condition": "{similarity} >= {threshold}"
+  },
+  "TRIGRAM": {
+    "match": "{source} % {target}",
+    "similarity": "similarity({source}, {target})",
+    "before_index": "SELECT set_config('pg_trgm.similarity_threshold', {threshold}, true);",
+    "index": "gin ({target} gin_trgm_ops)"
+  },
+  "SOUNDEX": {
+    "field": "ll_soundex({field}, {size})",
+    "index": "btree (ll_soundex({target}, {size}))"
+  },
+  "BLOOTHOOFT": {
+    "field": "bloothooft({field}, {name_type})",
+    "index": "btree (bloothooft({target}, {name_type}))"
+  },
+  "NYSIIS": {
+    "field": "nysiis({field})",
+    "index": "btree (nysiis({target}))"
+  },
+  "METAPHONE": {
+    "field": "metaphone({field}, {max})",
+    "index": "btree (metaphone({target}, {max}))"
+  },
+  "DMETAPHONE": {
+    "field": "dmetaphone({field})",
+    "index": "btree (dmetaphone({target}))"
   }
 }

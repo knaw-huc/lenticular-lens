@@ -201,7 +201,7 @@ export default {
                             method.method_sim_config = {};
                             method.method_sim_normalized = false;
                             method.list_threshold = 0;
-                            method.list_threshold_unit = 'items';
+                            method.list_threshold_unit = 'matches';
                             method.t_conorm = 'MAXIMUM_T_CONORM';
 
                             if (method.method_name === '=')

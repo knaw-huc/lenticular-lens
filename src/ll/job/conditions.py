@@ -29,19 +29,30 @@ class Conditions:
         filter_sqls = []
         for condition in self.conditions_list:
             if isinstance(condition, MatchingFunction):
-                filter_sqls.append(condition.sql)
-            else:
-                filter_sqls.append(condition.conditions_sql)
+                match_condition = condition.match_conditions_sql
+                if match_condition:
+                    filter_sqls.append(match_condition)
 
-        return psycopg2_sql.SQL('({})').format(psycopg2_sql.SQL(' %s ' % self._operator).join(filter_sqls))
+                join_condition = condition.join_condition_sql
+                if join_condition:
+                    filter_sqls.append(join_condition)
+            else:
+                nested_condition = condition.conditions_sql
+                if nested_condition:
+                    filter_sqls.append(nested_condition)
+
+        if filter_sqls:
+            return psycopg2_sql.SQL('({})').format(psycopg2_sql.SQL(' \n%s ' % self._operator).join(filter_sqls))
+
+        return None
 
     @property
     def similarity_sql(self):
         similarity_sqls = []
         for condition in self.conditions_list:
             if isinstance(condition, MatchingFunction):
-                if condition.similarity_sql:
-                    similarity_sqls.append(condition.similarity_sql)
+                if condition.similarity_grouping_sql:
+                    similarity_sqls.append(condition.similarity_grouping_sql)
             else:
                 similarity_sqls.append(condition.similarity_sql)
 
@@ -57,6 +68,11 @@ class Conditions:
             )
 
         return sim_sql
+
+    @property
+    def similarity_fields(self):
+        return {matching_function.field_name + '_similarity': matching_function.similarity_sql
+                for matching_function in self.matching_functions if matching_function.similarity_sql}
 
     @property
     def matching_functions(self):
