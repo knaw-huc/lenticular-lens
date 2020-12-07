@@ -44,9 +44,9 @@ mapping_method_logicbox_schema = Schema({
     Optional('method_sim_normalized', default=False): bool,
     Optional('list_threshold', default=0): int,
     Optional('list_threshold_unit', default='matches'): And(str, lambda s: s in ('matches', 'percentage')),
-    Optional('t_conorm', default='MAXIMUM_T_CONORM'):
-        lambda s: s in ('MAXIMUM_T_CONORM', 'PROBABILISTIC_SUM', 'BOUNDED_SUM',
-                        'DRASTIC_T_CONORM', 'NILPOTENT_MAXIMUM', 'EINSTEIN_SUM'),
+    # Optional('t_conorm', default='MAXIMUM_T_CONORM'):
+    #     lambda s: s in ('MAXIMUM_T_CONORM', 'PROBABILISTIC_SUM', 'BOUNDED_SUM',
+    #                     'DRASTIC_T_CONORM', 'NILPOTENT_MAXIMUM', 'EINSTEIN_SUM'),
     'sources': [{
         'entity_type_selection': Use(int),
         'property': [And(str, len)],
@@ -97,10 +97,10 @@ linkset_spec_schema = Schema({
     Optional('is_association', default=False): bool,
     'sources': [Use(int)],
     'targets': [Use(int)],
-    'methods': And(LogicBox(mapping_method_logicbox_schema, 'conditions',
-                            ('minimum_t_norm', 'product_t_norm', 'lukasiewicz_t_norm', 'drastic_t_norm',
-                             'nilpotent_minimum', 'hamacher_product', 'maximum_t_conorm', 'probabilistic_sum',
-                             'bounded_sum', 'drastic_t_conorm', 'nilpotent_maximum', 'einstein_sum')), dict),
+    'methods': And(LogicBox(mapping_method_logicbox_schema, 'conditions', ('and', 'or'))),
+                            # ('minimum_t_norm', 'product_t_norm', 'lukasiewicz_t_norm', 'drastic_t_norm',
+                            #  'nilpotent_minimum', 'hamacher_product', 'maximum_t_conorm', 'probabilistic_sum',
+                            #  'bounded_sum', 'drastic_t_conorm', 'nilpotent_maximum', 'einstein_sum')), dict),
     Optional('properties', default=list): [{
         'entity_type_selection': Use(int),
         'property': [str],
@@ -290,17 +290,17 @@ def transform(entity_type_selections_org, linkset_specs_org, lens_specs_org):
                 'method_sim_normalized': condition['method_sim_normalized'],
                 'list_threshold': condition['list_threshold'],
                 'list_threshold_unit': condition['list_threshold_unit'],
-                't_conorm': condition['t_conorm'],
+                # 't_conorm': condition['t_conorm'],
                 'sources': reduce(transform_mapping_condition, condition['sources'], {}),
                 'targets': reduce(transform_mapping_condition, condition['targets'], {}),
             })
             linkset_spec['properties'] = reduce(transform_property, linkset_spec['properties'], [])
-            linkset_spec['intermediates'] = [method['method_value']['entity_type_selection']
+            linkset_spec['intermediates'] = [method['method_config']['entity_type_selection']
                                              for method in get_elements(linkset_spec['methods'], 'conditions')
                                              if method['method_name'] == 'INTERMEDIATE']
 
             linkset_specs.append(linkset_spec)
-        except SchemaError as e:
+        except SchemaError:
             pass
 
     entity_type_selections += ref_entity_type_selections

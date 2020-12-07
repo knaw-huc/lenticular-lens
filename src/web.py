@@ -6,6 +6,7 @@ import psycopg2
 from flask import Flask, jsonify, request, abort, make_response
 from flask_cors import CORS
 from flask.json import JSONEncoder
+
 from werkzeug.routing import BaseConverter, ValidationError
 
 from ll.job.data import Job, Validation

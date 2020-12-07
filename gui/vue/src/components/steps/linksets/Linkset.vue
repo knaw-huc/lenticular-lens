@@ -136,8 +136,7 @@
                    :should-have-elements="true" group="linkset-filters"
                    :uid="'linkset_' + linksetSpec.id  + '_group_0'"
                    validate-method-name="validateCondition" empty-elements-text="No conditions"
-                   validation-failed-text="Please provide at least one condition"
-                   :options="linksetOptions" :option-groups="linksetOptionGroups" v-slot="curCondition"
+                   validation-failed-text="Please provide at least one condition" v-slot="curCondition"
                    @add="addCondition($event)" ref="matchingMethodGroupComponent">
           <condition
               :condition="curCondition.element" :index="curCondition.index"
@@ -161,7 +160,7 @@
 
     import LogicBox from "../../helpers/LogicBox";
     import ValidationMixin from '../../../mixins/ValidationMixin';
-    import props from "@/utils/props";
+    // import props from "@/utils/props";
 
     export default {
         name: "Linkset",
@@ -183,8 +182,8 @@
             return {
                 association: '',
                 isOpen: false,
-                linksetOptions: props.linksetOptions,
-                linksetOptionGroups: props.linksetOptionGroups,
+                // linksetOptions: props.linksetOptions,
+                // linksetOptionGroups: props.linksetOptionGroups,
             };
         },
         computed: {
@@ -244,7 +243,7 @@
                     method_sim_normalized: false,
                     list_threshold: 0,
                     list_threshold_unit: 'matches',
-                    t_conorm: 'MAXIMUM_T_CONORM',
+                    //t_conorm: 'MAXIMUM_T_CONORM',
                     sources: this.linksetSpec.sources
                         .filter(entityTypeSelection => entityTypeSelection !== '')
                         .map(entityTypeSelection => ({

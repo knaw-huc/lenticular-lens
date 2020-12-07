@@ -8,7 +8,7 @@
 
         <div class="col-auto">
           <div class="btn btn-sm bg-info-light border border-info text-info read-only m-1">
-            <span class="font-weight-bold">Similarity</span><br>
+            <span class="font-weight-bold">Max similarity</span><br>
             {{ similarity }}
           </div>
         </div>
@@ -91,12 +91,12 @@
         },
         computed: {
             similarity() {
-                if (isNaN(this.link.similarity)) {
-                    const similarityValues = Object.values(this.link.similarity);
+                if (isNaN(this.link.similarities)) {
+                    const similarityValues = Object.values(this.link.similarities);
                     return similarityValues.length > 0 ? Math.max(...similarityValues).toFixed(3) : '1.000';
                 }
 
-                return this.link.similarity.toFixed(3);
+                return this.link.similarities.toFixed(3);
             },
 
             switchSourceAndTarget() {

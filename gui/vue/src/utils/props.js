@@ -8,7 +8,7 @@ export default {
         },
         'INTERMEDIATE': {
             description: 'Intermediate dataset',
-            acceptsSimilarityMethod: true,
+            acceptsSimilarityMethod: false,
             isSimilarityMethod: false,
             items: [
                 {
@@ -235,7 +235,8 @@ export default {
                 {
                     key: 'format',
                     label: 'Date format',
-                    type: 'YYYY-MM-DD'
+                    type: 'string',
+                    defaultValue: 'YYYY-MM-DD'
                 }
             ]
         },
@@ -296,9 +297,14 @@ export default {
         },
     },
     transformers: {
-        'ECARTICO_FULL_NAME': {
-            label: 'Ecartico full name',
-            items: []
+        'TRANSFORM_LAST_NAME_FORMAT': {
+            label: 'Transform \'last name first\' format',
+            items: [{
+                key: 'infix',
+                label: 'Keep infix?',
+                type: 'boolean',
+                defaultValue: true,
+            }]
         },
         'PREFIX': {
             label: 'Prefix',

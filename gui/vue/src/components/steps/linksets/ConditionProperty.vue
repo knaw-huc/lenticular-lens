@@ -27,12 +27,25 @@
 
           <div v-if="getTransformerTemplate(transformer).items.length > 0" class="col-auto pr-0 form-inline">
             <template v-for="item in getTransformerTemplate(transformer).items">
-              <label class="small mr-2" v-if="item.label">
-                {{ item.label }}
-              </label>
+              <div v-if="item.type === 'boolean'" class="form-check">
+                <input class="form-check-input" type="checkbox" :id="`tr_${idx}_${item.key}`"
+                       v-model="transformer.parameters[item.key]"
+                       v-bind:class="{'is-invalid': errors.includes(`transformer_value_${idx}_${item.key}`)}">
 
-              <input class="form-control form-control-sm mr-2" v-model="transformer.parameters[item.key]"
-                     v-bind:class="{'is-invalid': errors.includes(`transformer_value_${idx}_${item.key}`)}">
+                <label class="form-check-label small" :for="`tr_${idx}_${item.key}`">
+                  {{ item.label }}
+                </label>
+              </div>
+
+              <template v-else>
+                <label v-if="item.label" class="small mr-2" :for="`tr_${idx}_${item.key}`">
+                  {{ item.label }}
+                </label>
+
+                <input class="form-control form-control-sm mr-2" :id="`tr_${idx}_${item.key}`"
+                       v-model="transformer.parameters[item.key]"
+                       v-bind:class="{'is-invalid': errors.includes(`transformer_value_${idx}_${item.key}`)}">
+              </template>
 
               <div class="invalid-feedback inline-feedback"
                    v-show="errors.includes(`transformer_value_${idx}_${item.key}`)">
@@ -89,10 +102,12 @@
                     }
                     else {
                         this.getTransformerTemplate(transformer).items.forEach(transformerItem => {
-                            const field = `transformer_value_${idx}_${transformerItem.key}`;
-                            const value = transformer.parameters[transformerItem.key];
-                            if (!this.validateField(field, transformerItem.allowEmptyValue || (value && value.length > 0)))
-                                transformersValid = false;
+                            if (transformerItem.type !== 'boolean') {
+                                const field = `transformer_value_${idx}_${transformerItem.key}`;
+                                const value = transformer.parameters[transformerItem.key];
+                                if (!this.validateField(field, transformerItem.allowEmptyValue || (value && value.length > 0)))
+                                    transformersValid = false;
+                            }
                         });
                     }
                 });

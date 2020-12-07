@@ -83,24 +83,19 @@ class LensElements:
 
     @property
     def sql(self):
-        # TODO: Remove 'similarities' for now
         return self._with_select_sql(cleandoc('''
             SELECT l.source_uri, l.target_uri, l.link_order, 
                    l.source_collections, l.target_collections, l.similarity, l.valid
         ''') if self._only_left else cleandoc('''
             SELECT
-                CASE WHEN r.source_uri IS NULL THEN l.source_uri ELSE r.source_uri END AS source_uri,
-                CASE WHEN r.target_uri IS NULL THEN l.target_uri ELSE r.target_uri END AS target_uri,
+                coalesce(l.source_uri, r.source_uri) AS source_uri,
+                coalesce(l.target_uri, r.target_uri) AS target_uri,
                 CASE WHEN l.link_order = r.link_order THEN l.link_order ELSE 'both'::link_order END AS link_order,
                 ARRAY(SELECT DISTINCT unnest(l.source_collections || r.source_collections)) AS source_collections,
                 ARRAY(SELECT DISTINCT unnest(l.target_collections || r.target_collections)) AS target_collections,
-                CASE WHEN l.similarity IS NULL OR l.similarity = 1 THEN r.similarity
-                     WHEN r.similarity IS NULL OR r.similarity = 1 THEN l.similarity
-                     ELSE logic_ops('MAXIMUM_T_CONORM', l.similarity, r.similarity) END AS similarity,
-                CASE WHEN l.valid = r.valid THEN l.valid 
-                     WHEN l.valid IS NULL THEN r.valid 
-                     WHEN r.valid IS NULL THEN l.valid
-                     ELSE 'mixed'::link_validity END AS valid
+                coalesce(jsonb_merge(l.similarities, r.similarities), l.similarities, r.similarities) AS similarities,
+                CASE WHEN l.valid = r.valid 
+                     THEN l.valid ELSE coalesce(l.valid, r.valid, 'mixed'::link_validity) END AS valid
         '''))
 
     def _with_select_sql(self, select_sql):

@@ -40,47 +40,7 @@
           <div class="h4 col-auto">Configuration</div>
         </div>
 
-        <template v-if="method.items.length > 0">
-          <condition-method :method="method" :condition="condition" config-key="method_config" ref="methodConfig"/>
-
-          <div v-if="method.acceptsSimilarityMethod" class="mt-2 ml-5 pt-2 border-top">
-            <div class="form-group row">
-              <label :for="'sim_method_' + index" class="col-sm-3 col-form-label">
-                Apply similarity method
-              </label>
-
-              <div class="col-sm-3">
-                <select :id="'sim_method_' + index" class="form-control form-control-sm"
-                        v-model="condition.method_sim_name" @change="handleSimMethodChange">
-                  <option :value="null">No similarity method</option>
-                  <option v-for="(method, methodName) in similarityMethods" :value="methodName">
-                    {{ method.description }}
-                  </option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          <condition-method v-if="simMethod.items.length > 0"
-                            :method="simMethod" :condition="condition" config-key="method_sim_config"
-                            ref="methodSimConfig"/>
-
-          <div v-if="condition.method_sim_name" class="ml-5">
-            <div class="form-group row">
-              <div class="col">
-                <div class="form-check">
-                  <input class="form-check-input" type="checkbox"
-                         :id="'method_sim_normalized_' + index" v-model="condition.method_sim_normalized">
-                  <label class="form-check-label" :for="'method_sim_normalized_' + index">
-                    Apply similarity method on normalized value?
-                  </label>
-                </div>
-              </div>
-            </div>
-          </div>
-        </template>
-
-        <div class="mt-2 ml-5" v-bind:class="{'pt-2 border-top': method.items.length > 0}">
+        <div class="my-3 ml-5">
           <div class="form-group row">
             <div class="col">
               <div class="form-check">
@@ -129,23 +89,59 @@
               </div>
             </div>
           </div>
-        </div>
 
-        <div class="mt-2 mb-4 ml-5 pt-2 border-top">
-          <div class="form-group row">
-            <label :for="'t_conorm_' + index" class="col-sm-3 col-form-label">
-              T-conorm
-            </label>
+          <template v-if="method.items.length > 0">
+            <condition-method :method="method" :condition="condition" config-key="method_config" ref="methodConfig"/>
 
-            <div class="col-sm-3">
-              <select :id="'t_conorm_' + index" class="form-control form-control-sm" v-model="condition.t_conorm">
-                <option v-for="(description, key) in tConorms" :value="key">
-                  {{ description }}
-                </option>
-              </select>
+            <div v-if="method.acceptsSimilarityMethod" class="form-group row">
+              <label :for="'sim_method_' + index" class="col-sm-3 col-form-label">
+                Apply similarity method
+              </label>
+
+              <div class="col-sm-3">
+                <select :id="'sim_method_' + index" class="form-control form-control-sm"
+                        v-model="condition.method_sim_name" @change="handleSimMethodChange">
+                  <option :value="null">No similarity method</option>
+                  <option v-for="(method, methodName) in similarityMethods" :value="methodName">
+                    {{ method.description }}
+                  </option>
+                </select>
+              </div>
             </div>
-          </div>
+
+            <condition-method v-if="simMethod.items.length > 0"
+                              :method="simMethod" :condition="condition" config-key="method_sim_config"
+                              ref="methodSimConfig"/>
+
+            <div v-if="condition.method_sim_name" class="form-group row">
+              <div class="col">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox"
+                         :id="'method_sim_normalized_' + index" v-model="condition.method_sim_normalized">
+                  <label class="form-check-label" :for="'method_sim_normalized_' + index">
+                    Apply similarity method on normalized value?
+                  </label>
+                </div>
+              </div>
+            </div>
+          </template>
         </div>
+
+        <!--        <div class="mt-2 mb-4 ml-5 pt-2 border-top">-->
+        <!--          <div class="form-group row">-->
+        <!--            <label :for="'t_conorm_' + index" class="col-sm-3 col-form-label">-->
+        <!--              T-conorm-->
+        <!--            </label>-->
+
+        <!--            <div class="col-sm-3">-->
+        <!--              <select :id="'t_conorm_' + index" class="form-control form-control-sm" v-model="condition.t_conorm">-->
+        <!--                <option v-for="(description, key) in tConorms" :value="key">-->
+        <!--                  {{ description }}-->
+        <!--                </option>-->
+        <!--              </select>-->
+        <!--            </div>-->
+        <!--          </div>-->
+        <!--        </div>-->
       </div>
     </div>
 

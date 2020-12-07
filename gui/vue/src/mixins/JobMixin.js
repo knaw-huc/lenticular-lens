@@ -52,7 +52,8 @@ export default {
                 sources: [],
                 targets: [],
                 methods: {
-                    type: 'MINIMUM_T_NORM',
+                    type: 'AND',
+                    // type: 'MINIMUM_T_NORM',
                     conditions: [],
                 },
                 properties: []
@@ -177,20 +178,20 @@ export default {
             if (this.job.linkset_specs) {
                 const linksetSpecs = copy(this.job.linkset_specs);
 
-                function updateLogicBoxTypes(conditions) {
-                    if (conditions.hasOwnProperty('type')) {
-                        if (conditions.type === 'AND')
-                            conditions.type = 'MINIMUM_T_NORM';
-                        else if (conditions.type === 'OR')
-                            conditions.type = 'MAXIMUM_T_CONORM';
-                    }
-
-                    if (conditions.hasOwnProperty('conditions'))
-                        conditions.conditions.forEach(condition => updateLogicBoxTypes(condition));
-                }
+                // function updateLogicBoxTypes(conditions) {
+                //     if (conditions.hasOwnProperty('type')) {
+                //         if (conditions.type === 'AND')
+                //             conditions.type = 'MINIMUM_T_NORM';
+                //         else if (conditions.type === 'OR')
+                //             conditions.type = 'MAXIMUM_T_CONORM';
+                //     }
+                //
+                //     if (conditions.hasOwnProperty('conditions'))
+                //         conditions.conditions.forEach(condition => updateLogicBoxTypes(condition));
+                // }
 
                 linksetSpecs.forEach(linksetSpec => {
-                    updateLogicBoxTypes(linksetSpec.methods);
+                    // updateLogicBoxTypes(linksetSpec.methods);
 
                     this.getRecursiveElements(linksetSpec.methods, 'conditions').forEach(method => {
                         if (method.hasOwnProperty('method_value')) {
@@ -202,7 +203,7 @@ export default {
                             method.method_sim_normalized = false;
                             method.list_threshold = 0;
                             method.list_threshold_unit = 'matches';
-                            method.t_conorm = 'MAXIMUM_T_CONORM';
+                            // method.t_conorm = 'MAXIMUM_T_CONORM';
 
                             if (method.method_name === '=')
                                 method.method_name = 'EXACT';
@@ -240,6 +241,13 @@ export default {
                             method.sources.forEach(source => {
                                 source.transformers = source.transformers.filter(transformer =>
                                     transformer.name !== 'PARSE_DATE' && transformer.name !== 'PARSE_NUMERIC');
+
+                                source.transformers.forEach(transformer => {
+                                    if (transformer.name === 'ECARTICO_FULL_NAME') {
+                                        transformer.name = 'TRANSFORM_LAST_NAME_FORMAT';
+                                        transformer.parameters = {infix: true};
+                                    }
+                                });
                             });
 
                             method.targets.forEach(target => {

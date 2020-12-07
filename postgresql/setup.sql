@@ -163,6 +163,30 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE FUNCTION jsonb_merge(l jsonb, r jsonb) RETURNS jsonb
+    STRICT IMMUTABLE PARALLEL SAFE AS
+$$
+SELECT jsonb_object_agg(
+    coalesce(left_set.key, right_set.key),
+    coalesce(left_set.value || right_set.value, left_set.value, right_set.value)
+)
+FROM jsonb_each(l) AS left_set
+FULL JOIN jsonb_each(r) AS right_set
+ON left_set.key = right_set.key;
+$$ LANGUAGE sql;
+
+CREATE OR REPLACE FUNCTION transform_last_name_format(name text, include_infix bool) RETURNS text
+    STRICT IMMUTABLE PARALLEL SAFE AS
+$$
+WITH name_parts (first_name, infix, last_name) AS (
+    VALUES (coalesce(trim(substring(name from ', ([^\[]*)')), ''),
+            coalesce(trim(substring(name from '\[(.*)\]')), ''),
+            coalesce(trim(substring(name from '^[^,\[]*')), ''))
+)
+SELECT trim(first_name || ' ' || CASE WHEN include_infix AND infix != '' THEN infix || ' ' ELSE '' END || last_name)
+FROM name_parts;
+$$ LANGUAGE sql;
+
 CREATE OR REPLACE FUNCTION to_date_immutable(text, text) RETURNS date
     STRICT IMMUTABLE AS
 $$
@@ -224,18 +248,6 @@ CREATE OR REPLACE FUNCTION similarity(source text, target text, distance decimal
     STRICT IMMUTABLE PARALLEL SAFE AS
 $$
 SELECT 1 - (distance / greatest(char_length(source), char_length(target)));
-$$ LANGUAGE sql;
-
-CREATE OR REPLACE FUNCTION delta(type text, source numeric, target numeric,
-                                 start_delta numeric, end_delta numeric) RETURNS boolean
-    STRICT IMMUTABLE PARALLEL SAFE AS
-$$
-SELECT source IS NOT NULL AND target IS NOT NULL
-           AND abs(source - target) BETWEEN start_delta AND end_delta
-           AND CASE
-                   WHEN type = '<' THEN source <= target
-                   WHEN type = '>' THEN target <= source
-                   ELSE TRUE END;
 $$ LANGUAGE sql;
 
 CREATE OR REPLACE FUNCTION delta(type text, source date, target date, no_days numeric) RETURNS boolean

@@ -95,60 +95,63 @@ class MatchingSql:
         # else:
         #     join_conditions_sql = sql.SQL("{} \nAND increment_counter('linkset_count')").format(join_conditions_sql)
 
-        similarity_fields = self._linkset.similarity_fields
-        if similarity_fields:
-            similarities_sql = sql.SQL(cleandoc('''
-                CROSS JOIN LATERAL (
-                    SELECT {expressions}
-                ) AS similarities ({names})
-            ''')).format(
-                expressions=sql.SQL(',\n    ').join(
-                    [sim_expression for sim_expression in list(similarity_fields.values())]),
-                names=sql.SQL(', ').join(
-                    [sql.Identifier(sim_field) for sim_field in list(similarity_fields.keys())])
-            )
-        else:
-            similarities_sql = sql.SQL('')
+        # similarity_fields = self._linkset.similarity_fields
+        # if similarity_fields:
+        #     similarities_sql = sql.SQL(cleandoc('''
+        #         CROSS JOIN LATERAL (
+        #             SELECT {expressions}
+        #         ) AS similarities ({names})
+        #     ''')).format(
+        #         expressions=sql.SQL(',\n    ').join(
+        #             [sim_expression for sim_expression in list(similarity_fields.values())]),
+        #         names=sql.SQL(', ').join(
+        #             [sql.Identifier(sim_field) for sim_field in list(similarity_fields.keys())])
+        #     )
+        # else:
+        #     similarities_sql = sql.SQL('')
 
         return sql.SQL(cleandoc(
-            """ DROP MATERIALIZED VIEW IF EXISTS linkset CASCADE;
-                CREATE MATERIALIZED VIEW linkset AS
+            """ DROP TABLE IF EXISTS public.{linkset} CASCADE;
+                CREATE TABLE public.{linkset} AS
                 SELECT CASE WHEN source.uri < target.uri THEN source.uri ELSE target.uri END AS source_uri,
                        CASE WHEN source.uri < target.uri THEN target.uri ELSE source.uri END AS target_uri,
-                       CASE WHEN source.uri < target.uri 
-                            THEN 'source_target'::link_order
-                            ELSE 'target_source'::link_order END AS link_order,
-                       source.collection AS source_collection,
-                       target.collection AS target_collection
+                       CASE WHEN every(source.uri < target.uri) THEN 'source_target'::link_order
+                            WHEN every(target.uri < source.uri) THEN 'target_source'::link_order
+                            ELSE 'both'::link_order END AS link_order,
+                       array_agg(DISTINCT source.collection) AS source_collections,
+                       array_agg(DISTINCT target.collection) AS target_collections,
+                       {similarities} AS similarities
                 FROM source
                 JOIN target ON (source.uri != target.uri)
-                {similarities}
-                WHERE {conditions}
-                AND increment_counter('linkset_count');
-            """) + '\n').format(
-            similarities=similarities_sql,
+                AND {conditions}
+                AND increment_counter('linkset_count')
+                GROUP BY source_uri, target_uri;
+            """
+        ) + '\n').format(
+            linkset=sql.Identifier(self._job.linkset_table_name(self._linkset.id)),
+            similarities=self._linkset.similarity_fields_agg_sql,
             conditions=self._linkset.conditions_sql
         )
 
-    def generate_match_distinct_linkset_sql(self):
-        return sql.SQL(cleandoc(
-            """ DROP TABLE IF EXISTS public.{view_name} CASCADE;
-                CREATE TABLE public.{view_name} AS
-                SELECT source_uri, target_uri,
-                       CASE WHEN every(link_order = 'source_target'::link_order) THEN 'source_target'::link_order
-                            WHEN every(link_order = 'target_source'::link_order) THEN 'target_source'::link_order
-                            ELSE 'both'::link_order END AS link_order,
-                       array_agg(DISTINCT source_collection) AS source_collections,
-                       array_agg(DISTINCT target_collection) AS target_collections,
-                       {similarity} AS similarity
-                FROM linkset
-                GROUP BY source_uri, target_uri;
-            """) + '\n').format(
-            view_name=sql.Identifier(self._job.linkset_table_name(self._linkset.id)),
-            similarity=self._linkset.similarity_sql,
-            similarities=similarities_sql,
-            conditions=self._linkset.conditions_sql
-        )
+    # def generate_match_distinct_linkset_sql(self):
+    #     return sql.SQL(cleandoc(
+    #         """ DROP TABLE IF EXISTS public.{view_name} CASCADE;
+    #             CREATE TABLE public.{view_name} AS
+    #             SELECT source_uri, target_uri,
+    #                    CASE WHEN every(link_order = 'source_target'::link_order) THEN 'source_target'::link_order
+    #                         WHEN every(link_order = 'target_source'::link_order) THEN 'target_source'::link_order
+    #                         ELSE 'both'::link_order END AS link_order,
+    #                    array_agg(DISTINCT source_collection) AS source_collections,
+    #                    array_agg(DISTINCT target_collection) AS target_collections,
+    #                    {similarity} AS similarity
+    #             FROM linkset
+    #             GROUP BY source_uri, target_uri;
+    #         """) + '\n').format(
+    #         view_name=sql.Identifier(self._job.linkset_table_name(self._linkset.id)),
+    #         similarity=self._linkset.similarity_sql,
+    #         similarities=similarities_sql,
+    #         conditions=self._linkset.conditions_sql
+    #     )
 
     def generate_match_linkset_finish_sql(self):
         return sql.SQL(cleandoc(

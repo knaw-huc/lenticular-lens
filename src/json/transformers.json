@@ -1,6 +1,6 @@
 {
-  "ECARTICO_FULL_NAME": {
-    "sql_template": "ecartico_full_name({property})"
+  "TRANSFORM_LAST_NAME_FORMAT": {
+    "sql_template": "transform_last_name_format({property}, {infix})"
   },
   "PREFIX": {
     "sql_template": "{prefix} || {property}"

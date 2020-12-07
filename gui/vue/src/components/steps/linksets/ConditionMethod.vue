@@ -1,46 +1,47 @@
 <template>
-  <div class="ml-5">
-    <template v-for="item in this.method.items">
-      <div v-if="item.type !== 'property' || condition[configKey][item.entity_type_selection_key] !== undefined"
-           class="form-group row">
-        <label v-if="showLabel(item)" :for="item.key" class="col-sm-3 col-form-label">{{ item.label }}</label>
+  <div>
+    <div v-for="item in this.method.items"
+         v-if="item.type !== 'property' || condition[configKey][item.entity_type_selection_key] !== undefined"
+         class="form-group row">
+      <label v-if="showLabel(item)" :for="item.key" class="col-sm-3 col-form-label">{{ item.label }}</label>
 
-        <div v-if="item.type === 'number'" class="col-sm-2">
-          <input :id="item.key" class="form-control form-control-sm" type="number"
-                 :step="Number.isInteger(item.defaultValue) ? '1' : '0.1'"
-                 v-model.number="condition[configKey][item.key]"
-                 v-bind:class="{'is-invalid': errors.includes(`method_config_${item.key}`)}">
+      <div v-if="item.type === 'number'" class="col-sm-2">
+        <input :id="item.key" class="form-control form-control-sm" type="number"
+               :step="Number.isInteger(item.defaultValue) ? '1' : '0.1'"
+               v-model.number="condition[configKey][item.key]"
+               v-bind:class="{'is-invalid': errors.includes(`method_config_${item.key}`)}">
 
-          <div class="invalid-feedback" v-show="errors.includes(`method_config_${item.key}`)">
-            Please specify a valid value
-          </div>
+        <div class="invalid-feedback" v-show="errors.includes(`method_config_${item.key}`)">
+          Please specify a valid value
         </div>
+      </div>
 
-        <div v-else-if="item.type === 'string'" class="col-sm-3">
-          <input :id="item.key" class="form-control form-control-sm" type="text"
-                 v-model="condition[configKey][item.key]"
-                 v-bind:class="{'is-invalid': errors.includes(`method_config_${item.key}`)}">
+      <div v-else-if="item.type === 'string'" class="col-sm-3">
+        <input :id="item.key" class="form-control form-control-sm" type="text"
+               v-model="condition[configKey][item.key]"
+               v-bind:class="{'is-invalid': errors.includes(`method_config_${item.key}`)}">
 
-          <div class="invalid-feedback" v-show="errors.includes(`method_config_${item.key}`)">
-            Please specify a valid value
-          </div>
+        <div class="invalid-feedback" v-show="errors.includes(`method_config_${item.key}`)">
+          Please specify a valid value
         </div>
+      </div>
 
-        <div v-else-if="item.type === 'choices'" class="col-sm-3">
-          <select :id="item.key" class="form-control form-control-sm h-auto" v-model="condition[configKey][item.key]"
-                  v-bind:class="{'is-invalid': errors.includes(`method_config_${item.key}`)}">
-            <option disabled selected value="">Select an option</option>
-            <option v-for="(choiceValue, choiceLabel) in item.choices" :value="choiceValue">
-              {{ choiceLabel }}
-            </option>
-          </select>
+      <div v-else-if="item.type === 'choices'" class="col-sm-3">
+        <select :id="item.key" class="form-control form-control-sm h-auto" v-model="condition[configKey][item.key]"
+                v-bind:class="{'is-invalid': errors.includes(`method_config_${item.key}`)}">
+          <option disabled selected value="">Select an option</option>
+          <option v-for="(choiceValue, choiceLabel) in item.choices" :value="choiceValue">
+            {{ choiceLabel }}
+          </option>
+        </select>
 
-          <div class="invalid-feedback" v-show="errors.includes(`method_config_${item.key}`)">
-            Please specify a valid value
-          </div>
+        <div class="invalid-feedback" v-show="errors.includes(`method_config_${item.key}`)">
+          Please specify a valid value
         </div>
+      </div>
 
-        <div v-else-if="item.type === 'boolean'" class="form-check">
+      <div v-else-if="item.type === 'boolean'" class="col">
+        <div class="form-check">
           <input class="form-check-input" type="checkbox"
                  :id="item.key" v-model="condition[configKey][item.key]"
                  v-bind:class="{'is-invalid': errors.includes(`method_config_${item.key}`)}">
@@ -53,33 +54,33 @@
             Please specify a valid value
           </div>
         </div>
+      </div>
 
-        <div v-else-if="item.type === 'entity_type_selection'" class="col-sm-6">
-          <select :id="item.key" class="form-control form-control-sm h-auto" v-model="condition[configKey][item.key]"
-                  v-bind:class="{'is-invalid': errors.includes(`method_config_${item.key}`)}">
-            <option disabled selected value="">Choose an entity-type selection</option>
-            <option v-for="ets in $root.entityTypeSelections" :value.number="ets.id">
-              {{ ets.label }}
-            </option>
-          </select>
+      <div v-else-if="item.type === 'entity_type_selection'" class="col-sm-6">
+        <select :id="item.key" class="form-control form-control-sm h-auto" v-model="condition[configKey][item.key]"
+                v-bind:class="{'is-invalid': errors.includes(`method_config_${item.key}`)}">
+          <option disabled selected value="">Choose an entity-type selection</option>
+          <option v-for="ets in $root.entityTypeSelections" :value.number="ets.id">
+            {{ ets.label }}
+          </option>
+        </select>
 
-          <div class="invalid-feedback" v-show="errors.includes(`method_config_${item.key}`)">
-            Please specify an entity-type selection
-          </div>
-        </div>
-
-        <div v-else-if="item.type === 'property'" class="col-sm row align-items-center m-0 mb-1">
-          <property
-              :entity-type-selection="$root.getEntityTypeSelectionById(condition[configKey][item.entity_type_selection_key])"
-              :property="condition[configKey][item.key]"
-              :singular="true" :allow-delete="false" :entity-type-selection-info="false" :ref="item.key"/>
-
-          <div class="invalid-feedback" v-show="errors.includes(`method_config_${item.key}`)">
-            Please specify a property
-          </div>
+        <div class="invalid-feedback" v-show="errors.includes(`method_config_${item.key}`)">
+          Please specify an entity-type selection
         </div>
       </div>
-    </template>
+
+      <div v-else-if="item.type === 'property'" class="col-sm row align-items-center m-0 mb-1">
+        <property
+            :entity-type-selection="$root.getEntityTypeSelectionById(condition[configKey][item.entity_type_selection_key])"
+            :property="condition[configKey][item.key]"
+            :singular="true" :allow-delete="false" :entity-type-selection-info="false" :ref="item.key"/>
+
+        <div class="invalid-feedback" v-show="errors.includes(`method_config_${item.key}`)">
+          Please specify a property
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 

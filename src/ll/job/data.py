@@ -415,9 +415,8 @@ class Job:
                 values = get_property_values(queries, dict=True)
 
         with db_conn() as conn, conn.cursor(name=uuid4().hex) as cur:
-            # TODO: Removed 'similarities' for now
             cur.execute(sql.SQL('SELECT links.source_uri, links.target_uri, link_order, '
-                                '       similarity, cluster_id, valid '
+                                '       similarities, cluster_id, valid '
                                 'FROM {view_name} AS links '
                                 '{where_sql} '
                                 'ORDER BY sort_order ASC {limit_offset}').format(
@@ -438,8 +437,7 @@ class Job:
                         'target': link[1],
                         'target_values': values[link[1]] if values and link[1] in values else None,
                         'link_order': link[2],
-                        'similarity': link[3] if link[3] else 1,
-                        #'similarities': link[4] if link[4] else {},
+                        'similarities': link[3] if link[3] else {},
                         'cluster_id': link[4],
                         'valid': link[5]
                     }
