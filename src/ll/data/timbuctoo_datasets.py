@@ -1,5 +1,6 @@
 from ll.util.config_db import db_conn
 from ll.data.timbuctoo import Timbuctoo
+from ll.data.collection import Collection
 from psycopg2 import extras as psycopg2_extras
 
 
@@ -13,12 +14,22 @@ class TimbuctooDatasets:
     def datasets(self):
         if not self._datasets:
             timbuctoo_data = Timbuctoo(self._graphql_uri, self._hsid).datasets
-            database_data = self.datasets_from_database()
-            self._datasets = self.combine(timbuctoo_data, database_data)
+            database_data = self._datasets_from_database()
+            self._datasets = self._combine(timbuctoo_data, database_data)
 
         return self._datasets
 
-    def datasets_from_database(self):
+    def update(self):
+        timbuctoo_data = Timbuctoo(self._graphql_uri, self._hsid).datasets
+        database_data = self._datasets_from_database()
+
+        for dataset_id, dataset_data in database_data.items():
+            for collection_id, collection_data in dataset_data['collections'].items():
+                if dataset_id in timbuctoo_data and collection_id in timbuctoo_data[dataset_id]['collections']:
+                    collection = Collection(self._graphql_uri, self._hsid, dataset_id, collection_id, timbuctoo_data)
+                    collection.update()
+
+    def _datasets_from_database(self):
         with db_conn() as conn, conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) as cur:
             cur.execute('SELECT * FROM timbuctoo_tables WHERE graphql_endpoint = %s', (self._graphql_uri,))
 
@@ -41,14 +52,14 @@ class TimbuctooDatasets:
                     'total': table['total'],
                     'properties': {
                         column_info['name']: {
-                            'uri': column_info['uri'],
-                            'shortenedUri': column_info['shortenedUri'],
-                            'isInverse': column_info['isInverse'],
-                            'isList': column_info['isList'],
-                            'isValueType': column_info['isValueType'],
-                            'isLink': column_info['isLink'],
-                            'density': column_info['density'],
-                            'referencedCollections': column_info['referencedCollections']
+                            'uri': column_info.get('uri', None),
+                            'shortenedUri': column_info.get('shortenedUri', None),
+                            'isInverse': column_info.get('isInverse', False),
+                            'isList': column_info.get('isList', False),
+                            'isValueType': column_info.get('isValueType', True),
+                            'isLink': column_info.get('isLink', False),
+                            'density': column_info.get('density', 100),
+                            'referencedCollections': column_info.get('referencedCollections', [])
                         } for column_info in table['columns'].values()
                     },
                 }
@@ -56,7 +67,7 @@ class TimbuctooDatasets:
             return datasets
 
     @staticmethod
-    def combine(timbuctoo_data, database_data):
+    def _combine(timbuctoo_data, database_data):
         combined = timbuctoo_data.copy()
         for dataset, dataset_data in database_data.items():
             if dataset not in combined:
