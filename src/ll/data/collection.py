@@ -8,13 +8,15 @@ from psycopg2 import extras as psycopg2_extras, sql as psycopg2_sql
 
 
 class Collection:
-    def __init__(self, graphql_endpoint, hsid, dataset_id, collection_id):
+    def __init__(self, graphql_endpoint, hsid, dataset_id, collection_id, timbuctoo_data=None):
         self._graphql_endpoint = graphql_endpoint
         self._hsid = hsid
         self._dataset_id = dataset_id
         self._collection_id = collection_id
+        self._timbuctoo_data = timbuctoo_data
 
         self._table_data = None
+        self._timbuctoo = Timbuctoo(self._graphql_endpoint, self._hsid)
 
     @property
     def table_data(self):
@@ -23,7 +25,7 @@ class Collection:
 
         self._table_data = fetch_one('SELECT * FROM timbuctoo_tables '
                                      'WHERE graphql_endpoint = %s AND dataset_id = %s AND collection_id = %s',
-                                      (self._graphql_endpoint, self._dataset_id, self._collection_id), dict=True)
+                                     (self._graphql_endpoint, self._dataset_id, self._collection_id), dict=True)
 
         if not self._table_data:
             self.start_download()
@@ -47,13 +49,19 @@ class Collection:
 
         return -1
 
-    def start_download(self):
-        timbuctoo = Timbuctoo(self._graphql_endpoint, self._hsid)
-        datasets = timbuctoo.datasets
+    @property
+    def timbuctoo_data(self):
+        if not self._timbuctoo_data:
+            self._timbuctoo_data = self._timbuctoo.datasets
 
+        return self._timbuctoo_data
+
+    @property
+    def timbuctoo_dataset_and_collection(self):
         dataset = None
         collection = None
-        for dataset_id, dataset_data in datasets.items():
+
+        for dataset_id, dataset_data in self.timbuctoo_data.items():
             if dataset_id == self._dataset_id:
                 dataset = dataset_data
                 for collection_id, collection_data in dataset_data['collections'].items():
@@ -62,6 +70,10 @@ class Collection:
                         break
                 break
 
+        return dataset, collection
+
+    def start_download(self):
+        (dataset, collection) = self.timbuctoo_dataset_and_collection
         if dataset and collection:
             columns = {'uri' if col_name == 'uri' else hash_string(col_name.lower()): col_info
                        for col_name, col_info in collection['properties'].items()}
@@ -75,11 +87,31 @@ class Collection:
                 cur.execute('''
                     INSERT INTO timbuctoo_tables (
                         "table_name", graphql_endpoint, hsid, dataset_id, collection_id, 
-                        dataset_name, title, description, collection_title, total, columns, create_time)
+                        dataset_uri, dataset_name, title, description, 
+                        collection_uri, collection_title, collection_shortened_uri, 
+                        total, columns, create_time)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, now())
                 ''', (self.table_name, self._graphql_endpoint, self._hsid, self._dataset_id, self._collection_id,
-                      dataset['name'], dataset['title'], dataset['description'],
-                      collection['title'], collection['total'], dumps(columns)))
+                      dataset['uri'], dataset['name'], dataset['title'], dataset['description'],
+                      collection['uri'], collection['title'], collection['shortenedUri'],
+                      collection['total'], dumps(columns)))
+
+    def update(self):
+        (dataset, collection) = self.timbuctoo_dataset_and_collection
+        if dataset and collection:
+            columns = {'uri' if col_name == 'uri' else hash_string(col_name.lower()): col_info
+                       for col_name, col_info in collection['properties'].items()}
+
+            with db_conn() as conn, conn.cursor() as cur:
+                cur.execute('''
+                    UPDATE timbuctoo_tables
+                    SET dataset_uri = %s, dataset_name = %s, title = %s, description = %s, 
+                        collection_uri = %s, collection_title = %s, collection_shortened_uri = %s,
+                        total = %s, columns = %s
+                    WHERE "table_name" = %s
+                ''', (dataset['uri'], dataset['name'], dataset['title'], dataset['description'],
+                      collection['uri'], collection['title'], collection['shortenedUri'],
+                      collection['total'], dumps(columns), self.table_name))
 
     @staticmethod
     def columns_sql(columns):

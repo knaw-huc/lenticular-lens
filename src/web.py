@@ -48,6 +48,12 @@ def datasets():
     return jsonify(TimbuctooDatasets(request.args.get('endpoint'), request.args.get('hsid')).datasets)
 
 
+@app.route('/datasets/update', methods=['POST'])
+def datasets_update():
+    TimbuctooDatasets(request.form.get('endpoint'), request.form.get('hsid')).update()
+    return jsonify({'result': 'updated'})
+
+
 @app.route('/downloads')
 def downloads():
     return jsonify(Collection.download_status())
