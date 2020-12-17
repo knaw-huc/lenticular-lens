@@ -1,59 +1,91 @@
 <template>
   <div class="border border-dark p-3 mt-3">
-    <div class="row align-items-start justify-content-between mb-2">
+    <div class="row align-items-center justify-content-between mb-2">
+      <label class="h5 col-auto">Method</label>
+
       <div class="col-auto mr-auto">
-        <div class="row">
-          <label class="h4 col-auto">Method</label>
+        <div class="input-group input-group-sm">
+          <select-box v-model="condition.method_name" @input="handleMethodChange"
+                      v-bind:class="{'is-invalid': errors.includes('method_name')}">
+            <option disabled selected value="">Select a method</option>
+            <option v-for="(method, methodName) in matchingMethods" :value="methodName">
+              {{ method.description }}
+            </option>
+          </select-box>
 
-          <div class="col-auto">
-            <select-box v-model="condition.method_name" @input="handleMethodChange"
-                        v-bind:class="{'is-invalid': errors.includes('method_name')}">
-              <option disabled selected value="">Select a method</option>
-              <option v-for="(method, methodName) in matchingMethods" :value="methodName">
-                {{ method.description }}
-              </option>
-            </select-box>
+          <div class="input-group-append">
+            <div class="btn-group btn-group-toggle">
+              <label v-if="method.items.length > 0" class="btn btn-secondary btn-sm"
+                     v-bind:class="{'active': configureMatching}">
+                <input type="checkbox" autocomplete="off" v-model="configureMatching"/>
+                Configure
+              </label>
 
-            <div class="invalid-feedback" v-show="errors.includes('method_name')">
-              Please specify a matching method
+              <label v-if="method.items.length > 0 && method.acceptsSimilarityMethod" class="btn btn-secondary btn-sm"
+                     v-bind:class="{'active': applySimMethod}">
+                <input type="checkbox" autocomplete="off" v-model="applySimMethod"/>
+                Apply similarity method
+              </label>
+
+              <label class="btn btn-secondary btn-sm" v-bind:class="{'active': applyListMatching}">
+                <input type="checkbox" autocomplete="off" v-model="applyListMatching"/>
+                Apply list matching
+              </label>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="col-auto ml-auto">
-        <div class="row">
-          <div class="col-auto">
-            <button-delete @click="$emit('remove', index)" title="Delete this Method" class="pt-1 pr-0"/>
-          </div>
+      <div class="col-auto">
+        <button-delete @click="$emit('remove', index)" title="Delete this Method" class="pt-1 pr-0"/>
+      </div>
 
-          <div class="col-auto">
-            <button-add v-on:click="$emit('add')" title="Add Method and Create Group"/>
-          </div>
-        </div>
+      <div class="col-auto">
+        <button-add v-on:click="$emit('add')" title="Add Method and Create Group"/>
       </div>
     </div>
 
     <div class="row pl-5">
       <div class="col">
-        <div class="row">
-          <div class="h4 col-auto">Configuration</div>
-        </div>
-
         <div class="my-3 ml-5">
-          <div class="form-group row">
-            <div class="col">
-              <div class="form-check">
-                <input class="form-check-input" type="checkbox"
-                       :id="'list_matching_' + index" v-model="useListMatching" @change="handleListMatchingChange">
-                <label class="form-check-label" :for="'list_matching_' + index">
-                  Apply list matching?
-                </label>
+          <condition-method v-if="configureMatching && method.items.length > 0"
+                            :method="method" :condition="condition" config-key="method_config" ref="methodConfig"/>
+
+          <template v-if="applySimMethod && method.items.length > 0 && method.acceptsSimilarityMethod">
+            <div class="form-group row">
+              <label :for="'sim_method_' + index" class="col-sm-3 col-form-label">
+                Apply similarity method
+              </label>
+
+              <div class="col-sm-3">
+                <select :id="'sim_method_' + index" class="form-control form-control-sm"
+                        v-model="condition.method_sim_name" @change="handleSimMethodChange">
+                  <option :value="null">No similarity method</option>
+                  <option v-for="(method, methodName) in similarityMethods" :value="methodName">
+                    {{ method.description }}
+                  </option>
+                </select>
               </div>
             </div>
-          </div>
 
-          <div v-if="useListMatching" class="form-group row">
+            <condition-method v-if="simMethod.items.length > 0"
+                              :method="simMethod" :condition="condition" config-key="method_sim_config"
+                              ref="methodSimConfig"/>
+
+            <div v-if="condition.method_sim_name" class="form-group row">
+              <div class="col">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox"
+                         :id="'method_sim_normalized_' + index" v-model="condition.method_sim_normalized">
+                  <label class="form-check-label" :for="'method_sim_normalized_' + index">
+                    Apply similarity method on normalized value?
+                  </label>
+                </div>
+              </div>
+            </div>
+          </template>
+
+          <div v-if="applyListMatching" class="form-group row">
             <label :for="'list_threshold_' + index" class="col-sm-3 col-form-label">
               Minimum matches
             </label>
@@ -89,42 +121,6 @@
               </div>
             </div>
           </div>
-
-          <template v-if="method.items.length > 0">
-            <condition-method :method="method" :condition="condition" config-key="method_config" ref="methodConfig"/>
-
-            <div v-if="method.acceptsSimilarityMethod" class="form-group row">
-              <label :for="'sim_method_' + index" class="col-sm-3 col-form-label">
-                Apply similarity method
-              </label>
-
-              <div class="col-sm-3">
-                <select :id="'sim_method_' + index" class="form-control form-control-sm"
-                        v-model="condition.method_sim_name" @change="handleSimMethodChange">
-                  <option :value="null">No similarity method</option>
-                  <option v-for="(method, methodName) in similarityMethods" :value="methodName">
-                    {{ method.description }}
-                  </option>
-                </select>
-              </div>
-            </div>
-
-            <condition-method v-if="simMethod.items.length > 0"
-                              :method="simMethod" :condition="condition" config-key="method_sim_config"
-                              ref="methodSimConfig"/>
-
-            <div v-if="condition.method_sim_name" class="form-group row">
-              <div class="col">
-                <div class="form-check">
-                  <input class="form-check-input" type="checkbox"
-                         :id="'method_sim_normalized_' + index" v-model="condition.method_sim_normalized">
-                  <label class="form-check-label" :for="'method_sim_normalized_' + index">
-                    Apply similarity method on normalized value?
-                  </label>
-                </div>
-              </div>
-            </div>
-          </template>
         </div>
 
         <!--        <div class="mt-2 mb-4 ml-5 pt-2 border-top">-->
@@ -191,7 +187,9 @@
         mixins: [ValidationMixin],
         data() {
             return {
-                useListMatching: false,
+                configureMatching: false,
+                applySimMethod: false,
+                applyListMatching: false,
                 tConorms: props.tConorms,
                 transformers: props.transformers,
                 matchingMethods: props.matchingMethods,
@@ -245,7 +243,7 @@
                     this.$refs.methodSimConfig ? this.$refs.methodSimConfig.validateConditionMethod() : true);
 
                 const listThresholdValid = this.validateField('list_threshold',
-                    !this.useListMatching || (this.condition.list_threshold > 0 &&
+                    !this.applyListMatching || (this.condition.list_threshold > 0 &&
                     (this.condition.list_threshold_unit === 'matches' || this.condition.list_threshold <= 100)));
 
                 const sourcesValid = this.validateField('sources', this.condition.sources.length > 0);
@@ -304,7 +302,7 @@
             },
         },
         mounted() {
-            this.useListMatching = !!this.condition.list_threshold;
+            this.applyListMatching = !!this.condition.list_threshold;
         },
     };
 </script>

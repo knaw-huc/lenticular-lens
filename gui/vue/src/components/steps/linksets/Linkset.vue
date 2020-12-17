@@ -127,10 +127,27 @@
         </div>
       </sub-card>
 
-      <sub-card label="Matching Methods" :has-info="true" :hasError="errors.includes('matching-methods')">
-        <template v-slot:info>
-          <matching-methods-info/>
-        </template>
+      <sub-card label="Matching Methods" :hasError="errors.includes('matching-methods')"> <!-- :has-columns="true" -->
+<!--        <template v-slot:columns>-->
+<!--          <div v-if="useComplexMethods" class="col-auto">-->
+<!--            <div  class="input-group input-group-sm">-->
+<!--              <div class="input-group-prepend">-->
+<!--                <span class="input-group-text">Threshold</span>-->
+<!--              </div>-->
+
+<!--              <input type="text" class="form-control" value="">-->
+<!--            </div>-->
+<!--          </div>-->
+
+<!--          <div class="col-auto">-->
+<!--            <div class="btn-group-toggle" data-toggle="buttons">-->
+<!--              <label class="btn btn-secondary btn-sm" v-bind:class="{'active': useComplexMethods}">-->
+<!--                <input type="checkbox" autocomplete="off" v-model="useComplexMethods"/>-->
+<!--                Use complex methods-->
+<!--              </label>-->
+<!--            </div>-->
+<!--          </div>-->
+<!--        </template>-->
 
         <logic-box :element="linksetSpec.methods" elements-name="conditions" :is-root="true"
                    :should-have-elements="true" group="linkset-filters"
