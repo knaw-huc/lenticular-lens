@@ -105,11 +105,11 @@ export function Property(
     return (
         <div className="property">
             {entityTypeSelectionInfo && <>
-                <div className="property-pill resource-pill property-resource">
+                <div className="property-pill property-resource">
                     {datasetId}
                 </div>
 
-                <div className="property-pill resource-pill property-resource">
+                <div className="property-pill property-resource">
                     {collectionId}
                 </div>
 
@@ -131,20 +131,20 @@ export function Property(
                         <div className="property-sep">→</div>
 
                         {prop.collection === '' && !readOnly &&
-                        <button className="property-pill property-path property-select"
+                        <button className="property-pill property-select"
                                 onClick={_ => console.log(prop.collections)}>
                             Select value
                         </button>
                         }
 
                         {prop.collection && readOnly &&
-                        <div className="property-pill property-path property-entity">
+                        <div className="property-pill property-prop">
                             {prop.collections[prop.collection].title || prop.collection}
                         </div>
                         }
 
                         {prop.collection && !readOnly &&
-                        <button className="property-pill property-path property-entity"
+                        <button className="property-pill property-prop"
                                 onClick={_ => prop.collectionIdx != null && resetProperty(prop.collectionIdx)}>
                             {prop.collections[prop.collection].title || prop.collection}
                         </button>
@@ -155,21 +155,21 @@ export function Property(
                         {prop.collection && <div className="property-sep">→</div>}
 
                         {prop.property === '' && !readOnly &&
-                        <button className="property-pill property-path property-select"
+                        <button className="property-pill property-select"
                                 onClick={_ => console.log(prop.properties)}>
                             Select value
                         </button>
                         }
 
                         {prop.property && readOnly &&
-                        <div className="property-pill property-path property-prop">
+                        <div className="property-pill">
                             {prop.properties[prop.property].isInverse && '← '}
                             {prop.properties[prop.property].shortenedUri}
                         </div>
                         }
 
                         {prop.property && !readOnly &&
-                        <button className="property-pill property-path property-prop"
+                        <button className="property-pill property-prop"
                                 onClick={_ => prop.propIdx != null && resetProperty(prop.propIdx)}>
                             {prop.properties[prop.property].isInverse && '← '}
                             {prop.properties[prop.property].shortenedUri}

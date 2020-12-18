@@ -1,10 +1,8 @@
 <template>
   <div>
     <div class="property" v-for="propAndValues in properties" v-if="propAndValues.values.length > 0">
-      <div class="property-resource property-pills">
-        <div class="property-pill sm read-only">
-          {{ propAndValues.property[propAndValues.property.length - 1] }}
-        </div>
+      <div class="property-pill property-prop read-only sm">
+        {{ propAndValues.property[propAndValues.property.length - 1] }}
       </div>
 
       <ul class="property-values inline-list">

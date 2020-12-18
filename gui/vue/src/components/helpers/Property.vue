@@ -1,82 +1,94 @@
 <template>
   <div class="property">
-    <div v-if="entityTypeSelectionInfo" class="property-resource resource-pills">
-      <div class="property-pill read-only" v-bind:class="{'sm': small}">
+    <template v-if="entityTypeSelectionInfo">
+      <div class="property-pill property-resource read-only" :title="dataset.uri" v-bind:class="{'sm': small}">
         {{ dataset.title }}
       </div>
 
-      <div class="property-pill read-only mx-2" v-bind:class="{'sm': small}">
-        {{ collection.title || collectionId }}
+      <div class="property-pill property-resource read-only" :title="collection.uri" v-bind:class="{'sm': small}">
+        {{ getCollectionLabel(collection, collectionId) }}
 
         <download-progress :dataset-id="datasetId" :collection-id="collectionId" :small="true" class="pl-2"/>
       </div>
 
-      <div v-if="!singular && !readOnly" class="mr-2">
+      <span v-if="!singular && !readOnly" class="property-part">
         <button-add @click="$emit('clone')" size="sm" title="Add another property"/>
         <button-delete v-if="allowDelete" class="ml-2" @click="$emit('delete')" size="sm" title="Remove this property"/>
-      </div>
-    </div>
+      </span>
+    </template>
 
-    <div class="property-path property-pills">
-      <template v-for="prop in props">
-        <template v-if="prop.collections">
-          <div class="mx-2">
-            <fa-icon icon="arrow-right"/>
-          </div>
+    <template v-for="prop in props">
+      <template v-if="prop.collections">
+        <fa-icon icon="arrow-right" class="property-part"/>
 
-          <v-select v-if="prop.collection === '' && !readOnly" :value="prop.collection"
-                    :clearable="false" autocomplete="off" placeholder="Choose a referenced collection"
-                    :options="['__value__', ...Object.keys(prop.collections).sort()]"
+        <div v-if="prop.collection === '' && !readOnly" class="property-part">
+          <v-select :value="prop.collection" :clearable="false" autocomplete="off"
+                    placeholder="Choose a referenced collection"
+                    :options="['__value__', ...Object.keys(prop.collections)]"
                     v-bind:class="{'is-invalid': errors.includes(`value_${prop.collectionIdx}`)}"
-                    @input="updateProperty($event, prop.collectionIdx)">
+                    @input="updateProperty($event, prop.collectionIdx)" ref="select">
             <div slot="option" slot-scope="option">
               <div v-if="option.label === '__value__'">
                 <span class="text-success pr-2">Value</span>
-                <span class="font-italic text-muted small">Do not follow reference</span>
+                <span class="font-italic text-muted smaller ml-1">Do not follow reference</span>
               </div>
 
               <template v-else>
                 <div>
-                  <span class="pr-2">{{ prop.collections[option.label].title || option.label }}</span>
-                  <span class="font-italic text-muted small">{{ prop.collections[option.label].total }}</span>
+                  {{ getCollectionLabel(prop.collections[option.label], option.label) }}
+
+                  <span v-if="isSameShortenedAndLongUri(prop.collections[option.label])"
+                        class="smaller font-italic text-muted ml-1">
+                    {{ prop.collections[option.label].uri }}
+                  </span>
+
+                  <span class="font-italic text-muted smaller ml-1">{{ prop.collections[option.label].total }}</span>
                 </div>
 
-                <div class="small pt-1">
+                <div class="smaller pt-1">
                   <download-progress :dataset-id="entityTypeSelection.dataset.dataset_id"
                                      :collection-id="option.label"/>
                 </div>
               </template>
             </div>
           </v-select>
+        </div>
 
-          <div v-else-if="readOnly" class="property-pill read-only" v-bind:class="{'sm': small}">
-            {{ prop.collections[prop.collection].title || prop.collection }}
+        <div v-else-if="readOnly" class="property-pill property-prop read-only"
+             :title="prop.collections[prop.collection].uri" v-bind:class="{'sm': small}">
+          {{ getCollectionLabel(prop.collections[prop.collection], prop.collection) }}
 
-            <download-progress :dataset-id="datasetId" :collection-id="prop.collection" :small="true" class="pl-2"/>
-          </div>
+          <download-progress :dataset-id="datasetId" :collection-id="prop.collection" :small="true" class="pl-2"/>
+        </div>
 
-          <button v-else type="button" class="property-pill"
-                  v-bind:class="{'sm': small}" @click="resetProperty(prop.collectionIdx)">
-            {{ prop.collections[prop.collection].title || prop.collection }}
+        <button v-else type="button" class="property-pill property-prop"
+                :title="prop.collections[prop.collection].uri" v-bind:class="{'sm': small}"
+                @click="resetProperty(prop.collectionIdx)">
+          {{ getCollectionLabel(prop.collections[prop.collection], prop.collection) }}
 
-            <download-progress :dataset-id="datasetId" :collection-id="prop.collection" :small="true" class="pl-2"/>
-          </button>
-        </template>
+          <download-progress :dataset-id="datasetId" :collection-id="prop.collection" :small="true" class="pl-2"/>
+        </button>
+      </template>
 
-        <template v-if="prop.properties && prop.property !== '__value__'">
-          <div v-if="prop.collection" class="mx-2">
-            <fa-icon icon="arrow-right"/>
-          </div>
+      <template v-if="prop.properties && prop.property !== '__value__'">
+        <fa-icon v-if="prop.collection" icon="arrow-right" class="property-part"/>
 
-          <v-select v-if="!prop.property && !readOnly"
-                    :clearable="false" autocomplete="off" placeholder="Choose a property"
-                    :options="Object.keys(prop.properties).sort()" @input="updateProperty($event, prop.propIdx)"
-                    v-bind:class="{'is-invalid': errors.includes(`value_${prop.propIdx}`)}">
+        <div v-if="!prop.property && !readOnly" class="property-part">
+          <v-select :clearable="false" autocomplete="off" placeholder="Choose a property"
+                    :options="Object.keys(prop.properties)" @input="updateProperty($event, prop.propIdx)"
+                    v-bind:class="{'is-invalid': errors.includes(`value_${prop.propIdx}`)}" ref="select">
             <div slot="option" slot-scope="option">
-              <div>{{ option.label }}</div>
+              <div>
+                {{ getPropertyLabel(prop.properties[option.label], option.label) }}
 
-              <div class="clearfix">
-                <ul class="small font-italic text-info inline-list px-0 pt-1">
+                <span v-if="isSameShortenedAndLongUri(prop.properties[option.label])"
+                      class="smaller font-italic text-muted ml-1">
+                {{ prop.properties[option.label].uri }}
+              </span>
+              </div>
+
+              <div class="clearfix smaller font-italic text-info pt-1">
+                <ul class="inline-list px-0">
                   <li>Density: {{ prop.properties[option.label].density }}&percnt;</li>
                   <li v-if="prop.properties[option.label].isValueType">Has values</li>
 
@@ -90,33 +102,36 @@
               </div>
             </div>
           </v-select>
+        </div>
 
-          <div v-else-if="readOnly" class="property-pill read-only" v-bind:class="{'sm': small}">
-            {{ prop.property }}
-          </div>
+        <div v-else-if="readOnly" class="property-pill property-prop read-only"
+             :title="prop.properties[prop.property].uri" v-bind:class="{'sm': small}">
+          {{ getPropertyLabel(prop.properties[prop.property], prop.property) }}
+        </div>
 
-          <button v-else type="button" class="property-pill"
-                  v-bind:class="{'sm': small}" @click="resetProperty(prop.propIdx)">
-            {{ prop.property }}
-          </button>
-        </template>
+        <button v-else type="button" class="property-pill property-prop"
+                :title="prop.properties[prop.property].uri" v-bind:class="{'sm': small}"
+                @click="resetProperty(prop.propIdx)">
+          {{ getPropertyLabel(prop.properties[prop.property], prop.property) }}
+        </button>
       </template>
+    </template>
 
-      <button v-if="notDownloaded.length > 0" type="button" class="property-pill download-pill ml-4"
-              v-bind:class="{'sm': small}" @click="startDownloading">
-        Start downloading missing entities
-      </button>
-    </div>
+    <button v-if="notDownloaded.length > 0" type="button" class="property-pill property-download"
+            v-bind:class="{'sm': small}" @click="startDownloading">
+      Start downloading missing entities
+    </button>
 
-    <div v-if="!entityTypeSelectionInfo && !singular && !readOnly" class="ml-2">
+    <template v-if="!entityTypeSelectionInfo && !singular && !readOnly">
       <button-add @click="$emit('clone')" size="sm" title="Add another property"/>
-      <button-delete v-if="allowDelete" class="ml-2" @click="$emit('delete')" size="sm" title="Remove this property"/>
-    </div>
+      <button-delete v-if="allowDelete" class="ml-2" @click="$emit('delete')"
+                     size="sm" title="Remove this property"/>
+    </template>
   </div>
 </template>
 
 <script>
-    import {EventBus} from "../../eventbus";
+    import {EventBus} from "@/eventbus";
     import ValidationMixin from "../../mixins/ValidationMixin";
 
     export default {
@@ -216,14 +231,52 @@
                     .includes(false);
             },
 
+            getCollectionLabel(collection, collectionId) {
+                return collection.title || collection.shortenedUri || collectionId;
+            },
+
+            getPropertyLabel(property, propertyId) {
+                return property.shortenedUri ? (property.isInverse ? '← ' : '') + property.shortenedUri : propertyId;
+            },
+
             getPropertiesForIndex(index) {
                 const collectionId = index === 0 ? this.collectionId : this.property[index - 1];
                 return this.getPropertiesForCollection(collectionId);
             },
 
+            isSameShortenedAndLongUri(props) {
+                return props.uri && props.shortenedUri !== props.uri;
+            },
+
             getPropertiesForCollection(collectionId) {
-                return this.dataset.collections.hasOwnProperty(collectionId)
-                    ? this.dataset.collections[collectionId].properties : null;
+                if (!this.dataset.collections.hasOwnProperty(collectionId))
+                    return null;
+
+                return Object.fromEntries(
+                    Object
+                        .entries(this.dataset.collections[collectionId].properties)
+                        .sort(([idA, propA], [idB, propB]) => {
+                            if (idA === 'uri')
+                                return -1;
+                            if (idB === 'uri')
+                                return 1;
+
+                            if (propA.shortenedUri && propB.shortenedUri) {
+                                if (propA.shortenedUri === propA.uri && propB.shortenedUri !== propB.uri)
+                                    return 1;
+
+                                if (propB.shortenedUri === propB.uri && propA.shortenedUri !== propA.uri)
+                                    return -1;
+
+                                if (propA.shortenedUri === propB.shortenedUri)
+                                    return propB.isInverse ? -1 : 1;
+
+                                return propA.shortenedUri < propB.shortenedUri ? -1 : 1;
+                            }
+
+                            return idA < idB ? -1 : 1;
+                        })
+                );
             },
 
             getCollectionsForIndex(index) {
@@ -262,17 +315,20 @@
                 const properties = prop ? this.getPropertiesForCollection(collectionId)[prop] : null;
                 if (properties && properties.referencedCollections.length > 0)
                     this.property.push('', '');
+
+                this.$nextTick(_ => {
+                    if (this.$refs.select[0])
+                        this.$refs.select[0].$el.querySelector('input').focus();
+                });
             },
 
             async startDownloading() {
-                const downloads = this.notDownloaded.map(async collection => {
-                    return this.$root.startDownload(
-                        this.entityTypeSelection.dataset.dataset_id,
-                        collection,
-                        this.entityTypeSelection.dataset.timbuctoo_graphql,
-                        this.entityTypeSelection.dataset.timbuctoo_hsid
-                    );
-                });
+                const downloads = this.notDownloaded.map(async collection => this.$root.startDownload(
+                    this.entityTypeSelection.dataset.dataset_id,
+                    collection,
+                    this.entityTypeSelection.dataset.timbuctoo_graphql,
+                    this.entityTypeSelection.dataset.timbuctoo_hsid
+                ));
 
                 await Promise.all(downloads);
                 EventBus.$emit('refreshDownloadsInProgress');

@@ -90,7 +90,7 @@ class Collection:
                         dataset_uri, dataset_name, title, description, 
                         collection_uri, collection_title, collection_shortened_uri, 
                         total, columns, create_time)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, now())
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, now())
                 ''', (self.table_name, self._graphql_endpoint, self._hsid, self._dataset_id, self._collection_id,
                       dataset['uri'], dataset['name'], dataset['title'], dataset['description'],
                       collection['uri'], collection['title'], collection['shortenedUri'],

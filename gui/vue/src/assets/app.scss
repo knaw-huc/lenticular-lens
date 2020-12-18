@@ -235,45 +235,53 @@ ul.inline-list li:not(:first-child):before {
 
 .property {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  padding-left: 3em;
 
-  .property-resource, .property-path {
-    display: inline-flex;
-    align-items: baseline;
+  .vs__search {
+    line-height: 1;
+    font-size: 0.9em;
   }
 
   .property-pill {
     @extend .btn;
     @extend .border;
+    @extend .border-info;
     @extend .rounded-pill;
-    @extend .py-0;
-    @extend .my-1;
     @extend .text-break-all;
+
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    margin: 0.25rem;
 
     &.sm {
       @extend .btn-sm;
     }
   }
 
+  .property-pill:first-child, .property-part:first-child {
+    margin-left: -3em;
+  }
+
+  .property-pill:last-child, .property-part:last-child {
+    margin-right: 0;
+  }
+
+  .property-part {
+    margin: 0 0.25rem;
+  }
+
   .property-resource {
-    flex: 0 0 auto;
-  }
-
-  .property-path {
-    flex-wrap: wrap;
-  }
-
-  .resource-pills .property-pill {
-    @extend .border-info;
     @extend .bg-white;
   }
 
-  .property-pills .property-pill {
-    @extend .border-info;
+  .property-prop {
     @extend .bg-info;
     @extend .text-white;
   }
 
-  .property-pill.download-pill {
+  .property-download {
     font-size: 0.9em;
 
     @extend .border-warning;
@@ -285,11 +293,9 @@ ul.inline-list li:not(:first-child):before {
   .property-values {
     flex-shrink: 1;
     padding: 0;
+    margin: 0 0.25rem;
 
     @extend .text-info;
-    @extend .mb-0;
-    @extend .mt-1;
-    @extend .ml-2;
   }
 }
 
