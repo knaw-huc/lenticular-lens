@@ -1,10 +1,14 @@
+import logging
+
 from json import dumps
 
-from ll.util.helpers import hash_string
 from ll.data.timbuctoo import Timbuctoo
 from ll.util.config_db import db_conn, fetch_one
+from ll.util.hasher import table_name_hash, column_name_hash
 
 from psycopg2 import extras as psycopg2_extras, sql as psycopg2_sql
+
+log = logging.getLogger(__name__)
 
 
 class Collection:
@@ -35,7 +39,7 @@ class Collection:
 
     @property
     def table_name(self):
-        return hash_string(self._graphql_endpoint + self._dataset_id + self._collection_id)
+        return table_name_hash(self._graphql_endpoint, self._dataset_id, self._collection_id)
 
     @property
     def columns(self):
@@ -75,7 +79,7 @@ class Collection:
     def start_download(self):
         (dataset, collection) = self.timbuctoo_dataset_and_collection
         if dataset and collection:
-            columns = {'uri' if col_name == 'uri' else hash_string(col_name.lower()): col_info
+            columns = {'uri' if col_name == 'uri' else column_name_hash(col_name): col_info
                        for col_name, col_info in collection['properties'].items()}
 
             with db_conn() as conn, conn.cursor() as cur:
@@ -99,7 +103,7 @@ class Collection:
     def update(self):
         (dataset, collection) = self.timbuctoo_dataset_and_collection
         if dataset and collection:
-            columns = {'uri' if col_name == 'uri' else hash_string(col_name.lower()): col_info
+            columns = {'uri' if col_name == 'uri' else column_name_hash(col_name): col_info
                        for col_name, col_info in collection['properties'].items()}
 
             with db_conn() as conn, conn.cursor() as cur:
@@ -112,6 +116,43 @@ class Collection:
                 ''', (dataset['uri'], dataset['name'], dataset['title'], dataset['description'],
                       collection['uri'], collection['title'], collection['shortenedUri'],
                       collection['total'], dumps(columns), self.table_name))
+
+    @staticmethod
+    def update_ids():
+        with db_conn() as conn, conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) as cur:
+            cur.execute('SELECT * FROM timbuctoo_tables')
+            for timbuctoo_table in cur.fetchall():
+                old_table_name = timbuctoo_table['table_name']
+                new_table_name = table_name_hash(timbuctoo_table['graphql_endpoint'],
+                                                 timbuctoo_table['dataset_id'],
+                                                 timbuctoo_table['collection_id'])
+
+                old_col_names = {col_info['name']: col_name
+                                 for col_name, col_info in timbuctoo_table['columns'].items()}
+                columns = {'uri' if col_name == 'uri' else column_name_hash(col_info['name']): col_info
+                           for col_name, col_info in timbuctoo_table['columns'].items()}
+
+                cur.execute('''
+                    UPDATE timbuctoo_tables
+                    SET "table_name" = %s, columns = %s
+                    WHERE "table_name" = %s
+                ''', (new_table_name, dumps(columns), old_table_name))
+
+                if old_table_name != new_table_name:
+                    cur.execute('ALTER TABLE "{}" RENAME TO "{}"'.format(old_table_name, new_table_name))
+
+                for new_col_name, col_info in columns.items():
+                    if new_col_name != 'uri' and old_col_names[col_info['name']] != new_col_name:
+                        cur.execute('''
+                            SELECT count(*) 
+                            FROM information_schema.columns
+                            WHERE table_name = %s 
+                            AND column_name = %s
+                        ''', (new_table_name, old_col_names[col_info['name']]))
+
+                        if cur.fetchone()['count'] == 1:
+                            cur.execute('ALTER TABLE "{}" RENAME COLUMN "{}" TO "{}"'
+                                        .format(new_table_name, old_col_names[col_info['name']], new_col_name))
 
     @staticmethod
     def columns_sql(columns):

@@ -16,7 +16,8 @@ from ll.data.query import get_property_values, get_property_values_queries, get_
     get_linkset_join_sql, get_linkset_cluster_join_sql, get_table_info
 
 from ll.util.config_db import db_conn, fetch_one
-from ll.util.helpers import hasher, get_pagination_sql
+from ll.util.helpers import get_pagination_sql
+from ll.util.hasher import hasher
 
 
 class Validation(IntFlag):

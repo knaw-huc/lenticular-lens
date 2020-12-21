@@ -5,7 +5,8 @@ from inspect import cleandoc
 from psycopg2 import sql as psycopg2_sql
 
 from ll.data.property_field import PropertyField
-from ll.util.helpers import hash_string, get_json_from_file
+from ll.util.helpers import get_json_from_file
+from ll.util.hasher import hash_string_min
 
 
 class MatchingFunction:
@@ -19,7 +20,7 @@ class MatchingFunction:
         self._targets = []
         self._intermediates = []
 
-        self.field_name = hash_string(json.dumps(function_obj))
+        self.field_name = hash_string_min(json.dumps(function_obj))
 
         self.method_name = function_obj['method_name']
         self._method_config = function_obj['method_config']

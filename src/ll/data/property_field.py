@@ -1,5 +1,7 @@
 from psycopg2 import sql as psycopg2_sql
-from ll.util.helpers import hash_string, get_string_from_sql
+
+from ll.util.helpers import get_string_from_sql
+from ll.util.hasher import hash_string_min, column_name_hash
 
 
 class PropertyField:
@@ -22,7 +24,7 @@ class PropertyField:
     @property
     def hash(self):
         if not self._hash:
-            self._hash = hash_string(get_string_from_sql(self.sql))
+            self._hash = hash_string_min(get_string_from_sql(self.sql))
         return self._hash
 
     @property
@@ -33,7 +35,7 @@ class PropertyField:
             property_array = self._data.copy()
 
         if len(property_array) == 2 and property_array[1] != 'uri':
-            property_array[1] = hash_string(property_array[1])
+            property_array[1] = column_name_hash(property_array[1])
 
         return property_array
 
@@ -51,7 +53,7 @@ class PropertyField:
 
     @property
     def extended_prop_label(self):
-        return hash_string('.'.join(self.absolute_property)) + '_extended'
+        return hash_string_min('.'.join(self.absolute_property)) + '_extended'
 
     @property
     def is_list(self):

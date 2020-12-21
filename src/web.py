@@ -11,8 +11,9 @@ from werkzeug.routing import BaseConverter, ValidationError
 
 from ll.job.data import Job, Validation
 
+from ll.util.hasher import hash_string
 from ll.util.logging import config_logger
-from ll.util.helpers import hash_string, get_association_files
+from ll.util.helpers import get_association_files
 
 from ll.data.collection import Collection
 from ll.data.timbuctoo_datasets import TimbuctooDatasets
@@ -53,6 +54,12 @@ app.url_map.converters['type'] = TypeConverter
 @app.route('/')
 def index():
     return app.send_static_file('index.html')
+
+
+@app.route('/update_once')
+def update_once():
+    Collection.update_ids()
+    return jsonify({'result': 'updated'})
 
 
 @app.route('/datasets')

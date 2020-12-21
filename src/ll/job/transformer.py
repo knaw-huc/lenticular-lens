@@ -1,6 +1,8 @@
 from functools import reduce
 from schema import Schema, SchemaError, And, Or, Use, Optional
-from ll.util.helpers import hash_string, get_json_from_file
+
+from ll.util.hasher import hash_string_min
+from ll.util.helpers import get_json_from_file
 
 filter_functions = get_json_from_file('filter_functions.json')
 matching_functions = get_json_from_file('matching_functions.json')
@@ -125,7 +127,7 @@ def transform(entity_type_selections_org, linkset_specs_org, lens_specs_org):
         if len(property) == 1 or property[1] == '__value__':
             return [entity_type_selection['internal_id'], property[0]]
 
-        referenced_ets_id = hash_string(entity_type_selection['internal_id'] + property[0] + property[1])
+        referenced_ets_id = hash_string_min(entity_type_selection['internal_id'] + property[0] + property[1])
         referenced_ets = next((ref for ref in ref_entity_type_selections if ref['internal_id'] == referenced_ets_id), {
             'internal_id': referenced_ets_id,
             'dataset': {
@@ -249,7 +251,7 @@ def transform(entity_type_selections_org, linkset_specs_org, lens_specs_org):
     for entity_type_selection_org in entity_type_selections_org:
         try:
             entity_type_selection = entity_type_selection_schema.validate(entity_type_selection_org)
-            entity_type_selection['internal_id'] = hash_string(str(entity_type_selection['id']))
+            entity_type_selection['internal_id'] = hash_string_min(str(entity_type_selection['id']))
             entity_type_selection['properties'] = [prop for prop in entity_type_selection['properties'] if prop != '']
             entity_type_selections.append(entity_type_selection)
         except SchemaError:

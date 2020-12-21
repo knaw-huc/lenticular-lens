@@ -1,7 +1,7 @@
 from psycopg2 import sql as psycopg2_sql
 
 from ll.util.config_db import db_conn
-from ll.util.helpers import hash_string
+from ll.util.hasher import column_name_hash
 
 from ll.worker.job import WorkerJob
 from ll.data.timbuctoo import Timbuctoo
@@ -89,7 +89,7 @@ class TimbuctooJob(WorkerJob):
             for item in query_result['items']:
                 # Property names can be too long for column names in Postgres, so make them shorter
                 # We use hashing, because that keeps the column names unique and uniform
-                result = {'uri' if name == 'uri' else hash_string(name.lower()): self.extract_value(item[name])
+                result = {'uri' if name == 'uri' else column_name_hash(name): self.extract_value(item[name])
                           for name in item}
 
                 results.append(result)

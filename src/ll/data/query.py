@@ -5,7 +5,8 @@ from ll.data.joins import Joins
 from ll.data.property_field import PropertyField
 
 from ll.util.config_db import db_conn, fetch_one
-from ll.util.helpers import hasher, hash_string, get_pagination_sql
+from ll.util.helpers import get_pagination_sql
+from ll.util.hasher import hasher, hash_string_min
 
 
 def get_property_values(query, dict=True):
@@ -155,7 +156,7 @@ def get_property_field(graph, joins, cur_resource, cur_columns, property_path):
         target_resource = property_path_copy.pop(0)
 
         next_table_info = get_table_info(graph, target_resource)
-        next_resource = hash_string(cur_resource + '_' + target_resource + '_' + column)
+        next_resource = hash_string_min(cur_resource + '_' + target_resource + '_' + column)
 
         local_property = PropertyField(column, parent_label=cur_resource, columns=cur_columns)
         remote_property = PropertyField('uri', parent_label=next_resource, columns=next_table_info['columns'])

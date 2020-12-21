@@ -2,16 +2,9 @@ import re
 import datetime
 import jstyleson
 
-from hashlib import md5
 from os.path import join, dirname, realpath
 
 from ll.util.config_db import db_conn
-
-
-def hasher(object):
-    h = md5()
-    h.update(bytes(object.__str__(), encoding='utf-8'))
-    return F"H{h.hexdigest()[:15]}"
 
 
 def file_date():
@@ -30,10 +23,6 @@ def get_json_from_file(filename):
 def get_string_from_sql(sql):
     with db_conn() as conn:
         return sql.as_string(conn)
-
-
-def hash_string(to_hash):
-    return md5(to_hash.encode('utf-8')).hexdigest()
 
 
 def is_nt_format(resource):

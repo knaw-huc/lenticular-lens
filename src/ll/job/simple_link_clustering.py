@@ -1,5 +1,6 @@
 import logging
-from ll.util.helpers import hasher, to_nt_format
+from ll.util.helpers import to_nt_format
+from ll.util.hasher import hasher
 
 log = logging.getLogger(__name__)
 

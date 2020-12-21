@@ -1,6 +1,6 @@
 from os.path import join
 
-from ll.util.helpers import hasher
+from ll.util.hasher import hasher
 from ll.util.config_db import db_conn
 from ll.job.data import Job as JobLL
 

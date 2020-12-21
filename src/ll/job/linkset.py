@@ -1,7 +1,7 @@
 from inspect import cleandoc
 from psycopg2 import sql as psycopg_sql
 
-from ll.util.helpers import hash_string
+from ll.util.hasher import hash_string_min
 from ll.job.conditions import Conditions
 
 
@@ -204,7 +204,7 @@ class Linkset:
                     target = 'target'
                     fields = [prop.hash for prop in ets_method_properties]
                     if any(all(elem in fields for elem in prev_field) for prev_field in prev_fields):
-                        target = hash_string(property_label)
+                        target = hash_string_min(property_label)
                         joins.append(
                             psycopg_sql.SQL('JOIN {res} AS {join_name} ON target.uri = {join_name}.uri').format(
                                 res=psycopg_sql.Identifier(ets_internal_id),
@@ -244,7 +244,7 @@ class Linkset:
 
                 if matching_func.method_name == 'INTERMEDIATE':
                     for intermediate_ets, intermediate_ets_props in matching_func.intermediates.items():
-                        target = hash_string(intermediate_ets)
+                        target = hash_string_min(intermediate_ets)
                         intermediate_field = intermediate_ets_props['source'] \
                             if is_source else intermediate_ets_props['target']
 
