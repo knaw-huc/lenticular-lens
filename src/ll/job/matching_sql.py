@@ -120,7 +120,7 @@ class MatchingSql:
                             ELSE 'both'::link_order END AS link_order,
                        array_agg(DISTINCT source.collection) AS source_collections,
                        array_agg(DISTINCT target.collection) AS target_collections,
-                       {similarities} AS similarities
+                       {similarities} AS similarity
                 FROM source
                 JOIN target ON (source.uri != target.uri)
                 AND {conditions}

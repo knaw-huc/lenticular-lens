@@ -417,7 +417,7 @@ class Job:
 
         with db_conn() as conn, conn.cursor(name=uuid4().hex) as cur:
             cur.execute(sql.SQL('SELECT links.source_uri, links.target_uri, link_order, '
-                                '       similarities, cluster_id, valid '
+                                '       similarity, cluster_id, valid '
                                 'FROM {view_name} AS links '
                                 '{where_sql} '
                                 'ORDER BY sort_order ASC {limit_offset}').format(

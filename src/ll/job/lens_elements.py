@@ -93,7 +93,7 @@ class LensElements:
                 CASE WHEN l.link_order = r.link_order THEN l.link_order ELSE 'both'::link_order END AS link_order,
                 ARRAY(SELECT DISTINCT unnest(l.source_collections || r.source_collections)) AS source_collections,
                 ARRAY(SELECT DISTINCT unnest(l.target_collections || r.target_collections)) AS target_collections,
-                coalesce(jsonb_merge(l.similarities, r.similarities), l.similarities, r.similarities) AS similarities,
+                coalesce(jsonb_merge(l.similarity, r.similarity), l.similarity, r.similarity) AS similarity,
                 CASE WHEN l.valid = r.valid 
                      THEN l.valid ELSE coalesce(l.valid, r.valid, 'mixed'::link_validity) END AS valid
         '''))
