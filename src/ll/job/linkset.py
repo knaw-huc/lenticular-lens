@@ -3,6 +3,7 @@ from psycopg2 import sql as psycopg_sql
 
 from ll.util.hasher import hash_string_min
 from ll.job.conditions import Conditions
+from ll.util.helpers import get_sql_empty
 
 
 class Linkset:
@@ -267,17 +268,17 @@ class Linkset:
 
             sql.append(
                 psycopg_sql.SQL(cleandoc(
-                    """SELECT DISTINCT {collection} AS collection, target.uri, 
-                                       {matching_fields}
-                       FROM {res} AS target
-                       {joins}
-                       WHERE {props_not_null}"""
+                    """ SELECT DISTINCT {collection} AS collection, target.uri, 
+                                        {matching_fields}
+                        FROM {res} AS target {joins}
+                        WHERE {props_not_null}
+                   """
                 )).format(
                     collection=psycopg_sql.Literal(ets_internal_id),
                     matching_fields=psycopg_sql.SQL(',\n                ').join(matching_fields),
                     res=psycopg_sql.Identifier(ets_internal_id),
-                    joins=psycopg_sql.SQL('\n').join(joins),
-                    props_not_null=psycopg_sql.SQL('\n  OR ').join(props_not_null),
+                    joins=get_sql_empty(psycopg_sql.SQL('\n').join(joins)),
+                    props_not_null=psycopg_sql.SQL('\nOR ').join(props_not_null),
                 )
             )
 

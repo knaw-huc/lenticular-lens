@@ -2,6 +2,7 @@ import re
 import datetime
 import jstyleson
 
+from psycopg2 import sql as psycopg2_sql
 from os.path import join, dirname, realpath
 
 from ll.util.config_db import db_conn
@@ -35,6 +36,13 @@ def to_nt_format(resource):
         return resource
 
     return '<{}>'.format(resource)
+
+
+def get_sql_empty(sql, add_new_line=True):
+    if not sql or sql == psycopg2_sql.SQL('') or sql == psycopg2_sql.Composed([]):
+        return psycopg2_sql.SQL('')
+
+    return psycopg2_sql.Composed([psycopg2_sql.SQL('\n'), sql]) if add_new_line else sql
 
 
 def get_pagination_sql(limit=None, offset=0):

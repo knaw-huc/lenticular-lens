@@ -2,7 +2,7 @@ import locale
 
 from psycopg2 import sql
 from inspect import cleandoc
-from ll.util.helpers import get_string_from_sql
+from ll.util.helpers import get_string_from_sql, get_sql_empty
 
 locale.setlocale(locale.LC_ALL, '')
 
@@ -17,36 +17,29 @@ class MatchingSql:
 
         return sql.Composed([
             sql.SQL('CREATE SCHEMA IF NOT EXISTS {};\n').format(schema_name_sql),
-            sql.SQL('SET SEARCH_PATH TO "$user", {}, public;').format(schema_name_sql),
+            sql.SQL('SET SEARCH_PATH TO "$user", {}, public;\n').format(schema_name_sql),
         ])
 
     def generate_entity_type_selection_sql(self):
         entity_type_selections_sql = []
         for entity_type_selection in self._job.entity_type_selections_required_for_linkset(self._linkset.id):
-            pre = sql.SQL('SELECT * FROM (') if entity_type_selection.limit > -1 else sql.SQL('')
-
-            entity_type_selection_sql = sql.SQL(cleandoc(
+            entity_type_selections_sql.append(sql.SQL(cleandoc(
                 """ DROP MATERIALIZED VIEW IF EXISTS {view_name} CASCADE;
                     CREATE MATERIALIZED VIEW {view_name} AS
                     {pre}SELECT DISTINCT {matching_fields}
-                    FROM timbuctoo.{table_name} AS {view_name} 
-                    {joins} 
-                    {wheres}
-                    ORDER BY uri {limit};
+                    FROM timbuctoo.{table_name} AS {view_name}{joins}{wheres}{limit};
                     
                     ANALYZE {view_name};
                 """
             ) + '\n').format(
-                pre=pre,
+                pre=sql.SQL('SELECT * FROM (') if entity_type_selection.limit > -1 else sql.SQL(''),
                 view_name=sql.Identifier(entity_type_selection.internal_id),
                 matching_fields=entity_type_selection.matching_fields_sql(self._linkset),
                 table_name=sql.Identifier(entity_type_selection.table_name),
-                joins=entity_type_selection.joins(self._linkset).sql,
-                wheres=entity_type_selection.where_sql,
-                limit=entity_type_selection.limit_sql,
-            )
-
-            entity_type_selections_sql.append(entity_type_selection_sql)
+                joins=get_sql_empty(entity_type_selection.joins(self._linkset).sql),
+                wheres=get_sql_empty(entity_type_selection.where_sql),
+                limit=get_sql_empty(entity_type_selection.limit_sql),
+            ))
 
         return sql.Composed(entity_type_selections_sql)
 
@@ -174,17 +167,17 @@ class MatchingSql:
     @property
     def sql_string(self):
         sql_str = get_string_from_sql(self.generate_schema_sql())
-        sql_str += '\n\n'
+        sql_str += '\n'
         sql_str += get_string_from_sql(self.generate_entity_type_selection_sql())
-        sql_str += '\n\n'
+        sql_str += '\n'
         sql_str += get_string_from_sql(self.generate_match_source_sql())
-        sql_str += '\n\n'
+        sql_str += '\n'
         sql_str += get_string_from_sql(self.generate_match_target_sql())
-        sql_str += '\n\n'
+        sql_str += '\n'
         sql_str += get_string_from_sql(self.generate_match_index_and_sequence_sql())
-        sql_str += '\n\n'
+        sql_str += '\n'
         sql_str += get_string_from_sql(self.generate_match_linkset_sql())
-        sql_str += '\n\n'
+        sql_str += '\n'
         sql_str += get_string_from_sql(self.generate_match_linkset_finish_sql())
 
         return sql_str

@@ -145,7 +145,7 @@ class EntityTypeSelection:
                 return psycopg2_sql.SQL('')
 
             filter_sqls = map(self._r_get_filter_sql, filter_obj['conditions'])
-            return psycopg2_sql.SQL('({})').format(psycopg2_sql.SQL('\n %s ' % filter_obj['type']).join(filter_sqls))
+            return psycopg2_sql.SQL('({})').format(psycopg2_sql.SQL('\n%s ' % filter_obj['type']).join(filter_sqls))
 
         property = PropertyField(filter_obj['property'], job=self._job)
         return FilterFunction(filter_obj, property).sql

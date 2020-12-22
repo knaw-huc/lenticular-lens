@@ -198,7 +198,7 @@ def sql(job, type, id):
     from ll.job.lens_sql import LensSql
 
     job_sql = MatchingSql(job, id) if type == 'linkset' else LensSql(job, id)
-    return Response(job_sql.sql_string, mimetype='application/sql')
+    return Response(job_sql.sql_string, mimetype='text/plain')
 
 
 @app.route('/job/<job:job>/kill_linkset/<int:id>', methods=['POST'])
