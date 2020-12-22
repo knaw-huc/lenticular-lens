@@ -19,8 +19,6 @@ class ClusteringJob(WorkerJob):
         super().__init__(self.start_clustering)
 
     def start_clustering(self):
-        table_name = self._job.linkset_table_name(self._id) \
-            if self._type == 'linkset' else self._job.lens_table_name(self._id)
         links = self._job.get_links(self._id, self._type)
 
         with self._db_conn.cursor() as cur:
@@ -32,10 +30,11 @@ class ClusteringJob(WorkerJob):
                         source=psycopg2_sql.Literal(link[0]), target=psycopg2_sql.Literal(link[1])
                     ) for link in cluster['links'][i:i + 1000]]
 
-                    cur.execute(psycopg2_sql.SQL('UPDATE {table_name} '
+                    cur.execute(psycopg2_sql.SQL('UPDATE {schema}.{table_name} '
                                                  'SET cluster_id = {cluster_id} '
                                                  'WHERE {links}').format(
-                        table_name=psycopg2_sql.Identifier(table_name),
+                        schema=psycopg2_sql.Identifier('linksets' if self._type == 'linkset' else 'lenses'),
+                        table_name=psycopg2_sql.Identifier(self._job.table_name(self._id)),
                         cluster_id=psycopg2_sql.Literal(cluster['id']),
                         links=psycopg2_sql.SQL(' OR ').join(link_sqls)
                     ))

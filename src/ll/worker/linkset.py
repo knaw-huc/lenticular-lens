@@ -83,7 +83,7 @@ class LinksetJob(WorkerJob):
     def get_sequence_count(self, conn, cur, sequence, data, key):
         try:
             cur.execute(psycopg2_sql.SQL('SELECT is_called, last_value FROM {linkset_schema}.{sequence}').format(
-                linkset_schema=psycopg2_sql.Identifier(self._job.linkset_schema_name(self._id)),
+                linkset_schema=psycopg2_sql.Identifier(self._job.schema_name(self._id)),
                 sequence=psycopg2_sql.Identifier(sequence)
             ))
 
@@ -99,7 +99,7 @@ class LinksetJob(WorkerJob):
         try:
             if table not in self._distinct_counts:
                 cur.execute(psycopg2_sql.SQL('SELECT count(DISTINCT uri) FROM {linkset_schema}.{table_name}').format(
-                    linkset_schema=psycopg2_sql.Identifier(self._job.linkset_schema_name(self._id)),
+                    linkset_schema=psycopg2_sql.Identifier(self._job.schema_name(self._id)),
                     table_name=psycopg2_sql.Identifier(table)
                 ))
                 self._distinct_counts[table] = cur.fetchone()[0]
@@ -131,26 +131,26 @@ class LinksetJob(WorkerJob):
 
         with db_conn() as conn, conn.cursor() as cur:
             cur.execute(psycopg2_sql.SQL('''
-                SELECT  (SELECT count(*) FROM {linkset_table}) AS links_count,
+                SELECT  (SELECT count(*) FROM linksets.{linkset_table}) AS links_count,
                         (SELECT count(DISTINCT uri) FROM {linkset_schema}.source) AS sources_count,
                         (SELECT count(DISTINCT uri) FROM {linkset_schema}.target) AS targets_count,
                         (SELECT count(DISTINCT uris.uri) FROM (
-                            SELECT source_uri AS uri FROM {linkset_table} 
+                            SELECT source_uri AS uri FROM linksets.{linkset_table} 
                             WHERE link_order = 'source_target' OR link_order = 'both'
                             UNION ALL
-                            SELECT target_uri AS uri FROM {linkset_table} 
+                            SELECT target_uri AS uri FROM linksets.{linkset_table} 
                             WHERE link_order = 'target_source' OR link_order = 'both'
                         ) AS uris) AS linkset_sources_count,
                         (SELECT count(DISTINCT uris.uri) FROM (
-                            SELECT target_uri AS uri FROM {linkset_table} 
+                            SELECT target_uri AS uri FROM linksets.{linkset_table} 
                             WHERE link_order = 'source_target' OR link_order = 'both'
                             UNION ALL
-                            SELECT source_uri AS uri FROM {linkset_table} 
+                            SELECT source_uri AS uri FROM linksets.{linkset_table} 
                             WHERE link_order = 'target_source' OR link_order = 'both'
                         ) AS uris) AS linkset_targets_count
             ''').format(
-                linkset_table=psycopg2_sql.Identifier(self._job.linkset_table_name(self._id)),
-                linkset_schema=psycopg2_sql.Identifier(self._job.linkset_schema_name(self._id)),
+                linkset_table=psycopg2_sql.Identifier(self._job.table_name(self._id)),
+                linkset_schema=psycopg2_sql.Identifier(self._job.schema_name(self._id)),
             ))
 
             result = cur.fetchone()
@@ -162,7 +162,7 @@ class LinksetJob(WorkerJob):
             linkset_targets = result[4]
 
             cur.execute(psycopg2_sql.SQL('DROP SCHEMA {} CASCADE')
-                        .format(psycopg2_sql.Identifier(self._job.linkset_schema_name(self._id))))
+                        .format(psycopg2_sql.Identifier(self._job.schema_name(self._id))))
 
             cur.execute("UPDATE linksets "
                         "SET status = %s, status_message = null, distinct_links_count = %s, "
@@ -173,8 +173,8 @@ class LinksetJob(WorkerJob):
                         ('done', links, sources, targets, linkset_sources, linkset_targets, self._job_id, self._id))
 
             if links == 0:
-                cur.execute(psycopg2_sql.SQL('DROP TABLE {} CASCADE')
-                            .format(psycopg2_sql.Identifier(self._job.linkset_table_name(self._id))))
+                cur.execute(psycopg2_sql.SQL('DROP TABLE linksets.{} CASCADE')
+                            .format(psycopg2_sql.Identifier(self._job.table_name(self._id))))
             else:
                 cur.execute("SELECT * FROM clusterings WHERE job_id = %s AND spec_id = %s AND spec_type = 'linkset'",
                             (self._job_id, self._id))
@@ -200,4 +200,4 @@ class LinksetJob(WorkerJob):
     def cleanup(self):
         with db_conn() as conn, conn.cursor() as cur:
             cur.execute(psycopg2_sql.SQL('DROP SCHEMA {} CASCADE')
-                        .format(psycopg2_sql.Identifier(self._job.linkset_schema_name(self._id))))
+                        .format(psycopg2_sql.Identifier(self._job.schema_name(self._id))))

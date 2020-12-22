@@ -220,11 +220,13 @@ class Job:
 
             if type == 'linkset':
                 cur.execute('DELETE FROM linksets WHERE job_id = %s AND spec_id = %s', (self.job_id, id))
-                cur.execute(sql.SQL('DROP TABLE IF EXISTS {}').format(sql.Identifier(self.linkset_table_name(id))))
+                cur.execute(sql.SQL('DROP TABLE IF EXISTS linksets.{}')
+                            .format(sql.Identifier(self.table_name(id))))
 
             if type == 'lens':
                 cur.execute('DELETE FROM lenses WHERE job_id = %s AND spec_id = %s', (self.job_id, id))
-                cur.execute(sql.SQL('DROP TABLE IF EXISTS {}').format(sql.Identifier(self.lens_table_name(id))))
+                cur.execute(sql.SQL('DROP TABLE IF EXISTS lenses.{}')
+                            .format(sql.Identifier(self.table_name(id))))
 
     def validate_link(self, id, type, source_uri, target_uri, valid):
         linksets = set() if type == 'lens' else {id}
@@ -241,22 +243,23 @@ class Job:
 
         with db_conn() as conn, conn.cursor() as cur:
             for linkset_id in linksets:
-                query = sql.SQL('UPDATE {} SET valid = %s WHERE source_uri = %s AND target_uri = %s') \
-                    .format(sql.Identifier(self.linkset_table_name(linkset_id)))
+                query = sql.SQL('UPDATE linksets.{} SET valid = %s WHERE source_uri = %s AND target_uri = %s') \
+                    .format(sql.Identifier(self.table_name(linkset_id)))
                 cur.execute(query, (valid, source_uri, target_uri))
 
             if type == 'lens':
-                query = sql.SQL('UPDATE {} SET valid = %s WHERE source_uri = %s AND target_uri = %s') \
-                    .format(sql.Identifier(self.lens_table_name(id)))
+                query = sql.SQL('UPDATE lenses.{} SET valid = %s WHERE source_uri = %s AND target_uri = %s') \
+                    .format(sql.Identifier(self.table_name(id)))
                 cur.execute(query, (valid, source_uri, target_uri))
             else:
                 for lens_spec in self.lens_specs:
                     if linkset_id in lens_spec.linksets:
                         validities_sql = sql.SQL(' UNION ALL ').join(
                             sql.Composed([
-                                sql.SQL('SELECT valid FROM {table} '
+                                sql.SQL('SELECT valid '
+                                        'FROM linksets.{table} '
                                         'WHERE source_uri = {source_uri} AND target_uri = {target_uri}').format(
-                                    table=sql.Identifier(self.linkset_table_name(linkset)),
+                                    table=sql.Identifier(self.table_name(linkset)),
                                     source_uri=sql.Literal(source_uri), target_uri=sql.Literal(target_uri)
                                 ) for linkset in lens_spec.linksets if linkset != linkset_id
                             ])
@@ -266,8 +269,8 @@ class Job:
                         validities = [result[0] for result in cur.fetchall()]
                         valid_lens = 'mixed' if validities and valid not in validities else valid
 
-                        query = sql.SQL('UPDATE {} SET valid = %s WHERE source_uri = %s AND target_uri = %s') \
-                            .format(sql.Identifier(self.lens_table_name(lens_spec.id)))
+                        query = sql.SQL('UPDATE lenses.{} SET valid = %s WHERE source_uri = %s AND target_uri = %s') \
+                            .format(sql.Identifier(self.table_name(lens_spec.id)))
                         cur.execute(query, (valid_lens, source_uri, target_uri))
 
     def properties_for_entity_type_selection(self, entity_type_selection, downloaded_only=True):
@@ -277,14 +280,11 @@ class Job:
     def value_targets_for_properties(self, properties, downloaded_only=True):
         return self._value_targets(properties, downloaded_only)
 
-    def linkset_schema_name(self, id):
+    def schema_name(self, id):
         return 'job_' + self.job_id + '_' + str(id)
 
-    def linkset_table_name(self, id):
-        return 'linkset_' + self.job_id + '_' + str(id)
-
-    def lens_table_name(self, id):
-        return 'lens_' + self.job_id + '_' + str(id)
+    def table_name(self, id):
+        return self.job_id + '_' + str(id)
 
     def entity_type_selections_required_for_linkset(self, id):
         linkset_spec = self.get_linkset_spec_by_id(id)
@@ -380,8 +380,7 @@ class Job:
 
     def get_links(self, id, type, validation_filter=Validation.ALL, cluster_id=None, uri=None,
                   limit=None, offset=0, include_props=False):
-        view_name = sql.Identifier(self.linkset_table_name(id)) \
-            if type == 'linkset' else sql.Identifier(self.lens_table_name(id))
+        schema = 'lenses' if type == 'lens' else 'linksets'
 
         validation_filter_sql = []
         if validation_filter < Validation.ALL and Validation.ACCEPTED in validation_filter:
@@ -411,17 +410,18 @@ class Job:
                 if type == 'lens' else self.get_linkset_spec_by_id(id).properties
             targets = self.value_targets_for_properties(properties)
             if targets:
-                joins = get_linkset_join_sql(view_name, where_sql, limit, offset)
+                joins = get_linkset_join_sql(schema, self.table_name(id), where_sql, limit, offset)
                 queries = get_property_values_queries(targets, joins=joins)
                 values = get_property_values(queries, dict=True)
 
         with db_conn() as conn, conn.cursor(name=uuid4().hex) as cur:
             cur.execute(sql.SQL('SELECT links.source_uri, links.target_uri, link_order, '
                                 '       similarity, cluster_id, valid '
-                                'FROM {view_name} AS links '
+                                'FROM {schema}.{view_name} AS links '
                                 '{where_sql} '
                                 'ORDER BY sort_order ASC {limit_offset}').format(
-                view_name=view_name,
+                schema=sql.Identifier(schema),
+                view_name=sql.Identifier(self.table_name(id)),
                 where_sql=where_sql,
                 limit_offset=sql.SQL(limit_offset_sql)
             ))
@@ -438,15 +438,12 @@ class Job:
                         'target': link[1],
                         'target_values': values[link[1]] if values and link[1] in values else None,
                         'link_order': link[2],
-                        'similarities': link[3] if link[3] else {},
+                        'similarity': link[3] if link[3] else {},
                         'cluster_id': link[4],
                         'valid': link[5]
                     }
 
     def get_links_totals(self, id, type, cluster_id=None, uri=None):
-        view_name = sql.Identifier(self.linkset_table_name(id)) \
-            if type == 'linkset' else sql.Identifier(self.lens_table_name(id))
-
         conditions = []
         if cluster_id:
             conditions.append(sql.SQL('cluster_id = {cluster_id}').format(cluster_id=sql.Literal(cluster_id)))
@@ -458,17 +455,17 @@ class Job:
 
         with db_conn() as conn, conn.cursor() as cur:
             cur.execute(sql.SQL('SELECT valid, count(*) AS valid_count '
-                                'FROM {view_name} AS links '
+                                'FROM {schema}.{view_name} AS links '
                                 '{where_sql} '
                                 'GROUP BY valid').format(
-                view_name=view_name,
+                schema=sql.Identifier('lenses' if type == 'lens' else 'linksets'),
+                view_name=sql.Identifier(self.table_name(id)),
                 where_sql=where_sql
             ))
 
             return {row[0]: row[1] for row in cur.fetchall()}
 
     def get_clusters(self, id, type, limit=None, offset=0, include_props=False):
-        linkset_table = self.linkset_table_name(id) if type == 'linkset' else self.lens_table_name(id)
         limit_offset_sql = get_pagination_sql(limit, offset)
         nodes_sql = ', array_agg(DISTINCT nodes.uri) AS nodes_arr' if include_props else ''
 
@@ -478,19 +475,19 @@ class Job:
                 else self.get_linkset_spec_by_id(id).properties
             targets = self.value_targets_for_properties(properties)
             if targets:
-                joins = get_linkset_cluster_join_sql(linkset_table, limit, offset)
+                joins = get_linkset_cluster_join_sql(self.table_name(id), limit, offset)
                 queries = get_property_values_queries(targets, joins=joins)
                 values = get_property_values(queries, dict=True)
 
         with db_conn() as conn, conn.cursor(name=uuid4().hex) as cur:
             cur.execute("""
-                 SELECT ls.cluster_id, COUNT(DISTINCT nodes.uri) AS size, COUNT(ls.*) / 2 AS links {}
-                 FROM {} AS ls
+                 SELECT ls.cluster_id, count(DISTINCT nodes.uri) AS size, count(ls.*) / 2 AS links {}
+                 FROM {}.{} AS ls
                  CROSS JOIN LATERAL (VALUES (ls.source_uri), (ls.target_uri)) AS nodes(uri)
                  GROUP BY ls.cluster_id
                  ORDER BY size DESC, ls.cluster_id ASC
                  {}
-             """.format(nodes_sql, linkset_table, limit_offset_sql))
+             """.format(nodes_sql, ('lenses' if type == 'lens' else 'linksets'), self.table_name(id), limit_offset_sql))
 
             while True:
                 clusters = cur.fetchmany(size=2000)
@@ -538,8 +535,9 @@ class Job:
             target = '<' + link['target'] + '>'
 
             all_links.append([source, target])
-            link_hash = "key_{}".format(str(hasher((source, target))).replace("-", "N"))
-            strengths[link_hash] = list(link['similarity'].values())
+            link_hash = "key_{}"\
+                .format(str(hasher((source, target) if source < target else (target, source))).replace("-", "N"))
+            strengths[link_hash] = [sim for simlist in list(link['similarity'].values()) for sim in simlist]
             if not strengths[link_hash]:
                 strengths[link_hash] = [1]
 

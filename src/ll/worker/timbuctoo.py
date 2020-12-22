@@ -115,7 +115,7 @@ class TimbuctooJob(WorkerJob):
                                     'Someone else updated the job for table %s '
                                     'while I was fetching data.' % self._table_name)
 
-                cur.execute(psycopg2_sql.SQL('SELECT count(*) FROM {}')
+                cur.execute(psycopg2_sql.SQL('SELECT count(*) FROM timbuctoo.{}')
                             .format(psycopg2_sql.Identifier(self._table_name)))
                 table_rows = cur.fetchone()[0]
 
@@ -128,7 +128,7 @@ class TimbuctooJob(WorkerJob):
                         [psycopg2_sql.Identifier(key) for key in results[0].keys()])
 
                     for result in results:
-                        cur.execute(psycopg2_sql.SQL('INSERT INTO {} ({}) VALUES %s').format(
+                        cur.execute(psycopg2_sql.SQL('INSERT INTO timbuctoo.{} ({}) VALUES %s').format(
                             psycopg2_sql.Identifier(self._table_name),
                             columns_sql,
                         ), (tuple(result.values()),))

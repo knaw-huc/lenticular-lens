@@ -91,12 +91,12 @@
         },
         computed: {
             similarity() {
-                if (isNaN(this.link.similarities)) {
-                    const similarityValues = Object.values(this.link.similarities);
+                if (isNaN(this.link.similarity)) {
+                    const similarityValues = Object.values(this.link.similarity);
                     return similarityValues.length > 0 ? Math.max(...similarityValues).toFixed(3) : '1.000';
                 }
 
-                return this.link.similarities.toFixed(3);
+                return this.link.similarity.toFixed(3);
             },
 
             switchSourceAndTarget() {

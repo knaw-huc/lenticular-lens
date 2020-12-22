@@ -83,7 +83,7 @@ class Collection:
                        for col_name, col_info in collection['properties'].items()}
 
             with db_conn() as conn, conn.cursor() as cur:
-                cur.execute(psycopg2_sql.SQL('CREATE TABLE {} ({})').format(
+                cur.execute(psycopg2_sql.SQL('CREATE TABLE timbuctoo.{} ({})').format(
                     psycopg2_sql.Identifier(self.table_name),
                     self.columns_sql(columns),
                 ))
@@ -122,37 +122,30 @@ class Collection:
         with db_conn() as conn, conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) as cur:
             cur.execute('SELECT * FROM timbuctoo_tables')
             for timbuctoo_table in cur.fetchall():
-                old_table_name = timbuctoo_table['table_name']
-                new_table_name = table_name_hash(timbuctoo_table['graphql_endpoint'],
-                                                 timbuctoo_table['dataset_id'],
-                                                 timbuctoo_table['collection_id'])
+                table_name = timbuctoo_table['table_name']
+                cur.execute('ALTER TABLE "{}" SET SCHEMA "{}"'.format(table_name, 'timbuctoo'))
 
-                old_col_names = {col_info['name']: col_name
-                                 for col_name, col_info in timbuctoo_table['columns'].items()}
-                columns = {'uri' if col_name == 'uri' else column_name_hash(col_info['name']): col_info
-                           for col_name, col_info in timbuctoo_table['columns'].items()}
+            cur.execute('SELECT * FROM linksets')
+            for linkset in cur.fetchall():
+                job_id = linkset['job_id']
+                spec_id = linkset['spec_id']
+                old_table_name = 'linkset_' + job_id + '_' + str(spec_id)
+                new_table_name = job_id + '_' + str(spec_id)
 
-                cur.execute('''
-                    UPDATE timbuctoo_tables
-                    SET "table_name" = %s, columns = %s
-                    WHERE "table_name" = %s
-                ''', (new_table_name, dumps(columns), old_table_name))
-
-                if old_table_name != new_table_name:
+                if linkset['status'] == 'done':
                     cur.execute('ALTER TABLE "{}" RENAME TO "{}"'.format(old_table_name, new_table_name))
+                    cur.execute('ALTER TABLE "{}" SET SCHEMA "{}"'.format(new_table_name, 'linksets'))
 
-                for new_col_name, col_info in columns.items():
-                    if new_col_name != 'uri' and old_col_names[col_info['name']] != new_col_name:
-                        cur.execute('''
-                            SELECT count(*) 
-                            FROM information_schema.columns
-                            WHERE table_name = %s 
-                            AND column_name = %s
-                        ''', (new_table_name, old_col_names[col_info['name']]))
+            cur.execute('SELECT * FROM lenses')
+            for lens in cur.fetchall():
+                job_id = lens['job_id']
+                spec_id = lens['spec_id']
+                old_table_name = 'lens_' + job_id + '_' + str(spec_id)
+                new_table_name = job_id + '_' + str(spec_id)
 
-                        if cur.fetchone()['count'] == 1:
-                            cur.execute('ALTER TABLE "{}" RENAME COLUMN "{}" TO "{}"'
-                                        .format(new_table_name, old_col_names[col_info['name']], new_col_name))
+                if lens['status'] == 'done':
+                    cur.execute('ALTER TABLE "{}" RENAME TO "{}"'.format(old_table_name, new_table_name))
+                    cur.execute('ALTER TABLE "{}" SET SCHEMA "{}"'.format(new_table_name, 'lenses'))
 
     @staticmethod
     def columns_sql(columns):

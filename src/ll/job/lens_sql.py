@@ -14,25 +14,25 @@ class LensSql:
 
     def generate_lens_sql(self):
         return sql.SQL(cleandoc(
-            """ DROP TABLE IF EXISTS {view_name} CASCADE;
-                CREATE TABLE {view_name} AS
+            """ DROP TABLE IF EXISTS lenses.{view_name} CASCADE;
+                CREATE TABLE lenses.{view_name} AS
                 {lens_sql};
 
-                ALTER TABLE {view_name}
+                ALTER TABLE lenses.{view_name}
                 ADD PRIMARY KEY (source_uri, target_uri),
                 ADD COLUMN cluster_id text;
 
-                ALTER TABLE {view_name} ADD COLUMN sort_order serial;
+                ALTER TABLE lenses.{view_name} ADD COLUMN sort_order serial;
 
-                CREATE INDEX ON {view_name} USING hash (source_uri);
-                CREATE INDEX ON {view_name} USING hash (target_uri);
-                CREATE INDEX ON {view_name} USING hash (cluster_id);
-                CREATE INDEX ON {view_name} USING btree (sort_order);
+                CREATE INDEX ON lenses.{view_name} USING hash (source_uri);
+                CREATE INDEX ON lenses.{view_name} USING hash (target_uri);
+                CREATE INDEX ON lenses.{view_name} USING hash (cluster_id);
+                CREATE INDEX ON lenses.{view_name} USING btree (sort_order);
 
-                ANALYZE {view_name};
+                ANALYZE lenses.{view_name};
             """
         ) + '\n').format(
-            view_name=sql.Identifier(self._job.lens_table_name(self._lens.id)),
+            view_name=sql.Identifier(self._job.table_name(self._lens.id)),
             lens_sql=self._lens.sql
         )
 

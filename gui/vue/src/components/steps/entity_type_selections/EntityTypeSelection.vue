@@ -66,18 +66,17 @@
           <div class="form-group col-8">
             <label :for="'dataset_' + entityTypeSelection.id">Dataset</label>
 
-            <v-select :id="'dataset_' + entityTypeSelection.id" :value="selectedDataset" label="title"
-                      :options="datasetsList"
+            <v-select :id="'dataset_' + entityTypeSelection.id" :value="selectedDataset" :options="datasetsList"
                       :clearable="false" :disabled="isUsedInLinkset" autocomplete="off"
                       placeholder="Type to search for a dataset" @input="updateDataset"
                       v-bind:class="{'is-invalid': errors.includes('dataset')}">
               <div slot="option" slot-scope="option">
                 <div>
-                  <span class="font-weight-bold pr-2">{{ option.title }}</span>
-                  <span class="text-wrap text-muted small">{{ option.name }}</span>
+                  <span class="font-weight-bold">{{ option.title }}</span>
+                  <span class="smaller text-wrap text-muted ml-1">{{ option.name }}</span>
                 </div>
 
-                <div v-if="option.description" class="text-wrap font-italic small pt-2">
+                <div v-if="option.description" class="text-wrap font-italic small pt-1">
                   {{ option.description }}
                 </div>
               </div>
@@ -95,17 +94,17 @@
           <div v-if="entityTypeSelection.dataset.dataset_id !== ''" class="form-group collection-input col-4">
             <label :for="'collection_' + entityTypeSelection.id">Entity type</label>
 
-            <v-select :id="'collection_' + entityTypeSelection.id" :value="selectedCollection" label="id"
+            <v-select :id="'collection_' + entityTypeSelection.id" :value="selectedCollection"
                       :options="collectionsList" :clearable="false" :disabled="isUsedInLinkset"
                       autocomplete="off" placeholder="Type to search for an entity type"
                       @input="updateCollection" v-bind:class="{'is-invalid': errors.includes('collection')}">
               <div slot="option" slot-scope="option">
                 <div>
-                  <span class="pr-2">{{ option.title || option.id }}</span>
-                  <span class="font-italic text-muted small">{{ option.total.toLocaleString('en') }}</span>
+                  {{ option.title || option.shortenedUri || option.id }}
+                  <span class="smaller font-italic text-muted ml-1">{{ option.total.toLocaleString('en') }}</span>
                 </div>
 
-                <div class="small pt-1">
+                <div class="smaller pt-1">
                   <download-progress :dataset-id="entityTypeSelection.dataset.dataset_id" :collection-id="option.id"/>
                 </div>
               </div>
@@ -293,13 +292,13 @@
 
             datasetsList() {
                 return Object.entries(this.datasets)
-                    .map(([id, data]) => ({id, ...data}))
+                    .map(([id, data]) => ({id, ...data, label: data.title || data.id}))
                     .sort((dsA, dsB) => dsA.title.localeCompare(dsB.title));
             },
 
             collectionsList() {
                 return Object.entries(this.collections)
-                    .map(([id, data]) => ({id, ...data}))
+                    .map(([id, data]) => ({id, ...data, label: data.title || data.shortenedUri || data.id}))
                     .sort((collA, collB) => collA.id.localeCompare(collB.id));
             },
 

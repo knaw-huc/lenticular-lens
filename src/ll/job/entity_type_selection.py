@@ -173,7 +173,7 @@ class EntityTypeSelection:
             extra_filter = psycopg2_sql.SQL('\nAND ({filter})').format(filter=extra_filter)
 
         joins.add_join(
-            psycopg2_sql.SQL('LEFT JOIN {view} AS {alias}\nON {lhs} = {rhs}{extra_filter}').format(
+            psycopg2_sql.SQL('LEFT JOIN timbuctoo.{view} AS {alias}\nON {lhs} = {rhs}{extra_filter}').format(
                 view=psycopg2_sql.Identifier(remote_ets.table_name),
                 alias=psycopg2_sql.Identifier(remote_ets_internal_id),
                 lhs=lhs, rhs=rhs,

@@ -13,7 +13,7 @@ class MatchingSql:
         self._linkset = job.get_linkset_spec_by_id(id)
 
     def generate_schema_sql(self):
-        schema_name_sql = sql.Identifier(self._job.linkset_schema_name(self._linkset.id))
+        schema_name_sql = sql.Identifier(self._job.schema_name(self._linkset.id))
 
         return sql.Composed([
             sql.SQL('CREATE SCHEMA IF NOT EXISTS {};\n').format(schema_name_sql),
@@ -29,7 +29,7 @@ class MatchingSql:
                 """ DROP MATERIALIZED VIEW IF EXISTS {view_name} CASCADE;
                     CREATE MATERIALIZED VIEW {view_name} AS
                     {pre}SELECT DISTINCT {matching_fields}
-                    FROM {table_name} AS {view_name} 
+                    FROM timbuctoo.{table_name} AS {view_name} 
                     {joins} 
                     {wheres}
                     ORDER BY uri {limit};
@@ -111,8 +111,8 @@ class MatchingSql:
         #     similarities_sql = sql.SQL('')
 
         return sql.SQL(cleandoc(
-            """ DROP TABLE IF EXISTS public.{linkset} CASCADE;
-                CREATE TABLE public.{linkset} AS
+            """ DROP TABLE IF EXISTS linksets.{linkset} CASCADE;
+                CREATE TABLE linksets.{linkset} AS
                 SELECT CASE WHEN source.uri < target.uri THEN source.uri ELSE target.uri END AS source_uri,
                        CASE WHEN source.uri < target.uri THEN target.uri ELSE source.uri END AS target_uri,
                        CASE WHEN every(source.uri < target.uri) THEN 'source_target'::link_order
@@ -128,15 +128,15 @@ class MatchingSql:
                 GROUP BY source_uri, target_uri;
             """
         ) + '\n').format(
-            linkset=sql.Identifier(self._job.linkset_table_name(self._linkset.id)),
+            linkset=sql.Identifier(self._job.table_name(self._linkset.id)),
             similarities=self._linkset.similarity_fields_agg_sql,
             conditions=self._linkset.conditions_sql
         )
 
     # def generate_match_distinct_linkset_sql(self):
     #     return sql.SQL(cleandoc(
-    #         """ DROP TABLE IF EXISTS public.{view_name} CASCADE;
-    #             CREATE TABLE public.{view_name} AS
+    #         """ DROP TABLE IF EXISTS linksets.{view_name} CASCADE;
+    #             CREATE TABLE linksets.{view_name} AS
     #             SELECT source_uri, target_uri,
     #                    CASE WHEN every(link_order = 'source_target'::link_order) THEN 'source_target'::link_order
     #                         WHEN every(link_order = 'target_source'::link_order) THEN 'target_source'::link_order
@@ -147,7 +147,7 @@ class MatchingSql:
     #             FROM linkset
     #             GROUP BY source_uri, target_uri;
     #         """) + '\n').format(
-    #         view_name=sql.Identifier(self._job.linkset_table_name(self._linkset.id)),
+    #         view_name=sql.Identifier(self._job.table_name(self._linkset.id)),
     #         similarity=self._linkset.similarity_sql,
     #         similarities=similarities_sql,
     #         conditions=self._linkset.conditions_sql
@@ -155,21 +155,21 @@ class MatchingSql:
 
     def generate_match_linkset_finish_sql(self):
         return sql.SQL(cleandoc(
-            """ ALTER TABLE public.{linkset}
+            """ ALTER TABLE linksets.{linkset}
                 ADD PRIMARY KEY (source_uri, target_uri),
                 ADD COLUMN cluster_id text,
                 ADD COLUMN valid link_validity DEFAULT 'not_validated';
 
-                ALTER TABLE public.{linkset} ADD COLUMN sort_order serial;
+                ALTER TABLE linksets.{linkset} ADD COLUMN sort_order serial;
 
-                CREATE INDEX ON public.{linkset} USING hash (source_uri);
-                CREATE INDEX ON public.{linkset} USING hash (target_uri);
-                CREATE INDEX ON public.{linkset} USING hash (cluster_id);
-                CREATE INDEX ON public.{linkset} USING hash (valid);
-                CREATE INDEX ON public.{linkset} USING btree (sort_order);
+                CREATE INDEX ON linksets.{linkset} USING hash (source_uri);
+                CREATE INDEX ON linksets.{linkset} USING hash (target_uri);
+                CREATE INDEX ON linksets.{linkset} USING hash (cluster_id);
+                CREATE INDEX ON linksets.{linkset} USING hash (valid);
+                CREATE INDEX ON linksets.{linkset} USING btree (sort_order);
 
-                ANALYZE public.{linkset};
-            """) + '\n').format(linkset=sql.Identifier(self._job.linkset_table_name(self._linkset.id)))
+                ANALYZE linksets.{linkset};
+            """) + '\n').format(linkset=sql.Identifier(self._job.table_name(self._linkset.id)))
 
     @property
     def sql_string(self):

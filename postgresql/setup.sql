@@ -6,6 +6,10 @@ CREATE TYPE spec_type AS ENUM ('linkset', 'lens');
 CREATE TYPE link_order AS ENUM ('source_target', 'both', 'target_source');
 CREATE TYPE link_validity AS ENUM ('accepted', 'rejected', 'not_validated', 'mixed');
 
+CREATE SCHEMA IF NOT EXISTS timbuctoo;
+CREATE SCHEMA IF NOT EXISTS linksets;
+CREATE SCHEMA IF NOT EXISTS lenses;
+
 CREATE TABLE IF NOT EXISTS jobs
 (
     job_id                           text primary key,

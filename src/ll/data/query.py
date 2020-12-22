@@ -76,8 +76,8 @@ def get_property_values_queries(query_data, uris=None, joins=None):
 
 def create_count_query_for_properties(resource, target, joins=None, condition=None):
     return sql.SQL('''
-        SELECT COUNT({parent_resource}.uri) AS total
-        FROM {table_name} AS {parent_resource} 
+        SELECT count({parent_resource}.uri) AS total
+        FROM timbuctoo.{table_name} AS {parent_resource} 
         {joins}
         {condition}
     ''').format(
@@ -116,11 +116,11 @@ def create_query_for_properties(graph, resource, target, columns, property_paths
 
     return sql.SQL('''
         SELECT {parent_resource}.uri AS uri, {selection}
-        FROM {table_name} AS {parent_resource} 
+        FROM timbuctoo.{table_name} AS {parent_resource} 
         {selection_joins}
         WHERE {parent_resource}.uri IN (
             SELECT {parent_resource}.uri
-            FROM {table_name} AS {parent_resource}
+            FROM timbuctoo.{table_name} AS {parent_resource}
             {joins}
             {condition}
             GROUP BY {parent_resource}.uri
@@ -167,7 +167,7 @@ def get_property_field(graph, joins, cur_resource, cur_columns, property_path):
         lhs = local_property.sql
         rhs = remote_property.sql
 
-        joins.add_join(sql.SQL('LEFT JOIN {target} AS {alias}\nON {lhs} = {rhs}').format(
+        joins.add_join(sql.SQL('LEFT JOIN timbuctoo.{target} AS {alias}\nON {lhs} = {rhs}').format(
             target=sql.Identifier(next_table_info['table_name']),
             alias=sql.Identifier(next_resource),
             lhs=lhs, rhs=rhs
@@ -179,7 +179,7 @@ def get_property_field(graph, joins, cur_resource, cur_columns, property_path):
     return PropertyField(property_path_copy[0], parent_label=cur_resource, columns=cur_columns)
 
 
-def get_linkset_join_sql(linkset, where_sql=None, limit=None, offset=0):
+def get_linkset_join_sql(schema, linkset, where_sql=None, limit=None, offset=0):
     limit_offset_sql = get_pagination_sql(limit, offset)
 
     return sql.SQL('''
@@ -187,26 +187,27 @@ def get_linkset_join_sql(linkset, where_sql=None, limit=None, offset=0):
             SELECT DISTINCT nodes.uri
             FROM (
                 SELECT links.source_uri, links.target_uri 
-                FROM {linkset} AS links
+                FROM {schema}.{linkset} AS links
                 {where_sql} 
                 ORDER BY sort_order ASC {limit_offset}
             ) AS ls, LATERAL (VALUES (ls.source_uri), (ls.target_uri)) AS nodes(uri)
         ) AS linkset ON target.uri = linkset.uri
     ''').format(
-        linkset=linkset,
+        schema=sql.Identifier(schema),
+        linkset=sql.Identifier(linkset),
         where_sql=where_sql if where_sql else sql.SQL(''),
         limit_offset=sql.SQL(limit_offset_sql)
     )
 
 
-def get_linkset_cluster_join_sql(linkset_table_name, limit=None, offset=0, uri_limit=5):
+def get_linkset_cluster_join_sql(table_name, limit=None, offset=0, uri_limit=5):
     return sql.SQL('''
         INNER JOIN (
             SELECT nodes.uri, ROW_NUMBER() OVER (PARTITION BY ls.cluster_id) AS cluster_row_number
-            FROM {linkset} AS ls
+            FROM linksets.{linkset} AS ls
             INNER JOIN (
                 SELECT cluster_id
-                FROM {linkset}
+                FROM linksets.{linkset}
                 CROSS JOIN LATERAL (VALUES (source_uri), (target_uri)) AS nodes(uri)
                 GROUP BY cluster_id
                 ORDER BY COUNT(DISTINCT nodes.uri) DESC, cluster_id ASC
@@ -216,7 +217,7 @@ def get_linkset_cluster_join_sql(linkset_table_name, limit=None, offset=0, uri_l
         ) AS linkset 
         ON target.uri = linkset.uri AND linkset.cluster_row_number < {uri_limit}
     ''').format(
-        linkset=sql.Identifier(linkset_table_name),
+        linkset=sql.Identifier(table_name),
         limit_offset=sql.SQL(get_pagination_sql(limit, offset)),
         uri_limit=sql.Literal(uri_limit)
     )

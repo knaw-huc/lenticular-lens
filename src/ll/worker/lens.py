@@ -39,8 +39,8 @@ class LensJob(WorkerJob):
 
     def on_finish(self):
         with db_conn() as conn, conn.cursor() as cur:
-            cur.execute(psycopg2_sql.SQL('SELECT count(*) FROM {}').format(
-                psycopg2_sql.Identifier(self._job.lens_table_name(self._id))))
+            cur.execute(psycopg2_sql.SQL('SELECT count(*) FROM lenses.{}').format(
+                psycopg2_sql.Identifier(self._job.table_name(self._id))))
             links = cur.fetchone()[0]
 
             cur.execute("UPDATE lenses "
@@ -49,8 +49,8 @@ class LensJob(WorkerJob):
                         ('done', links, self._job_id, self._id))
 
             if links == 0:
-                cur.execute(psycopg2_sql.SQL('DROP TABLE {} CASCADE')
-                            .format(psycopg2_sql.Identifier(self._job.lens_table_name(self._id))))
+                cur.execute(psycopg2_sql.SQL('DROP TABLE lenses.{} CASCADE')
+                            .format(psycopg2_sql.Identifier(self._job.table_name(self._id))))
             else:
                 cur.execute("SELECT * FROM clusterings WHERE job_id = %s AND spec_id = %s AND spec_type = 'lens'",
                             (self._job_id, self._id))
