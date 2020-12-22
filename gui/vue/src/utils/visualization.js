@@ -1,11 +1,21 @@
-import * as d3 from 'd3';
+import {
+    drag, // d3-drag
+    scaleOrdinal, // d3-scale
+    select, // d3-selection
+    pointer, // d3-selection
+    schemeCategory10, // d3-scale-chromatic
+    forceSimulation, // d3-force
+    forceLink, // d3-force
+    forceManyBody, // d3-force
+    forceCenter // d3-force
+} from 'd3';
 
-const color = d3.scaleOrdinal(d3.schemeCategory10);
+const color = scaleOrdinal(schemeCategory10);
 const factor = x => Math.log2(x + 1) * 16;
 const radius = node => node.nodes ? factor(node.nodes) + 2 : node.size * 1.2;
 
 export function draw(canvasContainer, graphData) {
-    const container = d3.select(canvasContainer);
+    const container = select(canvasContainer);
     const canvas = container.select('canvas').size() ? container.select('canvas') : container.append('canvas');
     const ctx = canvas.node().getContext('2d');
 
@@ -17,8 +27,8 @@ export function draw(canvasContainer, graphData) {
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
 
-    const simulation = d3.forceSimulation()
-        .force('link', d3.forceLink()
+    const simulation = forceSimulation()
+        .force('link', forceLink()
             .id(link => link.id)
             .distance(link => {
                 if (link.dist_factor)
@@ -26,10 +36,10 @@ export function draw(canvasContainer, graphData) {
                 return link.distance;
             })
         )
-        .force('charge', d3.forceManyBody())
-        .force('center', d3.forceCenter(rect.width / 2, rect.height / 2));
+        .force('charge', forceManyBody())
+        .force('center', forceCenter(rect.width / 2, rect.height / 2));
 
-    const dragEvent = d3.drag()
+    const dragEvent = drag()
         .subject(findNode)
         .on('start', dragStarted)
         .on('drag', dragged)
@@ -66,9 +76,9 @@ export function draw(canvasContainer, graphData) {
         ctx.restore();
     }
 
-    function findNode(position) {
-        const x = (position ? position[0] : d3.event.x);
-        const y = (position ? position[1] : d3.event.y);
+    function findNode(e, position) {
+        const x = (position ? position[0] : e.x);
+        const y = (position ? position[1] : e.y);
 
         return root().nodes.find(node => {
             const dx = x - node.x;
@@ -181,25 +191,25 @@ export function draw(canvasContainer, graphData) {
         }
     }
 
-    function dragStarted() {
-        if (!d3.event.active) simulation.alphaTarget(0.2).restart();
+    function dragStarted(e) {
+        if (!e.active) simulation.alphaTarget(0.2).restart();
 
-        d3.event.subject.fx = d3.event.x;
-        d3.event.subject.fy = d3.event.y;
+        e.subject.fx = e.x;
+        e.subject.fy = e.y;
     }
 
-    function dragged() {
-        d3.event.subject.fx = d3.event.x;
-        d3.event.subject.fy = d3.event.y;
+    function dragged(e) {
+        e.subject.fx = e.x;
+        e.subject.fy = e.y;
     }
 
-    function dragEnded() {
-        if (!d3.event.active) simulation.alphaTarget(0);
+    function dragEnded(e) {
+        if (!e.active) simulation.alphaTarget(0);
     }
 
-    function onDblClick() {
-        const xy = d3.mouse(this);
-        const node = findNode(xy);
+    function onDblClick(e) {
+        const xy = pointer(e)
+        const node = findNode(e, xy);
         if (!node) return;
 
         currentChild = node.child;
