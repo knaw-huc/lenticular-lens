@@ -1,5 +1,3 @@
-import logging
-
 from json import dumps
 
 from ll.data.timbuctoo import Timbuctoo
@@ -7,8 +5,6 @@ from ll.util.config_db import db_conn, fetch_one
 from ll.util.hasher import table_name_hash, column_name_hash
 
 from psycopg2 import extras as psycopg2_extras, sql as psycopg2_sql
-
-log = logging.getLogger(__name__)
 
 
 class Collection:
@@ -116,36 +112,6 @@ class Collection:
                 ''', (dataset['uri'], dataset['name'], dataset['title'], dataset['description'],
                       collection['uri'], collection['title'], collection['shortenedUri'],
                       collection['total'], dumps(columns), self.table_name))
-
-    @staticmethod
-    def update_ids():
-        with db_conn() as conn, conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) as cur:
-            cur.execute('SELECT * FROM timbuctoo_tables')
-            for timbuctoo_table in cur.fetchall():
-                table_name = timbuctoo_table['table_name']
-                cur.execute('ALTER TABLE "{}" SET SCHEMA "{}"'.format(table_name, 'timbuctoo'))
-
-            cur.execute('SELECT * FROM linksets')
-            for linkset in cur.fetchall():
-                job_id = linkset['job_id']
-                spec_id = linkset['spec_id']
-                old_table_name = 'linkset_' + job_id + '_' + str(spec_id)
-                new_table_name = job_id + '_' + str(spec_id)
-
-                if linkset['status'] == 'done' and linkset['links_count'] and linkset['links_count'] > 0:
-                    cur.execute('ALTER TABLE "{}" RENAME TO "{}"'.format(old_table_name, new_table_name))
-                    cur.execute('ALTER TABLE "{}" SET SCHEMA "{}"'.format(new_table_name, 'linksets'))
-
-            cur.execute('SELECT * FROM lenses')
-            for lens in cur.fetchall():
-                job_id = lens['job_id']
-                spec_id = lens['spec_id']
-                old_table_name = 'lens_' + job_id + '_' + str(spec_id)
-                new_table_name = job_id + '_' + str(spec_id)
-
-                if lens['status'] == 'done':
-                    cur.execute('ALTER TABLE "{}" RENAME TO "{}"'.format(old_table_name, new_table_name))
-                    cur.execute('ALTER TABLE "{}" SET SCHEMA "{}"'.format(new_table_name, 'lenses'))
 
     @staticmethod
     def columns_sql(columns):

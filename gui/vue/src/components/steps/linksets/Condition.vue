@@ -59,8 +59,9 @@
 
               <div class="col-sm-3">
                 <select :id="'sim_method_' + index" class="form-control form-control-sm"
+                        v-bind:class="{'is-invalid': errors.includes('sim_method_name')}"
                         v-model="condition.method_sim_name" @change="handleSimMethodChange">
-                  <option :value="null">No similarity method</option>
+                  <option disabled selected value="">Select a similarity method</option>
                   <option v-for="(method, methodName) in similarityMethods" :value="methodName">
                     {{ method.description }}
                   </option>
@@ -236,6 +237,8 @@
         methods: {
             validateCondition() {
                 const methodNameValid = this.validateField('method_name', this.condition.method_name);
+                const simMethodNameValid = this.validateField('sim_method_name',
+                    !this.applySimMethod || this.condition.method_sim_name);
 
                 const methodConfigValid = this.validateField('method_config',
                     this.$refs.methodConfig ? this.$refs.methodConfig.validateConditionMethod() : true);
@@ -253,8 +256,8 @@
                     .map(propertyComponent => propertyComponent.validateConditionProperty())
                     .includes(false);
 
-                return methodNameValid && methodConfigValid && methodSimConfigValid && listThresholdValid
-                    && sourcesValid && targetsValid && conditionPropertiesValid;
+                return methodNameValid && simMethodNameValid && methodConfigValid && methodSimConfigValid
+                    && listThresholdValid && sourcesValid && targetsValid && conditionPropertiesValid;
             },
 
             handleMethodChange() {
@@ -271,11 +274,6 @@
                 this.simMethod.items
                     .filter(item => item.hasOwnProperty('defaultValue'))
                     .forEach(item => this.condition.method_sim_config[item.key] = item.defaultValue);
-            },
-
-            handleListMatchingChange() {
-                this.condition.list_threshold = 0;
-                this.condition.list_threshold_unit = 'matches';
             },
 
             getParametersForTransformer(transformer) {
@@ -302,7 +300,22 @@
             },
         },
         mounted() {
-            this.applyListMatching = !!this.condition.list_threshold;
+            this.applySimMethod = !!this.condition.method_sim_name;
+            this.applyListMatching = this.condition.list_threshold > 0;
+        },
+        watch: {
+            applySimMethod() {
+                if (!this.applySimMethod) {
+                    this.condition.method_sim_name = null;
+                    this.condition.method_sim_config = {};
+                }
+            },
+            applyListMatching() {
+                if (!this.applyListMatching) {
+                    this.condition.list_threshold = 0;
+                    this.condition.list_threshold_unit = 'matches';
+                }
+            },
         },
     };
 </script>

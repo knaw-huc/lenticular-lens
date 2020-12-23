@@ -56,12 +56,6 @@ def index():
     return app.send_static_file('index.html')
 
 
-@app.route('/update_once')
-def update_once():
-    Collection.update_ids()
-    return jsonify({'result': 'updated'})
-
-
 @app.route('/datasets')
 def datasets():
     return jsonify(TimbuctooDatasets(request.args.get('endpoint'), request.args.get('hsid')).datasets)
