@@ -132,7 +132,7 @@ class Collection:
                 old_table_name = 'linkset_' + job_id + '_' + str(spec_id)
                 new_table_name = job_id + '_' + str(spec_id)
 
-                if linkset['status'] == 'done':
+                if linkset['status'] == 'done' and linkset['links_count'] and linkset['links_count'] > 0:
                     cur.execute('ALTER TABLE "{}" RENAME TO "{}"'.format(old_table_name, new_table_name))
                     cur.execute('ALTER TABLE "{}" SET SCHEMA "{}"'.format(new_table_name, 'linksets'))
 
