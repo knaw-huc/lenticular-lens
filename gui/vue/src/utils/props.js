@@ -337,6 +337,10 @@ export default {
                 defaultValue: '',
                 allowEmptyValue: true
             }]
+        },
+        'LOWERCASE': {
+            label: 'To lowercase',
+            items: []
         }
     },
     tNorms: {

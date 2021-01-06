@@ -10,5 +10,8 @@
   },
   "REPLACE": {
     "sql_template": "replace({property}, {from}, {to})"
+  },
+  "LOWERCASE": {
+    "sql_template": "lower({property})"
   }
 }
