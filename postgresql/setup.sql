@@ -254,15 +254,25 @@ $$
 SELECT 1 - (distance / greatest(char_length(source), char_length(target)));
 $$ LANGUAGE sql;
 
+CREATE OR REPLACE FUNCTION delta(type text, source numeric, target numeric,
+                                 start_delta numeric, end_delta numeric) RETURNS boolean
+    STRICT IMMUTABLE PARALLEL SAFE AS
+$$
+SELECT abs(source - target) BETWEEN start_delta AND end_delta AND
+       CASE
+           WHEN type = '<' THEN source <= target
+           WHEN type = '>' THEN target <= source
+           ELSE TRUE END;
+$$ LANGUAGE sql;
+
 CREATE OR REPLACE FUNCTION delta(type text, source date, target date, no_days numeric) RETURNS boolean
     STRICT IMMUTABLE PARALLEL SAFE AS
 $$
-SELECT source IS NOT NULL AND target IS NOT NULL
-           AND abs(source - target) < no_days
-           AND CASE
-                   WHEN type = '<' THEN source <= target
-                   WHEN type = '>' THEN target <= source
-                   ELSE TRUE END;
+SELECT abs(source - target) < no_days AND
+       CASE
+           WHEN type = '<' THEN source <= target
+           WHEN type = '>' THEN target <= source
+           ELSE TRUE END;
 $$ LANGUAGE sql;
 
 CREATE OR REPLACE FUNCTION levenshtein_python(source text, target text) RETURNS integer
