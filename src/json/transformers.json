@@ -1,6 +1,15 @@
 {
+  "TO_NUMERIC_IMMUTABLE": {
+    "sql_template": "to_numeric_immutable({property})"
+  },
+  "TO_DATE_IMMUTABLE": {
+    "sql_template": "to_date_immutable({property}, {format})"
+  },
   "TRANSFORM_LAST_NAME_FORMAT": {
     "sql_template": "transform_last_name_format({property}, {infix})"
+  },
+  "LOWERCASE": {
+    "sql_template": "lower({property})"
   },
   "PREFIX": {
     "sql_template": "{prefix} || {property}"
@@ -11,7 +20,7 @@
   "REPLACE": {
     "sql_template": "replace({property}, {from}, {to})"
   },
-  "LOWERCASE": {
-    "sql_template": "lower({property})"
+  "REGEXP_REPLACE": {
+    "sql_template": "regexp_replace({property}, {pattern}, {replacement}, {flags})"
   }
 }

@@ -306,6 +306,10 @@ export default {
                 defaultValue: true,
             }]
         },
+        'LOWERCASE': {
+            label: 'To lowercase',
+            items: []
+        },
         'PREFIX': {
             label: 'Prefix',
             items: [{
@@ -338,10 +342,25 @@ export default {
                 allowEmptyValue: true
             }]
         },
-        'LOWERCASE': {
-            label: 'To lowercase',
-            items: []
-        }
+        'REGEXP_REPLACE': {
+            label: 'Regular expression replace',
+            items: [{
+                key: 'pattern',
+                label: 'Pattern',
+                defaultValue: '',
+                allowEmptyValue: false
+            }, {
+                key: 'replacement',
+                label: 'Replacement',
+                defaultValue: '',
+                allowEmptyValue: false
+            }, {
+                key: 'flags',
+                label: 'Flags',
+                defaultValue: '',
+                allowEmptyValue: true
+            }]
+        },
     },
     tNorms: {
         MINIMUM_T_NORM: 'Minimum t-norm (⊤min)',

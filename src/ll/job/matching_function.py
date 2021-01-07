@@ -251,6 +251,19 @@ class MatchingFunction:
                     else:
                         raise NameError('Transformer %s is not defined' % transformer['name'])
 
+                if self.method_name == 'NUMBERS_DELTA':
+                    field_transformers.append({
+                        'name': 'TO_NUMERIC_IMMUTABLE',
+                        'transformer_info': self._transformers['TO_NUMERIC_IMMUTABLE'],
+                        'parameters': {}
+                    })
+                elif self.method_name == 'TIME_DELTA':
+                    field_transformers.append({
+                        'name': 'TO_DATE_IMMUTABLE',
+                        'transformer_info': self._transformers['TO_DATE_IMMUTABLE'],
+                        'parameters': {'format': self._method_config['format']}
+                    })
+
                 property_field = PropertyField(field['property'], job=self._job, transformers=field_transformers)
                 properties[entity_type_selection].append(property_field)
 

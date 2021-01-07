@@ -8,12 +8,12 @@
     "index": "btree ({target_intermediate})"
   },
   "NUMBERS_DELTA": {
-    "match": "delta({type}, to_numeric_immutable({source}), to_numeric_immutable({target}), {distance_start}, {distance_end})",
-    "index": "btree (to_numeric_immutable({target}))"
+    "match": "delta({type}, {source}, {target}, {distance_start}, {distance_end})",
+    "index": "btree ({target})"
   },
   "TIME_DELTA": {
-    "match": "delta({type}, to_date_immutable({source}, {format}), to_date_immutable({target}, {format}), {days} + ({months} * 30) + ({years} * 365))",
-    "index": "btree (to_date_immutable({target}, {format}))"
+    "match": "delta({type}, {source}, {target}, {days} + ({months} * 30) + ({years} * 365))",
+    "index": "btree ({target})"
   },
   "SAME_YEAR_MONTH": {
     "field": "get_date_part({date_part}, {field})",
