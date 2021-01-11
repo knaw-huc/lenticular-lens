@@ -51,9 +51,9 @@ export default {
                 is_association: false,
                 sources: [],
                 targets: [],
+                threshold: 0,
                 methods: {
                     type: 'AND',
-                    // type: 'MINIMUM_T_NORM',
                     conditions: [],
                 },
                 properties: []
@@ -178,21 +178,7 @@ export default {
             if (this.job.linkset_specs) {
                 const linksetSpecs = copy(this.job.linkset_specs);
 
-                // function updateLogicBoxTypes(conditions) {
-                //     if (conditions.hasOwnProperty('type')) {
-                //         if (conditions.type === 'AND')
-                //             conditions.type = 'MINIMUM_T_NORM';
-                //         else if (conditions.type === 'OR')
-                //             conditions.type = 'MAXIMUM_T_CONORM';
-                //     }
-                //
-                //     if (conditions.hasOwnProperty('conditions'))
-                //         conditions.conditions.forEach(condition => updateLogicBoxTypes(condition));
-                // }
-
                 linksetSpecs.forEach(linksetSpec => {
-                    // updateLogicBoxTypes(linksetSpec.methods);
-
                     this.getRecursiveElements(linksetSpec.methods, 'conditions').forEach(method => {
                         if (method.hasOwnProperty('method_value')) {
                             method.method_config = method.method_value;

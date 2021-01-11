@@ -35,7 +35,7 @@ class MatchingMethod:
         self._method_sim_info = self._matching_methods[self._method_sim_name] \
             if self._method_sim_name in self._matching_methods else {}
 
-        # self._t_conorm = function_obj['t_conorm']
+        self._t_conorm = data['t_conorm']
         self.list_threshold = data['list_threshold']
         self._list_threshold_unit = data['list_threshold_unit']
 
@@ -64,15 +64,15 @@ class MatchingMethod:
     def similarity_sql(self):
         return self._sql(self._similarity_template, list_check=False) if self._similarity_template else None
 
-    # @property
-    # def similarity_grouping_sql(self):
-    #     if self.similarity_sql:
-    #         return psycopg2_sql.SQL('logic_ops({operation}, array_agg({field}))').format(
-    #             operation=psycopg2_sql.Literal(self._t_conorm),
-    #             field=psycopg2_sql.Identifier(self.field_name + '_similarity')
-    #         )
-    #
-    #     return None
+    @property
+    def similarity_logic_ops_sql(self):
+        if self.similarity_sql:
+            return psycopg2_sql.SQL('logic_ops({operation}, sim.{field})').format(
+                operation=psycopg2_sql.Literal(self._t_conorm),
+                field=psycopg2_sql.Identifier(self.field_name)
+            )
+
+        return None
 
     @property
     def index_sql(self):

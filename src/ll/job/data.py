@@ -381,6 +381,7 @@ class Job:
     def get_links(self, id, type, validation_filter=Validation.ALL, cluster_id=None, uri=None,
                   limit=None, offset=0, include_props=False):
         schema = 'lenses' if type == 'lens' else 'linksets'
+        spec = self.get_lens_spec_by_id(id) if type == 'lens' else self.get_linkset_spec_by_id(id)
 
         validation_filter_sql = []
         if validation_filter < Validation.ALL and Validation.ACCEPTED in validation_filter:
@@ -404,10 +405,15 @@ class Job:
         where_sql = sql.SQL('WHERE {}').format(sql.SQL(' AND ').join(conditions)) \
             if len(conditions) > 0 else sql.SQL('')
 
+        sim_fields_sql = sql.SQL('')
+        if spec.similarity_fields:
+            sim_fields_sql = sql.SQL('CROSS JOIN LATERAL jsonb_to_record(similarity) \nAS sim({})') \
+                .format(sql.SQL(', ').join([sql.SQL('{} numeric[]').format(sql.Identifier(sim_field))
+                                            for sim_field in spec.similarity_fields]))
+
         values = None
         if include_props:
-            properties = self.get_lens_spec_by_id(id).properties \
-                if type == 'lens' else self.get_linkset_spec_by_id(id).properties
+            properties = spec.properties if type == 'lens' else spec.properties
             targets = self.value_targets_for_properties(properties)
             if targets:
                 joins = get_linkset_join_sql(schema, self.table_name(id), where_sql, limit, offset)
@@ -415,13 +421,18 @@ class Job:
                 values = get_property_values(queries, dict=True)
 
         with db_conn() as conn, conn.cursor(name=uuid4().hex) as cur:
-            cur.execute(sql.SQL('SELECT links.source_uri, links.target_uri, link_order, '
-                                '       similarity, cluster_id, valid '
-                                'FROM {schema}.{view_name} AS links '
-                                '{where_sql} '
-                                'ORDER BY sort_order ASC {limit_offset}').format(
+            cur.execute(sql.SQL(
+                'SELECT links.source_uri, links.target_uri, link_order, '
+                '       cluster_id, valid, {sim_logic_ops_sql} '
+                'FROM {schema}.{view_name} AS links '
+                '{sim_fields_sql} '
+                '{where_sql} '
+                'ORDER BY sort_order ASC {limit_offset}'
+            ).format(
                 schema=sql.Identifier(schema),
                 view_name=sql.Identifier(self.table_name(id)),
+                sim_fields_sql=sim_fields_sql,
+                sim_logic_ops_sql=spec.similarity_logic_ops_sql,
                 where_sql=where_sql,
                 limit_offset=sql.SQL(limit_offset_sql)
             ))
@@ -438,9 +449,9 @@ class Job:
                         'target': link[1],
                         'target_values': values[link[1]] if values and link[1] in values else None,
                         'link_order': link[2],
-                        'similarity': link[3] if link[3] else {},
-                        'cluster_id': link[4],
-                        'valid': link[5]
+                        'cluster_id': link[3],
+                        'valid': link[4],
+                        'similarity': link[5]
                     }
 
     def get_links_totals(self, id, type, cluster_id=None, uri=None):
@@ -535,9 +546,9 @@ class Job:
             target = '<' + link['target'] + '>'
 
             all_links.append([source, target])
-            link_hash = "key_{}"\
+            link_hash = "key_{}" \
                 .format(str(hasher((source, target) if source < target else (target, source))).replace("-", "N"))
-            strengths[link_hash] = [sim for simlist in list(link['similarity'].values()) for sim in simlist]
+            strengths[link_hash] = [link['similarity']]
             if not strengths[link_hash]:
                 strengths[link_hash] = [1]
 

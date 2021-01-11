@@ -113,6 +113,84 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- CREATE OR REPLACE FUNCTION t_min(a numeric, b numeric) RETURNS numeric
+--     STRICT IMMUTABLE PARALLEL SAFE AS
+-- $$
+-- SELECT least(a, b);
+-- $$ LANGUAGE sql;
+--
+-- CREATE OR REPLACE FUNCTION t_prod(a numeric, b numeric) RETURNS numeric
+--     STRICT IMMUTABLE PARALLEL SAFE AS
+-- $$
+-- SELECT a * b;
+-- $$ LANGUAGE sql;
+--
+-- CREATE OR REPLACE FUNCTION t_luk(a numeric, b numeric) RETURNS numeric
+--     STRICT IMMUTABLE PARALLEL SAFE AS
+-- $$
+-- SELECT greatest(0, a + b - 1);
+-- $$ LANGUAGE sql;
+--
+-- CREATE OR REPLACE FUNCTION t_d(a numeric, b numeric) RETURNS numeric
+--     STRICT IMMUTABLE PARALLEL SAFE AS
+-- $$
+-- SELECT CASE WHEN b = 1 THEN a WHEN a = 1 THEN b ELSE 0 END;
+-- $$ LANGUAGE sql;
+--
+-- CREATE OR REPLACE FUNCTION t_nm(a numeric, b numeric) RETURNS numeric
+--     STRICT IMMUTABLE PARALLEL SAFE AS
+-- $$
+-- SELECT CASE WHEN a + b > 1 THEN least(a, b) ELSE 0 END;
+-- $$ LANGUAGE sql;
+--
+-- CREATE OR REPLACE FUNCTION t_h0(a numeric, b numeric) RETURNS numeric
+--     STRICT IMMUTABLE PARALLEL SAFE AS
+-- $$
+-- SELECT CASE WHEN NOT a = 0 AND NOT b = 0 THEN a * b / (a + b - (a * b)) ELSE 0 END;
+-- $$ LANGUAGE sql;
+--
+-- CREATE OR REPLACE FUNCTION t_h0(a numeric, b numeric) RETURNS numeric
+--     STRICT IMMUTABLE PARALLEL SAFE AS
+-- $$
+-- SELECT CASE WHEN NOT a = 0 AND NOT b = 0 THEN a * b / (a + b - (a * b)) ELSE 0 END;
+-- $$ LANGUAGE sql;
+--
+-- CREATE OR REPLACE FUNCTION tc_max(a numeric, b numeric) RETURNS numeric
+--     STRICT IMMUTABLE PARALLEL SAFE AS
+-- $$
+-- SELECT greatest(a, b);
+-- $$ LANGUAGE sql;
+--
+-- CREATE OR REPLACE FUNCTION tc_sum(a numeric, b numeric) RETURNS numeric
+--     STRICT IMMUTABLE PARALLEL SAFE AS
+-- $$
+-- SELECT a + b - (a * b);
+-- $$ LANGUAGE sql;
+--
+-- CREATE OR REPLACE FUNCTION tc_luk(a numeric, b numeric) RETURNS numeric
+--     STRICT IMMUTABLE PARALLEL SAFE AS
+-- $$
+-- SELECT least(a + b, 1);
+-- $$ LANGUAGE sql;
+--
+-- CREATE OR REPLACE FUNCTION tc_d(a numeric, b numeric) RETURNS numeric
+--     STRICT IMMUTABLE PARALLEL SAFE AS
+-- $$
+-- SELECT CASE WHEN b = 0 THEN a WHEN a = 0 THEN b ELSE 1 END;
+-- $$ LANGUAGE sql;
+--
+-- CREATE OR REPLACE FUNCTION tc_nm(a numeric, b numeric) RETURNS numeric
+--     STRICT IMMUTABLE PARALLEL SAFE AS
+-- $$
+-- SELECT CASE WHEN a + b < 1 THEN greatest(a, b) ELSE 1 END;
+-- $$ LANGUAGE sql;
+--
+-- CREATE OR REPLACE FUNCTION tc_h2(a numeric, b numeric) RETURNS numeric
+--     STRICT IMMUTABLE PARALLEL SAFE AS
+-- $$
+-- SELECT (a + b) / (1 + a * b);
+-- $$ LANGUAGE sql;
+
 CREATE OR REPLACE FUNCTION logic_ops(operation text, a numeric, b numeric) RETURNS numeric
     IMMUTABLE PARALLEL SAFE AS
 $$
@@ -149,7 +227,7 @@ SELECT CASE
 $$ LANGUAGE sql;
 
 CREATE OR REPLACE FUNCTION logic_ops(operation text, similarities numeric[]) RETURNS numeric
-    IMMUTABLE PARALLEL SAFE AS
+    STRICT IMMUTABLE PARALLEL SAFE AS
 $$
 DECLARE
     similarity     numeric;
@@ -166,6 +244,12 @@ BEGIN
     RETURN similarity;
 END;
 $$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION array_distinct_merge(l anyarray, r anyarray) RETURNS anyarray
+    STRICT IMMUTABLE PARALLEL SAFE AS
+$$
+SELECT ARRAY(SELECT DISTINCT unnest(l || r));
+$$ LANGUAGE sql;
 
 CREATE OR REPLACE FUNCTION jsonb_merge(l jsonb, r jsonb) RETURNS jsonb
     STRICT IMMUTABLE PARALLEL SAFE AS

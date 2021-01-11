@@ -378,21 +378,7 @@ export default {
         NILPOTENT_MAXIMUM: 'Nilpotent maximum (⊥nM)',
         EINSTEIN_SUM: 'Einstein sum (⊥H2)',
     },
-    linksetOptions: {
-        MINIMUM_T_NORM: 'Minimum t-norm (⊤min)',
-        PRODUCT_T_NORM: 'Product t-norm (⊤prod)',
-        LUKASIEWICZ_T_NORM: 'Łukasiewicz t-norm (⊤Luk)',
-        DRASTIC_T_NORM: 'Drastic t-norm (⊤D)',
-        NILPOTENT_MINIMUM: 'Nilpotent minimum (⊤nM)',
-        HAMACHER_PRODUCT: 'Hamacher product (⊤H0)',
-        MAXIMUM_T_CONORM: 'Maximum t-conorm (⊥max)',
-        PROBABILISTIC_SUM: 'Probabilistic sum (⊥sum)',
-        BOUNDED_SUM: 'Bounded sum (⊥Luk)',
-        DRASTIC_T_CONORM: 'Drastic t-conorm (⊥D)',
-        NILPOTENT_MAXIMUM: 'Nilpotent maximum (⊥nM)',
-        EINSTEIN_SUM: 'Einstein sum (⊥H2)',
-    },
-    linksetOptionGroups: {
+    fuzzyLogicOptionGroups: {
         'All conditions must be met (AND)': ['MINIMUM_T_NORM', 'PRODUCT_T_NORM', 'LUKASIEWICZ_T_NORM',
             'DRASTIC_T_NORM', 'NILPOTENT_MINIMUM', 'HAMACHER_PRODUCT'],
         'At least one of the conditions must be met (OR)': ['MAXIMUM_T_CONORM', 'PROBABILISTIC_SUM', 'BOUNDED_SUM',

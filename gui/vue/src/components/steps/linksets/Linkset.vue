@@ -127,36 +127,38 @@
         </div>
       </sub-card>
 
-      <sub-card label="Matching Methods" :hasError="errors.includes('matching-methods')"> <!-- :has-columns="true" -->
-<!--        <template v-slot:columns>-->
-<!--          <div v-if="useComplexMethods" class="col-auto">-->
-<!--            <div  class="input-group input-group-sm">-->
-<!--              <div class="input-group-prepend">-->
-<!--                <span class="input-group-text">Threshold</span>-->
-<!--              </div>-->
+      <sub-card label="Matching Methods" :has-columns="true" :hasError="errors.includes('matching-methods')">
+        <template v-slot:columns>
+          <div class="col-auto">
+            <div class="input-group input-group-sm">
+              <div class="input-group-prepend">
+                <span class="input-group-text">Threshold</span>
+              </div>
 
-<!--              <input type="text" class="form-control" value="">-->
-<!--            </div>-->
-<!--          </div>-->
+              <input type="number" class="form-control" min="0" max="1" step="0.1"
+                     v-model.number="linksetSpec.threshold"/>
+            </div>
+          </div>
 
-<!--          <div class="col-auto">-->
-<!--            <div class="btn-group-toggle" data-toggle="buttons">-->
-<!--              <label class="btn btn-secondary btn-sm" v-bind:class="{'active': useComplexMethods}">-->
-<!--                <input type="checkbox" autocomplete="off" v-model="useComplexMethods"/>-->
-<!--                Use complex methods-->
-<!--              </label>-->
-<!--            </div>-->
-<!--          </div>-->
-<!--        </template>-->
+          <div class="col-auto">
+            <div class="custom-control custom-switch">
+              <input type="checkbox" class="custom-control-input" autocomplete="off"
+                     :id="'fuzzy_' + linksetSpec.id" v-model="useFuzzyLogic"/>
+              <label class="custom-control-label" :for="'fuzzy_' + linksetSpec.id">Use fuzzy logic</label>
+            </div>
+          </div>
+        </template>
 
         <logic-box :element="linksetSpec.methods" elements-name="conditions" :is-root="true"
                    :should-have-elements="true" group="linkset-filters"
                    :uid="'linkset_' + linksetSpec.id  + '_group_0'"
+                   :options="useFuzzyLogic ? fuzzyLogicOptions : undefined"
+                   :option-groups="useFuzzyLogic ? fuzzyLogicOptionGroups : undefined"
                    validate-method-name="validateCondition" empty-elements-text="No conditions"
                    validation-failed-text="Please provide at least one condition" v-slot="curCondition"
                    @add="addCondition($event)" ref="matchingMethodGroupComponent">
           <condition
-              :condition="curCondition.element" :index="curCondition.index"
+              :condition="curCondition.element" :index="curCondition.index" :useFuzzyLogic="useFuzzyLogic"
               @add="curCondition.add()" @remove="curCondition.remove()"/>
         </logic-box>
       </sub-card>
@@ -166,6 +168,7 @@
 
 <script>
     import {EventBus} from "@/eventbus";
+    import props from "@/utils/props";
 
     import LinksetSpecSourcesInfo from '../../info/LinksetSpecSourcesInfo';
     import LinksetSpecTargetsInfo from '../../info/LinksetSpecTargetsInfo';
@@ -177,7 +180,6 @@
 
     import LogicBox from "../../helpers/LogicBox";
     import ValidationMixin from '../../../mixins/ValidationMixin';
-    // import props from "@/utils/props";
 
     export default {
         name: "Linkset",
@@ -199,8 +201,11 @@
             return {
                 association: '',
                 isOpen: false,
-                // linksetOptions: props.linksetOptions,
-                // linksetOptionGroups: props.linksetOptionGroups,
+                useFuzzyLogic: false,
+                tNorms: Object.keys(props.tNorms),
+                tConorms: Object.keys(props.tConorms),
+                fuzzyLogicOptions: {...props.tNorms, ...props.tConorms},
+                fuzzyLogicOptionGroups: props.fuzzyLogicOptionGroups,
             };
         },
         computed: {
@@ -260,7 +265,8 @@
                     method_sim_normalized: false,
                     list_threshold: 0,
                     list_threshold_unit: 'matches',
-                    //t_conorm: 'MAXIMUM_T_CONORM',
+                    t_conorm: 'MAXIMUM_T_CONORM',
+                    threshold: 0,
                     sources: this.linksetSpec.sources
                         .filter(entityTypeSelection => entityTypeSelection !== '')
                         .map(entityTypeSelection => ({
@@ -322,6 +328,26 @@
                     this.linksetSpec.properties.push({entity_type_selection: newEntityTypeSelection, property: ['']});
             },
 
+            updateLogicBoxTypes(conditions) {
+                if (conditions.hasOwnProperty('type')) {
+                    if (this.useFuzzyLogic) {
+                        if (conditions.type === 'AND')
+                            conditions.type = 'MINIMUM_T_NORM';
+                        if (conditions.type === 'OR')
+                            conditions.type = 'MAXIMUM_T_CONORM';
+                    }
+                    else {
+                        if (this.tNorms.includes(conditions.type))
+                            conditions.type = 'AND';
+                        if (this.tConorms.includes(conditions.type))
+                            conditions.type = 'OR';
+                    }
+                }
+
+                if (conditions.hasOwnProperty('conditions'))
+                    conditions.conditions.forEach(condition => this.updateLogicBoxTypes(condition));
+            },
+
             async runLinkset(force = false) {
                 if (this.validateLinkset()) {
                     const data = await this.$root.runLinkset(this.linksetSpec.id, force);
@@ -354,6 +380,13 @@
 
             if (this.linksetSpec.targets.length < 1)
                 this.addEntityTypeSelection('targets');
+
+            this.useFuzzyLogic = !['AND', 'OR'].includes(this.linksetSpec.methods.type);
+        },
+        watch: {
+            useFuzzyLogic() {
+                this.updateLogicBoxTypes(this.linksetSpec.methods);
+            },
         },
     };
 </script>

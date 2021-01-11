@@ -1,9 +1,9 @@
 from inspect import cleandoc
 from psycopg2 import sql as psycopg_sql
 
-from ll.util.hasher import hash_string_min
 from ll.job.conditions import Conditions
 from ll.util.helpers import get_sql_empty
+from ll.util.hasher import hash_string_min
 
 
 class Linkset:
@@ -17,23 +17,8 @@ class Linkset:
         return self._data['id']
 
     @property
-    def conditions(self):
-        if not self._conditions:
-            methods = self._data['methods']
-            self._conditions = Conditions(methods['conditions'], methods['type'], self._job)
-        return self._conditions
-
-    @property
-    def conditions_sql(self):
-        return self.conditions.conditions_sql
-
-    # @property
-    # def similarity_sql(self):
-    #     return self.conditions.similarity_sql
-    #
-    # @property
-    # def similarity_fields(self):
-    #     return self.conditions.similarity_fields
+    def threshold(self):
+        return self._data['threshold']
 
     @property
     def is_association(self):
@@ -44,37 +29,35 @@ class Linkset:
         return self._data['properties']
 
     @property
-    def index_sql(self):
-        index_sqls = []
-        for matching_method in self.conditions.matching_methods:
-            if matching_method.index_sql:
-                index_sqls.append(matching_method.index_sql)
-
-        return psycopg_sql.SQL('\n').join(index_sqls) if index_sqls else None
-
-    @property
     def entity_type_selections(self):
         return self.sources + self.targets + self.intermediates
 
     @property
+    def conditions(self):
+        if not self._conditions:
+            methods = self._data['methods']
+            self._conditions = Conditions(methods['conditions'], methods['type'], self._job)
+        return self._conditions
+
+    @property
+    def similarity_fields(self):
+        return self.conditions.similarity_fields
+
+    @property
+    def index_sql(self):
+        return self.conditions.index_sql
+
+    @property
+    def conditions_sql(self):
+        return self.conditions.conditions_sql
+
+    @property
     def similarity_fields_agg_sql(self):
-        fields = {}
-        fields_added = []
+        return self.conditions.similarity_fields_agg_sql
 
-        for matching_method in self.conditions.matching_methods:
-            if matching_method.similarity_sql:
-                name = matching_method.field_name
-
-                # Add source and target values; if not done already
-                if name not in fields_added:
-                    fields_added.append(name)
-                    fields[name] = matching_method.similarity_sql
-
-        fields_sql = [psycopg_sql.SQL('{}, array_agg({})').format(psycopg_sql.Literal(name), sim)
-                      for name, sim in fields.items()]
-
-        return psycopg_sql.SQL('jsonb_build_object({})').format(psycopg_sql.SQL(', ').join(fields_sql)) \
-            if fields_sql else psycopg_sql.SQL('NULL::jsonb')
+    @property
+    def similarity_logic_ops_sql(self):
+        return self.conditions.similarity_logic_ops_sql
 
     @property
     def sources(self):
@@ -97,42 +80,7 @@ class Linkset:
         return self._get_combined_entity_type_selections_sql(is_source=False)
 
     def get_fields(self, keys=None, only_matching_fields=True):
-        if not isinstance(keys, list):
-            keys = ['sources', 'targets', 'intermediates']
-
-        # Regroup properties by entity-type selection instead of by method
-        ets_properties = {}
-        for matching_method in self.conditions.matching_methods:
-            for key in keys:
-                for internal_id, properties in getattr(matching_method, key).items():
-                    if key == 'sources' or key == 'targets':
-                        for property in properties:
-                            self._set_field(internal_id, property, matching_method,
-                                            ets_properties, only_matching_fields)
-                    else:
-                        self._set_field(internal_id, properties['source'], matching_method,
-                                        ets_properties, only_matching_fields)
-                        self._set_field(internal_id, properties['target'], matching_method,
-                                        ets_properties, only_matching_fields)
-
-        return ets_properties
-
-    @staticmethod
-    def _set_field(internal_id, property, matching_function, ets_properties, only_matching_fields):
-        ets_internal_id = internal_id if only_matching_fields \
-            else property.prop_original.entity_type_selection_internal_id
-
-        if ets_internal_id not in ets_properties:
-            ets_properties[ets_internal_id] = {}
-
-        if matching_function.field_name not in ets_properties[ets_internal_id]:
-            ets_properties[ets_internal_id][matching_function.field_name] = {
-                'matching_function': matching_function,
-                'properties': []
-            }
-
-        props = ets_properties[ets_internal_id][matching_function.field_name]['properties']
-        props.append(property)
+        return self.conditions.get_fields(keys, only_matching_fields)
 
     def _get_combined_entity_type_selections_sql(self, is_source=True):
         sql = []
@@ -148,13 +96,13 @@ class Linkset:
 
             # Then for get all properties from this entity-type selection required for a single matching function
             for property_label, ets_matching_func_props in ets_properties.items():
-                matching_func = ets_matching_func_props['matching_function']
+                matching_method = ets_matching_func_props['matching_method']
                 ets_method_properties = ets_matching_func_props['properties']
 
-                self._matching_functions_sql(ets_internal_id, matching_func, ets_method_properties, is_source, False,
-                                             joins, matching_fields, props_not_null, prev_fields, prev_targets)
-                self._matching_functions_sql(ets_internal_id, matching_func, ets_method_properties, is_source, True,
-                                             joins, matching_fields, props_not_null, prev_fields, prev_targets)
+                self._matching_methods_sql(ets_internal_id, matching_method, ets_method_properties, is_source, False,
+                                           joins, matching_fields, props_not_null, prev_fields, prev_targets)
+                self._matching_methods_sql(ets_internal_id, matching_method, ets_method_properties, is_source, True,
+                                           joins, matching_fields, props_not_null, prev_fields, prev_targets)
 
             sql.append(
                 psycopg_sql.SQL(cleandoc(
@@ -175,9 +123,9 @@ class Linkset:
         return psycopg_sql.SQL('\nUNION ALL\n').join(sql)
 
     @staticmethod
-    def _matching_functions_sql(ets_internal_id, matching_func, properties, is_source, is_normalized,
-                                joins, matching_fields, props_not_null, prev_fields, prev_targets):
-        field_name = matching_func.field_name
+    def _matching_methods_sql(ets_internal_id, matching_method, properties, is_source, is_normalized,
+                              joins, matching_fields, props_not_null, prev_fields, prev_targets):
+        field_name = matching_method.field_name
         if is_normalized:
             field_name += '_norm'
 
@@ -188,7 +136,7 @@ class Linkset:
             return
 
         # In case of list matching, combine all values into a field
-        if matching_func.list_threshold:
+        if matching_method.list_threshold:
             target_field = psycopg_sql.SQL('{}.field_values') \
                 .format(psycopg_sql.Identifier(field_name + '_extended'))
 
@@ -212,7 +160,7 @@ class Linkset:
                 field_name=psycopg_sql.Identifier(field_name + '_extended')
             ))
         else:
-            target = 'target' if not is_normalized else prev_targets[matching_func.field_name]
+            target = 'target' if not is_normalized else prev_targets[matching_method.field_name]
 
             # If the same combination of fields was used for another matching function before, then add a join
             if not is_normalized:
@@ -256,14 +204,14 @@ class Linkset:
         ))
 
         # Add is not null or is not empty check
-        if matching_func.list_threshold:
+        if matching_method.list_threshold:
             props_not_null.append(psycopg_sql.SQL('cardinality({}) > 0').format(target_field))
         else:
             props_not_null.append(psycopg_sql.SQL('{} IS NOT NULL').format(target_field))
 
         # Add properties to do the intermediate dataset matching
-        if matching_func.method_name == 'INTERMEDIATE':
-            for intermediate_ets, intermediate_ets_props in matching_func.intermediates.items():
+        if matching_method.method_name == 'INTERMEDIATE':
+            for intermediate_ets, intermediate_ets_props in matching_method.intermediates.items():
                 target = hash_string_min(intermediate_ets)
                 intermediate_field = intermediate_ets_props['source'] \
                     if is_source else intermediate_ets_props['target']

@@ -5,7 +5,17 @@
     <template v-for="(condition, idx) in methodGroup.conditions">
       <linkset-spec-group-info :method-group="condition" :key="idx" :is-root="false" :is-linkset-root="false"/>
 
-      <p class="font-weight-bold my-2 text-info" v-if="idx < (methodGroup.conditions.length - 1)">
+      <p v-if="idx < (methodGroup.conditions.length - 1) && usingFuzzyLogic" class="font-weight-bold my-2">
+        <span class="text-info">
+          {{ Object.keys(tNorms).includes(methodGroup.type) ? 'AND' : 'OR' }}
+        </span>
+        using
+        <span class="text-info">
+          {{ {...tNorms, ...tConorms}[methodGroup.type] }}
+        </span>
+      </p>
+
+      <p v-else-if="idx < (methodGroup.conditions.length - 1)" class="font-weight-bold my-2 text-info">
         {{ methodGroup.type }}
       </p>
     </template>
@@ -15,6 +25,7 @@
 </template>
 
 <script>
+    import props from "@/utils/props";
     import LinksetSpecConditionInfo from './LinksetSpecConditionInfo';
 
     export default {
@@ -33,6 +44,12 @@
                 default: true,
             },
         },
+        data() {
+            return {
+                tNorms: props.tNorms,
+                tConorms: props.tConorms,
+            };
+        },
         computed: {
             styleClass() {
                 const styleClass = [];
@@ -46,6 +63,9 @@
                     styleClass.push('bg-primary-light', 'border-primary');
 
                 return styleClass;
+            },
+            usingFuzzyLogic() {
+                return !['AND', 'OR'].includes(this.methodGroup.type);
             },
         },
     }

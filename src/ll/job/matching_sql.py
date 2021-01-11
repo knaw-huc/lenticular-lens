@@ -77,36 +77,8 @@ class MatchingSql:
         return sequence_sql
 
     def generate_match_linkset_sql(self):
-        # join_conditions = self._linkset.join_conditions_sql
-        # join_conditions_sql = sql.SQL('AND {}').format(join_conditions) if join_conditions else sql.SQL('')
-        #
-        # match_conditions = self._linkset.match_conditions_sql
-        # match_conditions_sql = sql.SQL('WHERE {}').format(match_conditions) if match_conditions else sql.SQL('')
-        #
-        # if match_conditions:
-        #     match_conditions_sql = sql.SQL("{} \nAND increment_counter('linkset_count')").format(match_conditions_sql)
-        # else:
-        #     join_conditions_sql = sql.SQL("{} \nAND increment_counter('linkset_count')").format(join_conditions_sql)
-
-        # similarity_fields = self._linkset.similarity_fields
-        # if similarity_fields:
-        #     similarities_sql = sql.SQL(cleandoc('''
-        #         CROSS JOIN LATERAL (
-        #             SELECT {expressions}
-        #         ) AS similarities ({names})
-        #     ''')).format(
-        #         expressions=sql.SQL(',\n    ').join(
-        #             [sim_expression for sim_expression in list(similarity_fields.values())]),
-        #         names=sql.SQL(', ').join(
-        #             [sql.Identifier(sim_field) for sim_field in list(similarity_fields.keys())])
-        #     )
-        # else:
-        #     similarities_sql = sql.SQL('')
-
-        return sql.SQL(cleandoc(
-            """ DROP TABLE IF EXISTS linksets.{linkset} CASCADE;
-                CREATE TABLE linksets.{linkset} AS
-                SELECT CASE WHEN source.uri < target.uri THEN source.uri ELSE target.uri END AS source_uri,
+        linkset_sql = sql.SQL(cleandoc(
+            """ SELECT CASE WHEN source.uri < target.uri THEN source.uri ELSE target.uri END AS source_uri,
                        CASE WHEN source.uri < target.uri THEN target.uri ELSE source.uri END AS target_uri,
                        CASE WHEN every(source.uri < target.uri) THEN 'source_target'::link_order
                             WHEN every(target.uri < source.uri) THEN 'target_source'::link_order
@@ -118,33 +90,45 @@ class MatchingSql:
                 JOIN target ON (source.uri != target.uri)
                 AND {conditions}
                 AND increment_counter('linkset_count')
-                GROUP BY source_uri, target_uri;
+                GROUP BY source_uri, target_uri
             """
-        ) + '\n').format(
-            linkset=sql.Identifier(self._job.table_name(self._linkset.id)),
+        )).format(
             similarities=self._linkset.similarity_fields_agg_sql,
             conditions=self._linkset.conditions_sql
         )
 
-    # def generate_match_distinct_linkset_sql(self):
-    #     return sql.SQL(cleandoc(
-    #         """ DROP TABLE IF EXISTS linksets.{view_name} CASCADE;
-    #             CREATE TABLE linksets.{view_name} AS
-    #             SELECT source_uri, target_uri,
-    #                    CASE WHEN every(link_order = 'source_target'::link_order) THEN 'source_target'::link_order
-    #                         WHEN every(link_order = 'target_source'::link_order) THEN 'target_source'::link_order
-    #                         ELSE 'both'::link_order END AS link_order,
-    #                    array_agg(DISTINCT source_collection) AS source_collections,
-    #                    array_agg(DISTINCT target_collection) AS target_collections,
-    #                    {similarity} AS similarity
-    #             FROM linkset
-    #             GROUP BY source_uri, target_uri;
-    #         """) + '\n').format(
-    #         view_name=sql.Identifier(self._job.table_name(self._linkset.id)),
-    #         similarity=self._linkset.similarity_sql,
-    #         similarities=similarities_sql,
-    #         conditions=self._linkset.conditions_sql
-    #     )
+        if self._linkset.threshold and self._linkset.similarity_fields:
+            sim_fields_sql = [sql.SQL('{} numeric[]').format(sql.Identifier(sim_field))
+                              for sim_field in self._linkset.similarity_fields]
+
+            return sql.SQL(cleandoc(
+                """ DROP TABLE IF EXISTS linksets.{linkset} CASCADE;
+                    CREATE TABLE linksets.{linkset} AS
+                    SELECT *
+                    FROM (
+                        {linkset_sql}
+                    ) AS linkset
+                    CROSS JOIN LATERAL jsonb_to_record(similarity) 
+                    AS sim({sim_fields_sql})
+                    WHERE {sim_logic_ops_sql} >= {threshold};
+                """
+            ) + '\n').format(
+                linkset=sql.Identifier(self._job.table_name(self._linkset.id)),
+                linkset_sql=linkset_sql,
+                sim_fields_sql=sql.SQL(', ').join(sim_fields_sql),
+                sim_logic_ops_sql=self._linkset.similarity_logic_ops_sql,
+                threshold=sql.Literal(self._linkset.threshold)
+            )
+
+        return sql.SQL(cleandoc(
+            """ DROP TABLE IF EXISTS linksets.{linkset} CASCADE;
+                CREATE TABLE linksets.{linkset} AS
+                {linkset_sql};
+            """
+        ) + '\n').format(
+            linkset=sql.Identifier(self._job.table_name(self._linkset.id)),
+            linkset_sql=linkset_sql
+        )
 
     def generate_match_linkset_finish_sql(self):
         return sql.SQL(cleandoc(

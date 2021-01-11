@@ -12,15 +12,15 @@ class Lens:
         return self._data['id']
 
     @property
+    def properties(self):
+        return self._data['properties']
+
+    @property
     def specs(self):
         if not self._specs:
             specs = self._data['specs']
             self._specs = LensElements(specs['elements'], specs['type'], self._job)
         return self._specs
-
-    @property
-    def sql(self):
-        return self.specs.sql
 
     @property
     def linksets(self):
@@ -31,5 +31,13 @@ class Lens:
         return self.specs.lenses
 
     @property
-    def properties(self):
-        return self._data['properties']
+    def similarity_fields(self):
+        return self.specs.similarity_fields
+
+    @property
+    def sql(self):
+        return self.specs.sql
+
+    @property
+    def similarity_logic_ops_sql(self):
+        return self.specs.similarity_logic_ops_sql

@@ -21,6 +21,12 @@
                 Configure
               </label>
 
+              <label v-if="useFuzzyLogic" class="btn btn-secondary btn-sm"
+                     v-bind:class="{'active': configureTConorms}">
+                <input type="checkbox" autocomplete="off" v-model="configureTConorms"/>
+                Configure fuzzy logic
+              </label>
+
               <label v-if="method.items.length > 0 && method.acceptsSimilarityMethod" class="btn btn-secondary btn-sm"
                      v-bind:class="{'active': applySimMethod}">
                 <input type="checkbox" autocomplete="off" v-model="applySimMethod"/>
@@ -50,6 +56,33 @@
         <div class="my-3 ml-5">
           <condition-method v-if="configureMatching && method.items.length > 0"
                             :method="method" :condition="condition" config-key="method_config" ref="methodConfig"/>
+
+          <template v-if="useFuzzyLogic && configureTConorms">
+            <div class="form-group row">
+              <label :for="'t_conorm_' + index" class="col-sm-3 col-form-label">
+                T-conorm
+              </label>
+
+              <div class="col-sm-3">
+                <select :id="'t_conorm_' + index" class="form-control form-control-sm" v-model="condition.t_conorm">
+                  <option v-for="(description, key) in tConorms" :value="key">
+                    {{ description }}
+                  </option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group row">
+              <label :for="'threshold_' + index" class="col-sm-3 col-form-label">
+                Threshold
+              </label>
+
+              <div class="col-sm-2">
+                <input :id="'threshold_' + index" class="form-control form-control-sm"
+                       type="number" min="0" max="1" step="0.1" v-model.number="condition.threshold">
+              </div>
+            </div>
+          </template>
 
           <template v-if="applySimMethod && method.items.length > 0 && method.acceptsSimilarityMethod">
             <div class="form-group row">
@@ -123,22 +156,6 @@
             </div>
           </div>
         </div>
-
-        <!--        <div class="mt-2 mb-4 ml-5 pt-2 border-top">-->
-        <!--          <div class="form-group row">-->
-        <!--            <label :for="'t_conorm_' + index" class="col-sm-3 col-form-label">-->
-        <!--              T-conorm-->
-        <!--            </label>-->
-
-        <!--            <div class="col-sm-3">-->
-        <!--              <select :id="'t_conorm_' + index" class="form-control form-control-sm" v-model="condition.t_conorm">-->
-        <!--                <option v-for="(description, key) in tConorms" :value="key">-->
-        <!--                  {{ description }}-->
-        <!--                </option>-->
-        <!--              </select>-->
-        <!--            </div>-->
-        <!--          </div>-->
-        <!--        </div>-->
       </div>
     </div>
 
@@ -189,6 +206,7 @@
         data() {
             return {
                 configureMatching: false,
+                configureTConorms: false,
                 applySimMethod: false,
                 applyListMatching: false,
                 tConorms: props.tConorms,
@@ -202,7 +220,7 @@
                     }), {}),
             };
         },
-        props: ['condition', 'index'],
+        props: ['condition', 'index', 'useFuzzyLogic'],
         computed: {
             method() {
                 if (this.condition.method_name && this.matchingMethods.hasOwnProperty(this.condition.method_name))
