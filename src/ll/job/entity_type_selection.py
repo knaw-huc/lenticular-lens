@@ -118,9 +118,10 @@ class EntityTypeSelection:
 
         for match_field_label, match_field in match_ets_fields.items():
             for match_field_property in match_field['properties']:
-                if match_field_property.hash not in matching_fields_hashes:
-                    matching_fields_hashes.append(match_field_property.hash)
-                    matching_fields.append(match_field_property)
+                for property in [match_field_property.prop_original, match_field_property.prop_normalized]:
+                    if property and property.hash not in matching_fields_hashes:
+                        matching_fields_hashes.append(property.hash)
+                        matching_fields.append(property)
 
         return matching_fields
 

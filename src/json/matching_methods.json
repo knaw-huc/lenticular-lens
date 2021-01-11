@@ -1,28 +1,22 @@
 {
   "EXACT": {
-    "match": "{source} = {target}",
-    "index": "btree ({target})"
+    "match": "{source} = {target}"
   },
   "INTERMEDIATE": {
-    "match": "{source_intermediate} = {target_intermediate}",
-    "index": "btree ({target_intermediate})"
+    "match": "{source_intermediate} = {target_intermediate}"
   },
   "NUMBERS_DELTA": {
     "match": "delta({type}, {source}, {target}, {distance_start}, {distance_end})",
-    "index": "btree ({target})"
+    "field_type": "number"
   },
   "TIME_DELTA": {
     "match": "delta({type}, {source}, {target}, {days} + ({months} * 30) + ({years} * 365))",
-    "index": "btree ({target})"
-  },
-  "SAME_YEAR_MONTH": {
-    "field": "get_date_part({date_part}, {field})",
-    "index": "btree (get_date_part({date_part}, {target}))"
+    "field_type": "date"
   },
   "LEVENSHTEIN_DISTANCE": {
     "match": "levenshtein_distance({source}, {target}, {max_distance})",
-    "similarity": "similarity({source}, {target}, {match})",
-    "condition": "{similarity} <= {max_distance}"
+    "similarity": "similarity({source}, {target}, levenshtein_distance({source}, {target}, {max_distance}))",
+    "condition": "{match} <= {max_distance}"
   },
   "LEVENSHTEIN_NORMALIZED": {
     "similarity": "similarity({source}, {target}, levenshtein_distance({source}, {target}, -1))",
@@ -46,24 +40,22 @@
     "before_index": "SELECT set_config('pg_trgm.similarity_threshold', {threshold}, true);",
     "index": "gin ({target} gin_trgm_ops)"
   },
+  "SAME_YEAR_MONTH": {
+    "field": "get_date_part({date_part}, {property})"
+  },
   "SOUNDEX": {
-    "field": "ll_soundex({field}, {size})",
-    "index": "btree (ll_soundex({target}, {size}))"
+    "field": "ll_soundex({property}, {size})"
   },
   "BLOOTHOOFT": {
-    "field": "bloothooft({field}, {name_type})",
-    "index": "btree (bloothooft({target}, {name_type}))"
+    "field": "bloothooft({property}, {name_type})"
   },
   "NYSIIS": {
-    "field": "nysiis({field})",
-    "index": "btree (nysiis({target}))"
+    "field": "nysiis({property})"
   },
   "METAPHONE": {
-    "field": "metaphone({field}, {max})",
-    "index": "btree (metaphone({target}, {max}))"
+    "field": "metaphone({property}, {max})"
   },
   "DMETAPHONE": {
-    "field": "dmetaphone({field})",
-    "index": "btree (dmetaphone({target}))"
+    "field": "dmetaphone({property})"
   }
 }

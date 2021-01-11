@@ -68,7 +68,7 @@ class PropertyField:
         sql = psycopg2_sql.SQL('.').join(map(psycopg2_sql.Identifier, absolute_property))
 
         for transformer in self._transformers:
-            template_sql = psycopg2_sql.SQL(transformer['transformer_info']['sql_template'])
+            template_sql = psycopg2_sql.SQL(transformer['sql_template'])
             sql_parameters = {key: psycopg2_sql.Literal(value) for (key, value) in transformer['parameters'].items()}
             sql = template_sql.format(property=sql, **sql_parameters)
 

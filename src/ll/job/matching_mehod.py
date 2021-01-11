@@ -4,51 +4,59 @@ import json
 from inspect import cleandoc
 from psycopg2 import sql as psycopg2_sql
 
-from ll.data.property_field import PropertyField
-from ll.util.helpers import get_json_from_file
 from ll.util.hasher import hash_string_min
+from ll.util.helpers import get_json_from_file
+from ll.data.property_field import PropertyField
+from ll.job.matching_method_property import MatchingMethodProperty
 
 
 class MatchingMethod:
-    _transformers = get_json_from_file('transformers.json')
     _matching_methods = get_json_from_file('matching_methods.json')
 
-    def __init__(self, function_obj, job):
-        self._data = function_obj
+    def __init__(self, data, job):
+        self._data = data
         self._job = job
         self._sources = []
         self._targets = []
         self._intermediates = []
 
-        self.field_name = hash_string_min(json.dumps(function_obj))
+        self.field_name = hash_string_min(json.dumps(data))
 
-        self.method_name = function_obj['method_name']
-        self._method_config = function_obj['method_config']
+        self.method_name = data['method_name']
+        self._method_config = data['method_config']
         if self.method_name in self._matching_methods:
             self._method_info = self._matching_methods[self.method_name]
         else:
             raise NameError('Matching method %s is not defined' % self.method_name)
 
-        self._method_sim_name = function_obj['method_sim_name']
-        self._method_sim_config = function_obj['method_sim_config']
-        self._method_sim_normalized = function_obj['method_sim_normalized']
+        self._method_sim_name = data['method_sim_name']
+        self._method_sim_config = data['method_sim_config']
+        self._method_sim_normalized = data['method_sim_normalized']
         self._method_sim_info = self._matching_methods[self._method_sim_name] \
             if self._method_sim_name in self._matching_methods else {}
 
         # self._t_conorm = function_obj['t_conorm']
-        self.list_threshold = function_obj['list_threshold']
-        self._list_threshold_unit = function_obj['list_threshold_unit']
+        self.list_threshold = data['list_threshold']
+        self._list_threshold_unit = data['list_threshold_unit']
 
     @property
     def sql(self):
-        join_template = self._join_condition_template
-        condition_template = re.sub(r'{similarity}', self._similarity_template, self._match_conditions_template) \
-            if self._similarity_template and self._match_conditions_template else None
-
-        if not self._method_sim_normalized and join_template and condition_template:
-            template = '({} AND {})'.format(join_template, condition_template)
+        if 'field' in self._method_info and not self._method_sim_name:
+            template = '{source_norm} = {target_norm}'
         else:
-            template = join_template if join_template else condition_template
+            template = self._condition_template
+            if template:
+                if self._match_template:
+                    template = re.sub(r'{match}', self._match_template, template)
+                if self._similarity_template:
+                    template = re.sub(r'{similarity}', self._similarity_template, template)
+            else:
+                template = self._match_template
+
+        if self._method_sim_name and not self._method_sim_normalized:
+            template = '{source_norm} = {target_norm} AND ' + template
+
+        template = self._update_template_fields(template)
 
         return self._sql(template, list_check=True) if template else None
 
@@ -71,46 +79,32 @@ class MatchingMethod:
         if self.list_threshold:
             return None
 
-        if 'index' not in self._method_info and 'index' not in self._method_sim_info:
-            return None
+        index_sqls = [psycopg2_sql.SQL('CREATE INDEX ON target USING btree ({});')
+                          .format(psycopg2_sql.Identifier(self.field_name))]
 
-        index_sqls = []
+        if self._method_info.get('field'):
+            index_sqls.append(psycopg2_sql.SQL('CREATE INDEX ON target USING btree ({});')
+                              .format(psycopg2_sql.Identifier(self.field_name + '_norm')))
 
-        if 'before_index' in self._method_info:
+        for before_index in [self._method_info['before_index']
+                             for method_info in [self._method_info, self._method_sim_info]
+                             if 'before_index' in method_info]:
+            index_sqls.append(psycopg2_sql.SQL(before_index).format(
+                target=psycopg2_sql.Identifier(self.field_name),
+                target_intermediate=psycopg2_sql.Identifier(self.field_name + '_intermediate'),
+                **self._sql_parameters
+            ))
+
+        for index in [self._method_info['index']
+                      for method_info in [self._method_info, self._method_sim_info]
+                      if 'index' in method_info]:
             index_sqls.append(psycopg2_sql.SQL('CREATE INDEX ON target USING {};').format(
-                psycopg2_sql.SQL(self._method_info['before_index']).format(
+                psycopg2_sql.SQL(index).format(
                     target=psycopg2_sql.Identifier(self.field_name),
                     target_intermediate=psycopg2_sql.Identifier(self.field_name + '_intermediate'),
                     **self._sql_parameters
                 )
             ))
-
-        if 'before_index' in self._method_sim_info:
-            index_sqls.append(psycopg2_sql.SQL('CREATE INDEX ON target USING {};').format(
-                psycopg2_sql.SQL(self._method_sim_info['before_index']).format(
-                    target=psycopg2_sql.Identifier(self.field_name),
-                    target_intermediate=psycopg2_sql.Identifier(self.field_name + '_intermediate'),
-                    **self._sql_parameters
-                )
-            ))
-
-        if 'index' in self._method_info:
-            index_sqls.append(psycopg2_sql.SQL('CREATE INDEX ON target USING {};').format(
-                psycopg2_sql.SQL(self._method_info['index']).format(
-                    target=psycopg2_sql.Identifier(self.field_name),
-                    target_intermediate=psycopg2_sql.Identifier(self.field_name + '_intermediate'),
-                    **self._sql_parameters
-                )
-            ))
-
-            if 'index' in self._method_sim_info:
-                index_sqls.append(psycopg2_sql.SQL('CREATE INDEX ON target USING {};').format(
-                    psycopg2_sql.SQL(self._method_info['index']).format(
-                        target=psycopg2_sql.Identifier(self.field_name),
-                        target_intermediate=psycopg2_sql.Identifier(self.field_name + '_intermediate'),
-                        **self._sql_parameters
-                    )
-                ))
 
         return psycopg2_sql.SQL('\n').join(index_sqls)
 
@@ -141,31 +135,35 @@ class MatchingMethod:
         return self._intermediates
 
     @property
-    def _join_condition_template(self):
-        if 'match' in self._method_info and 'condition' not in self._method_info:
+    def _match_template(self):
+        if 'match' in self._method_info:
             template = self._method_info['match']
-        elif 'field' in self._method_info and not self._method_sim_normalized:
-            template = '{source} = {target}'.format(
-                source=re.sub(r'{field}', '{source}', self._method_info['field']),
-                target=re.sub(r'{field}', '{target}', self._method_info['field'])
-            )
+        elif 'field' in self._method_info and 'match' in self._method_sim_info:
+            template = self._method_sim_info['match']
+            if self._method_sim_normalized:
+                template = re.sub(r'{source}', '{source_norm}', template)
+                template = re.sub(r'{target}', '{target_norm}', template)
         else:
             return None
 
-        if self.list_threshold:
-            template = re.sub(r'{source}', 'src', template)
-            template = re.sub(r'{target}', 'trg', template)
-        else:
-            template = re.sub(r'{source}', 'source.{field_name}', template)
-            template = re.sub(r'{target}', 'target.{field_name}', template)
-
-        template = re.sub(r'{source_intermediate}', 'source.{field_name_intermediate}', template)
-        template = re.sub(r'{target_intermediate}', 'target.{field_name_intermediate}', template)
-
-        return template
+        return self._update_template_fields(template)
 
     @property
-    def _match_conditions_template(self):
+    def _similarity_template(self):
+        if 'similarity' in self._method_info:
+            template = self._method_info['similarity']
+        elif 'field' in self._method_info and 'similarity' in self._method_sim_info:
+            template = self._method_sim_info['similarity']
+            if self._method_sim_normalized:
+                template = re.sub(r'{source}', '{source_norm}', template)
+                template = re.sub(r'{target}', '{target_norm}', template)
+        else:
+            return None
+
+        return self._update_template_fields(template)
+
+    @property
+    def _condition_template(self):
         if 'condition' in self._method_info:
             return self._method_info['condition']
 
@@ -175,32 +173,26 @@ class MatchingMethod:
         return None
 
     @property
-    def _similarity_template(self):
-        if 'similarity' in self._method_info:
-            template = self._method_info['similarity']
-        elif 'field' in self._method_info and 'similarity' in self._method_sim_info:
-            template = self._method_sim_info['similarity']
-            if self._method_sim_normalized:
-                template = template.format(
-                    source=re.sub(r'{field}', '{source}', self._method_info['field']),
-                    target=re.sub(r'{field}', '{target}', self._method_info['field'])
-                )
-        else:
-            return None
-
-        if self.list_threshold:
-            template = re.sub(r'{source}', 'src', template)
-            template = re.sub(r'{target}', 'trg', template)
-        else:
-            template = re.sub(r'{source}', 'source.{field_name}', template)
-            template = re.sub(r'{target}', 'target.{field_name}', template)
-
-        return template
-
-    @property
     def _sql_parameters(self):
         return {key: psycopg2_sql.Literal(value)
                 for (key, value) in {**self._method_config, **self._method_sim_config}.items()}
+
+    def _update_template_fields(self, template):
+        if self.list_threshold:
+            template = re.sub(r'{source}', 'src_org', template)
+            template = re.sub(r'{target}', 'trg_org', template)
+            template = re.sub(r'{source_norm}', 'src_norm', template)
+            template = re.sub(r'{target_norm}', 'trg_norm', template)
+        else:
+            template = re.sub(r'{source}', 'source.{field_name}', template)
+            template = re.sub(r'{target}', 'target.{field_name}', template)
+            template = re.sub(r'{source_norm}', 'source.{field_name_norm}', template)
+            template = re.sub(r'{target_norm}', 'target.{field_name_norm}', template)
+
+        template = re.sub(r'{source_intermediate}', 'source.{field_name_intermediate}', template)
+        template = re.sub(r'{target_intermediate}', 'target.{field_name_intermediate}', template)
+
+        return template
 
     def _sql(self, template, list_check=True):
         list_threshold = None
@@ -217,8 +209,8 @@ class MatchingMethod:
                 template = cleandoc('''	
                     cardinality(ARRAY(
                         SELECT 1
-                        FROM unnest(source.{field_name}) AS src
-                        JOIN unnest(target.{field_name}) AS trg
+                        FROM unnest(source.{field_name}, source.{field_name_norm}) AS (src_org, src_norm)
+                        CROSS JOIN unnest(target.{field_name}, target.{field_name_norm}) AS (trg_org, trg_norm)
                         ON ''' + template + '''	
                     )) >= {list_threshold}
                 ''')
@@ -226,13 +218,14 @@ class MatchingMethod:
                 template = cleandoc('''	
                     ARRAY(
                         SELECT ''' + template + '''	
-                        FROM unnest(source.{field_name}) AS src
-                        CROSS JOIN unnest(target.{field_name}) AS trg
+                        FROM unnest(source.{field_name}, source.{field_name_norm}) AS (src_org, src_norm)
+                        CROSS JOIN unnest(target.{field_name}, target.{field_name_norm}) AS (trg_org, trg_norm)
                     )
                 ''')
 
         return psycopg2_sql.SQL(template).format(
             field_name=psycopg2_sql.Identifier(self.field_name),
+            field_name_norm=psycopg2_sql.Identifier(self.field_name + '_norm'),
             field_name_intermediate=psycopg2_sql.Identifier(self.field_name + '_intermediate'),
             list_threshold=list_threshold,
             **self._sql_parameters
@@ -241,30 +234,15 @@ class MatchingMethod:
     def _get_properties(self, key):
         properties = {}
         for entity_type_selection, fields in self._data[key].items():
-            properties[entity_type_selection] = []
-            for field in fields:
-                field_transformers = field.get('transformers', [])
+            field_type = self._method_config.get('field_type')
+            field_type_info = {
+                'type': field_type,
+                'parameters': {'format': self._method_config['format'] if field_type == 'date' else {}}
+            }
 
-                for transformer in field_transformers:
-                    if transformer['name'] in self._transformers:
-                        transformer['transformer_info'] = self._transformers[transformer['name']]
-                    else:
-                        raise NameError('Transformer %s is not defined' % transformer['name'])
-
-                if self.method_name == 'NUMBERS_DELTA':
-                    field_transformers.append({
-                        'name': 'TO_NUMERIC_IMMUTABLE',
-                        'transformer_info': self._transformers['TO_NUMERIC_IMMUTABLE'],
-                        'parameters': {}
-                    })
-                elif self.method_name == 'TIME_DELTA':
-                    field_transformers.append({
-                        'name': 'TO_DATE_IMMUTABLE',
-                        'transformer_info': self._transformers['TO_DATE_IMMUTABLE'],
-                        'parameters': {'format': self._method_config['format']}
-                    })
-
-                property_field = PropertyField(field['property'], job=self._job, transformers=field_transformers)
-                properties[entity_type_selection].append(property_field)
+            properties[entity_type_selection] = \
+                [MatchingMethodProperty(field, self._job, field_type_info,
+                                        self._method_info.get('field'), self._method_config)
+                 for field in fields]
 
         return properties

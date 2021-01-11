@@ -120,7 +120,7 @@ class Linkset:
     @staticmethod
     def _set_field(internal_id, property, matching_function, ets_properties, only_matching_fields):
         ets_internal_id = internal_id if only_matching_fields \
-            else property.entity_type_selection_internal_id
+            else property.prop_original.entity_type_selection_internal_id
 
         if ets_internal_id not in ets_properties:
             ets_properties[ets_internal_id] = {}
@@ -144,127 +144,17 @@ class Linkset:
             matching_fields = []
             props_not_null = []
             prev_fields = []
+            prev_targets = {}
 
             # Then for get all properties from this entity-type selection required for a single matching function
             for property_label, ets_matching_func_props in ets_properties.items():
                 matching_func = ets_matching_func_props['matching_function']
                 ets_method_properties = ets_matching_func_props['properties']
 
-                # In case of list matching, combine all values into a field
-                if matching_func.list_threshold:
-                    target_field = psycopg_sql.SQL('{}.field_values') \
-                        .format(psycopg_sql.Identifier(property_label + '_extended'))
-
-                    # matching_fields.append(psycopg_sql.SQL('{target_field}.field_counts AS {field_name}').format(
-                    #     target_field=psycopg_sql.Identifier(property_label + '_counts'),
-                    #     field_name=psycopg_sql.Identifier(property_label + '_count')
-                    # ))
-
-                    joins.append(psycopg_sql.SQL(cleandoc('''
-                        LEFT JOIN (
-                            SELECT uri, ARRAY(	                            
-                                SELECT DISTINCT x
-                                FROM unnest({fields}) AS x
-                                WHERE x IS NOT NULL
-                            ) AS field_values
-                            FROM {res}
-                            GROUP BY uri
-                        ) AS {field_name}
-                        ON {field_name}.uri = target.uri                    
-                    ''')).format(
-                        res=psycopg_sql.Identifier(ets_internal_id),
-                        fields=psycopg_sql.SQL(' || ').join(
-                            [psycopg_sql.SQL('array_agg({})').format(psycopg_sql.Identifier(prop.hash))
-                             for prop in ets_method_properties]
-                        ),
-                        # field_name=psycopg_sql.Identifier(property_label + '_counts')
-                        field_name=psycopg_sql.Identifier(property_label + '_extended')
-                    ))
-
-                    # joins.append(psycopg_sql.SQL(cleandoc('''
-                    #     LEFT JOIN (
-                    #         SELECT uri, (
-                    #             SELECT count(DISTINCT x)
-                    #             FROM unnest({fields}) AS x
-                    #             WHERE x IS NOT NULL
-                    #         ) AS field_counts
-                    #         FROM {res}
-                    #         GROUP BY uri
-                    #     ) AS {field_name}
-                    #     ON {field_name}.uri = target.uri
-                    # ''')).format(
-                    #     res=psycopg_sql.Identifier(ets_internal_id),
-                    #     fields=psycopg_sql.SQL(' || ').join(
-                    #         [psycopg_sql.SQL('array_agg({})').format(psycopg_sql.Identifier(prop.hash))
-                    #          for prop in ets_method_properties]
-                    #     ),
-                    #     field_name=psycopg_sql.Identifier(property_label + '_counts')
-                    # ))
-                else:
-                    # If the same combination of fields was used for another matching function before, then add a join
-                    target = 'target'
-                    fields = [prop.hash for prop in ets_method_properties]
-                    if any(all(elem in fields for elem in prev_field) for prev_field in prev_fields):
-                        target = hash_string_min(property_label)
-                        joins.append(
-                            psycopg_sql.SQL('JOIN {res} AS {join_name} ON target.uri = {join_name}.uri').format(
-                                res=psycopg_sql.Identifier(ets_internal_id),
-                                join_name=psycopg_sql.Identifier(target)
-                            )
-                        )
-
-                    prev_fields.append(fields)
-                    target_field = psycopg_sql.SQL('{target}.{property_field}').format(
-                        target=psycopg_sql.Identifier(target),
-                        property_field=psycopg_sql.Identifier(ets_method_properties[0].hash)
-                    )
-
-                    # In case of multiple properties, combine all values into a new field to use as a join
-                    if len(ets_method_properties) > 1:
-                        target_field = psycopg_sql.Identifier(property_label)
-
-                        joins.append(psycopg_sql.SQL('CROSS JOIN unnest(ARRAY[{fields}]) AS {field_name}').format(
-                            fields=psycopg_sql.SQL(', ').join(
-                                [psycopg_sql.SQL('{target}.{property_field}').format(
-                                    target=psycopg_sql.Identifier(target),
-                                    property_field=psycopg_sql.Identifier(prop.hash)
-                                ) for prop in ets_method_properties]
-                            ),
-                            field_name=psycopg_sql.Identifier(property_label)
-                        ))
-
-                matching_fields.append(psycopg_sql.SQL('{target_field} AS {field_name}').format(
-                    target_field=target_field,
-                    field_name=psycopg_sql.Identifier(property_label)
-                ))
-
-                if matching_func.list_threshold:
-                    props_not_null.append(psycopg_sql.SQL('cardinality({}) > 0').format(target_field))
-                else:
-                    props_not_null.append(psycopg_sql.SQL('{} IS NOT NULL').format(target_field))
-
-                if matching_func.method_name == 'INTERMEDIATE':
-                    for intermediate_ets, intermediate_ets_props in matching_func.intermediates.items():
-                        target = hash_string_min(intermediate_ets)
-                        intermediate_field = intermediate_ets_props['source'] \
-                            if is_source else intermediate_ets_props['target']
-
-                        joins.append(
-                            psycopg_sql.SQL('''
-                                LEFT JOIN {ets} AS {join_name} 
-                                ON {target_field} = {join_name}.{intermediate_field}
-                            ''').format(
-                                ets=psycopg_sql.Identifier(intermediate_ets),
-                                join_name=psycopg_sql.Identifier(target),
-                                target_field=target_field,
-                                intermediate_field=psycopg_sql.Identifier(intermediate_field.hash)
-                            )
-                        )
-
-                        matching_fields.append(psycopg_sql.SQL('{join_name}.uri AS {field_name}').format(
-                            join_name=psycopg_sql.Identifier(target),
-                            field_name=psycopg_sql.Identifier(property_label + '_intermediate')
-                        ))
+                self._matching_functions_sql(ets_internal_id, matching_func, ets_method_properties, is_source, False,
+                                             joins, matching_fields, props_not_null, prev_fields, prev_targets)
+                self._matching_functions_sql(ets_internal_id, matching_func, ets_method_properties, is_source, True,
+                                             joins, matching_fields, props_not_null, prev_fields, prev_targets)
 
             sql.append(
                 psycopg_sql.SQL(cleandoc(
@@ -283,3 +173,114 @@ class Linkset:
             )
 
         return psycopg_sql.SQL('\nUNION ALL\n').join(sql)
+
+    @staticmethod
+    def _matching_functions_sql(ets_internal_id, matching_func, properties, is_source, is_normalized,
+                                joins, matching_fields, props_not_null, prev_fields, prev_targets):
+        field_name = matching_func.field_name
+        if is_normalized:
+            field_name += '_norm'
+
+        props = [prop.prop_normalized if is_normalized else prop.prop_original
+                 for prop in properties
+                 if not is_normalized or prop.prop_normalized]
+        if not props:
+            return
+
+        # In case of list matching, combine all values into a field
+        if matching_func.list_threshold:
+            target_field = psycopg_sql.SQL('{}.field_values') \
+                .format(psycopg_sql.Identifier(field_name + '_extended'))
+
+            joins.append(psycopg_sql.SQL(cleandoc('''
+                LEFT JOIN (
+                    SELECT uri, ARRAY(
+                        SELECT DISTINCT x
+                        FROM unnest({fields}) AS x
+                        WHERE x IS NOT NULL
+                    ) AS field_values
+                    FROM {res}
+                    GROUP BY uri
+                ) AS {field_name}
+                ON {field_name}.uri = target.uri                    
+            ''')).format(
+                res=psycopg_sql.Identifier(ets_internal_id),
+                fields=psycopg_sql.SQL(' || ').join(
+                    [psycopg_sql.SQL('array_agg({})').format(psycopg_sql.Identifier(prop.hash))
+                     for prop in props]
+                ),
+                field_name=psycopg_sql.Identifier(field_name + '_extended')
+            ))
+        else:
+            target = 'target' if not is_normalized else prev_targets[matching_func.field_name]
+
+            # If the same combination of fields was used for another matching function before, then add a join
+            if not is_normalized:
+                fields = [prop.hash for prop in props]
+                if any(all(elem in fields for elem in prev_field) for prev_field in prev_fields):
+                    target = hash_string_min(field_name)
+                    joins.append(
+                        psycopg_sql.SQL('JOIN {res} AS {join_name} ON target.uri = {join_name}.uri').format(
+                            res=psycopg_sql.Identifier(ets_internal_id),
+                            join_name=psycopg_sql.Identifier(target)
+                        )
+                    )
+
+                prev_fields.append(fields)
+                prev_targets[field_name] = target
+
+            # Default case: if we have just one property, just select that property field from the target
+            target_field = psycopg_sql.SQL('{target}.{property_field}').format(
+                target=psycopg_sql.Identifier(target),
+                property_field=psycopg_sql.Identifier(props[0].hash)
+            )
+
+            # In case of multiple props, combine all values into a new field to use as a join
+            if len(props) > 1:
+                target_field = psycopg_sql.Identifier(field_name)
+
+                joins.append(psycopg_sql.SQL('CROSS JOIN unnest(ARRAY[{fields}]) AS {field_name}').format(
+                    fields=psycopg_sql.SQL(', ').join(
+                        [psycopg_sql.SQL('{target}.{property_field}').format(
+                            target=psycopg_sql.Identifier(target),
+                            property_field=psycopg_sql.Identifier(prop.hash)
+                        ) for prop in props]
+                    ),
+                    field_name=psycopg_sql.Identifier(field_name)
+                ))
+
+        # Now that we have determined the target field, add it to the list of matching fields
+        matching_fields.append(psycopg_sql.SQL('{target_field} AS {field_name}').format(
+            target_field=target_field,
+            field_name=psycopg_sql.Identifier(field_name)
+        ))
+
+        # Add is not null or is not empty check
+        if matching_func.list_threshold:
+            props_not_null.append(psycopg_sql.SQL('cardinality({}) > 0').format(target_field))
+        else:
+            props_not_null.append(psycopg_sql.SQL('{} IS NOT NULL').format(target_field))
+
+        # Add properties to do the intermediate dataset matching
+        if matching_func.method_name == 'INTERMEDIATE':
+            for intermediate_ets, intermediate_ets_props in matching_func.intermediates.items():
+                target = hash_string_min(intermediate_ets)
+                intermediate_field = intermediate_ets_props['source'] \
+                    if is_source else intermediate_ets_props['target']
+
+                joins.append(
+                    psycopg_sql.SQL('''
+                        LEFT JOIN {ets} AS {join_name} 
+                        ON {target_field} = {join_name}.{intermediate_field}
+                    ''').format(
+                        ets=psycopg_sql.Identifier(intermediate_ets),
+                        join_name=psycopg_sql.Identifier(target),
+                        target_field=target_field,
+                        intermediate_field=psycopg_sql.Identifier(intermediate_field.hash)
+                    )
+                )
+
+                matching_fields.append(psycopg_sql.SQL('{join_name}.uri AS {field_name}').format(
+                    join_name=psycopg_sql.Identifier(target),
+                    field_name=psycopg_sql.Identifier(field_name + '_intermediate')
+                ))
