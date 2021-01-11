@@ -9,9 +9,9 @@ from ll.util.helpers import get_json_from_file
 from ll.util.hasher import hash_string_min
 
 
-class MatchingFunction:
+class MatchingMethod:
     _transformers = get_json_from_file('transformers.json')
-    _matching_functions = get_json_from_file('matching_functions.json')
+    _matching_methods = get_json_from_file('matching_methods.json')
 
     def __init__(self, function_obj, job):
         self._data = function_obj
@@ -24,16 +24,16 @@ class MatchingFunction:
 
         self.method_name = function_obj['method_name']
         self._method_config = function_obj['method_config']
-        if self.method_name in self._matching_functions:
-            self._method_info = self._matching_functions[self.method_name]
+        if self.method_name in self._matching_methods:
+            self._method_info = self._matching_methods[self.method_name]
         else:
-            raise NameError('Matching function %s is not defined' % self.method_name)
+            raise NameError('Matching method %s is not defined' % self.method_name)
 
         self._method_sim_name = function_obj['method_sim_name']
         self._method_sim_config = function_obj['method_sim_config']
         self._method_sim_normalized = function_obj['method_sim_normalized']
-        self._method_sim_info = self._matching_functions[self._method_sim_name] \
-            if self._method_sim_name in self._matching_functions else {}
+        self._method_sim_info = self._matching_methods[self._method_sim_name] \
+            if self._method_sim_name in self._matching_methods else {}
 
         # self._t_conorm = function_obj['t_conorm']
         self.list_threshold = function_obj['list_threshold']

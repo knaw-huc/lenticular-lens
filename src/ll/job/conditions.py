@@ -1,5 +1,5 @@
 from psycopg2 import sql as psycopg2_sql
-from ll.job.matching_function import MatchingFunction
+from ll.job.matching_mehod import MatchingMethod
 
 
 class Conditions:
@@ -20,7 +20,7 @@ class Conditions:
                 if 'conditions' in item and 'type' in item:
                     self._conditions_list.append(Conditions(item['conditions'], item['type'], self._job))
                 else:
-                    self._conditions_list.append(MatchingFunction(item, self._job))
+                    self._conditions_list.append(MatchingMethod(item, self._job))
 
         return self._conditions_list
 
@@ -28,7 +28,7 @@ class Conditions:
     def conditions_sql(self):
         condition_sqls = []
         for condition in self.conditions_list:
-            if isinstance(condition, MatchingFunction):
+            if isinstance(condition, MatchingMethod):
                 condition_sqls.append(condition.sql)
             else:
                 condition_sqls.append(condition.conditions_sql)
@@ -39,7 +39,7 @@ class Conditions:
     # def conditions_sql(self):
     #     filter_sqls = []
     #     for condition in self.conditions_list:
-    #         if isinstance(condition, MatchingFunction):
+    #         if isinstance(condition, MatchingMethod):
     #             match_condition = condition.match_conditions_sql
     #             if match_condition:
     #                 filter_sqls.append(match_condition)
@@ -61,7 +61,7 @@ class Conditions:
     # def similarity_sql(self):
     #     similarity_sqls = []
     #     for condition in self.conditions_list:
-    #         if isinstance(condition, MatchingFunction):
+    #         if isinstance(condition, MatchingMethod):
     #             if condition.similarity_grouping_sql:
     #                 similarity_sqls.append(condition.similarity_grouping_sql)
     #         else:
@@ -82,16 +82,16 @@ class Conditions:
 
     # @property
     # def similarity_fields(self):
-    #     return {matching_function.field_name + '_similarity': matching_function.similarity_sql
-    #             for matching_function in self.matching_functions if matching_function.similarity_sql}
+    #     return {matching_method.field_name + '_similarity': matching_method.similarity_sql
+    #             for matching_method in self.matching_methods if matching_method.similarity_sql}
 
     @property
-    def matching_functions(self):
-        matching_functions = []
+    def matching_methods(self):
+        matching_methods = []
         for condition in self.conditions_list:
-            if isinstance(condition, MatchingFunction):
-                matching_functions.append(condition)
+            if isinstance(condition, MatchingMethod):
+                matching_methods.append(condition)
             else:
-                matching_functions += condition.matching_functions
+                matching_methods += condition.matching_methods
 
-        return matching_functions
+        return matching_methods

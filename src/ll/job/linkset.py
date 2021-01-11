@@ -46,9 +46,9 @@ class Linkset:
     @property
     def index_sql(self):
         index_sqls = []
-        for matching_function in self.conditions.matching_functions:
-            if matching_function.index_sql:
-                index_sqls.append(matching_function.index_sql)
+        for matching_method in self.conditions.matching_methods:
+            if matching_method.index_sql:
+                index_sqls.append(matching_method.index_sql)
 
         return psycopg_sql.SQL('\n').join(index_sqls) if index_sqls else None
 
@@ -61,14 +61,14 @@ class Linkset:
         fields = {}
         fields_added = []
 
-        for match_func in self.conditions.matching_functions:
-            if match_func.similarity_sql:
-                name = match_func.field_name
+        for matching_method in self.conditions.matching_methods:
+            if matching_method.similarity_sql:
+                name = matching_method.field_name
 
                 # Add source and target values; if not done already
                 if name not in fields_added:
                     fields_added.append(name)
-                    fields[name] = match_func.similarity_sql
+                    fields[name] = matching_method.similarity_sql
 
         fields_sql = [psycopg_sql.SQL('{}, array_agg({})').format(psycopg_sql.Literal(name), sim)
                       for name, sim in fields.items()]
@@ -102,17 +102,17 @@ class Linkset:
 
         # Regroup properties by entity-type selection instead of by method
         ets_properties = {}
-        for matching_function in self.conditions.matching_functions:
+        for matching_method in self.conditions.matching_methods:
             for key in keys:
-                for internal_id, properties in getattr(matching_function, key).items():
+                for internal_id, properties in getattr(matching_method, key).items():
                     if key == 'sources' or key == 'targets':
                         for property in properties:
-                            self._set_field(internal_id, property, matching_function,
+                            self._set_field(internal_id, property, matching_method,
                                             ets_properties, only_matching_fields)
                     else:
-                        self._set_field(internal_id, properties['source'], matching_function,
+                        self._set_field(internal_id, properties['source'], matching_method,
                                         ets_properties, only_matching_fields)
-                        self._set_field(internal_id, properties['target'], matching_function,
+                        self._set_field(internal_id, properties['target'], matching_method,
                                         ets_properties, only_matching_fields)
 
         return ets_properties

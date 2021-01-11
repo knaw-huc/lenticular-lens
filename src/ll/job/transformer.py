@@ -5,7 +5,7 @@ from ll.util.hasher import hash_string_min
 from ll.util.helpers import get_json_from_file
 
 filter_functions = get_json_from_file('filter_functions.json')
-matching_functions = get_json_from_file('matching_functions.json')
+matching_methods = get_json_from_file('matching_methods.json')
 transformers = get_json_from_file('transformers.json')
 
 
@@ -38,10 +38,10 @@ entity_type_selection_filter_logicbox_schema = Schema({
 }, ignore_extra_keys=True)
 
 mapping_method_logicbox_schema = Schema({
-    'method_name': And(str, Use(str.upper), lambda m: m in matching_functions.keys()),
+    'method_name': And(str, Use(str.upper), lambda m: m in matching_methods.keys()),
     'method_config': dict,
     Optional('method_sim_name', default=None): Or(None, And(str, Use(str.upper),
-                                                            lambda m: m in matching_functions.keys())),
+                                                            lambda m: m in matching_methods.keys())),
     Optional('method_sim_config', default={}): dict,
     Optional('method_sim_normalized', default=False): bool,
     Optional('list_threshold', default=0): int,
