@@ -106,7 +106,7 @@ CREATE TABLE IF NOT EXISTS clusterings
 );
 
 CREATE OR REPLACE FUNCTION increment_counter(sequence_name text) RETURNS boolean
-    COST 10000 STRICT VOLATILE AS
+    COST 10000000 STRICT VOLATILE AS
 $$
 BEGIN
     RETURN nextval(sequence_name) > -1;
