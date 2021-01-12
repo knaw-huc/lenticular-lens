@@ -58,6 +58,10 @@ div#app::before {
   background-color: #c8eae4 !important;
 }
 
+.bg-opacity {
+  background-color: rgba(255, 255, 255, 0.4);
+}
+
 .form-check-label {
   margin-bottom: -0.2rem;
 }
@@ -173,6 +177,10 @@ div#app::before {
 
 .text-break-all {
   word-break: break-all;
+}
+
+.pointer {
+  cursor: pointer;
 }
 
 .max-overflow {

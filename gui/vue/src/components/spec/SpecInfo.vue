@@ -1,10 +1,10 @@
 <template>
   <sub-card v-if="type === 'linkset'" class="spec-info" label="Linkset specifications">
-    <linkset-spec-group-info :method-group="spec.methods"/>
+    <linkset-spec-group-info :method-group="spec.methods" :override-fuzzy-logic="overrideFuzzyLogic"/>
   </sub-card>
 
   <sub-card v-else class="spec-info" label="Lens specifications">
-    <lens-spec-group-info :elements-group="spec.specs"/>
+    <lens-spec-group-info :elements-group="spec.specs" :override-fuzzy-logic="overrideFuzzyLogic"/>
   </sub-card>
 </template>
 
@@ -20,7 +20,11 @@
         },
         props: {
             type: String,
-            spec: Object
+            spec: Object,
+            overrideFuzzyLogic: {
+                type: Boolean,
+                default: false,
+            },
         },
     };
 </script>
