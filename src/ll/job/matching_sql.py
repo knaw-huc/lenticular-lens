@@ -72,7 +72,8 @@ class MatchingSql:
             """) + '\n')
 
         if self._linkset.index_sql:
-            return sql.SQL('\n').join([self._linkset.index_sql, sequence_sql])
+            # return sql.SQL('\n').join([self._linkset.index_sql, sequence_sql])
+            return sequence_sql
 
         return sequence_sql
 

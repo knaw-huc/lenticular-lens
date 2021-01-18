@@ -50,7 +50,7 @@ class Conditions:
                     fields_added.append(name)
                     fields[name] = match_func.similarity_sql
 
-        fields_sql = [psycopg2_sql.SQL('{}, array_agg({})').format(psycopg2_sql.Literal(name), sim)
+        fields_sql = [psycopg2_sql.SQL('{}, array_agg(DISTINCT {})').format(psycopg2_sql.Literal(name), sim)
                       for name, sim in fields.items()]
 
         return psycopg2_sql.SQL('jsonb_build_object({})').format(psycopg2_sql.SQL(', ').join(fields_sql)) \
