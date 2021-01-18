@@ -73,19 +73,62 @@
     </sub-card>
 
     <fieldset :disabled="!!lens">
-      <sub-card :hasError="errors.includes('elements')">
+      <sub-card label="Operations" :has-columns="true" :hasError="errors.includes('elements')">
+        <template v-slot:columns>
+          <div class="col-auto">
+            <div class="custom-control custom-switch">
+              <input type="checkbox" class="custom-control-input" autocomplete="off"
+                     :id="'fuzzy_lens_' + lensSpec.id" v-model="useFuzzyLogic"/>
+              <label class="custom-control-label" :for="'fuzzy_lens_' + lensSpec.id">Use fuzzy logic</label>
+            </div>
+          </div>
+        </template>
+
         <logic-box :element="lensSpec.specs" elements-name="elements" :is-root="true"
                    :should-have-elements="true" :controlled-elements="true" group="lens-elements"
                    :uid="'lens_' + lensSpec.id  + '_group_0'" validate-method-name="validateLensElement"
                    empty-elements-text="No lens elements"
                    validation-failed-text="Please provide at least one lens element"
                    :options="lensOptions" :option-groups="lensOptionGroups"
-                   :option-descriptions="lensOptionDescriptions" v-slot="curElement"
+                   :option-descriptions="lensOptionDescriptions" :group-include="groupInclude"
                    @add="addLensElement($event)" @remove="removeLensElement($event)"
                    ref="lensGroupComponent">
-          <lens-element :type="curElement.type" :element="curElement.element" :index="curElement.index"
-                        :disabled="!!lens" @add="curElement.add()" @remove="curElement.remove()"
-                        @update="updateProperties()"/>
+          <template v-slot:box-slot="boxElement">
+            <sub-card v-if="useFuzzyLogic && !isOnlyLeft(boxElement.element.type)"
+                      label="Fuzzy logic" :is-small-card="true">
+              <div class="form-group row mt-2">
+                <label :for="'t_conorm_' + boxElement.index" class="col-sm-3 col-form-label">
+                  T-conorm
+                </label>
+
+                <div class="col-sm-3">
+                  <select :id="'t_conorm_' + boxElement.index" class="form-control form-control-sm"
+                          v-model="boxElement.element.t_conorm">
+                    <option v-for="(description, key) in tConorms" :value="key">
+                      {{ description }}
+                    </option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group row">
+                <label :for="'threshold_' + boxElement.index" class="col-sm-3 col-form-label">
+                  Threshold
+                </label>
+
+                <div class="col-sm-2">
+                  <range :id="'threshold_' + boxElement.index"
+                         v-model.number="boxElement.element.threshold"/>
+                </div>
+              </div>
+            </sub-card>
+          </template>
+
+          <template v-slot="curElement">
+            <lens-element :type="curElement.type" :element="curElement.element" :index="curElement.index"
+                          :disabled="!!lens" @add="curElement.add()" @remove="curElement.remove()"
+                          @update="updateProperties()"/>
+          </template>
         </logic-box>
       </sub-card>
     </fieldset>
@@ -93,13 +136,13 @@
 </template>
 
 <script>
+    import {EventBus} from "@/eventbus";
+    import props from "@/utils/props";
+    import ValidationMixin from '@/mixins/ValidationMixin';
     import LogicBox from "../../helpers/LogicBox";
-    import ValidationMixin from '../../../mixins/ValidationMixin';
 
     import Status from "./Status";
     import LensElement from "./LensElement";
-    import {EventBus} from "../../../eventbus";
-    import props from "../../../utils/props";
 
     export default {
         name: "Lens",
@@ -117,9 +160,11 @@
             return {
                 association: '',
                 isOpen: false,
+                useFuzzyLogic: false,
                 lensOptions: props.lensOptions,
                 lensOptionGroups: props.lensOptionGroups,
                 lensOptionDescriptions: props.lensOptionDescriptions,
+                tConorms: props.tConorms,
             };
         },
         computed: {
@@ -138,6 +183,10 @@
 
             clusteringStatus() {
                 return this.clustering ? this.clustering.status : null;
+            },
+
+            groupInclude() {
+                return {t_conorm: this.useFuzzyLogic ? 'MAXIMUM_T_CONORM' : '', threshold: 0};
             },
 
             lensesInLens() {
@@ -181,6 +230,10 @@
         methods: {
             validateLens() {
                 return this.$refs.lensGroupComponent.validateLogicBox();
+            },
+
+            isOnlyLeft(type) {
+                return type === 'DIFFERENCE' || type.startsWith('IN_SET');
             },
 
             onToggle(isOpen) {
@@ -228,6 +281,18 @@
                 }
             },
 
+            updateLogicBoxTypes(elements) {
+                if (elements.hasOwnProperty('type')) {
+                    if (this.useFuzzyLogic)
+                        elements.t_conorm = 'MAXIMUM_T_CONORM';
+                    else
+                        elements.t_conorm = '';
+                }
+
+                if (elements.hasOwnProperty('elements'))
+                    elements.elements.forEach(element => this.updateLogicBoxTypes(element));
+            },
+
             async runLens(force = false) {
                 if (this.validateLens()) {
                     const data = await this.$root.runLens(this.lensSpec.id, force);
@@ -252,6 +317,14 @@
             async killClustering() {
                 await this.$root.killClustering('lens', this.lensSpec.id);
                 EventBus.$emit('refresh');
+            },
+        },
+        mounted() {
+            this.useFuzzyLogic = !!this.lensSpec.specs.tConorm;
+        },
+        watch: {
+            useFuzzyLogic() {
+                this.updateLogicBoxTypes(this.lensSpec.specs);
             },
         },
     };

@@ -67,6 +67,8 @@ export default {
                 description: '',
                 specs: {
                     type: 'UNION',
+                    t_conorm: '',
+                    threshold: 0,
                     elements: [],
                 },
                 properties: []
@@ -189,7 +191,6 @@ export default {
                             method.method_sim_normalized = false;
                             method.list_threshold = 0;
                             method.list_threshold_unit = 'matches';
-                            // method.t_conorm = 'MAXIMUM_T_CONORM';
 
                             if (method.method_name === '=')
                                 method.method_name = 'EXACT';
@@ -247,8 +248,21 @@ export default {
                 this.linksetSpecs = linksetSpecs;
             }
 
-            if (this.job.lens_specs)
-                this.lensSpecs = copy(this.job.lens_specs);
+            function updateLogicBoxTypes(elements) {
+                if (!elements.hasOwnProperty('t_conorm'))
+                    elements.t_conorm = '';
+                if (!elements.hasOwnProperty('threshold'))
+                    elements.threshold = 0;
+
+                if (elements.hasOwnProperty('elements'))
+                    elements.elements.forEach(element => updateLogicBoxTypes(element));
+            }
+
+            if (this.job.lens_specs) {
+                const lensSpecs = copy(this.job.lens_specs);
+                lensSpecs.forEach(lensSpec => updateLogicBoxTypes(lensSpec.specs));
+                this.lensSpecs = lensSpecs;
+            }
 
             await Promise.all([this.loadLinksets(), this.loadLenses(), this.loadClusterings()]);
         },

@@ -1,5 +1,5 @@
 <template>
-  <div class="sub-card" v-bind:class="{'mt-4': !isFirst, 'is-invalid': hasError}">
+  <div class="sub-card" v-bind:class="classes">
     <div v-if="hasColumns || hasCollapse || label || hasInfo || addButton"
          class="row align-items-center justify-content-between">
       <div v-if="hasCollapse" class="col-auto">
@@ -8,7 +8,8 @@
 
       <div v-if="label" class="col-auto pr-0" v-b-toggle="hasCollapse ? id : {}"
            v-bind:class="{'mr-auto': !hasInfo && !addButton && !hasMarginAuto}">
-        <h3>{{ label }}</h3>
+        <h5 v-if="isSmallCard">{{ label }}</h5>
+        <h3 v-else>{{ label }}</h3>
       </div>
 
       <div v-if="hasInfo" class="col-auto pl-0" v-bind:class="{'mr-auto': !addButton && !hasMarginAuto}">
@@ -71,9 +72,23 @@
                 type: Boolean,
                 default: false
             },
+            isSmallCard: {
+                type: Boolean,
+                default: false,
+            },
             isFirst: {
                 type: Boolean,
                 default: false,
+            },
+        },
+        computed: {
+            classes() {
+                return {
+                    'mt-4': !this.isSmallCard && !this.isFirst,
+                    'mt-3': this.isSmallCard && !this.isFirst,
+                    'is-invalid': this.hasError,
+                    'small-card': this.isSmallCard
+                };
             },
         },
     };

@@ -17,9 +17,17 @@ class LensJob(WorkerJob):
 
     def generate_lens(self):
         lens_sql = LensSql(self._job, self._id)
-        with self._db_conn.cursor() as cur:
+        if not self._killed:
             self._status = 'Generating lens'
-            cur.execute(lens_sql.generate_lens_sql())
+            with self._db_conn.cursor() as cur:
+                cur.execute(lens_sql.generate_lens_sql())
+                self._db_conn.commit()
+
+        if not self._killed:
+            self._status = 'Finishing'
+            with self._db_conn.cursor() as cur:
+                cur.execute(lens_sql.generate_lens_finish_sql())
+                self._db_conn.commit()
 
     def watch_process(self):
         pass

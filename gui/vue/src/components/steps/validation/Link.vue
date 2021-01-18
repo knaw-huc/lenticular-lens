@@ -91,7 +91,8 @@
         },
         computed: {
             similarity() {
-                return !isNaN(this.link.similarity) ? this.link.similarity.toFixed(3) : '1.000';
+                return this.link.similarity && !isNaN(this.link.similarity)
+                    ? this.link.similarity.toFixed(3) : '1.000';
             },
 
             switchSourceAndTarget() {

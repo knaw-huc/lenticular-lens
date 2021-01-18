@@ -4,7 +4,7 @@ import json
 from inspect import cleandoc
 from psycopg2 import sql as psycopg2_sql
 
-from ll.util.hasher import hash_string_min
+from ll.util.hasher import hash_string
 from ll.util.helpers import get_json_from_file
 from ll.data.property_field import PropertyField
 from ll.job.matching_method_property import MatchingMethodProperty
@@ -13,14 +13,15 @@ from ll.job.matching_method_property import MatchingMethodProperty
 class MatchingMethod:
     _matching_methods = get_json_from_file('matching_methods.json')
 
-    def __init__(self, data, job):
+    def __init__(self, data, job, linkset_id, id):
         self._data = data
         self._job = job
         self._sources = []
         self._targets = []
         self._intermediates = []
 
-        self.field_name = hash_string_min(json.dumps(data))
+        self.field_name = 'm' + str(linkset_id) + '_' + id
+        self.old_field_name = hash_string(json.dumps(data))
 
         self.method_name = data['method_name']
         self._method_config = data['method_config']
@@ -36,6 +37,7 @@ class MatchingMethod:
             if self._method_sim_name in self._matching_methods else {}
 
         self._t_conorm = data['t_conorm']
+        self._threshold = data['threshold']
         self.list_threshold = data['list_threshold']
         self._list_threshold_unit = data['list_threshold_unit']
 
@@ -75,6 +77,16 @@ class MatchingMethod:
         return None
 
     @property
+    def similarity_threshold_sql(self):
+        if self.similarity_logic_ops_sql and self._threshold:
+            return psycopg2_sql.SQL('{similarity} >= {threshold}').format(
+                similarity=self.similarity_logic_ops_sql,
+                threshold=psycopg2_sql.Literal(self._threshold)
+            )
+
+        return None
+
+    @property
     def index_sql(self):
         if self.list_threshold:
             return None
@@ -86,8 +98,7 @@ class MatchingMethod:
             index_sqls.append(psycopg2_sql.SQL('CREATE INDEX ON target USING btree ({});')
                               .format(psycopg2_sql.Identifier(self.field_name + '_norm')))
 
-        for before_index in [self._method_info['before_index']
-                             for method_info in [self._method_info, self._method_sim_info]
+        for before_index in [method_info['before_index'] for method_info in [self._method_info, self._method_sim_info]
                              if 'before_index' in method_info]:
             index_sqls.append(psycopg2_sql.SQL(before_index).format(
                 target=psycopg2_sql.Identifier(self.field_name),
@@ -95,8 +106,7 @@ class MatchingMethod:
                 **self._sql_parameters
             ))
 
-        for index in [self._method_info['index']
-                      for method_info in [self._method_info, self._method_sim_info]
+        for index in [method_info['index'] for method_info in [self._method_info, self._method_sim_info]
                       if 'index' in method_info]:
             index_sqls.append(psycopg2_sql.SQL('CREATE INDEX ON target USING {};').format(
                 psycopg2_sql.SQL(index).format(

@@ -42,6 +42,7 @@ export default {
                     label: 'Maximum distance',
                     type: 'number',
                     defaultValue: 1,
+                    step: 1,
                     minValue: 0,
                 }
             ],
@@ -54,8 +55,9 @@ export default {
                 {
                     key: 'threshold',
                     label: 'Similarity threshold',
-                    type: 'number',
+                    type: 'range',
                     defaultValue: 0.7,
+                    step: 0.05,
                     minValue: 0,
                     maxValue: 1,
                 }
@@ -69,8 +71,9 @@ export default {
                 {
                     key: 'size',
                     label: 'Soundex size',
-                    type: 'number',
+                    type: 'range',
                     defaultValue: 4,
+                    step: 1,
                     minValue: 1,
                     maxValue: 5,
                 }
@@ -124,8 +127,9 @@ export default {
                 {
                     key: 'threshold',
                     label: 'Similarity threshold',
-                    type: 'number',
+                    type: 'range',
                     defaultValue: 0.7,
+                    step: 0.05,
                     minValue: 0,
                     maxValue: 1,
                 }
@@ -141,6 +145,7 @@ export default {
                     label: 'Maximum size',
                     type: 'number',
                     defaultValue: 20,
+                    step: 1,
                     minValue: 1,
                     maxValue: 255,
                 }
@@ -160,8 +165,9 @@ export default {
                 {
                     key: 'threshold',
                     label: 'Similarity threshold',
-                    type: 'number',
+                    type: 'range',
                     defaultValue: 0.3,
+                    step: 0.05,
                     minValue: 0,
                     maxValue: 1,
                 }
@@ -216,6 +222,7 @@ export default {
                     label: 'Years',
                     type: 'number',
                     defaultValue: 0,
+                    step: 1,
                     minValue: 0,
                 },
                 {
@@ -223,6 +230,7 @@ export default {
                     label: 'Months',
                     type: 'number',
                     defaultValue: 0,
+                    step: 1,
                     minValue: 0,
                 },
                 {
@@ -230,6 +238,7 @@ export default {
                     label: 'Days',
                     type: 'number',
                     defaultValue: 0,
+                    step: 1,
                     minValue: 0,
                 },
                 {
@@ -265,8 +274,9 @@ export default {
                 {
                     key: 'threshold',
                     label: 'Similarity threshold',
-                    type: 'number',
+                    type: 'range',
                     defaultValue: 0.7,
+                    step: 0.05,
                     minValue: 0,
                     maxValue: 1,
                 }
@@ -280,18 +290,20 @@ export default {
                 {
                     key: 'threshold',
                     label: 'Similarity threshold',
-                    type: 'number',
+                    type: 'range',
                     defaultValue: 0.7,
+                    step: 0.05,
                     minValue: 0,
                     maxValue: 1,
                 },
                 {
                     key: 'prefix_weight',
                     label: 'Prefix weight',
-                    type: 'number',
+                    type: 'range',
                     defaultValue: 0.1,
-                    minValue: 0,
-                    maxValue: 1,
+                    step: 0.05,
+                    minValue: 0.1,
+                    maxValue: 0.25,
                 }
             ]
         },

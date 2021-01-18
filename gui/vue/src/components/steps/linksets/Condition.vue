@@ -16,14 +16,12 @@
           <div class="input-group-append">
             <div class="btn-group btn-group-toggle">
               <label v-if="method.items.length > 0" class="btn btn-secondary btn-sm"
-                     v-bind:class="{'active': configureMatching}">
-                <input type="checkbox" autocomplete="off" v-model="configureMatching"/>
+                     v-bind:class="{'active': configureMatching}" @click="configureMatching = !configureMatching">
                 Configure
               </label>
 
               <label v-if="useFuzzyLogic" class="btn btn-secondary btn-sm"
-                     v-bind:class="{'active': configureTConorms}">
-                <input type="checkbox" autocomplete="off" v-model="configureTConorms"/>
+                     v-bind:class="{'active': configureTConorms}" @click="configureTConorms = !configureTConorms">
                 Configure fuzzy logic
               </label>
 
@@ -54,17 +52,17 @@
     <div class="row pl-5">
       <div class="col">
         <div class="my-3 ml-5">
-          <condition-method v-if="configureMatching && method.items.length > 0"
+          <condition-method v-if="configureMatching && method.items.length > 0" :id="'method_' + id"
                             :method="method" :condition="condition" config-key="method_config" ref="methodConfig"/>
 
           <template v-if="useFuzzyLogic && configureTConorms">
             <div class="form-group row">
-              <label :for="'t_conorm_' + index" class="col-sm-3 col-form-label">
+              <label :for="'t_conorm_' + id" class="col-sm-3 col-form-label">
                 T-conorm
               </label>
 
               <div class="col-sm-3">
-                <select :id="'t_conorm_' + index" class="form-control form-control-sm" v-model="condition.t_conorm">
+                <select :id="'t_conorm_' + id" class="form-control form-control-sm" v-model="condition.t_conorm">
                   <option v-for="(description, key) in tConorms" :value="key">
                     {{ description }}
                   </option>
@@ -73,25 +71,24 @@
             </div>
 
             <div class="form-group row">
-              <label :for="'threshold_' + index" class="col-sm-3 col-form-label">
+              <label :for="'threshold_' + id" class="col-sm-3 col-form-label">
                 Threshold
               </label>
 
               <div class="col-sm-2">
-                <input :id="'threshold_' + index" class="form-control form-control-sm"
-                       type="number" min="0" max="1" step="0.1" v-model.number="condition.threshold">
+                <range :id="'threshold_' + id" v-model.number="condition.threshold"/>
               </div>
             </div>
           </template>
 
           <template v-if="applySimMethod && method.items.length > 0 && method.acceptsSimilarityMethod">
             <div class="form-group row">
-              <label :for="'sim_method_' + index" class="col-sm-3 col-form-label">
+              <label :for="'sim_method_' + id" class="col-sm-3 col-form-label">
                 Apply similarity method
               </label>
 
               <div class="col-sm-3">
-                <select :id="'sim_method_' + index" class="form-control form-control-sm"
+                <select :id="'sim_method_' + id" class="form-control form-control-sm"
                         v-bind:class="{'is-invalid': errors.includes('sim_method_name')}"
                         v-model="condition.method_sim_name" @change="handleSimMethodChange">
                   <option disabled selected value="">Select a similarity method</option>
@@ -102,7 +99,7 @@
               </div>
             </div>
 
-            <condition-method v-if="simMethod.items.length > 0"
+            <condition-method v-if="simMethod.items.length > 0" :id="'sim_method_' + id"
                               :method="simMethod" :condition="condition" config-key="method_sim_config"
                               ref="methodSimConfig"/>
 
@@ -110,8 +107,8 @@
               <div class="col">
                 <div class="form-check">
                   <input class="form-check-input" type="checkbox"
-                         :id="'method_sim_normalized_' + index" v-model="condition.method_sim_normalized">
-                  <label class="form-check-label" :for="'method_sim_normalized_' + index">
+                         :id="'method_sim_normalized_' + id" v-model="condition.method_sim_normalized">
+                  <label class="form-check-label" :for="'method_sim_normalized_' + id">
                     Apply similarity method on normalized value?
                   </label>
                 </div>
@@ -120,12 +117,12 @@
           </template>
 
           <div v-if="applyListMatching" class="form-group row">
-            <label :for="'list_threshold_' + index" class="col-sm-3 col-form-label">
+            <label :for="'list_threshold_' + id" class="col-sm-3 col-form-label">
               Minimum matches
             </label>
 
             <div class="col-sm-1">
-              <input :id="'list_threshold_' + index" class="form-control form-control-sm"
+              <input :id="'list_threshold_' + id" class="form-control form-control-sm"
                      type="number" step="1"
                      v-model.number="condition.list_threshold"
                      v-bind:class="{'is-invalid': errors.includes('list_threshold')}">
@@ -137,9 +134,9 @@
 
             <div class="col-sm-1">
               <div class="form-check">
-                <input class="form-check-input" type="radio" :id="'list_threshold_items_' + index"
+                <input class="form-check-input" type="radio" :id="'list_threshold_items_' + id"
                        v-model="condition.list_threshold_unit" value="matches">
-                <label class="form-check-label" :for="'list_threshold_items_' + index">
+                <label class="form-check-label" :for="'list_threshold_items_' + id">
                   matches
                 </label>
               </div>
@@ -147,9 +144,9 @@
 
             <div class="col-sm-1">
               <div class="form-check">
-                <input class="form-check-input" type="radio" :id="'list_threshold_percentage_' + index"
+                <input class="form-check-input" type="radio" :id="'list_threshold_percentage_' + id"
                        v-model="condition.list_threshold_unit" value="percentage">
-                <label class="form-check-label" :for="'list_threshold_percentage_' + index">
+                <label class="form-check-label" :for="'list_threshold_percentage_' + id">
                   %
                 </label>
               </div>
@@ -190,8 +187,8 @@
 </template>
 
 <script>
-    import props from "../../../utils/props";
-    import ValidationMixin from "../../../mixins/ValidationMixin";
+    import props from "@/utils/props";
+    import ValidationMixin from "@/mixins/ValidationMixin";
 
     import ConditionMethod from "./ConditionMethod";
     import ConditionProperty from "./ConditionProperty";
@@ -220,7 +217,7 @@
                     }), {}),
             };
         },
-        props: ['condition', 'index', 'useFuzzyLogic'],
+        props: ['condition', 'index', 'id', 'useFuzzyLogic'],
         computed: {
             method() {
                 if (this.condition.method_name && this.matchingMethods.hasOwnProperty(this.condition.method_name))
@@ -279,19 +276,17 @@
             },
 
             handleMethodChange() {
-                this.condition.method_config = {};
-                this.condition.method_sim_name = null;
-                this.condition.method_sim_config = {};
-                this.method.items
-                    .filter(item => item.hasOwnProperty('defaultValue'))
-                    .forEach(item => this.condition.method_config[item.key] = item.defaultValue);
+                this.$set(this.condition, 'method_config', {});
+                this.$set(this.condition, 'method_sim_name', null);
+                this.$set(this.condition, 'method_sim_config', {});
+                this.method.items.forEach(item =>
+                    this.$set(this.condition.method_config, item.key, item.defaultValue));
             },
 
             handleSimMethodChange() {
-                this.condition.method_sim_config = {};
-                this.simMethod.items
-                    .filter(item => item.hasOwnProperty('defaultValue'))
-                    .forEach(item => this.condition.method_sim_config[item.key] = item.defaultValue);
+                this.$set(this.condition, 'method_sim_config', {});
+                this.simMethod.items.forEach(item =>
+                    this.$set(this.condition.method_sim_config, item.key, item.defaultValue));
             },
 
             getParametersForTransformer(transformer) {

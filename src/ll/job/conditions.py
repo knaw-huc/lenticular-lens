@@ -3,10 +3,12 @@ from ll.job.matching_mehod import MatchingMethod
 
 
 class Conditions:
-    def __init__(self, data, type, job):
+    def __init__(self, data, type, job, linkset_id, id_pref=''):
         self._data = data
         self._type = type
         self._job = job
+        self._linkset_id = linkset_id
+        self._id_pref = id_pref
 
         self._conditions = None
         self._operator = type if type == 'AND' or type == 'OR' else \
@@ -77,6 +79,16 @@ class Conditions:
 
         return sim_sql
 
+    @property
+    def similarity_threshold_sqls(self):
+        return [match_method.similarity_threshold_sql
+                for match_method in self._matching_methods
+                if match_method.similarity_threshold_sql]
+
+    @property
+    def update_keys_mm(self):
+        return self._matching_methods
+
     def get_fields(self, keys=None, only_matching_fields=True):
         if not isinstance(keys, list):
             keys = ['sources', 'targets', 'intermediates']
@@ -101,10 +113,12 @@ class Conditions:
     @property
     def _conditions_list(self):
         if not self._conditions:
-            self._conditions = [Conditions(item['conditions'], item['type'], self._job)
-                                if 'conditions' in item and 'type' in item else
-                                MatchingMethod(item, self._job)
-                                for idx, item in enumerate(self._data)]
+            self._conditions = [
+                Conditions(item['conditions'], item['type'], self._job, self._linkset_id, self._id_pref + str(idx))
+                if 'conditions' in item and 'type' in item else
+                MatchingMethod(item, self._job, self._linkset_id, self._id_pref + str(idx))
+                for idx, item in enumerate(self._data)
+            ]
 
         return self._conditions
 

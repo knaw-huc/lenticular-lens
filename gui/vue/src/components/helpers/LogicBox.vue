@@ -41,12 +41,14 @@
       </div>
     </div>
 
-    <sub-card v-if="optionDescriptions.hasOwnProperty(element.type) && logicBoxElements.length > 0"
-              class="max-overflow small mb-2">
-      {{ optionDescriptions[element.type] }}
-    </sub-card>
-
     <b-collapse visible :id="uid" :ref="uid" v-model="isOpen">
+      <sub-card v-if="optionDescriptions.hasOwnProperty(element.type) && logicBoxElements.length > 0"
+                class="max-overflow small" label="Description" :is-small-card="true">
+        <p class="mt-2">{{ optionDescriptions[element.type] }}</p>
+      </sub-card>
+
+      <slot name="box-slot" v-bind:index="index" v-bind:element="element"/>
+
       <draggable v-model="element[elementsName]" :group="controlledElements ? uid : group"
                  handle=".handle" @change="onMove($event)">
         <logic-box
@@ -64,15 +66,21 @@
             :options="options"
             :option-groups="optionGroups"
             :option-descriptions="optionDescriptions"
+            :group-include="groupInclude"
             :should-have-elements="shouldHaveElements"
             :controlled-elements="controlledElements"
             @add="addElement($event)"
             @remove="removeElement($event)"
             @promote="promoteElement($event)"
             @demote="demoteElement($event)"
-            v-slot="slotProps"
             ref="logicBoxComponents">
-          <slot v-bind="slotProps"/>
+          <template v-slot:default="slotProps">
+            <slot name="default" v-bind="slotProps"/>
+          </template>
+
+          <template v-slot:box-slot="boxSlotProps">
+            <slot name="box-slot" v-bind="boxSlotProps"/>
+          </template>
         </logic-box>
       </draggable>
     </b-collapse>
@@ -126,6 +134,10 @@
                 default: () => ({})
             },
             optionDescriptions: {
+                type: Object,
+                default: () => ({})
+            },
+            groupInclude: {
                 type: Object,
                 default: () => ({})
             },
@@ -225,6 +237,7 @@
                 const elementCopy = JSON.parse(JSON.stringify(element));
 
                 const logicBox = {
+                    ...this.groupInclude,
                     type: Object.keys(this.options)[0],
                     [this.elementsName]: [elementCopy],
                 };

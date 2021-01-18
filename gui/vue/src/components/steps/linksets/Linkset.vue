@@ -129,22 +129,16 @@
 
       <sub-card label="Matching Methods" :has-columns="true" :hasError="errors.includes('matching-methods')">
         <template v-slot:columns>
-          <div class="col-auto">
-            <div class="input-group input-group-sm">
-              <div class="input-group-prepend">
-                <span class="input-group-text">Threshold</span>
-              </div>
-
-              <input type="number" class="form-control" min="0" max="1" step="0.1"
-                     v-model.number="linksetSpec.threshold"/>
-            </div>
+          <div v-if="useFuzzyLogic" class="col-auto form-inline">
+            Threshold
+            <range class="ml-3" :id="'linkset_threshold_' + linksetSpec.id" v-model.number="linksetSpec.threshold"/>
           </div>
 
           <div class="col-auto">
             <div class="custom-control custom-switch">
               <input type="checkbox" class="custom-control-input" autocomplete="off"
-                     :id="'fuzzy_' + linksetSpec.id" v-model="useFuzzyLogic"/>
-              <label class="custom-control-label" :for="'fuzzy_' + linksetSpec.id">Use fuzzy logic</label>
+                     :id="'fuzzy_linkset_' + linksetSpec.id" v-model="useFuzzyLogic"/>
+              <label class="custom-control-label" :for="'fuzzy_linkset_' + linksetSpec.id">Use fuzzy logic</label>
             </div>
           </div>
         </template>
@@ -158,7 +152,8 @@
                    validation-failed-text="Please provide at least one condition" v-slot="curCondition"
                    @add="addCondition($event)" ref="matchingMethodGroupComponent">
           <condition
-              :condition="curCondition.element" :index="curCondition.index" :useFuzzyLogic="useFuzzyLogic"
+              :condition="curCondition.element" :index="curCondition.index"
+              :id="linksetSpec.id + '_' + curCondition.index" :useFuzzyLogic="useFuzzyLogic"
               @add="curCondition.add()" @remove="curCondition.remove()"/>
         </logic-box>
       </sub-card>
@@ -169,6 +164,7 @@
 <script>
     import {EventBus} from "@/eventbus";
     import props from "@/utils/props";
+    import ValidationMixin from '@/mixins/ValidationMixin';
 
     import LinksetSpecSourcesInfo from '../../info/LinksetSpecSourcesInfo';
     import LinksetSpecTargetsInfo from '../../info/LinksetSpecTargetsInfo';
@@ -179,7 +175,6 @@
     import Condition from "./Condition";
 
     import LogicBox from "../../helpers/LogicBox";
-    import ValidationMixin from '../../../mixins/ValidationMixin';
 
     export default {
         name: "Linkset",

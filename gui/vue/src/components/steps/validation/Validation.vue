@@ -155,7 +155,7 @@
           </div>
         </sub-card>
 
-        <spec-info v-if="showInfo" :type="type" :spec="spec"/>
+        <spec-info v-if="showInfo" :type="type" :spec="spec" :override-fuzzy-logic="true"/>
 
         <sub-card v-if="showPropertySelection" id="properties-card" type="properties" label="Property selection"
                   :has-margin-auto="true" :has-columns="true">

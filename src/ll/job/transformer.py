@@ -10,10 +10,11 @@ transformers = get_json_from_file('transformers.json')
 
 
 class LogicBox:
-    def __init__(self, schema, name, types):
+    def __init__(self, schema, name, types, elements_schema=None):
         self.schema = schema
         self.name = name
         self.types = types
+        self.elements_schema = elements_schema
 
     def validate(self, data):
         if type(data) is not dict:
@@ -25,7 +26,14 @@ class LogicBox:
             if len(elements) == 0:
                 return None
 
-            return {'type': data['type'].upper(), self.name: elements}
+            logicbox = {}
+            if self.elements_schema:
+                logicbox = self.elements_schema.validate(data)
+
+            logicbox['type'] = data['type'].upper()
+            logicbox[self.name] = elements
+
+            return logicbox
 
         return self.schema.validate(data)
 
@@ -73,6 +81,14 @@ lens_logicbox_schema = Schema({
     'type': Or('linkset', 'lens')
 }, ignore_extra_keys=True)
 
+lens_logicbox_elements_schema = Schema({
+    'type': str,
+    'elements': list,
+    Optional('t_conorm', default=''): lambda s: s in ('', 'MAXIMUM_T_CONORM', 'PROBABILISTIC_SUM', 'BOUNDED_SUM',
+                                                      'DRASTIC_T_CONORM', 'NILPOTENT_MAXIMUM', 'EINSTEIN_SUM'),
+    Optional('threshold', default=0): Or(float, Use(lambda t: 0)),
+}, ignore_extra_keys=True)
+
 entity_type_selection_schema = Schema({
     'id': Use(int),
     'label': And(str, len),
@@ -116,7 +132,8 @@ lens_spec_schema = Schema({
     'label': And(str, len),
     Optional('description', default=None): Or(str, None),
     'specs': And(LogicBox(lens_logicbox_schema, 'elements',
-                          ('union', 'intersection', 'difference', 'sym_difference', 'in_set_and', 'in_set_or')), dict),
+                          ('union', 'intersection', 'difference', 'sym_difference', 'in_set_and', 'in_set_or'),
+                          elements_schema=lens_logicbox_elements_schema), dict),
     Optional('properties', default=list): [{
         'entity_type_selection': Use(int),
         'property': [str],
@@ -168,10 +185,8 @@ def transform(entity_type_selections_org, linkset_specs_org, lens_specs_org):
             return [transform_elements(elements, name, with_element) for elements in logicbox]
 
         if name in logicbox:
-            return {
-                'type': logicbox['type'],
-                name: [transform_elements(elements, name, with_element) for elements in logicbox[name]]
-            }
+            logicbox[name] = [transform_elements(elements, name, with_element) for elements in logicbox[name]]
+            return logicbox
 
         return with_element(logicbox)
 
@@ -295,6 +310,7 @@ def transform(entity_type_selections_org, linkset_specs_org, lens_specs_org):
                 'list_threshold': condition['list_threshold'],
                 'list_threshold_unit': condition['list_threshold_unit'],
                 't_conorm': condition['t_conorm'],
+                'threshold': condition['threshold'],
                 'sources': reduce(transform_mapping_condition, condition['sources'], {}),
                 'targets': reduce(transform_mapping_condition, condition['targets'], {}),
             })
@@ -304,7 +320,7 @@ def transform(entity_type_selections_org, linkset_specs_org, lens_specs_org):
                                              if method['method_name'] == 'INTERMEDIATE']
 
             linkset_specs.append(linkset_spec)
-        except SchemaError as e:
+        except SchemaError:
             pass
 
     entity_type_selections += ref_entity_type_selections

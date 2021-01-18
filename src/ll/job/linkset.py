@@ -36,7 +36,7 @@ class Linkset:
     def conditions(self):
         if not self._conditions:
             methods = self._data['methods']
-            self._conditions = Conditions(methods['conditions'], methods['type'], self._job)
+            self._conditions = Conditions(methods['conditions'], methods['type'], self._job, self.id)
         return self._conditions
 
     @property
@@ -60,6 +60,10 @@ class Linkset:
         return self.conditions.similarity_logic_ops_sql
 
     @property
+    def similarity_threshold_sqls(self):
+        return self.conditions.similarity_threshold_sqls
+
+    @property
     def sources(self):
         return self._data['sources']
 
@@ -78,6 +82,21 @@ class Linkset:
     @property
     def target_sql(self):
         return self._get_combined_entity_type_selections_sql(is_source=False)
+
+    @property
+    def update_keys_sqls(self):
+        return [
+            psycopg_sql.SQL('''
+                UPDATE "linksets".{linkset}
+                SET similarity = similarity - {old_key} || jsonb_build_object({new_key}, similarity->{old_key})
+                WHERE similarity ? {old_key};
+            ''').format(
+                linkset=psycopg_sql.Identifier(self._job.table_name(self.id)),
+                old_key=psycopg_sql.Literal(match_method.old_field_name),
+                new_key=psycopg_sql.Literal(match_method.field_name)
+            )
+            for match_method in self.conditions.update_keys_mm
+        ]
 
     def get_fields(self, keys=None, only_matching_fields=True):
         return self.conditions.get_fields(keys, only_matching_fields)

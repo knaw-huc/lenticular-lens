@@ -19,7 +19,7 @@ class Lens:
     def specs(self):
         if not self._specs:
             specs = self._data['specs']
-            self._specs = LensElements(specs['elements'], specs['type'], self._job)
+            self._specs = LensElements(specs, self._job)
         return self._specs
 
     @property
@@ -41,3 +41,9 @@ class Lens:
     @property
     def similarity_logic_ops_sql(self):
         return self.specs.similarity_logic_ops_sql
+
+    @property
+    def similarity_threshold_sqls(self):
+        return [lens_element.similarity_threshold_sql
+                for lens_element in self.specs.lens_elements
+                if lens_element.similarity_threshold_sql]

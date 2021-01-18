@@ -195,6 +195,17 @@ def sql(job, type, id):
     return Response(job_sql.sql_string, mimetype='text/plain')
 
 
+@app.route('/job/<job:job>/key_update/<int:id>')
+def key_update(job, id):
+    from flask import Response
+    from ll.util.helpers import get_string_from_sql
+
+    linkset = job.get_linkset_spec_by_id(id)
+    sql = '\n\n\n'.join([get_string_from_sql(update_keys_sql) for update_keys_sql in linkset.update_keys_sqls])
+
+    return Response(sql, mimetype='text/plain')
+
+
 @app.route('/job/<job:job>/kill_linkset/<int:id>', methods=['POST'])
 def kill_linkset(job, id):
     job.kill_linkset(id)

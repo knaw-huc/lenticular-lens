@@ -5,10 +5,13 @@ from ll.job.lens_element import LensElement
 
 
 class LensElements:
-    def __init__(self, data, type, job):
-        self._data = data
-        self._type = type.lower()
-        self._only_left = self._type.startswith('in_set')
+    def __init__(self, data, job):
+        self._type = data['type'].lower()
+        self._elements = data['elements']
+        self._tConorm = 'MAXIMUM_T_CONORM' if data['t_conorm'] == '' else data['t_conorm']
+        self._threshold = data['threshold'] if data['t_conorm'] != '' else 0
+
+        self._only_left = self._type == 'difference' or self._type.startswith('in_set')
         self._job = job
         self._left = None
         self._right = None
@@ -16,9 +19,9 @@ class LensElements:
     @property
     def left(self):
         if not self._left:
-            elem = self._data[0]
+            elem = self._elements[0]
             if type(elem) is dict and 'elements' in elem and 'type' in elem:
-                self._left = LensElements(elem['elements'], elem['type'], self._job)
+                self._left = LensElements(elem, self._job)
             else:
                 self._left = LensElement(elem, self._job)
 
@@ -27,9 +30,9 @@ class LensElements:
     @property
     def right(self):
         if not self._right:
-            elem = self._data[1]
+            elem = self._elements[1]
             if type(elem) is dict and 'elements' in elem and 'type' in elem:
-                self._right = LensElements(elem['elements'], elem['type'], self._job)
+                self._right = LensElements(elem, self._job)
             else:
                 self._right = LensElement(elem, self._job)
 
@@ -64,11 +67,21 @@ class LensElements:
         return lenses
 
     @property
+    def lens_elements(self):
+        lens_elements = [self]
+
+        for target in [self.left, self.right]:
+            if isinstance(target, LensElements):
+                lens_elements += target.lens_elements
+
+        return lens_elements
+
+    @property
     def similarity_fields(self):
         fields_sqls = []
         for linkset_id in self.linksets:
             linkset = self._job.get_linkset_spec_by_id(linkset_id)
-            fields_sqls += linkset.similarity_fields
+            fields_sqls += [sim_field for sim_field in linkset.similarity_fields if sim_field not in fields_sqls]
 
         return fields_sqls
 
@@ -89,8 +102,10 @@ class LensElements:
                          l.target_collections, r.target_collections) AS target_collections,
                 coalesce(array_distinct_merge(l.linksets, r.linksets), l.linksets, r.linksets) AS linksets,
                 coalesce(jsonb_merge(l.similarity, r.similarity), l.similarity, r.similarity) AS similarity,
-                CASE WHEN l.valid = r.valid 
-                     THEN l.valid ELSE coalesce(l.valid, r.valid, 'mixed'::link_validity) END AS valid
+                CASE WHEN l.valid = r.valid THEN l.valid 
+                     WHEN l.valid IS NULL THEN r.valid 
+                     WHEN r.valid IS NULL THEN l.valid
+                     ELSE 'mixed'::link_validity END AS valid
         '''))
 
     @property
@@ -120,10 +135,20 @@ class LensElements:
             return right
 
         return psycopg2_sql.SQL('logic_ops({operation}, {a}, {b})').format(
-            operation=psycopg2_sql.Literal('MAXIMUM_T_CONORM'),
+            operation=psycopg2_sql.Literal(self._tConorm),
             a=left,
             b=right
         )
+
+    @property
+    def similarity_threshold_sql(self):
+        if self._threshold:
+            return psycopg2_sql.SQL('{similarity} >= {threshold}').format(
+                similarity=self.similarity_logic_ops_sql,
+                threshold=psycopg2_sql.Literal(self._threshold)
+            )
+
+        return None
 
     @property
     def _left_sql(self):

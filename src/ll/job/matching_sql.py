@@ -97,27 +97,33 @@ class MatchingSql:
             conditions=self._linkset.conditions_sql
         )
 
-        if self._linkset.threshold and self._linkset.similarity_fields:
+        if self._linkset.similarity_fields and (self._linkset.threshold or self._linkset.similarity_threshold_sqls):
             sim_fields_sql = [sql.SQL('{} numeric[]').format(sql.Identifier(sim_field))
                               for sim_field in self._linkset.similarity_fields]
+
+            sim_conditions = self._linkset.similarity_threshold_sqls
+            if self._linkset.threshold:
+                sim_conditions.append(sql.SQL('{sim_logic_ops_sql} >= {threshold}').format(
+                    sim_logic_ops_sql=self._linkset.similarity_logic_ops_sql,
+                    threshold=sql.Literal(self._linkset.threshold)
+                ))
 
             return sql.SQL(cleandoc(
                 """ DROP TABLE IF EXISTS linksets.{linkset} CASCADE;
                     CREATE TABLE linksets.{linkset} AS
-                    SELECT *
+                    SELECT linkset.*
                     FROM (
                         {linkset_sql}
                     ) AS linkset
                     CROSS JOIN LATERAL jsonb_to_record(similarity) 
                     AS sim({sim_fields_sql})
-                    WHERE {sim_logic_ops_sql} >= {threshold};
+                    WHERE {sim_conditions};
                 """
             ) + '\n').format(
                 linkset=sql.Identifier(self._job.table_name(self._linkset.id)),
                 linkset_sql=linkset_sql,
                 sim_fields_sql=sql.SQL(', ').join(sim_fields_sql),
-                sim_logic_ops_sql=self._linkset.similarity_logic_ops_sql,
-                threshold=sql.Literal(self._linkset.threshold)
+                sim_conditions=sql.SQL(' AND ').join(sim_conditions)
             )
 
         return sql.SQL(cleandoc(

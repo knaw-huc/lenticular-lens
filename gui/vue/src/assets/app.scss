@@ -75,6 +75,10 @@ div#app::before {
   min-width: 250px;
 }
 
+.w-number {
+  min-width: 30px;
+}
+
 .vs__dropdown-menu {
   width: auto !important;
 }
@@ -241,6 +245,10 @@ ul.inline-list li:not(:first-child):before {
   @extend .bg-white;
   @extend .border;
   @extend .p-3;
+
+  &.small-card {
+    background-color: rgba(255, 255, 255, 0.8) !important;
+  }
 
   p:last-child {
     margin-bottom: 0;

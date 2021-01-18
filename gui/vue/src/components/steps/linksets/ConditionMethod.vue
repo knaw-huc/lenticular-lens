@@ -1,13 +1,13 @@
 <template>
   <div>
-    <div v-for="item in this.method.items"
+    <div v-for="(item, idx) in this.method.items"
          v-if="item.type !== 'property' || condition[configKey][item.entity_type_selection_key] !== undefined"
          class="form-group row">
-      <label v-if="showLabel(item)" :for="item.key" class="col-sm-3 col-form-label">{{ item.label }}</label>
+      <label v-if="showLabel(item)" :for="id + idx" class="col-sm-3 col-form-label">{{ item.label }}</label>
 
       <div v-if="item.type === 'number'" class="col-sm-2">
-        <input :id="item.key" class="form-control form-control-sm" type="number"
-               :step="Number.isInteger(item.defaultValue) ? '1' : '0.1'"
+        <input :id="id + idx" class="form-control form-control-sm" type="number"
+               :step="item.step || 1" :min="item.minValue" :max="item.maxValue"
                v-model.number="condition[configKey][item.key]"
                v-bind:class="{'is-invalid': errors.includes(`method_config_${item.key}`)}">
 
@@ -16,8 +16,18 @@
         </div>
       </div>
 
+      <div v-else-if="item.type === 'range'" class="col-sm-2">
+        <range :id="id + idx" :step="item.step" :min="item.minValue" :max="item.maxValue"
+               v-model.number="condition[configKey][item.key]"
+               v-bind:class="{'is-invalid': errors.includes(`method_config_${item.key}`)}"/>
+
+        <div class="invalid-feedback" v-show="errors.includes(`method_config_${item.key}`)">
+          Please specify a valid value
+        </div>
+      </div>
+
       <div v-else-if="item.type === 'string'" class="col-sm-3">
-        <input :id="item.key" class="form-control form-control-sm" type="text"
+        <input :id="id + idx" class="form-control form-control-sm" type="text"
                v-model="condition[configKey][item.key]"
                v-bind:class="{'is-invalid': errors.includes(`method_config_${item.key}`)}">
 
@@ -27,7 +37,7 @@
       </div>
 
       <div v-else-if="item.type === 'choices'" class="col-sm-3">
-        <select :id="item.key" class="form-control form-control-sm h-auto" v-model="condition[configKey][item.key]"
+        <select :id="id + idx" class="form-control form-control-sm h-auto" v-model="condition[configKey][item.key]"
                 v-bind:class="{'is-invalid': errors.includes(`method_config_${item.key}`)}">
           <option disabled selected value="">Select an option</option>
           <option v-for="(choiceValue, choiceLabel) in item.choices" :value="choiceValue">
@@ -43,10 +53,10 @@
       <div v-else-if="item.type === 'boolean'" class="col">
         <div class="form-check">
           <input class="form-check-input" type="checkbox"
-                 :id="item.key" v-model="condition[configKey][item.key]"
+                 :id="id + idx" v-model="condition[configKey][item.key]"
                  v-bind:class="{'is-invalid': errors.includes(`method_config_${item.key}`)}">
 
-          <label class="form-check-label" :for="item.key">
+          <label class="form-check-label" :for="id + idx">
             {{ item.label }}
           </label>
 
@@ -57,7 +67,7 @@
       </div>
 
       <div v-else-if="item.type === 'entity_type_selection'" class="col-sm-6">
-        <select :id="item.key" class="form-control form-control-sm h-auto" v-model="condition[configKey][item.key]"
+        <select :id="id + idx" class="form-control form-control-sm h-auto" v-model="condition[configKey][item.key]"
                 v-bind:class="{'is-invalid': errors.includes(`method_config_${item.key}`)}">
           <option disabled selected value="">Choose an entity-type selection</option>
           <option v-for="ets in $root.entityTypeSelections" :value.number="ets.id">
@@ -85,12 +95,12 @@
 </template>
 
 <script>
-    import ValidationMixin from "../../../mixins/ValidationMixin";
+    import ValidationMixin from "@/mixins/ValidationMixin";
 
     export default {
         name: "ConditionMethod",
         mixins: [ValidationMixin],
-        props: ['method', 'condition', 'configKey'],
+        props: ['id', 'method', 'condition', 'configKey'],
         methods: {
             validateConditionMethod() {
                 let methodValueValid = true;
@@ -113,12 +123,14 @@
             },
 
             isInvalidMinValue(valueItem, value) {
-                return valueItem.type === 'number' && valueItem.hasOwnProperty('minValue')
+                return (valueItem.type === 'number' || valueItem.type === 'range')
+                    && valueItem.hasOwnProperty('minValue')
                     && (isNaN(parseFloat(value)) || (parseFloat(value) < valueItem.minValue));
             },
 
             isInvalidMaxValue(valueItem, value) {
-                return valueItem.type === 'number' && valueItem.hasOwnProperty('maxValue')
+                return (valueItem.type === 'number' || valueItem.type === 'range')
+                    && valueItem.hasOwnProperty('maxValue')
                     && (isNaN(parseFloat(value)) || (parseFloat(value) > valueItem.maxValue));
             },
 
