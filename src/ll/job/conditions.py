@@ -85,10 +85,6 @@ class Conditions:
                 for match_method in self._matching_methods
                 if match_method.similarity_threshold_sql]
 
-    @property
-    def update_keys_mm(self):
-        return self._matching_methods
-
     def get_fields(self, keys=None, only_matching_fields=True):
         if not isinstance(keys, list):
             keys = ['sources', 'targets', 'intermediates']

@@ -21,7 +21,6 @@ class MatchingMethod:
         self._intermediates = []
 
         self.field_name = 'm' + str(linkset_id) + '_' + id
-        self.old_field_name = hash_string(json.dumps(data))
 
         self.method_name = data['method_name']
         self._method_config = data['method_config']
