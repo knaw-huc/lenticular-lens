@@ -244,7 +244,7 @@ class MatchingMethod:
     def _get_properties(self, key):
         properties = {}
         for entity_type_selection, fields in self._data[key].items():
-            field_type = self._method_config.get('field_type')
+            field_type = self._method_info.get('field_type')
             field_type_info = {
                 'type': field_type,
                 'parameters': {'format': self._method_config['format'] if field_type == 'date' else {}}
