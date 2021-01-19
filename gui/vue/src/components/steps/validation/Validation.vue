@@ -24,22 +24,22 @@
             <div v-if="isLinkset" class="col-auto">
               <div>
                 <strong>Source entities in linkset: </strong>
-                {{ linkset.distinct_linkset_sources_count.toLocaleString('en') }}
+                {{ linkset.distinct_linkset_sources_count ? linkset.distinct_linkset_sources_count.toLocaleString('en') : 0 }}
               </div>
               <div>
                 <strong>Target entities in linkset: </strong>
-                {{ linkset.distinct_linkset_targets_count.toLocaleString('en') }}
+                {{ linkset.distinct_linkset_targets_count ? linkset.distinct_linkset_targets_count.toLocaleString('en') : 0 }}
               </div>
             </div>
 
             <div v-if="isLinkset" class="col-auto">
               <div>
                 <strong>Entities in source: </strong>
-                {{ linkset.distinct_sources_count.toLocaleString('en') }}
+                {{ linkset.distinct_sources_count ? linkset.distinct_sources_count.toLocaleString('en') : 0 }}
               </div>
               <div>
                 <strong>Entities in target: </strong>
-                {{ linkset.distinct_targets_count.toLocaleString('en') }}
+                {{ linkset.distinct_targets_count ? linkset.distinct_targets_count.toLocaleString('en') : 0 }}
               </div>
             </div>
 
