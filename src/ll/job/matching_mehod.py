@@ -215,22 +215,41 @@ class MatchingMethod:
                 )
 
             if list_check:
-                template = cleandoc('''	
-                    cardinality(ARRAY(
-                        SELECT 1
-                        FROM unnest(source.{field_name}, source.{field_name_norm}) AS (src_org, src_norm)
-                        CROSS JOIN unnest(target.{field_name}, target.{field_name_norm}) AS (trg_org, trg_norm)
-                        ON ''' + template + '''	
-                    )) >= {list_threshold}
-                ''')
+                if self._method_info.get('field'):
+                    template = cleandoc('''	
+                        cardinality(ARRAY(
+                            SELECT 1
+                            FROM unnest(source.{field_name}, source.{field_name_norm}) AS (src_org, src_norm)
+                            CROSS JOIN unnest(target.{field_name}, target.{field_name_norm}) AS (trg_org, trg_norm)
+                            ON ''' + template + '''	
+                        )) >= {list_threshold}
+                    ''')
+                else:
+                    template = cleandoc('''	
+                        cardinality(ARRAY(
+                            SELECT 1
+                            FROM unnest(source.{field_name}) AS src_org
+                            CROSS JOIN unnest(target.{field_name}) AS trg_org
+                            ON ''' + template + '''	
+                        )) >= {list_threshold}
+                    ''')
             else:
-                template = cleandoc('''	
-                    ARRAY(
-                        SELECT ''' + template + '''	
-                        FROM unnest(source.{field_name}, source.{field_name_norm}) AS (src_org, src_norm)
-                        CROSS JOIN unnest(target.{field_name}, target.{field_name_norm}) AS (trg_org, trg_norm)
-                    )
-                ''')
+                if self._method_info.get('field'):
+                    template = cleandoc('''	
+                        ARRAY(
+                            SELECT ''' + template + '''	
+                            FROM unnest(source.{field_name}, source.{field_name_norm}) AS (src_org, src_norm)
+                            CROSS JOIN unnest(target.{field_name}, target.{field_name_norm}) AS (trg_org, trg_norm)
+                        )
+                    ''')
+                else:
+                    template = cleandoc('''	
+                        ARRAY(
+                            SELECT ''' + template + '''	
+                            FROM unnest(source.{field_name}) AS src_org
+                            CROSS JOIN unnest(target.{field_name}) AS trg_org
+                        )
+                    ''')
 
         return psycopg2_sql.SQL(template).format(
             field_name=psycopg2_sql.Identifier(self.field_name),
