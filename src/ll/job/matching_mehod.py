@@ -229,7 +229,7 @@ class MatchingMethod:
                         cardinality(ARRAY(
                             SELECT 1
                             FROM unnest(source.{field_name}) AS src_org
-                            CROSS JOIN unnest(target.{field_name}) AS trg_org
+                            JOIN unnest(target.{field_name}) AS trg_org
                             ON ''' + template + '''	
                         )) >= {list_threshold}
                     ''')
