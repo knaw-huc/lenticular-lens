@@ -60,6 +60,51 @@
         </div>
       </div>
     </div>
+
+    <div class="row align-items-center mt-2">
+      <div class="col-auto h5">Stop words</div>
+
+      <div class="col-auto p-0">
+        <button-delete v-if="showStopWords" @click="resetStopWords" size="sm"
+                       title="Do not apply stop words" class="btn-sm"/>
+        <button-add v-else @click="showStopWords = true" size="sm" title="Apply stop words" class="btn-sm"/>
+      </div>
+
+      <div v-if="showStopWords" class="col-auto">
+        <select class="form-control form-control-sm" v-model="conditionProperty.stopwords.dictionary">
+          <option value="">No dictionary</option>
+          <option value="arabic">Arabic</option>
+          <option value="azerbaijani">Azerbaijani</option>
+          <option value="danish">Danish</option>
+          <option value="dutch">Dutch</option>
+          <option value="dutch_names">Dutch names</option>
+          <option value="english">English</option>
+          <option value="finnish">Finnish</option>
+          <option value="french">French</option>
+          <option value="german">German</option>
+          <option value="greek">Greek</option>
+          <option value="hungarian">Hungarian</option>
+          <option value="indonesian">Indonesian</option>
+          <option value="italian">Italian</option>
+          <option value="kazakh">Kazakh</option>
+          <option value="nepali">Nepali</option>
+          <option value="norwegian">Norwegian</option>
+          <option value="portuguese">Portuguese</option>
+          <option value="romanian">Romanian</option>
+          <option value="russian">Russian</option>
+          <option value="slovene">Slovene</option>
+          <option value="spanish">Spanish</option>
+          <option value="swedish">Swedish</option>
+          <option value="tajik">Tajik</option>
+          <option value="turkish">Turkish</option>
+        </select>
+      </div>
+
+      <div v-if="showStopWords" class="col-auto flex-fill">
+        <b-form-tags separator=" " placeholder="Specify additional stop words" size="sm" remove-on-delete
+                     v-model="conditionProperty.stopwords.additional"/>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -74,6 +119,7 @@
             return {
                 transformers: props.transformers,
                 matchingMethods: props.matchingMethods,
+                showStopWords: false,
             };
         },
         props: {
@@ -132,6 +178,16 @@
                     transformer.parameters[valueItem.key] = valueItem.defaultValue;
                 });
             },
+
+            resetStopWords() {
+                this.showStopWords = false;
+                this.conditionProperty.stopwords.dictionary = '';
+                this.conditionProperty.stopwords.additional = [];
+            },
+        },
+        mounted() {
+            this.showStopWords = this.conditionProperty.stopwords.dictionary
+                || this.conditionProperty.stopwords.additional.length > 0;
         },
     };
 </script>

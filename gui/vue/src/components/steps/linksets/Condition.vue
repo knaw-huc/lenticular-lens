@@ -308,7 +308,11 @@
                 this.condition[key].splice(index + 1, 0, {
                     entity_type_selection: conditionProperty.entity_type_selection,
                     property: [''],
-                    transformers: []
+                    transformers: [],
+                    stopwords: {
+                        dictionary: '',
+                        additional: []
+                    }
                 });
             },
         },

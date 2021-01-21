@@ -40,23 +40,12 @@ class EntityTypeSelection:
         return self._data['dataset']['collection_id']
 
     @property
-    def properties(self):
-        return self._data['properties']
-
-    @property
-    def filter_sql(self):
-        return self._r_get_filter_sql(self._data['filter']) \
-            if 'filter' in self._data and self._data['filter'] else psycopg2_sql.SQL('')
-
-    @property
     def limit(self):
         return self._data.get('limit', -1)
 
     @property
-    def limit_sql(self):
-        random = '\nORDER BY RANDOM()' if self._data.get('random', False) else ''
-        return psycopg2_sql.SQL(') AS x%s\nLIMIT %i' % (random, self.limit)) \
-            if self.limit > -1 else psycopg2_sql.SQL('')
+    def properties(self):
+        return self._data['properties']
 
     @property
     def related(self):
@@ -67,6 +56,11 @@ class EntityTypeSelection:
         return self._r_get_filters(self._data['filter']) if 'filter' in self._data and self._data['filter'] else []
 
     @property
+    def filter_sql(self):
+        return self._r_get_filter_sql(self._data['filter']) \
+            if 'filter' in self._data and self._data['filter'] else psycopg2_sql.SQL('')
+
+    @property
     def where_sql(self):
         where_sql = self.filter_sql
         if where_sql != psycopg2_sql.SQL(''):
@@ -74,20 +68,32 @@ class EntityTypeSelection:
 
         return where_sql
 
-    def fields(self, linkset_spec):
-        return self._get_fields(linkset_spec, only_matching_fields=False)
+    @property
+    def limit_sql(self):
+        random = '\nORDER BY RANDOM()' if self._data.get('random', False) else ''
+        return psycopg2_sql.SQL(') AS x%s\nLIMIT %i' % (random, self.limit)) \
+            if self.limit > -1 else psycopg2_sql.SQL('')
 
-    def matching_fields(self, linkset_spec):
-        return self._get_fields(linkset_spec, only_matching_fields=True)
+    def prepare_sql(self, linkset_spec):
+        prepare_sql = [matching_method_prop.prepare_sql
+                       for matching_method_prop in self._matching_fields(linkset_spec)
+                       if matching_method_prop.prepare_sql]
+
+        if prepare_sql:
+            return psycopg2_sql.SQL('\n').join(prepare_sql)
+
+        return None
 
     def matching_fields_sql(self, linkset_spec):
         matching_fields_sqls = [psycopg2_sql.SQL('{}.uri').format(psycopg2_sql.Identifier(self.internal_id))]
 
-        for property_field in self.matching_fields(linkset_spec):
-            matching_fields_sqls.append(psycopg2_sql.SQL('{matching_field} AS {name}').format(
-                matching_field=property_field.sql,
-                name=psycopg2_sql.Identifier(property_field.hash)
-            ))
+        for matching_method_prop in self._matching_fields(linkset_spec):
+            for property_field in [matching_method_prop.prop_original, matching_method_prop.prop_normalized]:
+                if property_field:
+                    matching_fields_sqls.append(psycopg2_sql.SQL('{matching_field} AS {name}').format(
+                        matching_field=property_field.sql,
+                        name=psycopg2_sql.Identifier(property_field.hash)
+                    ))
 
         return psycopg2_sql.SQL(',\n       ').join(matching_fields_sqls)
 
@@ -98,9 +104,10 @@ class EntityTypeSelection:
 
     def set_joins_sql(self, linkset_spec, joins):
         if linkset_spec:
-            for property_field in self.fields(linkset_spec):
-                if property_field.is_list:
-                    joins.add_join(property_field.left_join, property_field.extended_prop_label)
+            for matching_method_prop in self._fields(linkset_spec):
+                for property_field in [matching_method_prop.prop_original, matching_method_prop.prop_normalized]:
+                    if property_field and property_field.is_list:
+                        joins.add_join(property_field.left_join, property_field.extended_prop_label)
 
         for relation in self.related:
             self._r_get_join_sql(linkset_spec, relation, joins)
@@ -109,21 +116,19 @@ class EntityTypeSelection:
             if filter.extend and filter.property_field.is_list:
                 joins.add_join(filter.property_field.left_join, filter.property_field.extended_prop_label)
 
-    def _get_fields(self, linkset_spec, only_matching_fields=True):
-        matching_fields = []
-        matching_fields_hashes = []
+    def _fields(self, linkset_spec):
+        return self._get_fields(linkset_spec, only_matching_fields=False)
 
+    def _matching_fields(self, linkset_spec):
+        return self._get_fields(linkset_spec, only_matching_fields=True)
+
+    def _get_fields(self, linkset_spec, only_matching_fields=True):
         match_fields = linkset_spec.get_fields(only_matching_fields=only_matching_fields)
         match_ets_fields = match_fields.get(self.internal_id, {})
 
-        for match_field_label, match_field in match_ets_fields.items():
-            for match_field_property in match_field['properties']:
-                for property in [match_field_property.prop_original, match_field_property.prop_normalized]:
-                    if property and property.hash not in matching_fields_hashes:
-                        matching_fields_hashes.append(property.hash)
-                        matching_fields.append(property)
-
-        return matching_fields
+        return list(dict.fromkeys([match_field_property
+                                   for match_field_label, match_field in match_ets_fields.items()
+                                   for match_field_property in match_field['properties']]))
 
     def _r_get_filters(self, filter_obj):
         if filter_obj['type'] in ['AND', 'OR']:

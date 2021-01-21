@@ -1,10 +1,8 @@
 import re
-import json
 
 from inspect import cleandoc
 from psycopg2 import sql as psycopg2_sql
 
-from ll.util.hasher import hash_string
 from ll.util.helpers import get_json_from_file
 from ll.data.property_field import PropertyField
 from ll.job.matching_method_property import MatchingMethodProperty
@@ -16,9 +14,6 @@ class MatchingMethod:
     def __init__(self, data, job, linkset_id, id):
         self._data = data
         self._job = job
-        self._sources = []
-        self._targets = []
-        self._intermediates = []
 
         self.field_name = 'm' + str(linkset_id) + '_' + id
 
@@ -39,6 +34,8 @@ class MatchingMethod:
         self._threshold = data['threshold']
         self.list_threshold = data['list_threshold']
         self._list_threshold_unit = data['list_threshold_unit']
+
+        self._sources, self._targets, self._intermediates = None, None, None
 
     @property
     def sql(self):

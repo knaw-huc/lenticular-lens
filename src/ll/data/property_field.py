@@ -86,3 +86,9 @@ class PropertyField:
             )
 
         return psycopg2_sql.SQL('')
+
+    def __eq__(self, other):
+        return isinstance(other, PropertyField) and self.hash == other.hash
+
+    def __hash__(self):
+        return hash(self.hash)

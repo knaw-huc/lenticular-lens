@@ -1,6 +1,7 @@
 CREATE EXTENSION IF NOT EXISTS fuzzystrmatch;
 CREATE EXTENSION IF NOT EXISTS plpython3u;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE EXTENSION IF NOT EXISTS unaccent;
 
 CREATE TYPE spec_type AS ENUM ('linkset', 'lens');
 CREATE TYPE link_order AS ENUM ('source_target', 'both', 'target_source');
@@ -431,4 +432,28 @@ $$
 from word_intersection import word_intersection
 
 return word_intersection(source, target, ordered, approximate, stop_symbols)
+$$ LANGUAGE plpython3u;
+
+CREATE OR REPLACE FUNCTION init_dictionary(key text, dictionary text, additional_stopwords text[] = ARRAY[]::text[]) RETURNS void
+    STRICT IMMUTABLE PARALLEL SAFE AS
+$$
+from stop_words import init_dictionary
+
+if '_' in dictionary:
+    [language, specific_set] = dictionary.split('_', 1)
+else:
+    language = dictionary
+
+GD['language_' + key] = language
+GD['stopwords_' + key] = init_dictionary(dictionary, additional_stopwords)
+$$ LANGUAGE plpython3u;
+
+CREATE OR REPLACE FUNCTION remove_stopwords(key text, input text) RETURNS text
+    STRICT IMMUTABLE PARALLEL SAFE AS
+$$
+from stop_words import remove_stopwords
+
+stop_words_set = GD['stopwords_' + key]
+language = GD['language_' + key]
+return remove_stopwords(stop_words_set, language, input)
 $$ LANGUAGE plpython3u;

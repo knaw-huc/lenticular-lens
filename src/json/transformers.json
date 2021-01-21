@@ -1,10 +1,12 @@
 {
   "TO_NUMERIC_IMMUTABLE": "to_numeric_immutable({property})",
   "TO_DATE_IMMUTABLE": "to_date_immutable({property}, {format})",
+  "STOPWORDS": "remove_stopwords({key}, {property})",
   "TRANSFORM_LAST_NAME_FORMAT": "transform_last_name_format({property}, {infix})",
   "LOWERCASE": "lower({property})",
   "PREFIX": "{prefix} || {property}",
   "SUFFIX": "{property} || {suffix}",
   "REPLACE": "replace({property}, {from}, {to})",
+  "UNACCENT": "unaccent({property})",
   "REGEXP_REPLACE": "regexp_replace({property}, {pattern}, {replacement}, {flags})"
 }

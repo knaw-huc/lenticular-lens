@@ -318,10 +318,6 @@ export default {
                 defaultValue: true,
             }]
         },
-        'LOWERCASE': {
-            label: 'To lowercase',
-            items: []
-        },
         'PREFIX': {
             label: 'Prefix',
             items: [{
@@ -353,6 +349,10 @@ export default {
                 defaultValue: '',
                 allowEmptyValue: true
             }]
+        },
+        'UNACCENT': {
+            label: 'Unaccent',
+            items: []
         },
         'REGEXP_REPLACE': {
             label: 'Regular expression replace',

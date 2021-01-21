@@ -23,7 +23,7 @@ class MatchingSql:
     def generate_entity_type_selection_sql(self):
         entity_type_selections_sql = []
         for entity_type_selection in self._job.entity_type_selections_required_for_linkset(self._linkset.id):
-            entity_type_selections_sql.append(sql.SQL(cleandoc(
+            ets_sql = sql.SQL(cleandoc(
                 """ DROP MATERIALIZED VIEW IF EXISTS {view_name} CASCADE;
                     CREATE MATERIALIZED VIEW {view_name} AS
                     {pre}SELECT DISTINCT {matching_fields}
@@ -39,7 +39,12 @@ class MatchingSql:
                 joins=get_sql_empty(entity_type_selection.joins(self._linkset).sql),
                 wheres=get_sql_empty(entity_type_selection.where_sql),
                 limit=get_sql_empty(entity_type_selection.limit_sql),
-            ))
+            )
+
+            if entity_type_selection.prepare_sql(self._linkset):
+                ets_sql = sql.SQL('\n\n').join([entity_type_selection.prepare_sql(self._linkset), ets_sql])
+
+            entity_type_selections_sql.append(ets_sql)
 
         return sql.Composed(entity_type_selections_sql)
 

@@ -249,6 +249,24 @@ export default {
                                 });
                             });
                         }
+
+                        method.sources.forEach(source => {
+                            if (!source.hasOwnProperty('stopwords')) {
+                                source.stopwords = {
+                                    dictionary: '',
+                                    additional: []
+                                };
+                            }
+                        });
+
+                        method.targets.forEach(target => {
+                            if (!target.hasOwnProperty('stopwords')) {
+                                target.stopwords = {
+                                    dictionary: '',
+                                    additional: []
+                                };
+                            }
+                        });
                     });
                 });
 

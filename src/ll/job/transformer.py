@@ -64,7 +64,11 @@ mapping_method_logicbox_schema = Schema({
         Optional('transformers', default=list): [{
             'name': And(str, Use(str.upper), lambda n: n in transformers.keys()),
             'parameters': dict
-        }]
+        }],
+        Optional('stopwords', default={'dictionary': '', 'additional': []}): {
+            'dictionary': str,
+            'additional': [And(str)]
+        }
     }],
     'targets': [{
         'entity_type_selection': Use(int),
@@ -72,7 +76,11 @@ mapping_method_logicbox_schema = Schema({
         Optional('transformers', default=list): [{
             'name': And(str, Use(str.upper), lambda n: n in transformers.keys()),
             'parameters': dict
-        }]
+        }],
+        Optional('stopwords', default={'dictionary': '', 'additional': []}): {
+            'dictionary': str,
+            'additional': [And(str)]
+        }
     }]
 }, ignore_extra_keys=True)
 
@@ -207,7 +215,8 @@ def transform(entity_type_selections_org, linkset_specs_org, lens_specs_org):
         entity_type_selection_list = mapping_conditions.get(ets_internal_id, [])
         entity_type_selection_list.append({
             'property': property,
-            'transformers': condition['transformers']
+            'transformers': condition['transformers'],
+            'stopwords': condition['stopwords'],
         })
         mapping_conditions[ets_internal_id] = entity_type_selection_list
 
