@@ -1,5 +1,5 @@
 from psycopg2 import sql as psycopg2_sql
-from ll.job.matching_mehod import MatchingMethod
+from ll.job.matching_method import MatchingMethod
 
 
 class Conditions:
