@@ -1,15 +1,33 @@
-FROM postgres:12
+FROM postgres:13 AS builder
 
-RUN apt-get update && apt-get install -y \
-    python3-pip \
-    postgresql-plpython3-12
+RUN apt-get update && \
+    apt-get install -y wget unzip python3-pip postgresql-server-dev-13 postgresql-plpython3-13
+
+RUN wget https://github.com/knaw-huc/lenticular-lenses-postgresql/archive/master.zip && \
+    unzip master.zip
+
+WORKDIR /lenticular-lenses-postgresql-master/python
+RUN pip3 install setuptools wheel && \
+    python3 setup.py sdist bdist_wheel
+
+WORKDIR /lenticular-lenses-postgresql-master
+RUN make && make install
+
+FROM postgres:13
+
+COPY --from=builder /lenticular-lenses-postgresql-master/python/dist/* /app/
+COPY --from=builder /usr/lib/postgresql/13/lib/lenticular_lenses.so /usr/lib/postgresql/13/lib/
+COPY --from=builder /usr/lib/postgresql/13/lib/bitcode/lenticular_lenses* /usr/lib/postgresql/13/lib/bitcode/
+COPY --from=builder /usr/share/postgresql/13/extension/lenticular_lenses* /usr/share/postgresql/13/extension/
+
+RUN apt-get update && \
+    apt-get install -y python3-pip postgresql-plpython3-13
+
+RUN pip3 install /app/lenticular_lenses-1.0-py3-none-any.whl
+
+RUN su postgres -c "python3 -m nltk.downloader stopwords" && \
+    su postgres -c "python3 -m nltk.downloader punkt"
 
 RUN echo listen_addresses='0.0.0.0' >> /usr/lib/tmpfiles.d/postgresql.conf
 
-COPY ./postgresql/ /app/
-
-RUN pip3 install --trusted-host pypi.python.org -r /app/requirements.txt
-
-ENV PYTHONPATH /app
-
-COPY ./postgresql/setup.sql /docker-entrypoint-initdb.d
+COPY setup.sql /docker-entrypoint-initdb.d
