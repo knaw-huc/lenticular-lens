@@ -44,13 +44,10 @@
     "field": "get_date_part({date_part}, {property})"
   },
   "SOUNDEX": {
-    "field": "ll_soundex({property}, {size})"
+    "field": "soundex({property}, {size})"
   },
   "BLOOTHOOFT": {
     "field": "bloothooft({property}, {name_type})"
-  },
-  "NYSIIS": {
-    "field": "nysiis({property})"
   },
   "METAPHONE": {
     "field": "metaphone({property}, {max})"

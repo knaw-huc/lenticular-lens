@@ -95,12 +95,6 @@ export default {
                 }
             ]
         },
-        'NYSIIS': {
-            description: 'New York State Identification and Intelligence System (NYSIIS)',
-            acceptsSimilarityMethod: true,
-            isSimilarityMethod: false,
-            items: []
-        },
         'WORD_INTERSECTION': {
             description: 'Word Intersection',
             acceptsSimilarityMethod: false,
