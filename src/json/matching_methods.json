@@ -14,12 +14,12 @@
     "field_type": "date"
   },
   "LEVENSHTEIN_DISTANCE": {
-    "match": "levenshtein_distance({source}, {target}, {max_distance})",
-    "similarity": "similarity({source}, {target}, levenshtein_distance({source}, {target}, {max_distance}))",
+    "match": "levenshtein({source}, {target}, {max_distance})",
+    "similarity": "similarity({source}, {target}, levenshtein({source}, {target}, {max_distance}))",
     "condition": "{match} <= {max_distance}"
   },
   "LEVENSHTEIN_NORMALIZED": {
-    "similarity": "similarity({source}, {target}, levenshtein_distance({source}, {target}, -1))",
+    "similarity": "similarity({source}, {target}, levenshtein({source}, {target}, -1))",
     "condition": "{similarity} >= {threshold}"
   },
   "JARO": {
