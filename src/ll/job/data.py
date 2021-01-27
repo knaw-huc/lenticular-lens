@@ -493,10 +493,10 @@ class Job:
         with db_conn() as conn, conn.cursor(name=uuid4().hex) as cur:
             cur.execute("""
                  SELECT ls.cluster_id, count(DISTINCT nodes.uri) AS size, count(ls.*) / 2 AS links {}
-                 FROM {}.{} AS ls
+                 FROM {}."{}" AS ls
                  CROSS JOIN LATERAL (VALUES (ls.source_uri), (ls.target_uri)) AS nodes(uri)
                  GROUP BY ls.cluster_id
-                 ORDER BY size DESC, ls.cluster_id ASC
+                 ORDER BY size DESC, ls.cluster_id 
                  {}
              """.format(nodes_sql, ('lenses' if type == 'lens' else 'linksets'), self.table_name(id), limit_offset_sql))
 
@@ -548,9 +548,7 @@ class Job:
             all_links.append([source, target])
             link_hash = "key_{}" \
                 .format(str(hasher((source, target) if source < target else (target, source))).replace("-", "N"))
-            strengths[link_hash] = [link['similarity']]
-            if not strengths[link_hash]:
-                strengths[link_hash] = [1]
+            strengths[link_hash] = [link['similarity'] if link['similarity'] else 1]
 
             if source not in nodes:
                 nodes.append(source)
