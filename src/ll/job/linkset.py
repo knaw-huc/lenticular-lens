@@ -114,7 +114,7 @@ class Linkset:
                     matching_fields=psycopg_sql.SQL(',\n                ').join(matching_fields),
                     res=psycopg_sql.Identifier(ets_internal_id),
                     joins=get_sql_empty(psycopg_sql.SQL('\n').join(joins)),
-                    props_not_null=psycopg_sql.SQL('\nOR ').join(props_not_null),
+                    props_not_null=psycopg_sql.SQL('\nAND ').join(props_not_null),
                 )
             )
 
