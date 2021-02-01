@@ -258,10 +258,14 @@
                     method_sim_name: null,
                     method_sim_config: {},
                     method_sim_normalized: false,
-                    list_threshold: 0,
-                    list_threshold_unit: 'matches',
                     t_conorm: 'MAXIMUM_T_CONORM',
                     threshold: 0,
+                    list_matching: {
+                        threshold: 0,
+                        is_percentage: false,
+                        unique_threshold: 0,
+                        unique_is_percentage: false,
+                    },
                     sources: this.linksetSpec.sources
                         .filter(entityTypeSelection => entityTypeSelection !== '')
                         .map(entityTypeSelection => ({

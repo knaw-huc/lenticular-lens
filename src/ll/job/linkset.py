@@ -137,7 +137,7 @@ class Linkset:
                 break
 
             # In case of list matching, combine all values into a field
-            if matching_method.list_threshold:
+            if matching_method.is_list_match:
                 target_field = psycopg_sql.SQL('{}.field_values') \
                     .format(psycopg_sql.Identifier(field_name + '_extended'))
 
@@ -229,7 +229,7 @@ class Linkset:
                 ))
 
                 # Add is not null or is not empty check
-                if matching_method.list_threshold:
+                if matching_method.is_list_match:
                     props_not_null.append(psycopg_sql.SQL('cardinality({}) > 0').format(target_field))
                 else:
                     props_not_null.append(psycopg_sql.SQL('{} IS NOT NULL').format(target_field))

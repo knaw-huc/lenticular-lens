@@ -32,8 +32,12 @@ class MatchingMethod:
 
         self._t_conorm = data['t_conorm']
         self._threshold = data['threshold']
-        self.list_threshold = data['list_threshold']
-        self._list_threshold_unit = data['list_threshold_unit']
+
+        self.is_list_match = data['list_matching']['threshold'] > 0 or data['list_matching']['unique_threshold'] > 0
+        self._list_threshold = data['list_matching']['threshold']
+        self._list_unique_threshold = data['list_matching']['unique_threshold']
+        self._list_is_percentage = data['list_matching']['is_percentage']
+        self._list_unique_is_percentage = data['list_matching']['unique_is_percentage']
 
         self._sources, self._targets, self._intermediates = None, None, None
 
@@ -84,7 +88,7 @@ class MatchingMethod:
 
     @property
     def index_sql(self):
-        if self.list_threshold:
+        if self.is_list_match:
             return None
 
         index_sqls = [psycopg2_sql.SQL('CREATE INDEX ON target USING btree ({});')
@@ -184,7 +188,7 @@ class MatchingMethod:
                 for (key, value) in {**self._method_config, **self._method_sim_config}.items()}
 
     def _update_template_fields(self, template):
-        if self.list_threshold:
+        if self.is_list_match:
             template = re.sub(r'{source}', 'src_org', template)
             template = re.sub(r'{target}', 'trg_org', template)
             template = re.sub(r'{source_norm}', 'src_norm', template)
@@ -201,58 +205,44 @@ class MatchingMethod:
         return template
 
     def _sql(self, template, list_check=True):
-        list_threshold = None
-        if self.list_threshold:
-            list_threshold = psycopg2_sql.Literal(self.list_threshold) \
-                if self._list_threshold_unit == 'matches' else \
-                psycopg2_sql.SQL('greatest(cardinality(source.{field_name}), ' +
-                                 'cardinality(target.{field_name})) * {threshold}').format(
-                    field_name=psycopg2_sql.Identifier(self.field_name),
-                    threshold=psycopg2_sql.Literal(self.list_threshold / 100)
-                )
+        if self.is_list_match:
+            from_sql = \
+                'FROM unnest(source.{field_name}, source.{field_name_norm}) AS (src_org, src_norm)' \
+                    if self._method_info.get('field') else \
+                    'FROM unnest(source.{field_name}) AS src_org'
+            join_sql = \
+                'JOIN unnest(target.{field_name}, target.{field_name_norm}) AS (trg_org, trg_norm)' \
+                    if self._method_info.get('field') else \
+                    'JOIN unnest(target.{field_name}) AS trg_org'
 
             if list_check:
-                if self._method_info.get('field'):
-                    template = cleandoc('''	
-                        cardinality(ARRAY(
-                            SELECT 1
-                            FROM unnest(source.{field_name}, source.{field_name_norm}) AS (src_org, src_norm)
-                            CROSS JOIN unnest(target.{field_name}, target.{field_name_norm}) AS (trg_org, trg_norm)
-                            ON ''' + template + '''	
-                        )) >= {list_threshold}
-                    ''')
-                else:
-                    template = cleandoc('''	
-                        cardinality(ARRAY(
-                            SELECT 1
-                            FROM unnest(source.{field_name}) AS src_org
-                            JOIN unnest(target.{field_name}) AS trg_org
-                            ON ''' + template + '''	
-                        )) >= {list_threshold}
-                    ''')
+                template = cleandoc(f'''	
+                    match_array_meets_size(ARRAY(
+                        SELECT ARRAY[src_org, trg_org]
+                        {from_sql}
+                        {join_sql}
+                        ON {template}
+                    ), source.{{field_name}}, target.{{field_name}}, 
+                       {{list_threshold}}, {{list_threshold_is_perc}}, 
+                       {{list_unique_threshold}}, {{list_unique_threshold_is_perc}})
+                ''')
             else:
-                if self._method_info.get('field'):
-                    template = cleandoc('''	
-                        ARRAY(
-                            SELECT ''' + template + '''	
-                            FROM unnest(source.{field_name}, source.{field_name_norm}) AS (src_org, src_norm)
-                            CROSS JOIN unnest(target.{field_name}, target.{field_name_norm}) AS (trg_org, trg_norm)
-                        )
-                    ''')
-                else:
-                    template = cleandoc('''	
-                        ARRAY(
-                            SELECT ''' + template + '''	
-                            FROM unnest(source.{field_name}) AS src_org
-                            CROSS JOIN unnest(target.{field_name}) AS trg_org
-                        )
-                    ''')
+                template = cleandoc(f'''	
+                    ARRAY(
+                        SELECT {template}
+                        {from_sql}
+                        CROSS {join_sql}
+                    )
+                ''')
 
         return psycopg2_sql.SQL(template).format(
             field_name=psycopg2_sql.Identifier(self.field_name),
             field_name_norm=psycopg2_sql.Identifier(self.field_name + '_norm'),
             field_name_intermediate=psycopg2_sql.Identifier(self.field_name + '_intermediate'),
-            list_threshold=list_threshold,
+            list_threshold=psycopg2_sql.Literal(self._list_threshold),
+            list_threshold_is_perc=psycopg2_sql.Literal(self._list_is_percentage),
+            list_unique_threshold=psycopg2_sql.Literal(self._list_unique_threshold),
+            list_unique_threshold_is_perc=psycopg2_sql.Literal(self._list_unique_is_percentage),
             **self._sql_parameters
         )
 

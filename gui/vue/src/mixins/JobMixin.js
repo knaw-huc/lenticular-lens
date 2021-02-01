@@ -189,8 +189,6 @@ export default {
                             method.method_sim_name = null;
                             method.method_sim_config = {};
                             method.method_sim_normalized = false;
-                            method.list_threshold = 0;
-                            method.list_threshold_unit = 'matches';
 
                             if (method.method_name === '=')
                                 method.method_name = 'EXACT';
@@ -248,6 +246,17 @@ export default {
                                     }
                                 });
                             });
+                        }
+
+                        if (method.hasOwnProperty('list_threshold')) {
+                            method.list_matching = {
+                                threshold: method.list_threshold,
+                                is_percentage: method.list_threshold_unit === 'percentage',
+                                unique_threshold: 0,
+                                unique_is_percentage: false,
+                            };
+                            delete method.list_threshold;
+                            delete method.list_threshold_unit;
                         }
 
                         method.sources.forEach(source => {

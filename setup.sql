@@ -127,6 +127,39 @@ FULL JOIN jsonb_each(r) AS right_set
 ON left_set.key = right_set.key;
 $$ LANGUAGE sql STRICT IMMUTABLE PARALLEL SAFE;
 
+CREATE OR REPLACE FUNCTION match_array_meets_size(arr anyarray, source anyarray, target anyarray,
+                                                  min_count numeric, min_count_percentage boolean,
+                                                  min_distinct_count numeric,
+                                                  min_distinct_count_percentage boolean) RETURNS boolean AS $$
+DECLARE
+    largest_size numeric;
+    unique_size  numeric;
+BEGIN
+    IF min_count_percentage or min_distinct_count_percentage THEN
+        largest_size = greatest(cardinality(source), cardinality(target));
+    END IF;
+
+    IF min_count > 0 THEN
+        IF min_count_percentage and array_length(arr, 1) < (largest_size * (min_count / 100.0)) THEN
+            RETURN FALSE;
+        ELSIF not min_count_percentage and array_length(arr, 1) < min_count THEN
+            RETURN FALSE;
+        END IF;
+    END IF;
+
+    IF min_distinct_count > 0 THEN
+        unique_size = cardinality(ARRAY(SELECT DISTINCT unnest(arr[1:])));
+        IF min_distinct_count_percentage and unique_size < (largest_size * (min_distinct_count / 100.0)) THEN
+            RETURN FALSE;
+        ELSIF not min_distinct_count_percentage and unique_size < min_distinct_count THEN
+            RETURN FALSE;
+        END IF;
+    END IF;
+
+    RETURN TRUE;
+END;
+$$ LANGUAGE plpgsql STRICT IMMUTABLE;
+
 CREATE OR REPLACE FUNCTION to_date_immutable(text, text) RETURNS date AS $$
 BEGIN
     RETURN to_date($1, $2);

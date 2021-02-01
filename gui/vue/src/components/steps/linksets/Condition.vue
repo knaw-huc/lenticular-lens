@@ -116,42 +116,93 @@
             </div>
           </template>
 
-          <div v-if="applyListMatching" class="form-group row">
-            <label :for="'list_threshold_' + id" class="col-sm-3 col-form-label">
-              Minimum matches
-            </label>
+          <template v-if="applyListMatching">
+            <div class="form-group row">
+              <label :for="'list_threshold_' + id" class="col-sm-3 col-form-label">
+                Minimum matches
+              </label>
 
-            <div class="col-sm-1">
-              <input :id="'list_threshold_' + id" class="form-control form-control-sm"
-                     type="number" step="1"
-                     v-model.number="condition.list_threshold"
+              <div class="col-sm-1">
+                <input :id="'list_threshold_' + id" class="form-control form-control-sm"
+                       type="number" step="1"
+                       v-model.number="condition.list_matching.threshold"
+                       v-bind:class="{'is-invalid':
+                          errors.includes('list_threshold') || errors.includes('list_matching')}">
+              </div>
+
+              <div class="col-sm-1">
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" :id="'list_threshold_items_' + id"
+                         v-model="condition.list_matching.is_percentage" :value="false">
+                  <label class="form-check-label" :for="'list_threshold_items_' + id">
+                    matches
+                  </label>
+                </div>
+              </div>
+
+              <div class="col-sm-1">
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" :id="'list_threshold_percentage_' + id"
+                         v-model="condition.list_matching.is_percentage" :value="true">
+                  <label class="form-check-label" :for="'list_threshold_percentage_' + id">
+                    %
+                  </label>
+                </div>
+              </div>
+
+              <div class="col-auto" v-show="errors.includes('list_threshold')">
+                <div class="invalid-feedback inline-feedback"
                      v-bind:class="{'is-invalid': errors.includes('list_threshold')}">
-
-              <div class="invalid-feedback" v-show="errors.includes('list_threshold')">
-                Please specify a valid value
+                  Please specify a valid value
+                </div>
               </div>
             </div>
 
-            <div class="col-sm-1">
-              <div class="form-check">
-                <input class="form-check-input" type="radio" :id="'list_threshold_items_' + id"
-                       v-model="condition.list_threshold_unit" value="matches">
-                <label class="form-check-label" :for="'list_threshold_items_' + id">
-                  matches
-                </label>
+            <div class="form-group row">
+              <label :for="'list_unique_threshold_' + id" class="col-sm-3 col-form-label">
+                Minimum unique values
+              </label>
+
+              <div class="col-sm-1">
+                <input :id="'list_unique_threshold_' + id" class="form-control form-control-sm"
+                       type="number" step="1"
+                       v-model.number="condition.list_matching.unique_threshold"
+                       v-bind:class="{'is-invalid':
+                          errors.includes('list_unique_threshold') || errors.includes('list_matching')}">
+              </div>
+
+              <div class="col-sm-1">
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" :id="'list_threshold_items_' + id"
+                         v-model="condition.list_matching.unique_is_percentage" :value="false">
+                  <label class="form-check-label" :for="'list_threshold_items_' + id">
+                    values
+                  </label>
+                </div>
+              </div>
+
+              <div class="col-sm-1">
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" :id="'list_threshold_percentage_' + id"
+                         v-model="condition.list_matching.unique_is_percentage" :value="true">
+                  <label class="form-check-label" :for="'list_threshold_percentage_' + id">
+                    %
+                  </label>
+                </div>
+              </div>
+
+              <div class="col-auto" v-show="errors.includes('list_unique_threshold')">
+                <div class="invalid-feedback inline-feedback"
+                     v-bind:class="{'is-invalid': errors.includes('list_unique_threshold')}">
+                  Please specify a valid value
+                </div>
               </div>
             </div>
 
-            <div class="col-sm-1">
-              <div class="form-check">
-                <input class="form-check-input" type="radio" :id="'list_threshold_percentage_' + id"
-                       v-model="condition.list_threshold_unit" value="percentage">
-                <label class="form-check-label" :for="'list_threshold_percentage_' + id">
-                  %
-                </label>
-              </div>
+            <div class="invalid-feedback mb-2" v-bind:class="{'is-invalid': errors.includes('list_matching')}">
+              Please specify at least a minimum number of matches or a minimum number of unique values
             </div>
-          </div>
+          </template>
         </div>
       </div>
     </div>
@@ -260,9 +311,20 @@
                 const methodSimConfigValid = this.validateField('method_sim_config',
                     this.$refs.methodSimConfig ? this.$refs.methodSimConfig.validateConditionMethod() : true);
 
+                const listMatchingValid = this.validateField('list_matching',
+                    !this.applyListMatching ||
+                    this.condition.list_matching.threshold > 0 ||
+                    this.condition.list_matching.unique_threshold > 0);
+
                 const listThresholdValid = this.validateField('list_threshold',
-                    !this.applyListMatching || (this.condition.list_threshold > 0 &&
-                    (this.condition.list_threshold_unit === 'matches' || this.condition.list_threshold <= 100)));
+                    !this.applyListMatching || (this.condition.list_matching.threshold >= 0 &&
+                    (!this.condition.list_matching.is_percentage
+                        || this.condition.list_matching.threshold <= 100)));
+
+                const listUniqueThresholdValid = this.validateField('list_unique_threshold',
+                    !this.applyListMatching || (this.condition.list_matching.unique_threshold >= 0 &&
+                    (!this.condition.list_matching.unique_is_percentage
+                        || this.condition.list_matching.unique_threshold <= 100)));
 
                 const sourcesValid = this.validateField('sources', this.condition.sources.length > 0);
                 const targetsValid = this.validateField('targets', this.condition.targets.length > 0);
@@ -272,7 +334,8 @@
                     .includes(false);
 
                 return methodNameValid && simMethodNameValid && methodConfigValid && methodSimConfigValid
-                    && listThresholdValid && sourcesValid && targetsValid && conditionPropertiesValid;
+                    && listMatchingValid && listThresholdValid && listUniqueThresholdValid
+                    && sourcesValid && targetsValid && conditionPropertiesValid;
             },
 
             handleMethodChange() {
@@ -318,7 +381,8 @@
         },
         mounted() {
             this.applySimMethod = !!this.condition.method_sim_name;
-            this.applyListMatching = this.condition.list_threshold > 0;
+            this.applyListMatching = this.condition.list_matching.threshold > 0
+                || this.condition.list_matching.unique_threshold > 0;
         },
         watch: {
             applySimMethod() {
@@ -329,8 +393,10 @@
             },
             applyListMatching() {
                 if (!this.applyListMatching) {
-                    this.condition.list_threshold = 0;
-                    this.condition.list_threshold_unit = 'matches';
+                    this.condition.list_matching.threshold = 0;
+                    this.condition.list_matching.is_percentage = false;
+                    this.condition.list_matching.unique_threshold = 0;
+                    this.condition.list_matching.unique_is_percentage = false;
                 }
             },
         },
