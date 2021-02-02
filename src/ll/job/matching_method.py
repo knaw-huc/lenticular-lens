@@ -207,18 +207,20 @@ class MatchingMethod:
     def _sql(self, template, list_check=True):
         if self.is_list_match:
             from_sql = \
-                'FROM unnest(source.{field_name}, source.{field_name_norm}) AS (src_org, src_norm)' \
+                'FROM unnest(source.{field_name}, source.{field_name_norm}) ' \
+                'WITH ORDINALITY AS src(src_org, src_norm, src_idx)' \
                     if self._method_info.get('field') else \
-                    'FROM unnest(source.{field_name}) AS src_org'
+                    'FROM unnest(source.{field_name}) WITH ORDINALITY AS src(src_org, src_idx)'
             join_sql = \
-                'JOIN unnest(target.{field_name}, target.{field_name_norm}) AS (trg_org, trg_norm)' \
+                'JOIN unnest(target.{field_name}, target.{field_name_norm}) ' \
+                'WITH ORDINALITY AS trg(trg_org, trg_norm, trg_idx)' \
                     if self._method_info.get('field') else \
-                    'JOIN unnest(target.{field_name}) AS trg_org'
+                    'JOIN unnest(target.{field_name}) WITH ORDINALITY AS trg(trg_org, trg_idx)'
 
             if list_check:
                 template = cleandoc(f'''	
                     match_array_meets_size(ARRAY(
-                        SELECT ARRAY[src_org, trg_org]
+                        SELECT ARRAY['src' || src_idx, 'trg' || trg_idx]
                         {from_sql}
                         {join_sql}
                         ON {template}
