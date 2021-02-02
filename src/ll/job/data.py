@@ -5,15 +5,14 @@ from uuid import uuid4
 from psycopg2 import extras, sql
 from psycopg2.extensions import AsIs
 
+from ll.data.visualize import get_visualization
 from ll.job.lens import Lens
 from ll.job.linkset import Linkset
 from ll.job.entity_type_selection import EntityTypeSelection
 from ll.job.transformer import transform
 
-from ll.data.collection import Collection
-from ll.data.query import get_property_values, get_property_values_queries, get_property_values_for_query, \
-    create_query_for_properties, create_count_query_for_properties, \
-    get_linkset_join_sql, get_linkset_cluster_join_sql, get_table_info
+from ll.data.joins import Joins
+from ll.data.query_builder import QueryBuilder
 
 from ll.util.config_db import db_conn, fetch_one
 from ll.util.helpers import get_pagination_sql
@@ -273,63 +272,29 @@ class Job:
                             .format(sql.Identifier(self.table_name(lens_spec.id)))
                         cur.execute(query, (valid_lens, source_uri, target_uri))
 
-    def properties_for_entity_type_selection(self, entity_type_selection, downloaded_only=True):
-        return self._properties(entity_type_selection.dataset_id, entity_type_selection.properties,
-                                None, downloaded_only)
-
-    def value_targets_for_properties(self, properties, downloaded_only=True):
-        return self._value_targets(properties, downloaded_only)
-
     def schema_name(self, id):
         return 'job_' + self.job_id + '_' + str(id)
 
     def table_name(self, id):
         return self.job_id + '_' + str(id)
 
-    def entity_type_selections_required_for_linkset(self, id):
-        linkset_spec = self.get_linkset_spec_by_id(id)
-
-        to_add = linkset_spec.entity_type_selections
-        to_run = []
-
-        added = []
-        while to_add:
-            ets_to_add = to_add[0]
-
-            if ets_to_add not in added:
-                for ets in self.entity_type_selections:
-                    if ets.internal_id == ets_to_add:
-                        to_run.append(ets)
-                        to_add.remove(ets_to_add)
-                        added.append(ets_to_add)
-            else:
-                to_add.remove(ets_to_add)
-
-        return to_run
-
     def spec_lens_uses(self, id, type):
         return [lens_spec.id for lens_spec in self.lens_specs
                 if (type == 'linkset' and id in lens_spec.linksets)
                 or (type == 'lens' and id in lens_spec.lenses)]
 
-    def has_queued_entity_type_selections(self, id=None):
-        ets = self.entity_type_selections_required_for_linkset(id) if id else self.entity_type_selections
-        for entity_type_selection in ets:
-            if entity_type_selection.view_queued:
-                return True
+    def linkset_has_queued_table_data(self, linkset_id=None):
+        linkset = self.get_linkset_spec_by_id(linkset_id)
+        for entity_type_selection in linkset.entity_type_selections:
+            for property in entity_type_selection.properties_for_matching(linkset):
+                if not property.is_downloaded:
+                    return True
 
         return False
 
     def get_entity_type_selection_by_id(self, id):
         for entity_type_selection in self.entity_type_selections:
-            if entity_type_selection.id == id:
-                return entity_type_selection
-
-        return None
-
-    def get_entity_type_selection_by_internal_id(self, internal_id):
-        for entity_type_selection in self.entity_type_selections:
-            if entity_type_selection.internal_id == internal_id:
+            if entity_type_selection.id == id or entity_type_selection.alias == id:
                 return entity_type_selection
 
         return None
@@ -353,33 +318,46 @@ class Job:
         if not entity_type_selection:
             return []
 
-        properties = self.properties_for_entity_type_selection(entity_type_selection)
-        if not properties:
+        filter_properties = entity_type_selection.filter_properties
+        if any(not prop.is_downloaded for prop in filter_properties):
             return []
 
-        table_info = get_table_info(entity_type_selection.dataset_id, entity_type_selection.collection_id)
-        query = create_query_for_properties(entity_type_selection.dataset_id, entity_type_selection.internal_id,
-                                            table_info['table_name'], table_info['columns'], properties,
-                                            joins=entity_type_selection.joins(),
-                                            condition=entity_type_selection.filter_sql,
-                                            invert=invert, limit=limit, offset=offset)
+        selection_properties = entity_type_selection.properties
 
-        return get_property_values_for_query(query, None, properties, dict=False)
+        query_builder = QueryBuilder()
+        query_builder.add_query(
+            entity_type_selection.dataset_id, entity_type_selection.collection_id, entity_type_selection.alias,
+            entity_type_selection.table_name, filter_properties, selection_properties,
+            condition=entity_type_selection.filter_sql, invert=invert, limit=limit, offset=offset)
+
+        return query_builder.run_queries(dict=False)
 
     def get_entity_type_selection_sample_total(self, id):
         entity_type_selection = self.get_entity_type_selection_by_id(id)
         if not entity_type_selection:
             return {'total': 0}
 
-        table_info = get_table_info(entity_type_selection.dataset_id, entity_type_selection.collection_id)
-        query = create_count_query_for_properties(entity_type_selection.internal_id, table_info['table_name'],
-                                                  joins=entity_type_selection.joins(),
-                                                  condition=entity_type_selection.filter_sql)
+        filter_properties = entity_type_selection.filter_properties
+        if any(not prop.is_downloaded for prop in filter_properties):
+            return {'total': 0}
 
-        return fetch_one(query, dict=True)
+        joins = Joins()
+        joins.set_joins_for_props(filter_properties)
+
+        return fetch_one(sql.SQL('''
+            SELECT count({resource}.uri) AS total
+            FROM timbuctoo.{table_name} AS {resource} 
+            {joins}
+            {condition}
+        ''').format(
+            resource=sql.Identifier(entity_type_selection.alias),
+            table_name=sql.Identifier(entity_type_selection.table_name),
+            joins=joins.sql,
+            condition=entity_type_selection.where_sql
+        ), dict=True)
 
     def get_links(self, id, type, validation_filter=Validation.ALL, cluster_id=None, uri=None,
-                  limit=None, offset=0, include_props=False):
+                  limit=None, offset=0, include_props=False, single_value=False):
         schema = 'lenses' if type == 'lens' else 'linksets'
         spec = self.get_lens_spec_by_id(id) if type == 'lens' else self.get_linkset_spec_by_id(id)
 
@@ -413,17 +391,22 @@ class Job:
 
         values = None
         if include_props:
-            properties = spec.properties if type == 'lens' else spec.properties
-            targets = self.value_targets_for_properties(properties)
-            if targets:
-                joins = get_linkset_join_sql(schema, self.table_name(id), where_sql, limit, offset)
-                queries = get_property_values_queries(targets, joins=joins)
-                values = get_property_values(queries, dict=True)
+            query_builder = QueryBuilder()
+
+            for ets in spec.entity_type_selections:
+                query_builder.add_linkset_query(
+                    schema, self.table_name(id), ets.dataset_id, ets.collection_id, ets.alias, ets.table_name,
+                    ets.filter_properties, ets.properties_for_spec_selection(spec),
+                    condition=where_sql, limit=limit, offset=offset, single_value=single_value)
+
+            values = query_builder.run_queries_single_value() if single_value else query_builder.run_queries()
 
         with db_conn() as conn, conn.cursor(name=uuid4().hex) as cur:
             cur.execute(sql.SQL(
-                'SELECT links.source_uri, links.target_uri, link_order, '
-                '       cluster_id, valid, {sim_logic_ops_sql} '
+                'SELECT links.source_uri, links.source_collections, '
+                '       links.target_uri, links.target_collections, '
+                '       link_order, cluster_id, valid, '
+                '       coalesce({sim_logic_ops_sql}, 1) AS similarity '
                 'FROM {schema}.{view_name} AS links '
                 '{sim_fields_sql} '
                 '{where_sql} '
@@ -445,13 +428,15 @@ class Job:
                 for link in links:
                     yield {
                         'source': link[0],
+                        'source_collections': link[1],
                         'source_values': values[link[0]] if values and link[0] in values else None,
-                        'target': link[1],
-                        'target_values': values[link[1]] if values and link[1] in values else None,
-                        'link_order': link[2],
-                        'cluster_id': link[3],
-                        'valid': link[4],
-                        'similarity': link[5]
+                        'target': link[2],
+                        'target_collections': link[3],
+                        'target_values': values[link[2]] if values and link[2] in values else None,
+                        'link_order': link[4],
+                        'cluster_id': link[5],
+                        'valid': link[6],
+                        'similarity': link[7]
                     }
 
     def get_links_totals(self, id, type, cluster_id=None, uri=None):
@@ -477,18 +462,20 @@ class Job:
             return {row[0]: row[1] for row in cur.fetchall()}
 
     def get_clusters(self, id, type, limit=None, offset=0, include_props=False):
+        spec = self.get_lens_spec_by_id(id) if type == 'lens' else self.get_linkset_spec_by_id(id)
         limit_offset_sql = get_pagination_sql(limit, offset)
         nodes_sql = ', array_agg(DISTINCT nodes.uri) AS nodes_arr' if include_props else ''
 
         values = None
         if include_props:
-            properties = self.get_lens_spec_by_id(id).properties if type == 'lens' \
-                else self.get_linkset_spec_by_id(id).properties
-            targets = self.value_targets_for_properties(properties)
-            if targets:
-                joins = get_linkset_cluster_join_sql(self.table_name(id), limit, offset)
-                queries = get_property_values_queries(targets, joins=joins)
-                values = get_property_values(queries, dict=True)
+            query_builder = QueryBuilder()
+
+            for ets in spec.entity_type_selections:
+                query_builder.add_cluster_query(
+                    self.table_name(id), ets.dataset_id, ets.collection_id, ets.alias, ets.table_name,
+                    ets.filter_properties, ets.properties_for_spec_selection(spec), limit=limit, offset=offset)
+
+            values = query_builder.run_queries()
 
         with db_conn() as conn, conn.cursor(name=uuid4().hex) as cur:
             cur.execute("""
@@ -536,64 +523,5 @@ class Job:
                         } for key, cluster_value in cluster_values.items()] if values else None
                     }
 
-    def cluster(self, id, type, cluster_id=None, uri=None):
-        all_links = []
-        strengths = {}
-        nodes = []
-
-        for link in self.get_links(id, type, cluster_id=cluster_id, uri=uri):
-            source = '<' + link['source'] + '>'
-            target = '<' + link['target'] + '>'
-
-            all_links.append([source, target])
-            link_hash = "key_{}" \
-                .format(str(hasher((source, target) if source < target else (target, source))).replace("-", "N"))
-            strengths[link_hash] = [link['similarity'] if link['similarity'] else 1]
-
-            if source not in nodes:
-                nodes.append(source)
-            if target not in nodes:
-                nodes.append(target)
-
-        return {'links': all_links, 'strengths': strengths, 'nodes': nodes}
-
-    @staticmethod
-    def _value_targets(properties, downloaded_only=True):
-        value_targets = []
-        downloaded = Collection.download_status()['downloaded']
-
-        for prop in properties:
-            graph = prop['graph']
-            new_graph_data = []
-
-            for data_of_entity in prop['data']:
-                entity_type = data_of_entity['entity_type']
-
-                if not downloaded_only or Job._is_downloaded(downloaded, graph, entity_type):
-                    new_properties = Job._properties(graph, data_of_entity['properties'], downloaded, downloaded_only)
-                    if len(new_properties) > 0:
-                        new_graph_data.append({'entity_type': entity_type, 'properties': new_properties})
-
-            if len(new_graph_data) > 0:
-                value_targets.append({'graph': graph, 'data': new_graph_data})
-
-        return value_targets
-
-    @staticmethod
-    def _properties(graph, properties, downloaded=None, downloaded_only=True):
-        downloaded = Collection.download_status()['downloaded'] if downloaded is None else downloaded
-
-        new_properties = []
-        for props in properties:
-            props = [prop for prop in props if prop != '__value__' and prop != '']
-
-            if len(props) > 0 and (not downloaded_only or len(props) == 1
-                                   or all(Job._is_downloaded(downloaded, graph, entity) for entity in props[1::2])):
-                new_properties.append(props)
-
-        return new_properties
-
-    @staticmethod
-    def _is_downloaded(downloaded, dataset_id, collection_id):
-        return any(download['dataset_id'] == dataset_id and download['collection_id'] == collection_id
-                   for download in downloaded)
+    def visualize(self, id, type, cluster_id):
+        return get_visualization(self, id, type, cluster_id, include_compact=True)

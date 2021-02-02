@@ -1,7 +1,7 @@
 from json import dumps
 
 from ll.data.timbuctoo import Timbuctoo
-from ll.util.config_db import db_conn, fetch_one
+from ll.util.config_db import db_conn
 from ll.util.hasher import table_name_hash, column_name_hash
 
 from psycopg2 import extras as psycopg2_extras, sql as psycopg2_sql
@@ -15,23 +15,28 @@ class Collection:
         self._collection_id = collection_id
         self._timbuctoo_data = timbuctoo_data
 
-        self._table_data = None
+        self._dataset_table_data = None
         self._timbuctoo = Timbuctoo(self._graphql_endpoint, self._hsid)
 
     @property
+    def dataset_table_data(self):
+        if self._dataset_table_data:
+            return self._dataset_table_data
+
+        with db_conn() as conn, conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) as cur:
+            cur.execute('SELECT * FROM timbuctoo_tables WHERE graphql_endpoint = %s AND dataset_id = %s',
+                        (self._graphql_endpoint, self._dataset_id))
+            self._dataset_table_data = {table_data['collection_id']: table_data for table_data in cur.fetchall()}
+
+        return self._dataset_table_data
+
+    @property
     def table_data(self):
-        if self._table_data:
-            return self._table_data
-
-        self._table_data = fetch_one('SELECT * FROM timbuctoo_tables '
-                                     'WHERE graphql_endpoint = %s AND dataset_id = %s AND collection_id = %s',
-                                     (self._graphql_endpoint, self._dataset_id, self._collection_id), dict=True)
-
-        if not self._table_data:
+        if self._collection_id not in self.dataset_table_data:
             self.start_download()
             return self.table_data
 
-        return self._table_data
+        return self.dataset_table_data[self._collection_id]
 
     @property
     def table_name(self):
@@ -75,7 +80,7 @@ class Collection:
     def start_download(self):
         (dataset, collection) = self.timbuctoo_dataset_and_collection
         if dataset and collection:
-            columns = {'uri' if col_name == 'uri' else column_name_hash(col_name): col_info
+            columns = {column_name_hash(col_name): col_info
                        for col_name, col_info in collection['properties'].items()}
 
             with db_conn() as conn, conn.cursor() as cur:
@@ -99,8 +104,7 @@ class Collection:
     def update(self):
         (dataset, collection) = self.timbuctoo_dataset_and_collection
         if dataset and collection:
-            columns = {'uri' if col_name == 'uri' else column_name_hash(col_name): col_info
-                       for col_name, col_info in collection['properties'].items()}
+            columns = {column_name_hash(col_name): col_info for col_name, col_info in collection['properties'].items()}
 
             with db_conn() as conn, conn.cursor() as cur:
                 cur.execute('''
@@ -112,6 +116,18 @@ class Collection:
                 ''', (dataset['uri'], dataset['name'], dataset['title'], dataset['description'],
                       collection['uri'], collection['title'], collection['shortenedUri'],
                       collection['total'], dumps(columns), self.table_name))
+
+    @staticmethod
+    def filter_downloaded_properties(properties):
+        downloaded = Collection.download_status()['downloaded']
+        is_downloaded = lambda dataset_id, collection_id: \
+            any(download['dataset_id'] == dataset_id and download['collection_id'] == collection_id
+                for download in downloaded)
+
+
+
+        return [props for props in properties
+                if len(props) == 1 or all(is_downloaded(graph, collection_id) for collection_id in props[1::2])]
 
     @staticmethod
     def columns_sql(columns):

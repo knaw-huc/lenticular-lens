@@ -8,16 +8,16 @@ from ll.util.hasher import hash_string_min
 class MatchingMethodProperty:
     _transformers = get_json_from_file('transformers.json')
 
-    def __init__(self, data, job, field_type_info, norm_template, norm_properties):
+    def __init__(self, data, ets_id, job, field_type_info, norm_template, norm_properties):
         self._data = data
-        self._job = job
+        self._ets = job.get_entity_type_selection_by_id(ets_id)
         self._field_type_info = field_type_info
         self._norm_template = norm_template
         self._norm_properties = norm_properties
 
     @property
     def prop_original(self):
-        return PropertyField(self._data['property'], job=self._job,
+        return PropertyField(self._data['property'], self._ets,
                              transformers=self._get_field_transformers(normalized=False))
 
     @property
@@ -25,7 +25,7 @@ class MatchingMethodProperty:
         if not self._norm_template:
             return None
 
-        return PropertyField(self._data['property'], job=self._job,
+        return PropertyField(self._data['property'], self._ets,
                              transformers=self._get_field_transformers(normalized=True))
 
     @property

@@ -11,9 +11,9 @@ class Joins:
             self._joins.append(sql)
             self._targets.append(target)
 
-    def copy_from(self, other):
-        self._joins = other._joins
-        self._targets = other._targets
+    def set_joins_for_props(self, properties):
+        for prop in properties:
+            prop.add_joins(self)
 
     @property
     def sql(self):

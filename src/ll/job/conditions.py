@@ -85,7 +85,7 @@ class Conditions:
                 for match_method in self._matching_methods
                 if match_method.similarity_threshold_sql]
 
-    def get_fields(self, keys=None, only_matching_fields=True):
+    def get_fields(self, keys=None):
         if not isinstance(keys, list):
             keys = ['sources', 'targets', 'intermediates']
 
@@ -93,16 +93,13 @@ class Conditions:
         ets_properties = {}
         for matching_method in self._matching_methods:
             for key in keys:
-                for internal_id, properties in getattr(matching_method, key).items():
+                for ets_id, properties in getattr(matching_method, key).items():
                     if key == 'sources' or key == 'targets':
                         for property in properties:
-                            self._set_field(internal_id, property, matching_method,
-                                            ets_properties, only_matching_fields)
+                            self._set_field(ets_id, property, matching_method, ets_properties)
                     else:
-                        self._set_field(internal_id, properties['source'], matching_method,
-                                        ets_properties, only_matching_fields)
-                        self._set_field(internal_id, properties['target'], matching_method,
-                                        ets_properties, only_matching_fields)
+                        self._set_field(ets_id, properties['source'], matching_method, ets_properties)
+                        self._set_field(ets_id, properties['target'], matching_method, ets_properties)
 
         return ets_properties
 
@@ -130,18 +127,15 @@ class Conditions:
         return matching_methods
 
     @staticmethod
-    def _set_field(internal_id, property, matching_method, ets_properties, only_matching_fields):
-        ets_internal_id = internal_id if only_matching_fields \
-            else property.prop_original.entity_type_selection_internal_id
+    def _set_field(ets_id, property, matching_method, ets_properties):
+        if ets_id not in ets_properties:
+            ets_properties[ets_id] = {}
 
-        if ets_internal_id not in ets_properties:
-            ets_properties[ets_internal_id] = {}
-
-        if matching_method.field_name not in ets_properties[ets_internal_id]:
-            ets_properties[ets_internal_id][matching_method.field_name] = {
+        if matching_method.field_name not in ets_properties[ets_id]:
+            ets_properties[ets_id][matching_method.field_name] = {
                 'matching_method': matching_method,
                 'properties': []
             }
 
-        props = ets_properties[ets_internal_id][matching_method.field_name]['properties']
+        props = ets_properties[ets_id][matching_method.field_name]['properties']
         props.append(property)

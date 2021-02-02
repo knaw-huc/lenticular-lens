@@ -1,7 +1,10 @@
 from inspect import cleandoc
+from collections import defaultdict
 from psycopg2 import sql as psycopg_sql
 
 from ll.job.conditions import Conditions
+from ll.data.property_field import PropertyField
+
 from ll.util.helpers import get_sql_empty
 from ll.util.hasher import hash_string_min
 
@@ -26,11 +29,16 @@ class Linkset:
 
     @property
     def properties(self):
-        return self._data['properties']
+        props = defaultdict(list)
+        for prop in self._data['properties']:
+            ets_id = prop['entity_type_selection']
+            props[ets_id].append(PropertyField(prop['property'], self._job.get_entity_type_selection_by_id(ets_id)))
+
+        return props
 
     @property
     def entity_type_selections(self):
-        return self.sources + self.targets + self.intermediates
+        return set(self.sources + self.targets + self.intermediates)
 
     @property
     def conditions(self):
@@ -65,15 +73,15 @@ class Linkset:
 
     @property
     def sources(self):
-        return self._data['sources']
+        return [self._job.get_entity_type_selection_by_id(ets_id) for ets_id in self._data['sources']]
 
     @property
     def targets(self):
-        return self._data['targets']
+        return [self._job.get_entity_type_selection_by_id(ets_id) for ets_id in self._data['targets']]
 
     @property
     def intermediates(self):
-        return self._data['intermediates']
+        return [self._job.get_entity_type_selection_by_id(ets_id) for ets_id in self._data['intermediates']]
 
     @property
     def source_sql(self):
@@ -83,15 +91,15 @@ class Linkset:
     def target_sql(self):
         return self._get_combined_entity_type_selections_sql(is_source=False)
 
-    def get_fields(self, keys=None, only_matching_fields=True):
-        return self.conditions.get_fields(keys, only_matching_fields)
+    def get_fields(self, keys=None):
+        return self.conditions.get_fields(keys)
 
     def _get_combined_entity_type_selections_sql(self, is_source=True):
         sql = []
         properties = self.get_fields(['sources'] if is_source else ['targets'])
 
         # Get the properties needed for the source or target per entity-type selection
-        for ets_internal_id, ets_properties in properties.items():
+        for ets_id, ets_properties in properties.items():
             joins, matching_fields, props_not_null = [], [], []
 
             # Then for get all properties from this entity-type selection required for a single matching function
@@ -99,7 +107,7 @@ class Linkset:
                 matching_method = ets_matching_func_props['matching_method']
                 ets_method_properties = ets_matching_func_props['properties']
 
-                self._matching_methods_sql(ets_internal_id, matching_method, ets_method_properties,
+                self._matching_methods_sql(ets_id, matching_method, ets_method_properties,
                                            is_source, joins, matching_fields, props_not_null, ets_index)
 
             sql.append(
@@ -110,9 +118,9 @@ class Linkset:
                         WHERE {props_not_null}
                    """
                 )).format(
-                    collection=psycopg_sql.Literal(ets_internal_id),
+                    collection=psycopg_sql.Literal(ets_id),
                     matching_fields=psycopg_sql.SQL(',\n                ').join(matching_fields),
-                    res=psycopg_sql.Identifier(ets_internal_id),
+                    res=psycopg_sql.Identifier(hash_string_min(ets_id)),
                     joins=get_sql_empty(psycopg_sql.SQL('\n').join(joins)),
                     props_not_null=psycopg_sql.SQL('\nAND ').join(props_not_null),
                 )
@@ -121,7 +129,7 @@ class Linkset:
         return psycopg_sql.SQL('\nUNION ALL\n').join(sql)
 
     @staticmethod
-    def _matching_methods_sql(ets_internal_id, matching_method, properties,
+    def _matching_methods_sql(ets_id, matching_method, properties,
                               is_source, joins, matching_fields, props_not_null, ets_index):
         field_name_org = matching_method.field_name
         field_name_norm = field_name_org + '_norm'
@@ -153,7 +161,7 @@ class Linkset:
                     ) AS {field_name}
                     ON {field_name}.uri = target.uri                    
                 ''')).format(
-                    res=psycopg_sql.Identifier(ets_internal_id),
+                    res=psycopg_sql.Identifier(hash_string_min(ets_id)),
                     fields=psycopg_sql.SQL(' || ').join(
                         [psycopg_sql.SQL('array_agg({})').format(psycopg_sql.Identifier(prop.hash))
                          for prop in props]
@@ -170,7 +178,7 @@ class Linkset:
                     if not is_normalized:
                         joins.append(
                             psycopg_sql.SQL('INNER JOIN {res} AS {join_name} ON target.uri = {join_name}.uri').format(
-                                res=psycopg_sql.Identifier(ets_internal_id),
+                                res=psycopg_sql.Identifier(hash_string_min(ets_id)),
                                 join_name=psycopg_sql.Identifier(target)
                             )
                         )

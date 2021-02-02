@@ -18,8 +18,6 @@ from ll.util.helpers import get_association_files
 from ll.data.collection import Collection
 from ll.data.timbuctoo_datasets import TimbuctooDatasets
 
-from ll.Clustering.IlnVisualisation import plot, plot_compact, plot_reconciliation
-
 
 class DecimalJSONEncoder(JSONEncoder):
     def default(self, obj):
@@ -257,18 +255,8 @@ def links(job, type, id):
 
 @app.route('/job/<job:job>/clusters/<type:type>/<int:id>')
 def clusters(job, type, id):
-    if request.args.get('association'):
-        extended_data = []
-        cycles_data = []
-
-        # reconciled_id = re.sub("Cluster", "Reconciled", clustering_id)
-        # reconciled = f'{reconciled_id}_{hasher(request.args.get("association"))}'
-        # extended_filename_base = F"{clustering_id}_ExtendedBy_{splitext(request.args.get('association'))[0]}_{hasher(reconciled)}"
-        # extended_data = pickle_deserializer(CLUSTER_SERIALISATION_DIR, f"{extended_filename_base}-1.txt.gz")
-        # cycles_data = pickle_deserializer(CLUSTER_SERIALISATION_DIR, f"{extended_filename_base}-2.txt.gz")
-    else:
-        extended_data = []
-        cycles_data = []
+    extended_data = []
+    cycles_data = []
 
     clusters = []
     for cluster in job.get_clusters(id, type, include_props=True,
@@ -298,33 +286,7 @@ def validate_link(job, type, id):
 
 @app.route('/job/<job:job>/cluster/<type:type>/<int:id>/<cluster_id>/graph')
 def get_cluster_graph_data(job, type, id, cluster_id):
-    cluster_data = job.cluster(id, type, cluster_id=cluster_id)
-    clustering = job.clustering(id, type)
-    spec = job.get_linkset_spec_by_id(id) if type == 'linkset' else job.get_lens_spec_by_id(id)
-    properties = job.value_targets_for_properties(spec.properties)
-
-    specifications = {
-        "data_store": "POSTGRESQL",
-        "sub_clusters": '',
-        "associations": clustering['association_file'],
-        "serialised": '',
-        "cluster_id": cluster_id,
-        "cluster_data": cluster_data,
-        "properties": properties,
-    }
-
-    cluster_graph = plot(specs=specifications, activated=True) \
-        if request.args.get('get_cluster', True) else None
-    cluster_graph_compact = plot_compact(specs=specifications, community_only=True, activated=True) \
-        if request.args.get('get_cluster_compact', True) else None
-    reconciliation_graph = plot_reconciliation(specs=specifications, activated=True)[1] \
-        if clustering['association_file'] and request.args.get('get_reconciliation', True) else None
-
-    return jsonify({
-        'cluster_graph': cluster_graph,
-        'cluster_graph_compact': cluster_graph_compact,
-        'reconciliation_graph': reconciliation_graph,
-    })
+    return jsonify(job.visualize(id, type, cluster_id))
 
 
 @app.route('/job/<job:job>/export/<type:type>/<int:id>/csv')

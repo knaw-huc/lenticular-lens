@@ -89,10 +89,7 @@ class TimbuctooJob(WorkerJob):
             for item in query_result['items']:
                 # Property names can be too long for column names in Postgres, so make them shorter
                 # We use hashing, because that keeps the column names unique and uniform
-                result = {'uri' if name == 'uri' else column_name_hash(name): self.extract_value(item[name])
-                          for name in item}
-
-                results.append(result)
+                results.append({column_name_hash(name): self.extract_value(item[name]) for name in item})
 
             with self._db_conn.cursor() as cur:
                 cur.execute("LOCK TABLE timbuctoo_tables IN ACCESS EXCLUSIVE MODE;")

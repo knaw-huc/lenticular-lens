@@ -137,9 +137,11 @@ class MatchingMethod:
         if not self._intermediates:
             self._intermediates = {}
             if self.method_name == 'INTERMEDIATE':
+                ets_id = int(self._method_config['entity_type_selection'])
+                ets = self._job.get_entity_type_selection_by_id(ets_id)
                 self._intermediates[self._method_config['entity_type_selection']] = {
-                    'source': PropertyField(self._method_config['intermediate_source'], job=self._job),
-                    'target': PropertyField(self._method_config['intermediate_target'], job=self._job)
+                    'source': PropertyField(self._method_config['intermediate_source'], ets),
+                    'target': PropertyField(self._method_config['intermediate_target'], ets)
                 }
 
         return self._intermediates
@@ -251,6 +253,7 @@ class MatchingMethod:
     def _get_properties(self, key):
         properties = {}
         for entity_type_selection, fields in self._data[key].items():
+            ets_id = int(entity_type_selection)
             field_type = self._method_info.get('field_type')
             field_type_info = {
                 'type': field_type,
@@ -258,7 +261,7 @@ class MatchingMethod:
             }
 
             properties[entity_type_selection] = \
-                [MatchingMethodProperty(field, self._job, field_type_info,
+                [MatchingMethodProperty(field, ets_id, self._job, field_type_info,
                                         self._method_info.get('field'), self._method_config)
                  for field in fields]
 

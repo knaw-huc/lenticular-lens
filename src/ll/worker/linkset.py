@@ -27,7 +27,7 @@ class LinksetJob(WorkerJob):
 
     def run(self):
         download_status_set = False
-        while self._job.has_queued_entity_type_selections(self._id) and not self._killed:
+        while self._job.linkset_has_queued_table_data(self._id) and not self._killed:
             if not download_status_set:
                 self._job.update_linkset(self._id, {'status': 'downloading'})
                 download_status_set = True

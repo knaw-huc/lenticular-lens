@@ -38,6 +38,18 @@ def to_nt_format(resource):
     return '<{}>'.format(resource)
 
 
+def get_id_of_uri(uri):
+    local = re.findall(".*[/#:](.*)$", uri)
+    if len(local) > 0 and len(local[0]) > 0:
+        return local[0]
+
+    bad_uri = re.findall("(.*)[/#:]$", uri)
+    if len(bad_uri) > 0:
+        return get_id_of_uri(bad_uri[0])
+
+    return uri
+
+
 def get_sql_empty(sql, add_new_line=True):
     if not sql or sql == psycopg2_sql.SQL('') or sql == psycopg2_sql.Composed([]):
         return psycopg2_sql.SQL('')

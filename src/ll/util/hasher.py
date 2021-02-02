@@ -42,8 +42,11 @@ def table_name_hash(graphql_endpoint, dataset_id, collection_id):
 
 def column_name_hash(column_name):
     column_name = column_name.lower()
-    length = postgresql_id_max_length - hash_length - 1
+    if column_name == 'uri':
+        return column_name
 
+    length = postgresql_id_max_length - hash_length - 1
     name_split = column_name.split('__')
     name = name_split[len(name_split) - 1]
+
     return name[-length:] + '_' + hash_string(column_name)[:hash_length]

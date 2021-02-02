@@ -2,6 +2,8 @@ import locale
 
 from psycopg2 import sql
 from inspect import cleandoc
+
+from ll.data.joins import Joins
 from ll.util.helpers import get_string_from_sql, get_sql_empty
 
 locale.setlocale(locale.LC_ALL, '')
@@ -22,7 +24,10 @@ class MatchingSql:
 
     def generate_entity_type_selection_sql(self):
         entity_type_selections_sql = []
-        for entity_type_selection in self._job.entity_type_selections_required_for_linkset(self._linkset.id):
+        for entity_type_selection in self._linkset.entity_type_selections:
+            joins = Joins()
+            joins.set_joins_for_props(entity_type_selection.properties_for_matching(self._linkset))
+
             ets_sql = sql.SQL(cleandoc(
                 """ DROP MATERIALIZED VIEW IF EXISTS {view_name} CASCADE;
                     CREATE MATERIALIZED VIEW {view_name} AS
@@ -33,10 +38,10 @@ class MatchingSql:
                 """
             ) + '\n').format(
                 pre=sql.SQL('SELECT * FROM (') if entity_type_selection.limit > -1 else sql.SQL(''),
-                view_name=sql.Identifier(entity_type_selection.internal_id),
+                view_name=sql.Identifier(entity_type_selection.alias),
                 matching_fields=entity_type_selection.matching_fields_sql(self._linkset),
                 table_name=sql.Identifier(entity_type_selection.table_name),
-                joins=get_sql_empty(entity_type_selection.joins(self._linkset).sql),
+                joins=get_sql_empty(joins.sql),
                 wheres=get_sql_empty(entity_type_selection.where_sql),
                 limit=get_sql_empty(entity_type_selection.limit_sql),
             )

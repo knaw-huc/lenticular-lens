@@ -1,4 +1,7 @@
+from collections import defaultdict
+
 from ll.job.lens_elements import LensElements
+from ll.data.property_field import PropertyField
 
 
 class Lens:
@@ -13,7 +16,12 @@ class Lens:
 
     @property
     def properties(self):
-        return self._data['properties']
+        props = defaultdict(list)
+        for prop in self._data['properties']:
+            ets_id = prop['entity_type_selection']
+            props[ets_id].append(PropertyField(prop['property'], self._job.get_entity_type_selection_by_id(ets_id)))
+
+        return props
 
     @property
     def specs(self):
@@ -29,6 +37,10 @@ class Lens:
     @property
     def lenses(self):
         return self.specs.lenses
+
+    @property
+    def entity_type_selections(self):
+        return set(linkset.entity_type_selections for linkset in self.specs.linksets)
 
     @property
     def similarity_fields(self):
