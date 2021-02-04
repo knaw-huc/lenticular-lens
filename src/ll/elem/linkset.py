@@ -2,8 +2,8 @@ from inspect import cleandoc
 from collections import defaultdict
 from psycopg2 import sql as psycopg_sql
 
-from ll.job.conditions import Conditions
-from ll.data.property_field import PropertyField
+from ll.elem.conditions import Conditions
+from ll.job.property_field import PropertyField
 
 from ll.util.helpers import get_sql_empty
 from ll.util.hasher import hash_string_min

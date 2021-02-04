@@ -1,7 +1,7 @@
 from collections import defaultdict
 
-from ll.job.lens_elements import LensElements
-from ll.data.property_field import PropertyField
+from ll.elem.lens_elements import LensElements
+from ll.job.property_field import PropertyField
 
 
 class Lens:

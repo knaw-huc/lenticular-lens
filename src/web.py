@@ -9,7 +9,7 @@ from flask.json import JSONEncoder
 
 from werkzeug.routing import BaseConverter, ValidationError
 
-from ll.job.data import Job, Validation
+from ll.job.job import Job, Validation
 
 from ll.util.hasher import hash_string
 from ll.util.logging import config_logger

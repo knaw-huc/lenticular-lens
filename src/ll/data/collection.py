@@ -118,18 +118,6 @@ class Collection:
                       collection['total'], dumps(columns), self.table_name))
 
     @staticmethod
-    def filter_downloaded_properties(properties):
-        downloaded = Collection.download_status()['downloaded']
-        is_downloaded = lambda dataset_id, collection_id: \
-            any(download['dataset_id'] == dataset_id and download['collection_id'] == collection_id
-                for download in downloaded)
-
-
-
-        return [props for props in properties
-                if len(props) == 1 or all(is_downloaded(graph, collection_id) for collection_id in props[1::2])]
-
-    @staticmethod
     def columns_sql(columns):
         def column_sql(column_name, column_type):
             return psycopg2_sql.SQL('{col_name} {col_type}').format(

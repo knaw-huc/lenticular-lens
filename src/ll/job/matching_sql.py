@@ -3,7 +3,7 @@ import locale
 from psycopg2 import sql
 from inspect import cleandoc
 
-from ll.data.joins import Joins
+from ll.job.joins import Joins
 from ll.util.helpers import get_string_from_sql, get_sql_empty
 
 locale.setlocale(locale.LC_ALL, '')

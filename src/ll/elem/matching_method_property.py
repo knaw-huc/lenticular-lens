@@ -1,6 +1,6 @@
 from psycopg2 import sql as psycopg2_sql
 
-from ll.data.property_field import PropertyField
+from ll.job.property_field import PropertyField
 from ll.util.helpers import get_json_from_file
 from ll.util.hasher import hash_string_min
 

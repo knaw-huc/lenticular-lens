@@ -2,6 +2,7 @@ import locale
 
 from psycopg2 import sql
 from inspect import cleandoc
+
 from ll.util.helpers import get_string_from_sql
 
 locale.setlocale(locale.LC_ALL, '')

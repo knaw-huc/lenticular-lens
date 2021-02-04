@@ -2,7 +2,7 @@ from os.path import join
 
 from ll.util.hasher import hasher
 from ll.util.config_db import db_conn
-from ll.job.data import Job as JobLL
+from ll.job.job import Job as JobLL
 
 import ll.org.Clustering.SimpleLinkClustering as Cls
 

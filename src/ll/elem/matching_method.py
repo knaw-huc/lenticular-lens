@@ -4,8 +4,8 @@ from inspect import cleandoc
 from psycopg2 import sql as psycopg2_sql
 
 from ll.util.helpers import get_json_from_file
-from ll.data.property_field import PropertyField
-from ll.job.matching_method_property import MatchingMethodProperty
+from ll.job.property_field import PropertyField
+from ll.elem.matching_method_property import MatchingMethodProperty
 
 
 class MatchingMethod:

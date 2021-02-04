@@ -1,10 +1,9 @@
 from psycopg2 import sql as psycopg2_sql
 
-from ll.data.collection import Collection
-from ll.data.property_field import PropertyField
-
 from ll.util.hasher import hash_string_min
-from ll.job.filter_function import FilterFunction
+from ll.data.collection import Collection
+from ll.job.property_field import PropertyField
+from ll.elem.filter_function import FilterFunction
 
 
 class EntityTypeSelection:

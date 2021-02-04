@@ -1,6 +1,6 @@
 from psycopg2 import sql as psycopg2_sql
 
-from ll.job.data import Job
+from ll.job.job import Job
 from ll.job.lens_sql import LensSql
 
 from ll.worker.job import WorkerJob

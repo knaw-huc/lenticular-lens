@@ -1,7 +1,7 @@
 from inspect import cleandoc
 from psycopg2 import sql as psycopg2_sql
 
-from ll.job.lens_element import LensElement
+from ll.elem.lens_element import LensElement
 
 
 class LensElements:

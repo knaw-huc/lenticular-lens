@@ -3,7 +3,7 @@ from psycopg2 import sql as psycopg2_sql
 from ll.worker.job import WorkerJob
 from ll.util.config_db import db_conn
 
-from ll.job.data import Job as JobLL
+from ll.job.job import Job as JobLL
 from ll.job.simple_link_clustering import SimpleLinkClustering
 
 

@@ -1,7 +1,7 @@
 from psycopg2 import sql, extras
 from collections import defaultdict
 
-from ll.data.joins import Joins
+from ll.job.joins import Joins
 from ll.util.config_db import db_conn
 from ll.util.helpers import get_pagination_sql
 
