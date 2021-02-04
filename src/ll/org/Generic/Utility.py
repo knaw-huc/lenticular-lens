@@ -22,10 +22,10 @@ import collections
 import os.path as path
 import zipfile as f_zip
 
-import ll.Generic.Settings as St
-import ll.Generic.NameSpace as Ns
-import ll.Generic.Server_Settings as Svr
-import ll.DataAccess.Stardog.Query as Stardog
+import ll.org.Generic.Settings as St
+import ll.org.Generic.NameSpace as Ns
+import ll.org.Generic.Server_Settings as Svr
+import ll.org.DataAccess.Stardog.Query as Stardog
 
 from hashlib import md5  # blake2b,
 from unidecode import unidecode
@@ -1653,7 +1653,7 @@ def listening(directory, sleep_time=10):
             print("\nListening for \"system.lock\" file and checking whether " \
                   "a connection to the server is established every {} seconds...".format(str(sleep_time)))
             # wait a little bit before getting the next listing
-            # if you want near instantaneous updates, make the sleep value small.
+            # if you want near instantaneous updates, make the sleep value small.org.
             time.sleep(sleep_time)
 
     except Exception as err:
@@ -2067,7 +2067,7 @@ def zip_folder(input_folder_path, output_file_path=None):
     """
     Zip the contents of an entire folder (with that folder included
     in the archive). Empty sub-folders will be included in the archive
-    as well.
+    as well.org.
     """
 
     if output_file_path is not None:

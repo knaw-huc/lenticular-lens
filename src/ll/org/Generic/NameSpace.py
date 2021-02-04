@@ -1,5 +1,5 @@
-from ll.Generic.Server_Settings import settings
-import ll.Generic.Settings as St
+from ll.org.Generic.Server_Settings import settings
+import ll.org.Generic.Settings as St
 
 db = settings[St.database]
 DOMAIN_NAME = settings[St.domain_name]

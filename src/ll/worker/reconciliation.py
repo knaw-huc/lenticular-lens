@@ -4,7 +4,7 @@ from ll.util.hasher import hasher
 from ll.util.config_db import db_conn
 from ll.job.data import Job as JobLL
 
-import ll.Clustering.SimpleLinkClustering as Cls
+import ll.org.Clustering.SimpleLinkClustering as Cls
 
 from ll.worker.job import WorkerJob
 

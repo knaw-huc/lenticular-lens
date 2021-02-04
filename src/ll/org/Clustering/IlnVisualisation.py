@@ -6,9 +6,9 @@ import intervals
 import statistics
 import networkx as nx
 
-import ll.Generic.Utility as Ut
-import ll.Generic.Settings as St
-import ll.DataAccess.Middleware as Middleware
+import ll.org.Generic.Utility as Ut
+import ll.org.Generic.Settings as St
+import ll.org.DataAccess.Middleware as Middleware
 
 from math import floor
 from copy import deepcopy
@@ -16,15 +16,15 @@ from os.path import join
 from io import StringIO as Buffer
 from collections import defaultdict
 
-from ll.Clustering.Iln_eQ import sigmoid
-from ll.Generic.Utility import pickle_deserializer, to_nt_format, print_heading, completed, \
+from ll.org.Clustering.Iln_eQ import sigmoid
+from ll.org.Generic.Utility import pickle_deserializer, to_nt_format, print_heading, completed, \
     get_uri_local_name_plus, undo_nt_format,  print_object, get_key, hasher, hash_number, problem
 
-import ll.DataAccess.Stardog.Query as Stardog
+import ll.org.DataAccess.Stardog.Query as Stardog
 
 # TODO: GET PATH OF THE SERIALISED DIRECTORY
-# from ll.LLData.CSV_Associations import CSV_ASSOCIATIONS_DIR
-# from ll.LLData.Serialisation import CLUSTER_SERIALISATION_DIR
+# from ll.org.LLData.CSV_Associations import CSV_ASSOCIATIONS_DIR
+# from ll.org.LLData.Serialisation import CLUSTER_SERIALISATION_DIR
 CSV_ASSOCIATIONS_DIR = ''
 CLUSTER_SERIALISATION_DIR = ''
 

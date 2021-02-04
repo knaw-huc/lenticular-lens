@@ -1,12 +1,12 @@
 from os.path import join
 
-import ll.Clustering.SimpleLinkClustering as Cls
+import ll.org.Clustering.SimpleLinkClustering as Cls
 
 # TODO: GET PATH
-# from ll.LLData.CSV_Alignments import CSV_ALIGNMENTS_DIR
-# from ll.LLData.CSV_Clusters import CSV_CLUSTER_DIR
-# from ll.LLData.CSV_Associations import CSV_ASSOCIATIONS_DIR
-# from ll.LLData.Serialisation import CLUSTER_SERIALISATION_DIR
+# from ll.org.LLData.CSV_Alignments import CSV_ALIGNMENTS_DIR
+# from ll.org.LLData.CSV_Clusters import CSV_CLUSTER_DIR
+# from ll.org.LLData.CSV_Associations import CSV_ASSOCIATIONS_DIR
+# from ll.org.LLData.Serialisation import CLUSTER_SERIALISATION_DIR
 CSV_ALIGNMENTS_DIR = ''
 CSV_CLUSTER_DIR = ''
 CSV_ASSOCIATIONS_DIR = ''
@@ -108,7 +108,7 @@ test(directory=DIR, alignment=LINKSET, related=RELATED, saved_in=SAVED_IN, activ
 
 
 # import sys
-# import ll.Generic.Utility as Ut
+# import ll.org.Generic.Utility as Ut
 # import soundex
 # Ut.display_structure(soundex.Soundex())
 # print(type(soundex.Soundex()))
@@ -119,7 +119,7 @@ test(directory=DIR, alignment=LINKSET, related=RELATED, saved_in=SAVED_IN, activ
 
 
 
-# from ll.StringAlgorithm.Soundex import soundex
+# from ll.org.StringAlgorithm.Soundex import soundex
 # print(soundex(["ali", "al", "albert", "alberto", "albertine"], size=3))
 #
 # from collections import Counter

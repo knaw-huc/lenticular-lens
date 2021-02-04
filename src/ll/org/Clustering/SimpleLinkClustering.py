@@ -8,15 +8,15 @@ import networkx as nx
 from os import stat, remove
 from rdflib import util, Graph
 
-import ll.Generic.Utility as Ut
-import ll.Generic.Settings as St
+import ll.org.Generic.Utility as Ut
+import ll.org.Generic.Settings as St
 
 from os.path import join, splitext as get_file_name, basename
-from ll.Generic.Utility import pickle_serializer, hasher, problem
+from ll.org.Generic.Utility import pickle_serializer, hasher, problem
 
 
 # TODO: GET PATH OF THE SERIALISED DIRECTORY
-# from ll.LLData.Serialisation import CLUSTER_SERIALISATION_DIR
+# from ll.org.LLData.Serialisation import CLUSTER_SERIALISATION_DIR
 CLUSTER_SERIALISATION_DIR = ''
 
 

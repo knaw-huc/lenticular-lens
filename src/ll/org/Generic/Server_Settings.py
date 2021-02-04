@@ -1,5 +1,5 @@
 import os
-import ll.Generic.Settings as St
+import ll.org.Generic.Settings as St
 
 # UPLOAD_FOLDER = os.getcwd()
 SEP = os.path.sep

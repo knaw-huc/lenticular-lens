@@ -2,13 +2,13 @@ import time
 import xmltodict
 import collections
 
-import ll.Generic.Utility as Ut
-import ll.Generic.Settings as St
-import ll.Generic.NameSpace as Ns
+import ll.org.Generic.Utility as Ut
+import ll.org.Generic.Settings as St
+import ll.org.Generic.NameSpace as Ns
 
 from io import StringIO as Buffer
 
-import ll.Generic.Server_Settings as Svr
+import ll.org.Generic.Server_Settings as Svr
 
 import urllib.request as request_url
 import urllib.parse as parse_url

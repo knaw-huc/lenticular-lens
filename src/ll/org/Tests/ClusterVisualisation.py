@@ -1,10 +1,10 @@
 import json
 from os.path import join
-import ll.Tests.TestData as TestData
-from ll.Clustering.SimpleLinkClustering import cluster_vis_input as visualise
+import ll.org.Tests.TestData as TestData
+from ll.org.Clustering.SimpleLinkClustering import cluster_vis_input as visualise
 
 # TODO: PATHS
-# from ll.LLData.Validation import CLUSTER_VISUALISATION_DIR
+# from ll.org.LLData.Validation import CLUSTER_VISUALISATION_DIR
 CLUSTER_VISUALISATION_DIR = ''
 
 # ****************************************************
@@ -27,10 +27,10 @@ target = [
     }
 ]
 
-from ll.Generic.Utility import pickle_deserializer
-# from ll.LLData.Serialisation import CLUSTER_SERIALISATION_DIR
-# from ll.LLData.CSVClusters import CSV_CLUSTER_DIR
-# from ll.Generic.Utility import print_object
+from ll.org.Generic.Utility import pickle_deserializer
+# from ll.org.LLData.Serialisation import CLUSTER_SERIALISATION_DIR
+# from ll.org.LLData.CSVClusters import CSV_CLUSTER_DIR
+# from ll.org.Generic.Utility import print_object
 # print_object(TestData.targets)
 # option = 0
 # data = visualise(specs=TestData.ga_specifications, activated=True) if option == 1 \

@@ -1,8 +1,8 @@
 # import Alignments.ConstraintClustering.DatasetsResourceClustering as Dcs
-import ll.Generic.Settings as St
-from ll.Generic.Utility import pickle_deserializer
+import ll.org.Generic.Settings as St
+from ll.org.Generic.Utility import pickle_deserializer
 # import Alignments.Linksets.SPA_Linkset as Linkset
-import ll.Generic .Utility as Ut
+import ll.org.Generic .Utility as Ut
 
 
 ###################################################
@@ -103,7 +103,7 @@ def get_cluster_node(ser_name, cluster_position=1, cluster_id=None):
 
     count = 0
     cluster = None
-    # from ll.LLData.Serialisation import CLUSTER_SERIALISATION_DIR
+    # from ll.org.LLData.Serialisation import CLUSTER_SERIALISATION_DIR
     CLUSTER_SERIALISATION_DIR = ''
     CLUSTERS = pickle_deserializer(
         serialised_folder=CLUSTER_SERIALISATION_DIR, name="{}-1.txt".format(ser_name))
@@ -255,7 +255,7 @@ RESOURCES = [
 # --> [070] size [3] became size [2]
 # --> [130] size [6] became size [3]
 # --> [200] size [12] became size [2]
-from ll.Generic.Utility import print_object
+from ll.org.Generic.Utility import print_object
 
 # 376 jan janz evidence
 # 458 is also crazy

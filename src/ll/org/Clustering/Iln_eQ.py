@@ -1,10 +1,10 @@
 import networkx as nx
 from io import StringIO as Buffer
-from ll.Generic.Utility import combinations
+from ll.org.Generic.Utility import combinations
 # from os.path import join
 # import json
-from ll.Generic.Utility import get_key, problem
-# from ll.Clustering.SimpleLinkClustering import cluster_vis_input
+from ll.org.Generic.Utility import get_key, problem
+# from ll.org.Clustering.SimpleLinkClustering import cluster_vis_input
 
 
 def sigmoid(x):
@@ -159,7 +159,7 @@ def metric(graph, strengths=None, alt_keys=None, hyper_parameter_1=0.1, hyper_pa
         #
         # vis = cluster_vis_input(specs, visualisation_obj=None, resources_obj=None,
         #                   dataset_obj=None, sub_clusters=None, root=None, investigated=True, activated=True)
-        # from ll.LLData.Validation import CLUSTER_VISUALISATION_DIR
+        # from ll.org.LLData.Validation import CLUSTER_VISUALISATION_DIR
         # with open(join(CLUSTER_VISUALISATION_DIR, "eQ.json"), mode='w') as file:
         #     json.dump(vis, file)
         "END NEW CODE FOR PRINTING THE NETWORK"
