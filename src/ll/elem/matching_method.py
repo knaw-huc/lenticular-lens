@@ -138,10 +138,11 @@ class MatchingMethod:
             self._intermediates = {}
             if self.method_name == 'INTERMEDIATE':
                 ets_id = int(self._method_config['entity_type_selection'])
-                ets = self._job.get_entity_type_selection_by_id(ets_id)
-                self._intermediates[self._method_config['entity_type_selection']] = {
-                    'source': PropertyField(self._method_config['intermediate_source'], ets),
-                    'target': PropertyField(self._method_config['intermediate_target'], ets)
+                self._intermediates[ets_id] = {
+                    'source': self._get_property(self._method_config['intermediate_source'],
+                                                 ets_id, property_only=True),
+                    'target': self._get_property(self._method_config['intermediate_target'],
+                                                 ets_id, property_only=True)
                 }
 
         return self._intermediates
@@ -251,18 +252,16 @@ class MatchingMethod:
         )
 
     def _get_properties(self, key):
-        properties = {}
-        for entity_type_selection, fields in self._data[key].items():
-            ets_id = int(entity_type_selection)
-            field_type = self._method_info.get('field_type')
-            field_type_info = {
-                'type': field_type,
-                'parameters': {'format': self._method_config['format'] if field_type == 'date' else {}}
-            }
+        return {int(ets_id): [self._get_property(field, int(ets_id)) for field in fields]
+                for ets_id, fields in self._data[key].items()}
 
-            properties[entity_type_selection] = \
-                [MatchingMethodProperty(field, ets_id, self._job, field_type_info,
-                                        self._method_info.get('field'), self._method_config)
-                 for field in fields]
+    def _get_property(self, field, ets_id, property_only=False):
+        field_type = self._method_info.get('field_type')
+        field_type_info = {
+            'type': field_type,
+            'parameters': {'format': self._method_config['format'] if field_type == 'date' else {}}
+        }
 
-        return properties
+        return MatchingMethodProperty(field, ets_id, self._job, field_type_info,
+                                      self._method_info.get('field'), self._method_config,
+                                      property_only=property_only)

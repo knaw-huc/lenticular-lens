@@ -107,7 +107,7 @@ class EntityTypeSelection:
 
     def get_fields(self, linkset_spec):
         match_fields = linkset_spec.get_fields()
-        match_ets_fields = match_fields.get(str(self.id), {})
+        match_ets_fields = match_fields.get(self.id, {})
 
         return list(dict.fromkeys([match_field_property
                                    for match_field_label, match_field in match_ets_fields.items()

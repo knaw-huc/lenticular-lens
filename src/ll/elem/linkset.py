@@ -245,23 +245,24 @@ class Linkset:
                 # Add properties to do the intermediate dataset matching
                 if matching_method.method_name == 'INTERMEDIATE':
                     for intermediate_ets, intermediate_ets_props in matching_method.intermediates.items():
-                        target = hash_string_min(intermediate_ets)
-                        intermediate_field = intermediate_ets_props['source'] \
-                            if is_source else intermediate_ets_props['target']
+                        intermediate_res = hash_string_min(intermediate_ets)
+                        intermediate_target = 'intermediate' + str(ets_index)
+                        intermediate_field = intermediate_ets_props['source'].prop_original \
+                            if is_source else intermediate_ets_props['target'].prop_original
 
                         joins.append(
-                            psycopg_sql.SQL('''
-                                LEFT JOIN {ets} AS {join_name} 
-                                ON {target_field} = {join_name}.{intermediate_field}
-                            ''').format(
-                                ets=psycopg_sql.Identifier(intermediate_ets),
-                                join_name=psycopg_sql.Identifier(target),
+                            psycopg_sql.SQL(cleandoc('''
+                                LEFT JOIN {intermediate_res} AS {intermediate_target}
+                                ON {target_field} = {intermediate_target}.{intermediate_field}
+                            ''')).format(
+                                intermediate_res=psycopg_sql.Identifier(intermediate_res),
+                                intermediate_target=psycopg_sql.Identifier(intermediate_target),
                                 target_field=target_field,
                                 intermediate_field=psycopg_sql.Identifier(intermediate_field.hash)
                             )
                         )
 
                         matching_fields.append(psycopg_sql.SQL('{join_name}.uri AS {field_name}').format(
-                            join_name=psycopg_sql.Identifier(target),
+                            join_name=psycopg_sql.Identifier(intermediate_target),
                             field_name=psycopg_sql.Identifier(field_name + '_intermediate')
                         ))
