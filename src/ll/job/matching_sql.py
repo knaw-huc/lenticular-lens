@@ -136,6 +136,9 @@ class MatchingSql:
             lambda matching_method: matching_method.sql
         )
 
+        if self._linkset.use_counter:
+            conditions_sql = sql.Composed([conditions_sql, sql.SQL("\nAND increment_counter('linkset_count')")])
+
         linkset_sql = sql.SQL(cleandoc(
             """ SELECT CASE WHEN source.uri < target.uri THEN source.uri ELSE target.uri END AS source_uri,
                        CASE WHEN source.uri < target.uri THEN target.uri ELSE source.uri END AS target_uri,
@@ -148,7 +151,6 @@ class MatchingSql:
                 FROM source
                 JOIN target ON (source.uri != target.uri)
                 AND {conditions}
-                AND increment_counter('linkset_count')
                 GROUP BY source_uri, target_uri
             """
         )).format(

@@ -11,7 +11,7 @@
           <template v-slot:header>
             <div class="col-auto" v-if="$root.job">
               <span class="badge badge-info">
-                Created {{ $root.job.created_at | moment("MMMM Do YYYY, hh:mm:ss") }}
+                Created {{ $root.job.created_at | moment("MMMM Do YYYY, HH:mm:ss") }}
               </span>
             </div>
           </template>

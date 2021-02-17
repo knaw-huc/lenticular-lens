@@ -44,13 +44,14 @@
 
         <div class="row justify-content-center mt-1">
           <div class="col-auto">
-            <div>
+            <div v-if="linksetStatus === 'running' && linksetSpec.use_counter">
               <strong>Links found: </strong>
               {{ linkset.links_count ? linkset.links_count.toLocaleString('en') : 0 }}
+            </div>
 
-              <span v-if="hasDistinctLinksCount" class="font-italic text-info">
-                ({{ linkset.distinct_links_count.toLocaleString('en') }} distinct links)
-              </span>
+            <div v-if="linkset.distinct_links_count">
+              <strong>Links found: </strong>
+              {{ linkset.distinct_links_count.toLocaleString('en') }}
             </div>
 
             <div v-if="clustering && clusteringStatus === 'running'">
@@ -68,12 +69,16 @@
           <div class="col-auto">
             <div>
               <strong>Source entities in linkset: </strong>
-              {{ linkset.distinct_linkset_sources_count ? linkset.distinct_linkset_sources_count.toLocaleString('en') : 0 }}
+              {{
+                linkset.distinct_linkset_sources_count ? linkset.distinct_linkset_sources_count.toLocaleString('en') : 0
+              }}
             </div>
 
             <div>
               <strong>Target entities in linkset: </strong>
-              {{ linkset.distinct_linkset_targets_count ? linkset.distinct_linkset_targets_count.toLocaleString('en') : 0 }}
+              {{
+                linkset.distinct_linkset_targets_count ? linkset.distinct_linkset_targets_count.toLocaleString('en') : 0
+              }}
             </div>
           </div>
 
@@ -92,7 +97,7 @@
           <div class="col-auto">
             <div v-if="linksetStatus === 'waiting'">
               <strong>Request: </strong>
-              {{ linkset.requested_at | moment("MMMM Do YYYY, hh:mm") }}
+              {{ linkset.requested_at | moment("MMMM Do YYYY, HH:mm") }}
 
               <span class="font-italic">
                 (<duration :from="linkset.requested_at"/>)
@@ -101,7 +106,7 @@
 
             <div v-else-if="linksetStatus === 'downloading' || linksetStatus === 'running'">
               <strong>Start: </strong>
-              {{ linkset.processing_at | moment("MMMM Do YYYY, hh:mm") }}
+              {{ linkset.processing_at | moment("MMMM Do YYYY, HH:mm") }}
 
               <span class="font-italic">
                 (<duration :from="linkset.processing_at"/>)
@@ -115,7 +120,7 @@
 
             <div v-if="clusteringStatus === 'waiting'">
               <strong>Request clustering: </strong>
-              {{ clustering.requested_at | moment("MMMM Do YYYY, hh:mm") }}
+              {{ clustering.requested_at | moment("MMMM Do YYYY, HH:mm") }}
 
               <span class="font-italic">
                 (<duration :from="clustering.requested_at"/>)
@@ -124,7 +129,7 @@
 
             <div v-else-if="clusteringStatus === 'running'">
               <strong>Start clustering: </strong>
-              {{ clustering.processing_at | moment("MMMM Do YYYY, hh:mm") }}
+              {{ clustering.processing_at | moment("MMMM Do YYYY, HH:mm") }}
 
               <span class="font-italic">
                 (<duration :from="clustering.processing_at"/>)
@@ -143,7 +148,7 @@
 </template>
 
 <script>
-    import {EventBus} from "../../../eventbus";
+    import {EventBus} from "@/eventbus";
 
     export default {
         name: "Status",
@@ -215,24 +220,6 @@
                 });
 
                 return this.$root.downloading.filter(collection => datasets.includes(collection.dataset_id));
-            },
-
-            hasDistinctLinksCount() {
-                return (this.linkset.links_count || this.linkset.links_count === 0)
-                    && (this.linkset.distinct_links_count || this.linkset.distinct_links_count === 0)
-                    && this.linkset.links_count > this.linkset.distinct_links_count;
-            },
-
-            hasDistinctSourcesCount() {
-                return (this.linkset.sources_count || this.linkset.sources_count === 0)
-                    && (this.linkset.distinct_sources_count || this.linkset.distinct_sources_count === 0)
-                    && this.linkset.sources_count > this.linkset.distinct_sources_count;
-            },
-
-            hasDistinctTargetsCount() {
-                return (this.linkset.targets_count || this.linkset.targets_count === 0)
-                    && (this.linkset.distinct_targets_count || this.linkset.distinct_targets_count === 0)
-                    && this.linkset.targets_count > this.linkset.distinct_targets_count;
             },
         },
     };

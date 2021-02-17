@@ -49,6 +49,7 @@ export default {
                 label: 'Linkset ' + (this.linksetSpecs.length + 1),
                 description: '',
                 is_association: false,
+                use_counter: true,
                 sources: [],
                 targets: [],
                 threshold: 0,
@@ -179,6 +180,9 @@ export default {
                 const linksetSpecs = copy(this.job.linkset_specs);
 
                 linksetSpecs.forEach(linksetSpec => {
+                    if (!linksetSpec.hasOwnProperty('use_counter'))
+                        linksetSpec.use_counter = true;
+
                     this.getRecursiveElements(linksetSpec.methods, 'conditions').forEach(method => {
                         if (method.hasOwnProperty('method_value')) {
                             method.method_config = method.method_value;

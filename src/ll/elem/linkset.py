@@ -34,6 +34,10 @@ class Linkset:
         return self._data.get('is_association', False)
 
     @property
+    def use_counter(self):
+        return self._data.get('use_counter', True)
+
+    @property
     def properties(self):
         props = defaultdict(set)
         for prop in self._data['properties']:

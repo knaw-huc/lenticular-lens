@@ -126,6 +126,7 @@ linkset_spec_schema = Schema({
     'label': And(str, len),
     Optional('description', default=None): Or(str, None),
     Optional('is_association', default=False): bool,
+    Optional('use_counter', default=True): bool,
     'sources': [Use(int)],
     'targets': [Use(int)],
     Optional('threshold', default=0): Or(float, Use(lambda t: 0)),

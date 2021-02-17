@@ -53,7 +53,7 @@
           <div class="col-auto">
             <div v-if="lensStatus === 'waiting'">
               <strong>Request: </strong>
-              {{ lens.requested_at | moment("MMMM Do YYYY, hh:mm") }}
+              {{ lens.requested_at | moment("MMMM Do YYYY, HH:mm") }}
 
               <span class="font-italic">
                 (<duration :from="lens.requested_at"/>)
@@ -62,7 +62,7 @@
 
             <div v-else-if="lensStatus === 'running'">
               <strong>Start: </strong>
-              {{ lens.processing_at | moment("MMMM Do YYYY, hh:mm") }}
+              {{ lens.processing_at | moment("MMMM Do YYYY, HH:mm") }}
 
               <span class="font-italic">
                 (<duration :from="lens.processing_at"/>)
@@ -76,7 +76,7 @@
 
             <div v-if="clusteringStatus === 'waiting'">
               <strong>Request clustering: </strong>
-              {{ clustering.requested_at | moment("MMMM Do YYYY, hh:mm") }}
+              {{ clustering.requested_at | moment("MMMM Do YYYY, HH:mm") }}
 
               <span class="font-italic">
                 (<duration :from="clustering.requested_at"/>)
@@ -85,7 +85,7 @@
 
             <div v-else-if="clusteringStatus === 'running'">
               <strong>Start clustering: </strong>
-              {{ clustering.processing_at | moment("MMMM Do YYYY, hh:mm") }}
+              {{ clustering.processing_at | moment("MMMM Do YYYY, HH:mm") }}
 
               <span class="font-italic">
                 (<duration :from="clustering.processing_at"/>)

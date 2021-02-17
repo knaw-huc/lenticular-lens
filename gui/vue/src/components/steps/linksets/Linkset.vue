@@ -3,6 +3,17 @@
         :has-error="errors.length > 0" :has-handle="true" :has-extra-row="!!linkset"
         @show="onToggle(true)" @hide="onToggle(false)">
     <template v-slot:title-columns>
+      <div v-if="!linkset" class="col-auto">
+        <div class="custom-control custom-switch">
+          <input type="checkbox" class="custom-control-input" autocomplete="off"
+                 :id="'use_counter_' + linksetSpec.id" v-model="linksetSpec.use_counter"/>
+          <label class="custom-control-label" :for="'use_counter_' + linksetSpec.id"
+                 title="Matching could potentially run faster if progress tracking is disabled">
+            Show matching progress
+          </label>
+        </div>
+      </div>
+
       <div v-if="!isOpen" class="col-auto">
         <b-button variant="info" @click="$emit('duplicate', linksetSpec)">Duplicate</b-button>
       </div>

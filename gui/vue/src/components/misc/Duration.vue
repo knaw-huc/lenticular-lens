@@ -28,6 +28,7 @@
             },
 
             exactDuration() {
+                const days = Math.abs(this.momentDuration.days());
                 const hours = Math.abs(this.momentDuration.hours());
                 const minutes = Math.abs(this.momentDuration.minutes());
                 const seconds = Math.abs(this.momentDuration.seconds());
@@ -36,13 +37,15 @@
                 const minutesStr = String(minutes).padStart(2, '0');
                 const secondsStr = String(seconds).padStart(2, '0');
 
+                const prefix = days > 0 ? `${days} ${days === 1 ? 'day' : 'days'} and ` : '';
+
                 if (hours > 0)
-                    return `${hoursStr}:${minutesStr}:${secondsStr}`;
+                    return `${prefix}${hoursStr}:${minutesStr}:${secondsStr}`;
 
                 if (minutes > 0)
-                    return `00:${minutesStr}:${secondsStr}`;
+                    return `${prefix}00:${minutesStr}:${secondsStr}`;
 
-                return `00:00:${secondsStr}`;
+                return `${prefix}00:00:${secondsStr}`;
             },
         },
         methods: {

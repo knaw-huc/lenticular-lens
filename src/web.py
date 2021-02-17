@@ -1,4 +1,5 @@
 import decimal
+import datetime
 import psycopg2
 
 from flask import Flask, jsonify, request, abort, Response
@@ -19,12 +20,13 @@ from ll.data.collection import Collection
 from ll.data.timbuctoo_datasets import TimbuctooDatasets
 
 
-class DecimalJSONEncoder(JSONEncoder):
+class FixedJSONEncoder(JSONEncoder):
     def default(self, obj):
         if isinstance(obj, decimal.Decimal):
-            # Convert decimal instances to strings.
             return float(obj)
-        return super(DecimalJSONEncoder, self).default(obj)
+        if isinstance(obj, datetime.date):
+            return obj.isoformat()
+        return super(FixedJSONEncoder, self).default(obj)
 
 
 class JobConverter(BaseConverter):
@@ -48,7 +50,7 @@ app.config['COMPRESS_MIMETYPES'] = ['text/html', 'text/css', 'text/plain', 'text
 CORS(app)
 Compress(app)
 
-app.json_encoder = DecimalJSONEncoder
+app.json_encoder = FixedJSONEncoder
 app.url_map.converters['job'] = JobConverter
 app.url_map.converters['type'] = TypeConverter
 
