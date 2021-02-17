@@ -1,6 +1,6 @@
 <template>
-  <div class="btn-info-popup">
-    <a class="btn btn-block text-info py-0" @click="$refs['info_' + uuid].show()">
+  <div class="btn-secondary-popup">
+    <a class="btn btn-block text-secondary py-0" @click="$refs['info_' + uuid].show()">
       <fa-icon :icon="['far', 'question-circle']" size="lg"/>
     </a>
 
@@ -37,8 +37,8 @@
 </script>
 
 <style>
-  .btn-info-popup a.btn.disabled,
-  fieldset:disabled .btn-info-popup a.btn {
+  .btn-secondary-popup a.btn.disabled,
+  fieldset:disabled .btn-secondary-popup a.btn {
     pointer-events: auto;
   }
 </style>

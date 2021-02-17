@@ -393,11 +393,12 @@ export default {
             return callApi(`/job/${this.job.job_id}/links_totals/${type}/${id}?${params.join('&')}`);
         },
 
-        async getLinks(type, id, accepted, rejected, notValidated, mixed, clusterId = undefined,
+        async getLinks(type, id, accepted, rejected, notSure, notValidated, mixed, clusterId = undefined,
                        limit = undefined, offset = 0) {
             const params = [];
             if (accepted) params.push('valid=accepted');
             if (rejected) params.push('valid=rejected');
+            if (notSure) params.push('valid=not_sure');
             if (notValidated) params.push('valid=not_validated');
             if (mixed) params.push('valid=mixed');
             if (clusterId) params.push(`cluster_id=${clusterId}`);

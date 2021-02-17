@@ -35,16 +35,16 @@
                                  :is-root="false" :is-linkset-root="false" :override-fuzzy-logic="overrideFuzzyLogic"/>
 
         <p v-if="idx < (methodGroup.conditions.length - 1) && usingFuzzyLogic" class="font-weight-bold my-2">
-          <span class="text-info">
+          <span class="text-secondary">
             {{ isConjunction ? 'AND' : 'OR' }}
           </span>
           using
-          <span class="text-info">
+          <span class="text-secondary">
             {{ {...tNorms, ...tConorms}[methodGroup.type] }}
           </span>
         </p>
 
-        <p v-else-if="idx < (methodGroup.conditions.length - 1)" class="font-weight-bold my-2 text-info">
+        <p v-else-if="idx < (methodGroup.conditions.length - 1)" class="font-weight-bold my-2 text-secondary">
           {{ methodGroup.type }}
         </p>
       </template>
@@ -94,7 +94,7 @@
                     styleClass.push('mt-3');
 
                 if (this.isRoot || this.$parent.$parent.styleClass.includes('bg-primary-light'))
-                    styleClass.push('bg-info-light', 'border-info');
+                    styleClass.push('bg-secondary-light', 'border-secondary');
                 else
                     styleClass.push('bg-primary-light', 'border-primary');
 

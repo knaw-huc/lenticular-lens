@@ -33,7 +33,7 @@
 
         <div v-if="linksetStatus === 'downloading' && downloads.length > 0" class="row justify-content-center">
           <div class="col-auto clearfix">
-            <ul class="font-italic text-info inline-list px-0">
+            <ul class="font-italic text-secondary inline-list px-0">
               <li v-for="download in downloads">
                 {{ download.collection_id }}:
                 <download-progress :dataset-id="download.dataset_id" :collection-id="download.collection_id"/>

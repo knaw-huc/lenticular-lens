@@ -8,12 +8,11 @@
             <div class="col-auto">
               <div>
                 <strong>Links: </strong>
-                {{ isLinkset ? linkset.links_count.toLocaleString('en') : lens.links_count.toLocaleString('en') }}
-
-                <span v-if="isLinkset && linkset.links_count > linkset.distinct_links_count"
-                      class="font-italic text-info">
-                  ({{ linkset.distinct_links_count.toLocaleString('en') }} distinct links)
-                </span>
+                {{
+                  isLinkset
+                      ? linkset.distinct_links_count.toLocaleString('en')
+                      : lens.distinct_links_count.toLocaleString('en')
+                }}
               </div>
               <div v-if="clustering">
                 <strong>Clusters: </strong>
@@ -24,11 +23,17 @@
             <div v-if="isLinkset" class="col-auto">
               <div>
                 <strong>Source entities in linkset: </strong>
-                {{ linkset.distinct_linkset_sources_count ? linkset.distinct_linkset_sources_count.toLocaleString('en') : 0 }}
+                {{
+                  linkset.distinct_linkset_sources_count
+                      ? linkset.distinct_linkset_sources_count.toLocaleString('en') : 0
+                }}
               </div>
               <div>
                 <strong>Target entities in linkset: </strong>
-                {{ linkset.distinct_linkset_targets_count ? linkset.distinct_linkset_targets_count.toLocaleString('en') : 0 }}
+                {{
+                  linkset.distinct_linkset_targets_count
+                      ? linkset.distinct_linkset_targets_count.toLocaleString('en') : 0
+                }}
               </div>
             </div>
 
@@ -123,6 +128,16 @@
                     </span>
                   </label>
 
+                  <label class="btn btn-sm btn-secondary" v-bind:class="{'active': showNotSureLinks}">
+                    <input type="checkbox" autocomplete="off" v-model="showNotSureLinks"
+                           :disabled="loadingTotals" @change="resetLinks()"/>
+                    {{ showNotSureLinks ? 'Hide not sure' : 'Show not sure' }}
+
+                    <span v-if="notSureLinks !== null" class="badge badge-light ml-1">
+                      {{ notSureLinks.toLocaleString('en') }}
+                    </span>
+                  </label>
+
                   <label class="btn btn-sm btn-secondary" v-bind:class="{'active': showNotValidatedLinks}">
                     <input type="checkbox" autocomplete="off" v-model="showNotValidatedLinks"
                            :disabled="loadingTotals" @change="resetLinks()"/>
@@ -161,7 +176,7 @@
                   :has-margin-auto="true" :has-columns="true">
           <template v-slot:columns>
             <div class="col-auto ml-auto">
-              <button type="button" class="btn btn-info" @click="saveProperties">
+              <button type="button" class="btn btn-secondary" @click="saveProperties">
                 Save
               </button>
             </div>
@@ -251,7 +266,8 @@
           :index="idx"
           :link="link"
           @accepted="acceptLink(link)"
-          @rejected="rejectLink(link)"/>
+          @rejected="rejectLink(link)"
+          @not_sure="notSureLink(link)"/>
 
       <infinite-loading :identifier="linksIdentifier" @infinite="getLinks">
         <template v-slot:spinner>
@@ -307,12 +323,14 @@
 
                 showAcceptedLinks: false,
                 showRejectedLinks: false,
+                showNotSureLinks: false,
                 showNotValidatedLinks: true,
                 showMixedLinks: false,
                 resetShownLinks: false,
 
                 acceptedLinks: null,
                 rejectedLinks: null,
+                notSureLinks: null,
                 notValidatedLinks: null,
                 mixedLinks: null,
 
@@ -462,6 +480,7 @@
                 if (totals) {
                     this.acceptedLinks = totals.accepted || 0;
                     this.rejectedLinks = totals.rejected || 0;
+                    this.notSureLinks = totals.not_sure || 0;
                     this.notValidatedLinks = totals.not_validated || 0;
                     this.mixedLinks = totals.mixed || 0;
                 }
@@ -477,7 +496,8 @@
 
                 const clusterId = this.showClusterLinks ? this.clusterIdSelected : undefined;
                 const links = await this.$root.getLinks(this.type, this.spec.id,
-                    this.showAcceptedLinks, this.showRejectedLinks, this.showNotValidatedLinks, this.showMixedLinks,
+                    this.showAcceptedLinks, this.showRejectedLinks, this.showNotSureLinks,
+                    this.showNotValidatedLinks, this.showMixedLinks,
                     clusterId, 50, this.links.length);
 
                 if (links !== null)
@@ -539,6 +559,8 @@
                         this.notValidatedLinks--;
                     else if (before === 'accepted')
                         this.notValidatedLinks++;
+                    else if (before === 'not_sure')
+                        this.notSureLinks--;
                     else if (before === 'mixed')
                         this.mixedLinks--;
                     else
@@ -568,6 +590,39 @@
                         this.notValidatedLinks--;
                     else if (before === 'rejected')
                         this.notValidatedLinks++;
+                    else if (before === 'not_sure')
+                        this.notSureLinks--;
+                    else if (before === 'mixed')
+                        this.mixedLinks--;
+                    else
+                        this.acceptedLinks--;
+
+                    this.resetShownLinks = true;
+                }
+            },
+
+            async notSureLink(link) {
+                const before = link.valid;
+                const after = (before === 'not_sure') ? 'not_validated' : 'not_sure';
+
+                link.updating = true;
+                const result = await this.$root.validateLink(this.type, this.spec.id, link.source, link.target, after);
+                link.updating = false;
+
+                if (result !== null) {
+                    link.valid = after;
+
+                    if (before === 'not_sure')
+                        this.notSureLinks--;
+                    else
+                        this.notSureLinks++;
+
+                    if (before === 'not_validated')
+                        this.notValidatedLinks--;
+                    else if (before === 'not_sure')
+                        this.notValidatedLinks++;
+                    else if (before === 'rejected')
+                        this.rejectedLinks--;
                     else if (before === 'mixed')
                         this.mixedLinks--;
                     else

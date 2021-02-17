@@ -1,10 +1,10 @@
 <template>
   <div class="border p-3 mb-2"
-       v-bind:class="[{'clickable': selectable}, selected ? 'bg-info-light' : 'bg-primary-very-light']"
+       v-bind:class="[{'clickable': selectable}, selected ? 'bg-secondary-light' : 'bg-primary-very-light']"
        @click="selectable && $emit('select:clusterId', cluster.id)">
     <div class="row">
       <div class="col">
-        <div class="text-info">
+        <div class="text-secondary">
           <strong>{{ cluster.id }}</strong>
         </div>
 

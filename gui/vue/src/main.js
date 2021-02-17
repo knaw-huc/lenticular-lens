@@ -46,12 +46,12 @@ import {library} from '@fortawesome/fontawesome-svg-core';
 import {faQuestionCircle} from '@fortawesome/free-regular-svg-icons';
 import {
     faCopy, faChevronDown, faArrowRight, faPlus, faTrashAlt, faPencilAlt, faFilter, faCheck, faTimes,
-    faInfoCircle, faAlignJustify, faProjectDiagram, faList, faCog, faGripHorizontal, faFileExport, faSync
+    faInfoCircle, faAlignJustify, faProjectDiagram, faList, faCog, faGripHorizontal, faFileExport, faSync, faQuestion
 } from '@fortawesome/free-solid-svg-icons';
 
 library.add(faQuestionCircle, faCopy, faChevronDown, faArrowRight, faPlus, faTrashAlt, faPencilAlt, faFilter,
     faCheck, faTimes, faInfoCircle, faAlignJustify, faProjectDiagram, faList, faCog,
-    faGripHorizontal, faFileExport, faSync);
+    faGripHorizontal, faFileExport, faSync, faQuestion);
 
 Vue.filter('capitalize', function (value) {
     if (!value) return '';

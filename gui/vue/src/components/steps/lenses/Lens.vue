@@ -4,7 +4,7 @@
         @show="onToggle(true)" @hide="onToggle(false)">
     <template v-slot:title-columns>
       <div v-if="!isOpen" class="col-auto">
-        <b-button variant="info" @click="$emit('duplicate', lensSpec)">Duplicate</b-button>
+        <b-button variant="secondary" @click="$emit('duplicate', lensSpec)">Duplicate</b-button>
       </div>
 
       <div v-if="lensStatus === 'downloading' || lensStatus === 'running'" class="col-auto">
@@ -20,21 +20,21 @@
       </div>
 
       <div v-if="!lens || lensStatus === 'failed'" class="col-auto">
-        <b-button variant="info" @click="runLens()">
+        <b-button variant="secondary" @click="runLens()">
           Run
           <template v-if="lensStatus === 'failed'">again</template>
         </b-button>
       </div>
 
       <div v-if="lensStatus === 'done' && lens.distinct_links_count > 0" class="col-auto">
-        <button v-if="clustering && clustering !== 'running'" type="button" class="btn btn-info my-1"
+        <button v-if="clustering && clustering !== 'running'" type="button" class="btn btn-secondary my-1"
                 @click="runClustering($event)" :disabled="association === ''"
                 :title="association === '' ? 'Choose an association first' : ''">
           Reconcile
           <template v-if="clusteringStatus === 'failed'">again</template>
         </button>
 
-        <button v-else-if="!clustering" type="button" class="btn btn-info my-1" @click="runClustering($event)">
+        <button v-else-if="!clustering" type="button" class="btn btn-secondary my-1" @click="runClustering($event)">
           Cluster
           <template v-if="association !== ''"> &amp; Reconcile</template>
           <template v-if="clusteringStatus === 'failed'">again</template>

@@ -1,6 +1,6 @@
 from json import dumps
-from enum import IntFlag
 from uuid import uuid4
+from enum import IntFlag
 
 from psycopg2 import extras, sql
 from psycopg2.extensions import AsIs
@@ -19,11 +19,29 @@ from ll.util.config_db import db_conn, fetch_one, fetch_many
 
 
 class Validation(IntFlag):
-    ALL = 15
-    ACCEPTED = 8
-    REJECTED = 4
+    ALL = 31
+    ACCEPTED = 16
+    REJECTED = 8
+    NOT_SURE = 4
     NOT_VALIDATED = 2
     MIXED = 1
+
+    @staticmethod
+    def get(valid):
+        validation_filter = 0
+        for type in valid:
+            if type == 'accepted':
+                validation_filter |= Validation.ACCEPTED
+            if type == 'rejected':
+                validation_filter |= Validation.REJECTED
+            if type == 'not_sure':
+                validation_filter |= Validation.NOT_SURE
+            if type == 'not_validated':
+                validation_filter |= Validation.NOT_VALIDATED
+            if type == 'mixed':
+                validation_filter |= Validation.MIXED
+
+        return validation_filter if validation_filter != 0 else Validation.ALL
 
 
 class Job:
@@ -358,14 +376,17 @@ class Job:
         spec = self.get_spec_by_id(id, type)
 
         validation_filter_sql = []
-        if validation_filter < Validation.ALL and Validation.ACCEPTED in validation_filter:
-            validation_filter_sql.append('valid = {}'.format("'accepted'"))
-        if validation_filter < Validation.ALL and Validation.REJECTED in validation_filter:
-            validation_filter_sql.append('valid = {}'.format("'rejected'"))
-        if validation_filter < Validation.ALL and Validation.NOT_VALIDATED in validation_filter:
-            validation_filter_sql.append('valid = {}'.format("'not_validated'"))
-        if validation_filter < Validation.ALL and Validation.MIXED in validation_filter:
-            validation_filter_sql.append('valid = {}'.format("'mixed'"))
+        if validation_filter < Validation.ALL:
+            if Validation.ACCEPTED in validation_filter:
+                validation_filter_sql.append('valid = {}'.format("'accepted'"))
+            if Validation.REJECTED in validation_filter:
+                validation_filter_sql.append('valid = {}'.format("'rejected'"))
+            if Validation.NOT_SURE in validation_filter:
+                validation_filter_sql.append('valid = {}'.format("'not_sure'"))
+            if Validation.NOT_VALIDATED in validation_filter:
+                validation_filter_sql.append('valid = {}'.format("'not_validated'"))
+            if Validation.MIXED in validation_filter:
+                validation_filter_sql.append('valid = {}'.format("'mixed'"))
 
         conditions = []
         if cluster_id:

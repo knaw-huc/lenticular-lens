@@ -8,7 +8,7 @@
       <div class="col text-break-all">
         <span class="font-weight-bold">URI: </span>
 
-        <span class="text-info">
+        <span class="text-secondary">
           {{ sample.uri }}
         </span>
 

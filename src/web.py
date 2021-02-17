@@ -256,7 +256,7 @@ def entity_type_selection_sample(job, id):
 @app.route('/job/<job:job>/links/<type:type>/<int:id>')
 def links(job, type, id):
     cluster_id = request.args.get('cluster_id')
-    validation_filter = validation_filter_helper(request.args.getlist('valid'))
+    validation_filter = Validation.get(request.args.getlist('valid'))
 
     links = [link for link in job.get_links(id, type, validation_filter=validation_filter,
                                             cluster_id=cluster_id, include_props=True,
@@ -305,7 +305,7 @@ def get_cluster_graph_data(job, type, id, cluster_id):
 def export_to_csv(job, type, id):
     export = Export(job, type, id)
 
-    validation_filter = validation_filter_helper(request.args.getlist('valid'))
+    validation_filter = Validation.get(request.args.getlist('valid'))
     export_generator = export.csv_export_generator(validation_filter)
 
     return Response(export_generator, mimetype='text/csv',
@@ -325,7 +325,7 @@ def export_to_rdf(job, type, id):
     use_graphs = request.args.get('use_graphs', default=True) == 'true'
     creator = request.args.get('creator')
     publisher = request.args.get('publisher')
-    validation_filter = validation_filter_helper(request.args.getlist('valid'))
+    validation_filter = Validation.get(request.args.getlist('valid'))
 
     export_generator = export.rdf_export_generator(
         link_pred_namespace, link_pred_shortname, export_metadata, export_link_metadata,
@@ -336,21 +336,6 @@ def export_to_rdf(job, type, id):
 
     return Response(export_generator, mimetype=mimetype,
                     headers={'Content-Disposition': 'attachment; filename=' + type + '_' + str(id) + extension})
-
-
-def validation_filter_helper(valid):
-    validation_filter = 0
-    for type in valid:
-        if type == 'accepted':
-            validation_filter |= Validation.ACCEPTED
-        if type == 'rejected':
-            validation_filter |= Validation.REJECTED
-        if type == 'not_validated':
-            validation_filter |= Validation.NOT_VALIDATED
-        if type == 'mixed':
-            validation_filter |= Validation.MIXED
-
-    return validation_filter if validation_filter != 0 else Validation.ALL
 
 
 if __name__ == '__main__':

@@ -7,7 +7,7 @@
         </div>
 
         <div class="col-auto">
-          <div class="btn btn-sm bg-info-light border border-info text-info read-only m-1">
+          <div class="btn btn-sm bg-secondary-light border border-secondary text-secondary read-only m-1">
             <span class="font-weight-bold">Similarity</span><br>
             {{ similarity }}
           </div>
@@ -18,7 +18,7 @@
         <div class="text-break-all">
           <span class="font-weight-bold">Source URI:</span>
 
-          <span class="text-info">
+          <span class="text-secondary">
             {{ switchSourceAndTarget ? link.target : link.source }}
           </span>
 
@@ -30,7 +30,7 @@
         <div class="text-break-all">
           <span class="font-weight-bold">Target URI:</span>
 
-          <span class="text-info">
+          <span class="text-secondary">
             {{ switchSourceAndTarget ? link.source : link.target }}
           </span>
 
@@ -69,6 +69,14 @@
                     @click="$emit('rejected')">
               <fa-icon icon="times"/>
               Reject
+            </button>
+          </div>
+
+          <div class="col-auto">
+            <button type="button" class="btn btn-sm btn-warning m-1" :disabled="isUpdating"
+                    @click="$emit('not_sure')">
+              <fa-icon icon="question"/>
+              Not sure
             </button>
           </div>
         </div>
@@ -117,6 +125,9 @@
 
                 if (this.link.valid === 'rejected')
                     return 'bg-danger';
+
+                if (this.link.valid === 'not_sure')
+                    return 'bg-warning';
 
                 if (this.link.valid === 'mixed')
                     return 'bg-warning';

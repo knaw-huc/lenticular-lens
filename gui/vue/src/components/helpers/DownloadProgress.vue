@@ -11,7 +11,7 @@
     Downloaded
   </span>
 
-  <span v-else-if="!small && downloadingInfo" class="text-info font-italic">
+  <span v-else-if="!small && downloadingInfo" class="text-secondary font-italic">
     Downloading {{ downloadingInfo.rows_count }}/{{ downloadingInfo.total }}
   </span>
 

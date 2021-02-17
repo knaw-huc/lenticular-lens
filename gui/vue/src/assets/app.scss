@@ -1,6 +1,5 @@
 $primary: #efc501;
 $secondary: #0c8c75;
-$info: $secondary;
 $light: #eff1f3;
 $primary-very-light: mix($primary, $light, 15%);
 $secondary-very-light: mix($secondary, $light, 10%);
@@ -55,7 +54,7 @@ div#app::before {
   background-color: $primary-very-light !important;
 }
 
-.bg-info-light {
+.bg-secondary-light {
   background-color: #c8eae4 !important;
 }
 
@@ -176,6 +175,10 @@ div#app::before {
   background-color: #ffcfc4 !important;
 }
 
+.bg-warning {
+  background-color: #fff3cd !important;
+}
+
 .btn, [role="button"], .clickable {
   &:not(.read-only) {
     cursor: pointer;
@@ -280,7 +283,7 @@ ul.inline-list li:not(:first-child):before {
   .property-pill {
     @extend .btn;
     @extend .border;
-    @extend .border-info;
+    @extend .border-secondary;
     @extend .rounded-pill;
     @extend .text-break-all;
 
@@ -310,7 +313,7 @@ ul.inline-list li:not(:first-child):before {
   }
 
   .property-prop {
-    @extend .bg-info;
+    @extend .bg-secondary;
     @extend .text-white;
   }
 
@@ -328,7 +331,7 @@ ul.inline-list li:not(:first-child):before {
     padding: 0;
     margin: 0 0.25rem;
 
-    @extend .text-info;
+    @extend .text-secondary;
   }
 }
 

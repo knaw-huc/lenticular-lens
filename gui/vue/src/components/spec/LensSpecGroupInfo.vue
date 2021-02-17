@@ -34,7 +34,7 @@
 
       <p class="font-weight-bold my-2">
         using a lens type of
-        <span class="text-info">{{ elementsGroup.type }}</span>
+        <span class="text-secondary">{{ elementsGroup.type }}</span>
         against
       </p>
 
@@ -84,7 +84,7 @@
                     styleClass.push('mt-3');
 
                 if (this.isRoot || this.$parent.$parent.styleClass.includes('bg-primary-light'))
-                    styleClass.push('bg-info-light', 'border-info');
+                    styleClass.push('bg-secondary-light', 'border-secondary');
                 else
                     styleClass.push('bg-primary-light', 'border-primary');
 

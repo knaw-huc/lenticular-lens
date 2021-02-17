@@ -87,7 +87,7 @@
               </span>
               </div>
 
-              <div class="clearfix smaller font-italic text-info pt-1">
+              <div class="clearfix smaller font-italic text-secondary pt-1">
                 <ul class="inline-list px-0">
                   <li>Density: {{ prop.properties[option.label].density }}&percnt;</li>
                   <li v-if="prop.properties[option.label].isValueType">Has values</li>

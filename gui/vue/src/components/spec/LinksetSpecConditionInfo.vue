@@ -52,7 +52,7 @@
       <p class="font-weight-bold m-0">
         using
 
-        <span class="text-info">{{ methodValueTemplate.label }}</span>
+        <span class="text-secondary">{{ methodValueTemplate.label }}</span>
 
         <template v-if="methodValueTemplate.items.length > 0">
           [ <span v-html="methodValuePropsHumanReadable"/> ]
@@ -87,7 +87,7 @@
                 if (this.$parent.styleClass.includes('bg-primary-light'))
                     return 'border-primary';
 
-                return 'border-info';
+                return 'border-secondary';
             },
 
             methodValueTemplate() {
@@ -106,9 +106,9 @@
                             value = Object.keys(item.choices).find(key => item.choices[key] === value);
 
                         if (item.label)
-                            return `<span class="text-info">${item.label} = ${value}</span>`;
+                            return `<span class="text-secondary">${item.label} = ${value}</span>`;
 
-                        return `<span class="text-info">${value}</span>`;
+                        return `<span class="text-secondary">${value}</span>`;
                     })
                     .join(' and ');
             },
@@ -120,13 +120,13 @@
                         const info = this.transformers[transformer.name];
                         const params = info.items
                             .map(item =>
-                                `<span class="text-info">${item.label} = ${transformer.parameters[item.key]}</span>`)
+                                `<span class="text-secondary">${item.label} = ${transformer.parameters[item.key]}</span>`)
                             .join(' and ');
 
                         if (!info.items || info.items.length === 0)
-                            return `<span class="text-info">${info.label}</span>`;
+                            return `<span class="text-secondary">${info.label}</span>`;
 
-                        return `<span class="text-info">${info.label}</span> [ ${params} ]`;
+                        return `<span class="text-secondary">${info.label}</span> [ ${params} ]`;
                     })
                     .join(' and ');
             },

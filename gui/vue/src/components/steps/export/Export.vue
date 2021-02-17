@@ -141,7 +141,7 @@
                   :clearable="false" :disabled="format === 'csv'"
                   class="mt-3" autocomplete="off" placeholder="Select a link predicate" @input="selectLinkPredicate">
           <div slot="option" slot-scope="option">
-            <div v-if="!option.predicate" class="text-info text-bold font-italic">
+            <div v-if="!option.predicate" class="text-secondary text-bold font-italic">
               Provide another link predicate
             </div>
 
@@ -196,7 +196,7 @@
 
     <div class="row justify-content-end align-items-center pt-3 mb-0">
       <div class="col-auto">
-        <b-button @click="doExport" variant="info">Export</b-button>
+        <b-button @click="doExport" variant="secondary">Export</b-button>
       </div>
     </div>
   </card>

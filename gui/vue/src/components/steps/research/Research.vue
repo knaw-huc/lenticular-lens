@@ -35,13 +35,13 @@
 
       <div class="form-group row justify-content-end align-items-center pt-3 mb-0">
         <div class="col-auto" v-if="$root.job">
-          <span class="badge badge-info" v-show="$root.job.created_at !== $root.job.updated_at">
+          <span class="badge badge-secondary" v-show="$root.job.created_at !== $root.job.updated_at">
             Updated {{ $root.job.updated_at | moment("MMMM Do YYYY, HH:mm:ss") }}
           </span>
         </div>
 
         <div class="col-auto">
-          <b-button @click="saveResearch" variant="info">
+          <b-button @click="saveResearch" variant="secondary">
             {{ $root.job ? 'Update' : 'Create' }}
           </b-button>
         </div>
@@ -54,7 +54,7 @@
 
         <failed v-else-if="failed" size="2x"/>
 
-        <span class="badge badge-info" ref="clipboardCopyMessage" hidden>
+        <span class="badge badge-secondary" ref="clipboardCopyMessage" hidden>
           Job ID copied to clipboard
         </span>
 
@@ -78,7 +78,7 @@
                  v-on:keyup.enter="$emit('load', idToLoad)"/>
 
           <div class="col-auto">
-            <b-button @click="$emit('load', idToLoad)" variant="info">Load</b-button>
+            <b-button @click="$emit('load', idToLoad)" variant="secondary">Load</b-button>
           </div>
         </template>
       </div>

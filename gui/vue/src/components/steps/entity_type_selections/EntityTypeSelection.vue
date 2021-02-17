@@ -5,7 +5,7 @@
         @show="onToggle(true)" @hide="onToggle(false)">
     <template v-slot:title-columns>
       <div class="col-auto" v-if="entityTypeSelection.dataset.collection_id !== ''">
-        <button type="button" class="btn btn-info" @click="runSample">
+        <button type="button" class="btn btn-secondary" @click="runSample">
           Explore sample
         </button>
 
@@ -13,7 +13,7 @@
       </div>
 
       <div v-if="!isOpen" class="col-auto">
-        <b-button variant="info" @click="$emit('duplicate', entityTypeSelection)">Duplicate</b-button>
+        <b-button variant="secondary" @click="$emit('duplicate', entityTypeSelection)">Duplicate</b-button>
       </div>
 
       <div v-if="!isOpen" class="col-auto">

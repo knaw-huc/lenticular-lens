@@ -1,5 +1,5 @@
 <template>
-  <button type="button" class="btn text-info p-0" :title="title" @click="$emit('click')" ref="button">
+  <button type="button" class="btn text-secondary p-0" :title="title" @click="$emit('click')" ref="button">
     <fa-icon icon="plus" :size="size"/>
   </button>
 </template>

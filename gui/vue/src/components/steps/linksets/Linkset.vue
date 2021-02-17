@@ -15,7 +15,7 @@
       </div>
 
       <div v-if="!isOpen" class="col-auto">
-        <b-button variant="info" @click="$emit('duplicate', linksetSpec)">Duplicate</b-button>
+        <b-button variant="secondary" @click="$emit('duplicate', linksetSpec)">Duplicate</b-button>
       </div>
 
       <div v-if="linksetStatus === 'downloading' || linksetStatus === 'running'" class="col-auto">
@@ -31,21 +31,21 @@
       </div>
 
       <div v-if="!linkset || linksetStatus === 'failed'" class="col-auto">
-        <b-button variant="info" @click="runLinkset()">
+        <b-button variant="secondary" @click="runLinkset()">
           Run
           <template v-if="linksetStatus === 'failed'">again</template>
         </b-button>
       </div>
 
       <div v-if="linksetStatus === 'done' && linkset.distinct_links_count > 0" class="col-auto">
-        <button v-if="clustering && clustering !== 'running'" type="button" class="btn btn-info my-1"
+        <button v-if="clustering && clustering !== 'running'" type="button" class="btn btn-secondary my-1"
                 @click="runClustering($event)" :disabled="association === ''"
                 :title="association === '' ? 'Choose an association first' : ''">
           Reconcile
           <template v-if="clusteringStatus === 'failed'">again</template>
         </button>
 
-        <button v-else-if="!clustering" type="button" class="btn btn-info my-1" @click="runClustering($event)">
+        <button v-else-if="!clustering" type="button" class="btn btn-secondary my-1" @click="runClustering($event)">
           Cluster
           <template v-if="association !== ''"> &amp; Reconcile</template>
           <template v-if="clusteringStatus === 'failed'">again</template>
