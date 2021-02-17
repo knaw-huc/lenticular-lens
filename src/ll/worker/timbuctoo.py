@@ -1,7 +1,9 @@
+from uuid import uuid4
+from os.path import commonprefix
 from psycopg2 import sql as psycopg2_sql
 
-from ll.util.config_db import db_conn
 from ll.util.hasher import column_name_hash
+from ll.util.config_db import db_conn, fetch_many
 
 from ll.worker.job import WorkerJob
 from ll.data.timbuctoo import Timbuctoo
@@ -19,8 +21,9 @@ class TimbuctooJob(WorkerJob):
         self._cursor = cursor
         self._rows_count = rows_count
         self._rows_per_page = rows_per_page
+        self._namespaces = []
 
-        super().__init__(self.download)
+        super().__init__(self.run_process)
 
     @staticmethod
     def format_query(column_info):
@@ -52,6 +55,10 @@ class TimbuctooJob(WorkerJob):
             return value['uri']
 
         return None
+
+    def run_process(self):
+        self.download()
+        self.determine_namespaces()
 
     def download(self):
         total_insert = 0
@@ -99,12 +106,13 @@ class TimbuctooJob(WorkerJob):
                     SELECT 1
                     FROM timbuctoo_tables
                     WHERE "table_name" = %(table_name)s
-                    AND ((
+                    AND (
                         %(next_page)s IS NULL AND next_page IS NULL
                         AND (update_finish_time IS NULL OR update_finish_time < update_start_time)
-                    ) OR (
+                    ) 
+                    OR (
                         %(next_page)s IS NOT NULL AND next_page = %(next_page)s
-                    ))
+                    )
                 ''', {'table_name': self._table_name, 'next_page': self._cursor})
 
                 if cur.fetchone() != (1,):
@@ -142,11 +150,39 @@ class TimbuctooJob(WorkerJob):
 
             self._cursor = query_result['nextCursor']
 
+    def determine_namespaces(self):
+        with self._db_conn.cursor(name=uuid4().hex) as cur:
+            cur.execute(psycopg2_sql.SQL('SELECT uri FROM timbuctoo.{}')
+                        .format(psycopg2_sql.Identifier(self._table_name)))
+
+            for uri in fetch_many(cur):
+                prefix_found = False
+
+                for ns in self._namespaces:
+                    common_prefix = commonprefix([uri[0], ns])
+
+                    prefix_allowed = common_prefix != '' and common_prefix != 'http'
+                    if common_prefix.startswith('http://') or common_prefix.startswith('https://'):
+                        domain = common_prefix.replace('http://', '').replace('https://', '')
+                        prefix_allowed = '/' in domain
+
+                    if prefix_allowed:
+                        prefix_found = True
+
+                        if ns != common_prefix and ns.startswith(common_prefix):
+                            self._namespaces.remove(ns)
+                        if common_prefix not in self._namespaces:
+                            self._namespaces.append(common_prefix)
+
+                if not prefix_found:
+                    self._namespaces.append(uri[0])
+
     def on_finish(self):
         if self._cursor is None:
             with db_conn() as conn, conn.cursor() as cur:
-                cur.execute('UPDATE timbuctoo_tables SET update_finish_time = now() WHERE "table_name" = %s',
-                            (self._table_name,))
+                cur.execute('UPDATE timbuctoo_tables '
+                            'SET uri_namespaces = %s, update_finish_time = now() '
+                            'WHERE "table_name" = %s', (self._namespaces, self._table_name,))
 
     def watch_process(self):
         pass

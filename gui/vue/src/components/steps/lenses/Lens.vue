@@ -26,7 +26,7 @@
         </b-button>
       </div>
 
-      <div v-if="lensStatus === 'done' && lens.links_count > 0" class="col-auto">
+      <div v-if="lensStatus === 'done' && lens.distinct_links_count > 0" class="col-auto">
         <button v-if="clustering && clustering !== 'running'" type="button" class="btn btn-info my-1"
                 @click="runClustering($event)" :disabled="association === ''"
                 :title="association === '' ? 'Choose an association first' : ''">
@@ -41,7 +41,7 @@
         </button>
       </div>
 
-      <div v-if="lensStatus === 'done' && lens.links_count > 0 && $root.associationFiles"
+      <div v-if="lensStatus === 'done' && lens.distinct_links_count > 0 && $root.associationFiles"
            class="col-auto">
         <select class="col-auto form-control association-select my-1" v-model="association"
                 :id="'lens_' + lensSpec.id + '_association'">

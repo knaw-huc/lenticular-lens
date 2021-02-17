@@ -117,14 +117,12 @@ export default {
             return this.lensSpecs.find(lensSpec => lensSpec.id === parseInt(id));
         },
 
-        exportCsvLink(type, id, accepted, rejected, notValidated, mixed) {
-            const params = [];
-            if (accepted) params.push('valid=accepted');
-            if (rejected) params.push('valid=rejected');
-            if (notValidated) params.push('valid=not_validated');
-            if (mixed) params.push('valid=mixed');
+        exportCsv(type, id, params) {
+            window.open(`/job/${this.job.job_id}/csv/${type}/${id}?${params.join('&')}`);
+        },
 
-            return `/job/${this.job.job_id}/export/${type}/${id}/csv?${params.join('&')}`;
+        exportRdf(type, id, params) {
+            window.open(`/job/${this.job.job_id}/rdf/${type}/${id}?${params.join('&')}`);
         },
 
         getRecursiveElements(element, groupName) {

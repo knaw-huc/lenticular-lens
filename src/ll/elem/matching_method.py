@@ -1,14 +1,14 @@
 import re
 
+from psycopg2 import sql
 from inspect import cleandoc
-from psycopg2 import sql as psycopg2_sql
 
 from ll.util.helpers import get_json_from_file
-from ll.job.property_field import PropertyField
 from ll.elem.matching_method_property import MatchingMethodProperty
 
 
 class MatchingMethod:
+    _logic_ops = get_json_from_file('logic_ops.json')
     _matching_methods = get_json_from_file('matching_methods.json')
 
     def __init__(self, data, job, linkset_id, id):
@@ -24,11 +24,11 @@ class MatchingMethod:
         else:
             raise NameError('Matching method %s is not defined' % self.method_name)
 
-        self._method_sim_name = data['method_sim_name']
+        self.method_sim_name = data['method_sim_name']
         self._method_sim_config = data['method_sim_config']
         self._method_sim_normalized = data['method_sim_normalized']
-        self._method_sim_info = self._matching_methods[self._method_sim_name] \
-            if self._method_sim_name in self._matching_methods else {}
+        self._method_sim_info = self._matching_methods[self.method_sim_name] \
+            if self.method_sim_name in self._matching_methods else {}
 
         self._t_conorm = data['t_conorm']
         self._threshold = data['threshold']
@@ -43,7 +43,7 @@ class MatchingMethod:
 
     @property
     def sql(self):
-        if 'field' in self._method_info and not self._method_sim_name:
+        if 'field' in self._method_info and not self.method_sim_name:
             template = '{source_norm} = {target_norm}'
         else:
             template = self._condition_template
@@ -55,7 +55,7 @@ class MatchingMethod:
             else:
                 template = self._match_template
 
-        if self._method_sim_name and not self._method_sim_normalized:
+        if self.method_sim_name and not self._method_sim_normalized:
             template = '{source_norm} = {target_norm} AND ' + template
 
         template = self._update_template_fields(template)
@@ -69,9 +69,9 @@ class MatchingMethod:
     @property
     def similarity_logic_ops_sql(self):
         if self.similarity_sql:
-            return psycopg2_sql.SQL('logic_ops({operation}, sim.{field})').format(
-                operation=psycopg2_sql.Literal(self._t_conorm),
-                field=psycopg2_sql.Identifier(self.field_name)
+            return sql.SQL('{function}(sim.{field})').format(
+                function=sql.SQL(self._logic_ops[self._t_conorm]['sql_agg']),
+                field=sql.Identifier(self.field_name)
             )
 
         return None
@@ -79,9 +79,9 @@ class MatchingMethod:
     @property
     def similarity_threshold_sql(self):
         if self.similarity_logic_ops_sql and self._threshold:
-            return psycopg2_sql.SQL('{similarity} >= {threshold}').format(
+            return sql.SQL('{similarity} >= {threshold}').format(
                 similarity=self.similarity_logic_ops_sql,
-                threshold=psycopg2_sql.Literal(self._threshold)
+                threshold=sql.Literal(self._threshold)
             )
 
         return None
@@ -91,32 +91,32 @@ class MatchingMethod:
         if self.is_list_match:
             return None
 
-        index_sqls = [psycopg2_sql.SQL('CREATE INDEX ON target USING btree ({});')
-                          .format(psycopg2_sql.Identifier(self.field_name))]
+        index_sqls = [sql.SQL('CREATE INDEX ON target USING btree ({});')
+                          .format(sql.Identifier(self.field_name))]
 
         if self._method_info.get('field'):
-            index_sqls.append(psycopg2_sql.SQL('CREATE INDEX ON target USING btree ({});')
-                              .format(psycopg2_sql.Identifier(self.field_name + '_norm')))
+            index_sqls.append(sql.SQL('CREATE INDEX ON target USING btree ({});')
+                              .format(sql.Identifier(self.field_name + '_norm')))
 
         for before_index in [method_info['before_index'] for method_info in [self._method_info, self._method_sim_info]
                              if 'before_index' in method_info]:
-            index_sqls.append(psycopg2_sql.SQL(before_index).format(
-                target=psycopg2_sql.Identifier(self.field_name),
-                target_intermediate=psycopg2_sql.Identifier(self.field_name + '_intermediate'),
+            index_sqls.append(sql.SQL(before_index).format(
+                target=sql.Identifier(self.field_name),
+                target_intermediate=sql.Identifier(self.field_name + '_intermediate'),
                 **self._sql_parameters
             ))
 
         for index in [method_info['index'] for method_info in [self._method_info, self._method_sim_info]
                       if 'index' in method_info]:
-            index_sqls.append(psycopg2_sql.SQL('CREATE INDEX ON target USING {};').format(
-                psycopg2_sql.SQL(index).format(
-                    target=psycopg2_sql.Identifier(self.field_name),
-                    target_intermediate=psycopg2_sql.Identifier(self.field_name + '_intermediate'),
+            index_sqls.append(sql.SQL('CREATE INDEX ON target USING {};').format(
+                sql.SQL(index).format(
+                    target=sql.Identifier(self.field_name),
+                    target_intermediate=sql.Identifier(self.field_name + '_intermediate'),
                     **self._sql_parameters
                 )
             ))
 
-        return psycopg2_sql.SQL('\n').join(index_sqls)
+        return sql.SQL('\n').join(index_sqls)
 
     @property
     def sources(self):
@@ -187,7 +187,7 @@ class MatchingMethod:
 
     @property
     def _sql_parameters(self):
-        return {key: psycopg2_sql.Literal(value)
+        return {key: sql.Literal(value)
                 for (key, value) in {**self._method_config, **self._method_sim_config}.items()}
 
     def _update_template_fields(self, template):
@@ -240,14 +240,14 @@ class MatchingMethod:
                     )
                 ''')
 
-        return psycopg2_sql.SQL(template).format(
-            field_name=psycopg2_sql.Identifier(self.field_name),
-            field_name_norm=psycopg2_sql.Identifier(self.field_name + '_norm'),
-            field_name_intermediate=psycopg2_sql.Identifier(self.field_name + '_intermediate'),
-            list_threshold=psycopg2_sql.Literal(self._list_threshold),
-            list_threshold_is_perc=psycopg2_sql.Literal(self._list_is_percentage),
-            list_unique_threshold=psycopg2_sql.Literal(self._list_unique_threshold),
-            list_unique_threshold_is_perc=psycopg2_sql.Literal(self._list_unique_is_percentage),
+        return sql.SQL(template).format(
+            field_name=sql.Identifier(self.field_name),
+            field_name_norm=sql.Identifier(self.field_name + '_norm'),
+            field_name_intermediate=sql.Identifier(self.field_name + '_intermediate'),
+            list_threshold=sql.Literal(self._list_threshold),
+            list_threshold_is_perc=sql.Literal(self._list_is_percentage),
+            list_unique_threshold=sql.Literal(self._list_unique_threshold),
+            list_unique_threshold_is_perc=sql.Literal(self._list_unique_is_percentage),
             **self._sql_parameters
         )
 

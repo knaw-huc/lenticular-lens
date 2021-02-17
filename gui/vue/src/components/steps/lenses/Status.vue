@@ -35,7 +35,7 @@
           <div class="col-auto">
             <div>
               <strong>Links found: </strong>
-              {{ lens.links_count ? lens.links_count.toLocaleString('en') : 0 }}
+              {{ lens.distinct_links_count ? lens.distinct_links_count.toLocaleString('en') : 0 }}
             </div>
 
             <div v-if="clustering && clusteringStatus === 'running'">

@@ -47,14 +47,35 @@ class LensJob(WorkerJob):
 
     def on_finish(self):
         with db_conn() as conn, conn.cursor() as cur:
-            cur.execute(psycopg2_sql.SQL('SELECT count(*) FROM lenses.{}').format(
-                psycopg2_sql.Identifier(self._job.table_name(self._id))))
-            links = cur.fetchone()[0]
+            cur.execute(psycopg2_sql.SQL('''
+                SELECT  (SELECT count(*) FROM lenses.{lens_table}) AS links_count,
+                        (SELECT count(DISTINCT uris.uri) FROM (
+                            SELECT source_uri AS uri FROM lenses.{lens_table} 
+                            WHERE link_order = 'source_target' OR link_order = 'both'
+                            UNION ALL
+                            SELECT target_uri AS uri FROM lenses.{lens_table} 
+                            WHERE link_order = 'target_source' OR link_order = 'both'
+                        ) AS uris) AS lens_sources_count,
+                        (SELECT count(DISTINCT uris.uri) FROM (
+                            SELECT target_uri AS uri FROM lenses.{lens_table} 
+                            WHERE link_order = 'source_target' OR link_order = 'both'
+                            UNION ALL
+                            SELECT source_uri AS uri FROM lenses.{lens_table} 
+                            WHERE link_order = 'target_source' OR link_order = 'both'
+                        ) AS uris) AS lens_targets_count
+            ''').format(lens_table=psycopg2_sql.Identifier(self._job.table_name(self._id))))
+
+            result = cur.fetchone()
+
+            links = result[0]
+            lens_sources_count = result[1]
+            lens_targets_count = result[2]
 
             cur.execute("UPDATE lenses "
-                        "SET status = %s, status_message = null, links_count = %s, finished_at = now() "
+                        "SET status = %s, status_message = null, distinct_links_count = %s, "
+                        "distinct_lens_sources_count = %s, distinct_lens_targets_count = %s, finished_at = now() "
                         "WHERE job_id = %s AND spec_id = %s",
-                        ('done', links, self._job_id, self._id))
+                        ('done', links, lens_sources_count, lens_targets_count, self._job_id, self._id))
 
             if links == 0:
                 cur.execute(psycopg2_sql.SQL('DROP TABLE lenses.{} CASCADE')

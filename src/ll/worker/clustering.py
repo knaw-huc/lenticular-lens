@@ -1,4 +1,5 @@
-from psycopg2 import sql as psycopg2_sql
+from io import StringIO
+from psycopg2 import sql
 
 from ll.worker.job import WorkerJob
 from ll.util.config_db import db_conn
@@ -20,24 +21,43 @@ class ClusteringJob(WorkerJob):
 
     def start_clustering(self):
         links = self._job.get_links(self._id, self._type)
+        self._worker = SimpleLinkClustering(links)
 
-        with self._db_conn.cursor() as cur:
-            self._worker = SimpleLinkClustering(links)
+        data = StringIO()
+        for cluster in self._worker.get_clusters():
+            for node in cluster['nodes']:
+                data.write(f"{cluster['id']}\t{node}\n")
+        data.seek(0)
 
-            for cluster in self._worker.get_clusters():
-                for i in range(0, len(cluster['links']), 1000):
-                    link_sqls = [psycopg2_sql.SQL('(source_uri = {source} AND target_uri = {target})').format(
-                        source=psycopg2_sql.Literal(link[0]), target=psycopg2_sql.Literal(link[1])
-                    ) for link in cluster['links'][i:i + 1000]]
+        if not self._killed:
+            schema = 'linksets' if self._type == 'linkset' else 'lenses'
+            linkset_table_name = self._job.table_name(self._id)
+            clusters_table_name = linkset_table_name + '_clusters'
+            linkset_index_name = linkset_table_name + '_cluster_id_idx'
 
-                    cur.execute(psycopg2_sql.SQL('UPDATE {schema}.{table_name} '
-                                                 'SET cluster_id = {cluster_id} '
-                                                 'WHERE {links}').format(
-                        schema=psycopg2_sql.Identifier('linksets' if self._type == 'linkset' else 'lenses'),
-                        table_name=psycopg2_sql.Identifier(self._job.table_name(self._id)),
-                        cluster_id=psycopg2_sql.Literal(cluster['id']),
-                        links=psycopg2_sql.SQL(' OR ').join(link_sqls)
-                    ))
+            with self._db_conn.cursor() as cur:
+                cur.execute(sql.SQL('SET search_path TO {}').format(sql.Identifier(schema)))
+
+                cur.execute(sql.SQL('DROP INDEX IF EXISTS {}').format(sql.Identifier(linkset_index_name)))
+
+                cur.execute(sql.SQL('''
+                    CREATE TEMPORARY TABLE IF NOT EXISTS {} (
+                        id text NOT NULL, node text NOT NULL
+                    ) ON COMMIT DROP
+                ''').format(sql.Identifier(clusters_table_name)))
+
+                cur.copy_from(data, f'"{clusters_table_name}"')
+
+                cur.execute(sql.SQL('''
+                    UPDATE {} AS linkset
+                    SET cluster_id = clusters.id
+                    FROM {} AS clusters
+                    WHERE linkset.source_uri = clusters.node
+                ''').format(sql.Identifier(linkset_table_name), sql.Identifier(clusters_table_name)))
+
+                cur.execute(sql.SQL('CREATE INDEX ON {} USING hash (cluster_id); '
+                                    'ANALYZE {};')
+                            .format(sql.Identifier(linkset_table_name), sql.Identifier(linkset_table_name)))
 
     def watch_process(self):
         if not self._worker:

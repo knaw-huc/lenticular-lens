@@ -117,6 +117,41 @@ class Collection:
                       collection['uri'], collection['title'], collection['shortenedUri'],
                       collection['total'], dumps(columns), self.table_name))
 
+    def temp_update(self):
+        from uuid import uuid4
+        from os.path import commonprefix
+        from ll.util.config_db import fetch_many
+
+        namespaces = []
+        with db_conn() as conn, conn.cursor(name=uuid4().hex) as cur:
+            cur.execute(psycopg2_sql.SQL('SELECT uri FROM timbuctoo.{}')
+                        .format(psycopg2_sql.Identifier(self.table_name)))
+
+            for uri in fetch_many(cur):
+                prefix_found = False
+
+                for ns in namespaces:
+                    common_prefix = commonprefix([uri[0], ns])
+
+                    prefix_allowed = common_prefix != '' and common_prefix != 'http'
+                    if common_prefix.startswith('http://') or common_prefix.startswith('https://'):
+                        domain = common_prefix.replace('http://', '').replace('https://', '')
+                        prefix_allowed = '/' in domain
+
+                    if prefix_allowed:
+                        prefix_found = True
+
+                        if ns != common_prefix and ns.startswith(common_prefix):
+                            namespaces.remove(ns)
+                        if common_prefix not in namespaces:
+                            namespaces.append(common_prefix)
+
+                if not prefix_found:
+                    namespaces.append(uri[0])
+
+            cur.execute('UPDATE timbuctoo_tables SET uri_namespaces = %s WHERE "table_name" = %s',
+                        (namespaces, self.table_name,))
+
     @staticmethod
     def columns_sql(columns):
         def column_sql(column_name, column_type):

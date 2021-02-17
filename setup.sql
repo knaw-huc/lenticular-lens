@@ -32,23 +32,24 @@ CREATE TABLE IF NOT EXISTS jobs
 CREATE TABLE IF NOT EXISTS timbuctoo_tables
 (
     table_name               text primary key,
-    graphql_endpoint         text          not null,
+    graphql_endpoint         text                        not null,
     hsid                     text,
-    dataset_id               text          not null,
-    collection_id            text          not null,
-    dataset_uri              text          not null,
-    dataset_name             text          not null,
-    title                    text          not null,
+    dataset_id               text                        not null,
+    collection_id            text                        not null,
+    dataset_uri              text                        not null,
+    dataset_name             text                        not null,
+    title                    text                        not null,
     description              text,
-    collection_uri           text          not null,
+    collection_uri           text                        not null,
     collection_title         text,
-    collection_shortened_uri text          not null,
-    total                    int           not null,
-    columns                  json          not null,
-    create_time              timestamp     not null,
+    collection_shortened_uri text                        not null,
+    uri_namespaces           text[] default '{}'::text[] not null,
+    total                    int                         not null,
+    columns                  json                        not null,
+    create_time              timestamp                   not null,
     update_start_time        timestamp,
     next_page                text,
-    rows_count               int default 0 not null,
+    rows_count               int    default 0            not null,
     last_push_time           timestamp,
     update_finish_time       timestamp,
     UNIQUE (graphql_endpoint, hsid, dataset_id, collection_id)
@@ -75,15 +76,17 @@ CREATE TABLE IF NOT EXISTS linksets
 
 CREATE TABLE IF NOT EXISTS lenses
 (
-    job_id         text    not null,
-    spec_id        int     not null,
-    status         text    not null,
-    status_message text,
-    kill           boolean not null,
-    requested_at   timestamp,
-    processing_at  timestamp,
-    finished_at    timestamp,
-    links_count    bigint,
+    job_id                      text    not null,
+    spec_id                     int     not null,
+    status                      text    not null,
+    status_message              text,
+    kill                        boolean not null,
+    requested_at                timestamp,
+    processing_at               timestamp,
+    finished_at                 timestamp,
+    distinct_links_count        bigint,
+    distinct_lens_sources_count bigint,
+    distinct_lens_targets_count bigint,
     PRIMARY KEY (job_id, spec_id)
 );
 
@@ -158,7 +161,7 @@ BEGIN
 
     RETURN TRUE;
 END;
-$$ LANGUAGE plpgsql STRICT IMMUTABLE;
+$$ LANGUAGE plpgsql STRICT IMMUTABLE PARALLEL SAFE;
 
 CREATE OR REPLACE FUNCTION to_date_immutable(text, text) RETURNS date AS $$
 BEGIN

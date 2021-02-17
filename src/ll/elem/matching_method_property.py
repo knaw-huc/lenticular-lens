@@ -1,4 +1,4 @@
-from psycopg2 import sql as psycopg2_sql
+from psycopg2 import sql
 
 from ll.job.property_field import PropertyField
 from ll.util.helpers import get_json_from_file
@@ -32,13 +32,11 @@ class MatchingMethodProperty:
     @property
     def prepare_sql(self):
         if not self._property_only and (self._data['stopwords']['dictionary'] or self._data['stopwords']['additional']):
-            return psycopg2_sql.SQL('SELECT init_dictionary({key}, {dictionary}, {additional});').format(
-                key=psycopg2_sql.Literal(hash_string_min(self._data['stopwords'])),
-                dictionary=psycopg2_sql.Literal(self._data['stopwords']['dictionary']),
-                additional=psycopg2_sql.SQL('ARRAY[{}]::text[]').format(
-                    psycopg2_sql.SQL(', ').join(
-                        [psycopg2_sql.Literal(additional) for additional in self._data['stopwords']['additional']]
-                    )
+            return sql.SQL('SELECT init_dictionary({key}, {dictionary}, {additional});').format(
+                key=sql.Literal(hash_string_min(self._data['stopwords'])),
+                dictionary=sql.Literal(self._data['stopwords']['dictionary']),
+                additional=sql.SQL('ARRAY[{}]::text[]').format(
+                    sql.SQL(', ').join(sql.Literal(additional) for additional in self._data['stopwords']['additional'])
                 ),
             )
 

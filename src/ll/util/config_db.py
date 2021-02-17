@@ -37,3 +37,13 @@ def fetch_one(query, args=None, dict=False):
         with conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) if dict else conn.cursor() as cur:
             cur.execute(query, args)
             return cur.fetchone() if cur.description else None
+
+
+def fetch_many(cur, size=2000):
+    while True:
+        results = cur.fetchmany(size=size)
+        if not results:
+            break
+
+        for result in results:
+            yield result

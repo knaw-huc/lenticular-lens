@@ -1,7 +1,9 @@
 from psycopg2 import sql as psycopg2_sql
 
-from ll.util.helpers import get_string_from_sql
 from ll.util.hasher import hash_string_min, column_name_hash
+from ll.util.helpers import get_string_from_sql, n3_pred_val, get_namespace_from_uris
+
+from ll.namespaces.shared_ontologies import Namespaces as NS
 
 
 class PropertyField:
@@ -9,10 +11,7 @@ class PropertyField:
         self._data = data if isinstance(data, list) else [data]
         self._transformers = transformers if transformers else []
 
-        if ets:
-            self._collection = ets.collection
-            self._alias = ets.alias
-            self._columns = ets.columns
+        self.ets = ets
 
         self._extend = True
         self._hash = None
@@ -28,7 +27,7 @@ class PropertyField:
     @property
     def resource_label(self):
         if not self._intermediate_property_path:
-            return self._alias
+            return self.ets.alias
 
         return self._intermediate_property_path[-1]['alias']
 
@@ -46,8 +45,8 @@ class PropertyField:
 
     @property
     def is_list(self):
-        if self.prop_label in self._columns:
-            return self._columns[self.prop_label]['isList']
+        if self.prop_label in self.ets.columns:
+            return self.ets.columns[self.prop_label]['isList']
 
         return False
 
@@ -62,9 +61,45 @@ class PropertyField:
 
         return sql
 
+    @property
+    def namespaces(self):
+        property_ns = {}
+        for prop_in_path in self._intermediate_property_path:
+            ns = get_namespace_from_uris(prop_in_path['collection_shortened_uri'], prop_in_path['collection_uri'])
+            if ns['prefix'] not in property_ns:
+                property_ns[ns['prefix']] = ns['uri']
+
+            ns = get_namespace_from_uris(prop_in_path['columns']['shortenedUri'], prop_in_path['columns']['uri'])
+            if ns['prefix'] not in property_ns:
+                property_ns[ns['prefix']] = ns['uri']
+
+        ns = get_namespace_from_uris(self.ets.collection.table_data['collection_shortened_uri'],
+                                     self.ets.collection.table_data['collection_uri'])
+        if ns['prefix'] not in property_ns:
+            property_ns[ns['prefix']] = ns['uri']
+
+        ns = get_namespace_from_uris(self.ets.columns[self.prop_label]['shortenedUri'],
+                                     self.ets.columns[self.prop_label]['uri'])
+        if ns['prefix'] not in property_ns:
+            property_ns[ns['prefix']] = ns['uri']
+
+        return property_ns
+
+    def n3(self, end=False):
+        if len(self._data) == 1:
+            return n3_pred_val(NS.VoID.property_ttl, self.ets.columns[self.prop_label]['shortenedUri'], end)
+
+        seq = f"\t\t{n3_pred_val('a', NS.RDFS.sequence_ttl)}"
+        for item in self._intermediate_property_path:
+            seq += f"\t\t\trdf:_li{40} {item['columns']['shortenedUri']}\n"
+            seq += f"\t\t\trdf:_li{40} {item['collection_shortened_uri']}\n"
+        seq += f"\t\t\trdf:_li{40} {self.ets.columns[self.prop_label]['shortenedUri']} ;\n"
+
+        return f"\t{NS.VoID.property_ttl}\n\t\t[\n{seq}\t\t]"
+
     def add_joins(self, joins):
-        cur_resource = self._alias
-        cur_columns = self._columns
+        cur_resource = self.ets.alias
+        cur_columns = self.ets.columns
         for prop_in_path in self._intermediate_property_path:
             next_table_name = prop_in_path['table_name']
             next_resource = prop_in_path['alias']
@@ -98,7 +133,7 @@ class PropertyField:
                 'LEFT JOIN unnest({alias}.{column_name}) ' +
                 'AS {column_name_expanded} ON true'
             ).format(
-                alias=psycopg2_sql.Identifier(self._alias),
+                alias=psycopg2_sql.Identifier(self.ets.alias),
                 column_name=psycopg2_sql.Identifier(self.prop_label),
                 column_name_expanded=psycopg2_sql.Identifier(self.extended_prop_label)
             ), self.extended_prop_label)
@@ -109,7 +144,7 @@ class PropertyField:
 
     @property
     def is_downloaded(self):
-        if self._collection.rows_downloaded > -1:
+        if self.ets.collection.rows_downloaded > -1:
             return False
 
         for prop_in_path in self._intermediate_property_path:
@@ -133,14 +168,16 @@ class PropertyField:
             for (prop, collection_id) in [(self._data[i], self._data[i + 1]) for i in range(0, len(self._data) - 2, 2)]:
                 table_data = None
                 downloaded = False
-                if collection_id in self._collection.dataset_table_data:
-                    table_data = self._collection.dataset_table_data[collection_id]
+                if collection_id in self.ets.collection.dataset_table_data:
+                    table_data = self.ets.collection.dataset_table_data[collection_id]
                     downloaded = table_data['update_finish_time'] \
                                  and table_data['update_finish_time'] >= table_data['update_start_time']
                     path += table_data['table_name']
 
                 self._prop_path.append({
                     'table_name': table_data['table_name'] if table_data else None,
+                    'collection_uri': table_data['collection_uri'] if table_data else None,
+                    'collection_shortened_uri': table_data['collection_shortened_uri'] if table_data else None,
                     'columns': table_data['columns'] if table_data else None,
                     'alias': hash_string_min(path),
                     'property': column_name_hash(prop),

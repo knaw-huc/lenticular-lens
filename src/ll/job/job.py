@@ -14,8 +14,8 @@ from ll.elem.lens import Lens
 from ll.elem.linkset import Linkset
 from ll.elem.entity_type_selection import EntityTypeSelection
 
-from ll.util.config_db import db_conn, fetch_one
 from ll.util.helpers import get_pagination_sql
+from ll.util.config_db import db_conn, fetch_one, fetch_many
 
 
 class Validation(IntFlag):
@@ -227,31 +227,25 @@ class Job:
                             .format(sql.Identifier(self.table_name(id))))
 
     def validate_link(self, id, type, source_uri, target_uri, valid):
-        linksets = set() if type == 'lens' else {id}
-        lenses = set() if type == 'linkset' else {id}
-
-        lenses_tmp = [] if type == 'linkset' else [id]
-        while lenses_tmp:
-            lens = self.get_lens_spec_by_id(lenses_tmp[0])
-            linksets = linksets.union(lens.linksets)
-            lenses = lenses.union(lens.lenses)
-
-            lenses_tmp += lens.lenses
-            lenses_tmp.remove(lens.id)
-
         with db_conn() as conn, conn.cursor() as cur:
-            for linkset_id in linksets:
-                query = sql.SQL('UPDATE linksets.{} SET valid = %s WHERE source_uri = %s AND target_uri = %s') \
-                    .format(sql.Identifier(self.table_name(linkset_id)))
-                cur.execute(query, (valid, source_uri, target_uri))
-
             if type == 'lens':
+                lens = self.get_lens_spec_by_id(id)
+
                 query = sql.SQL('UPDATE lenses.{} SET valid = %s WHERE source_uri = %s AND target_uri = %s') \
                     .format(sql.Identifier(self.table_name(id)))
                 cur.execute(query, (valid, source_uri, target_uri))
+
+                for linkset in lens.linksets:
+                    query = sql.SQL('UPDATE linksets.{} SET valid = %s WHERE source_uri = %s AND target_uri = %s') \
+                        .format(sql.Identifier(self.table_name(linkset.id)))
+                    cur.execute(query, (valid, source_uri, target_uri))
             else:
+                query = sql.SQL('UPDATE linksets.{} SET valid = %s WHERE source_uri = %s AND target_uri = %s') \
+                    .format(sql.Identifier(self.table_name(id)))
+                cur.execute(query, (valid, source_uri, target_uri))
+
                 for lens_spec in self.lens_specs:
-                    if linkset_id in lens_spec.linksets:
+                    if id in [linkset.id for linkset in lens_spec.linksets]:
                         validities_sql = sql.SQL(' UNION ALL ').join(
                             sql.Composed([
                                 sql.SQL('SELECT valid '
@@ -259,7 +253,7 @@ class Job:
                                         'WHERE source_uri = {source_uri} AND target_uri = {target_uri}').format(
                                     table=sql.Identifier(self.table_name(linkset)),
                                     source_uri=sql.Literal(source_uri), target_uri=sql.Literal(target_uri)
-                                ) for linkset in lens_spec.linksets if linkset != linkset_id
+                                ) for linkset in lens_spec.linksets if linkset.id != id
                             ])
                         )
 
@@ -312,6 +306,9 @@ class Job:
 
         return None
 
+    def get_spec_by_id(self, id, type):
+        return self.get_linkset_spec_by_id(id) if type == 'linkset' else self.get_lens_spec_by_id(id)
+
     def get_entity_type_selection_sample(self, id, invert=False, limit=None, offset=0):
         entity_type_selection = self.get_entity_type_selection_by_id(id)
         if not entity_type_selection:
@@ -327,7 +324,7 @@ class Job:
         query_builder.add_query(
             entity_type_selection.dataset_id, entity_type_selection.collection_id, entity_type_selection.alias,
             entity_type_selection.table_name, filter_properties, selection_properties,
-            condition=entity_type_selection.filter_sql, invert=invert, limit=limit, offset=offset)
+            condition=entity_type_selection.filters_sql, invert=invert, limit=limit, offset=offset)
 
         return query_builder.run_queries(dict=False)
 
@@ -352,13 +349,13 @@ class Job:
             resource=sql.Identifier(entity_type_selection.alias),
             table_name=sql.Identifier(entity_type_selection.table_name),
             joins=joins.sql,
-            condition=entity_type_selection.where_sql
+            condition=entity_type_selection.filters_sql
         ), dict=True)
 
     def get_links(self, id, type, validation_filter=Validation.ALL, cluster_id=None, uri=None,
                   limit=None, offset=0, include_props=False, single_value=False):
         schema = 'lenses' if type == 'lens' else 'linksets'
-        spec = self.get_lens_spec_by_id(id) if type == 'lens' else self.get_linkset_spec_by_id(id)
+        spec = self.get_spec_by_id(id, type)
 
         validation_filter_sql = []
         if validation_filter < Validation.ALL and Validation.ACCEPTED in validation_filter:
@@ -419,24 +416,19 @@ class Job:
                 limit_offset=sql.SQL(limit_offset_sql)
             ))
 
-            while True:
-                links = cur.fetchmany(size=2000)
-                if not links:
-                    break
-
-                for link in links:
-                    yield {
-                        'source': link[0],
-                        'source_collections': link[1],
-                        'source_values': values[link[0]] if values and link[0] in values else None,
-                        'target': link[2],
-                        'target_collections': link[3],
-                        'target_values': values[link[2]] if values and link[2] in values else None,
-                        'link_order': link[4],
-                        'cluster_id': link[5],
-                        'valid': link[6],
-                        'similarity': link[7]
-                    }
+            for link in fetch_many(cur):
+                yield {
+                    'source': link[0],
+                    'source_collections': link[1],
+                    'source_values': values[link[0]] if values and link[0] in values else None,
+                    'target': link[2],
+                    'target_collections': link[3],
+                    'target_values': values[link[2]] if values and link[2] in values else None,
+                    'link_order': link[4],
+                    'cluster_id': link[5],
+                    'valid': link[6],
+                    'similarity': link[7]
+                }
 
     def get_links_totals(self, id, type, cluster_id=None, uri=None):
         conditions = []
@@ -461,7 +453,7 @@ class Job:
             return {row[0]: row[1] for row in cur.fetchall()}
 
     def get_clusters(self, id, type, limit=None, offset=0, include_props=False):
-        spec = self.get_lens_spec_by_id(id) if type == 'lens' else self.get_linkset_spec_by_id(id)
+        spec = self.get_spec_by_id(id, type)
         limit_offset_sql = get_pagination_sql(limit, offset)
         nodes_sql = ', array_agg(DISTINCT nodes.uri) AS nodes_arr' if include_props else ''
 
@@ -486,41 +478,36 @@ class Job:
                  {}
              """.format(nodes_sql, ('lenses' if type == 'lens' else 'linksets'), self.table_name(id), limit_offset_sql))
 
-            while True:
-                clusters = cur.fetchmany(size=2000)
-                if not clusters:
-                    break
+            for cluster in fetch_many(cur):
+                cluster_values = {}
+                if values:
+                    for uri, uri_values in values.items():
+                        if uri in cluster[3]:
+                            for prop_value in uri_values:
+                                key = prop_value['dataset'] + '_' + prop_value['entity'] \
+                                      + '_' + prop_value['property'][-1]
 
-                for cluster in clusters:
-                    cluster_values = {}
-                    if values:
-                        for uri, uri_values in values.items():
-                            if uri in cluster[3]:
-                                for prop_value in uri_values:
-                                    key = prop_value['dataset'] + '_' + prop_value['entity'] \
-                                          + '_' + prop_value['property'][-1]
+                                if key not in cluster_values:
+                                    cluster_values[key] = {
+                                        'dataset': prop_value['dataset'],
+                                        'entity': prop_value['entity'],
+                                        'property': prop_value['property'],
+                                        'values': set()
+                                    }
 
-                                    if key not in cluster_values:
-                                        cluster_values[key] = {
-                                            'dataset': prop_value['dataset'],
-                                            'entity': prop_value['entity'],
-                                            'property': prop_value['property'],
-                                            'values': set()
-                                        }
+                                cluster_values[key]['values'].update(prop_value['values'])
 
-                                    cluster_values[key]['values'].update(prop_value['values'])
-
-                    yield {
-                        'id': cluster[0],
-                        'size': cluster[1],
-                        'links': cluster[2],
-                        'values': [{
-                            'dataset': cluster_value['dataset'],
-                            'entity': cluster_value['entity'],
-                            'property': cluster_value['property'],
-                            'values': list(cluster_value['values'])
-                        } for key, cluster_value in cluster_values.items()] if values else None
-                    }
+                yield {
+                    'id': cluster[0],
+                    'size': cluster[1],
+                    'links': cluster[2],
+                    'values': [{
+                        'dataset': cluster_value['dataset'],
+                        'entity': cluster_value['entity'],
+                        'property': cluster_value['property'],
+                        'values': list(cluster_value['values'])
+                    } for key, cluster_value in cluster_values.items()] if values else None
+                }
 
     def visualize(self, id, type, cluster_id):
         return get_visualization(self, id, type, cluster_id, include_compact=True)

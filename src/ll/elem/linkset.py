@@ -1,23 +1,29 @@
-from inspect import cleandoc
+from psycopg2 import sql
 from collections import defaultdict
-from psycopg2 import sql as psycopg_sql
 
-from ll.elem.conditions import Conditions
 from ll.job.property_field import PropertyField
-
-from ll.util.helpers import get_sql_empty
-from ll.util.hasher import hash_string_min
+from ll.elem.matching_method import MatchingMethod
+from ll.util.helpers import flatten, get_json_from_file
 
 
 class Linkset:
+    _logic_ops = get_json_from_file('logic_ops.json')
+
     def __init__(self, data, job):
         self._data = data
         self._job = job
-        self._conditions = None
 
     @property
     def id(self):
         return self._data['id']
+
+    @property
+    def label(self):
+        return self._data['label']
+
+    @property
+    def description(self):
+        return self._data['description']
 
     @property
     def threshold(self):
@@ -29,240 +35,107 @@ class Linkset:
 
     @property
     def properties(self):
-        props = defaultdict(list)
+        props = defaultdict(set)
         for prop in self._data['properties']:
             ets_id = prop['entity_type_selection']
-            props[ets_id].append(PropertyField(prop['property'], self._job.get_entity_type_selection_by_id(ets_id)))
+            props[ets_id].add(PropertyField(prop['property'], self._job.get_entity_type_selection_by_id(ets_id)))
 
         return props
 
     @property
+    def matching_methods(self):
+        return self.with_matching_methods_recursive(lambda c, operator, fuzzy: flatten(c))
+
+    @property
     def entity_type_selections(self):
-        return set(self.sources + self.targets + self.intermediates)
-
-    @property
-    def conditions(self):
-        if not self._conditions:
-            methods = self._data['methods']
-            self._conditions = Conditions(methods['conditions'], methods['type'], self._job, self.id)
-        return self._conditions
-
-    @property
-    def similarity_fields(self):
-        return self.conditions.similarity_fields
-
-    @property
-    def index_sql(self):
-        return self.conditions.index_sql
-
-    @property
-    def conditions_sql(self):
-        return self.conditions.conditions_sql
-
-    @property
-    def similarity_fields_agg_sql(self):
-        return self.conditions.similarity_fields_agg_sql
-
-    @property
-    def similarity_logic_ops_sql(self):
-        return self.conditions.similarity_logic_ops_sql
-
-    @property
-    def similarity_threshold_sqls(self):
-        return self.conditions.similarity_threshold_sqls
+        return self.sources.union(self.targets).union(self.intermediates)
 
     @property
     def sources(self):
-        return [self._job.get_entity_type_selection_by_id(ets_id) for ets_id in self._data['sources']]
+        return {self._job.get_entity_type_selection_by_id(ets_id) for ets_id in self._data['sources']}
 
     @property
     def targets(self):
-        return [self._job.get_entity_type_selection_by_id(ets_id) for ets_id in self._data['targets']]
+        return {self._job.get_entity_type_selection_by_id(ets_id) for ets_id in self._data['targets']}
 
     @property
     def intermediates(self):
-        return [self._job.get_entity_type_selection_by_id(ets_id) for ets_id in self._data['intermediates']]
+        return {self._job.get_entity_type_selection_by_id(ets_id) for ets_id in self._data['intermediates']}
 
     @property
-    def source_sql(self):
-        return self._get_combined_entity_type_selections_sql(is_source=True)
+    def similarity_fields(self):
+        return {match_method.field_name for match_method in self.matching_methods if match_method.similarity_sql}
 
     @property
-    def target_sql(self):
-        return self._get_combined_entity_type_selections_sql(is_source=False)
+    def similarity_logic_ops_sql(self):
+        def logic_ops_for_condition(sqls, fuzzy):
+            similarity_sqls = [sim_sql for sim_sql in sqls if sim_sql]
+            if not similarity_sqls:
+                return sql.SQL('NULL')
+
+            sim_sql = similarity_sqls.pop()
+            while similarity_sqls:
+                sim_sql = sql.SQL('{function}({a}, {b})').format(
+                    function=sql.SQL(self._logic_ops[fuzzy]['sql']),
+                    a=sim_sql,
+                    b=similarity_sqls.pop()
+                )
+
+            return sim_sql
+
+        return self.with_matching_methods_recursive(
+            lambda sqls, operator, fuzzy: logic_ops_for_condition(sqls, fuzzy),
+            lambda matching_method: matching_method.similarity_logic_ops_sql
+        )
 
     def get_fields(self, keys=None):
-        return self.conditions.get_fields(keys)
+        if not isinstance(keys, list):
+            keys = ['sources', 'targets', 'intermediates']
 
-    def _get_combined_entity_type_selections_sql(self, is_source=True):
-        sql = []
-        properties = self.get_fields(['sources'] if is_source else ['targets'])
+        # Regroup properties by entity-type selection instead of by method
+        ets_properties = {}
+        for matching_method in self.matching_methods:
+            for key in keys:
+                for ets_id, properties in getattr(matching_method, key).items():
+                    if key == 'sources' or key == 'targets':
+                        for property in properties:
+                            self._set_field(ets_id, property, matching_method, ets_properties)
+                    else:
+                        self._set_field(ets_id, properties['source'], matching_method, ets_properties)
+                        self._set_field(ets_id, properties['target'], matching_method, ets_properties)
 
-        # Get the properties needed for the source or target per entity-type selection
-        for ets_id, ets_properties in properties.items():
-            joins, matching_fields, props_not_null = [], [], []
+        return ets_properties
 
-            # Then for get all properties from this entity-type selection required for a single matching function
-            for ets_index, (property_label, ets_matching_func_props) in enumerate(ets_properties.items()):
-                matching_method = ets_matching_func_props['matching_method']
-                ets_method_properties = ets_matching_func_props['properties']
+    def with_matching_methods_recursive(self, with_conditions, with_matching_method=None):
+        return self._r_matching_methods(self._data['methods'], with_conditions, with_matching_method)
 
-                self._matching_methods_sql(ets_id, matching_method, ets_method_properties,
-                                           is_source, joins, matching_fields, props_not_null, ets_index)
+    def _r_matching_methods(self, methods_obj, with_conditions, with_matching_method, id=''):
+        if 'type' in methods_obj:
+            type = methods_obj['type']
+            operator = type if type == 'AND' or type == 'OR' else \
+                'AND' if type in ['MINIMUM_T_NORM', 'PRODUCT_T_NORM', 'LUKASIEWICZ_T_NORM',
+                                  'DRASTIC_T_NORM', 'NILPOTENT_MINIMUM', 'HAMACHER_PRODUCT'] else 'OR'
+            fuzzy = type if type != 'AND' and type != 'OR' else \
+                'MINIMUM_T_NORM' if type == 'AND' else 'MAXIMUM_T_CONORM'
 
-            sql.append(
-                psycopg_sql.SQL(cleandoc(
-                    """ SELECT DISTINCT {collection} AS collection, target.uri, 
-                                        {matching_fields}
-                        FROM {res} AS target {joins}
-                        WHERE {props_not_null}
-                   """
-                )).format(
-                    collection=psycopg_sql.Literal(ets_id),
-                    matching_fields=psycopg_sql.SQL(',\n                ').join(matching_fields),
-                    res=psycopg_sql.Identifier(hash_string_min(ets_id)),
-                    joins=get_sql_empty(psycopg_sql.SQL('\n').join(joins)),
-                    props_not_null=psycopg_sql.SQL('\nAND ').join(props_not_null),
-                )
-            )
+            conditions = [self._r_matching_methods(condition, with_conditions, with_matching_method, id + str(idx))
+                          for idx, condition in enumerate(methods_obj['conditions'])]
 
-        return psycopg_sql.SQL('\nUNION ALL\n').join(sql)
+            return with_conditions(conditions, operator, fuzzy) if with_conditions else conditions
+
+        matching_method = MatchingMethod(methods_obj, self._job, self.id, id)
+        return with_matching_method(matching_method) if with_matching_method else matching_method
 
     @staticmethod
-    def _matching_methods_sql(ets_id, matching_method, properties,
-                              is_source, joins, matching_fields, props_not_null, ets_index):
-        field_name_org = matching_method.field_name
-        field_name_norm = field_name_org + '_norm'
+    def _set_field(ets_id, property, matching_method, ets_properties):
+        if ets_id not in ets_properties:
+            ets_properties[ets_id] = {}
 
-        props_org = [prop.prop_original for prop in properties]
-        props_norm = [prop.prop_normalized for prop in properties if prop.prop_normalized]
+        if matching_method.field_name not in ets_properties[ets_id]:
+            ets_properties[ets_id][matching_method.field_name] = {
+                'matching_method': matching_method,
+                'properties': set()
+            }
 
-        for is_normalized in (False, True):
-            field_name = field_name_norm if is_normalized else field_name_org
-            props = props_norm if is_normalized else props_org
-
-            if not props:
-                break
-
-            # In case of list matching, combine all values into a field
-            if matching_method.is_list_match:
-                target_field = psycopg_sql.SQL('{}.field_values') \
-                    .format(psycopg_sql.Identifier(field_name + '_extended'))
-
-                joins.append(psycopg_sql.SQL(cleandoc('''
-                    LEFT JOIN (
-                        SELECT uri, ARRAY(
-                            SELECT DISTINCT x
-                            FROM unnest({fields}) AS x
-                            WHERE x IS NOT NULL
-                        ) AS field_values
-                        FROM {res}
-                        GROUP BY uri
-                    ) AS {field_name}
-                    ON {field_name}.uri = target.uri                    
-                ''')).format(
-                    res=psycopg_sql.Identifier(hash_string_min(ets_id)),
-                    fields=psycopg_sql.SQL(' || ').join(
-                        [psycopg_sql.SQL('array_agg({})').format(psycopg_sql.Identifier(prop.hash))
-                         for prop in props]
-                    ),
-                    field_name=psycopg_sql.Identifier(field_name + '_extended')
-                ))
-            else:
-                target = 'target'
-
-                # Add a join for this particular field if it is not the first one (first one will be used as 'from')
-                if ets_index > 0:
-                    target += str(ets_index)
-
-                    if not is_normalized:
-                        joins.append(
-                            psycopg_sql.SQL('INNER JOIN {res} AS {join_name} ON target.uri = {join_name}.uri').format(
-                                res=psycopg_sql.Identifier(hash_string_min(ets_id)),
-                                join_name=psycopg_sql.Identifier(target)
-                            )
-                        )
-
-                # Default case: if we have just one property, just select that property field from the target
-                target_field = psycopg_sql.SQL('{target}.{property_field}').format(
-                    target=psycopg_sql.Identifier(target),
-                    property_field=psycopg_sql.Identifier(props[0].hash)
-                )
-
-                # In case of multiple props, combine all values into a new field to use as a join
-                if len(props) > 1:
-                    target_field = psycopg_sql.Identifier(field_name)
-
-                    if not is_normalized:
-                        if props_norm:
-                            joins.append(
-                                psycopg_sql.SQL('CROSS JOIN unnest(ARRAY[{fields_org}], ARRAY[{fields_norm}]) \n'
-                                                'AS {join_name}({field_name_org}, {field_name_norm})').format(
-                                    fields_org=psycopg_sql.SQL(', ').join(
-                                        [psycopg_sql.SQL('{target}.{property_field}').format(
-                                            target=psycopg_sql.Identifier(target),
-                                            property_field=psycopg_sql.Identifier(prop.hash)
-                                        ) for prop in props_org]
-                                    ),
-                                    fields_norm=psycopg_sql.SQL(', ').join(
-                                        [psycopg_sql.SQL('{target}.{property_field}').format(
-                                            target=psycopg_sql.Identifier(target),
-                                            property_field=psycopg_sql.Identifier(prop.hash)
-                                        ) for prop in props_norm]
-                                    ),
-                                    join_name=psycopg_sql.Identifier('join_' + target),
-                                    field_name_org=psycopg_sql.Identifier(field_name_org),
-                                    field_name_norm=psycopg_sql.Identifier(field_name_norm)
-                                )
-                            )
-                        else:
-                            joins.append(
-                                psycopg_sql.SQL('CROSS JOIN unnest(ARRAY[{fields_org}]) \n'
-                                                'AS field_name_org').format(
-                                    fields_org=psycopg_sql.SQL(', ').join(
-                                        [psycopg_sql.SQL('{target}.{property_field}').format(
-                                            target=psycopg_sql.Identifier(target),
-                                            property_field=psycopg_sql.Identifier(prop.hash)
-                                        ) for prop in props_org]
-                                    ),
-                                    field_name_org=psycopg_sql.Identifier(field_name_org),
-                                )
-                            )
-
-            if target_field:
-                # Now that we have determined the target field, add it to the list of matching fields
-                matching_fields.append(psycopg_sql.SQL('{target_field} AS {field_name}').format(
-                    target_field=target_field,
-                    field_name=psycopg_sql.Identifier(field_name)
-                ))
-
-                # Add is not null or is not empty check
-                if matching_method.is_list_match:
-                    props_not_null.append(psycopg_sql.SQL('cardinality({}) > 0').format(target_field))
-                else:
-                    props_not_null.append(psycopg_sql.SQL('{} IS NOT NULL').format(target_field))
-
-                # Add properties to do the intermediate dataset matching
-                if matching_method.method_name == 'INTERMEDIATE':
-                    for intermediate_ets, intermediate_ets_props in matching_method.intermediates.items():
-                        intermediate_res = hash_string_min(intermediate_ets)
-                        intermediate_target = 'intermediate' + str(ets_index)
-                        intermediate_field = intermediate_ets_props['source'].prop_original \
-                            if is_source else intermediate_ets_props['target'].prop_original
-
-                        joins.append(
-                            psycopg_sql.SQL(cleandoc('''
-                                LEFT JOIN {intermediate_res} AS {intermediate_target}
-                                ON {target_field} = {intermediate_target}.{intermediate_field}
-                            ''')).format(
-                                intermediate_res=psycopg_sql.Identifier(intermediate_res),
-                                intermediate_target=psycopg_sql.Identifier(intermediate_target),
-                                target_field=target_field,
-                                intermediate_field=psycopg_sql.Identifier(intermediate_field.hash)
-                            )
-                        )
-
-                        matching_fields.append(psycopg_sql.SQL('{join_name}.uri AS {field_name}').format(
-                            join_name=psycopg_sql.Identifier(intermediate_target),
-                            field_name=psycopg_sql.Identifier(field_name + '_intermediate')
-                        ))
+        props = ets_properties[ets_id][matching_method.field_name]['properties']
+        props.add(property)

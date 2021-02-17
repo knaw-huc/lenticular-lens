@@ -368,6 +368,27 @@ export default {
             }]
         },
     },
+    linkPredicates: {
+        SKOS: {
+            prefix: 'skos',
+            uri: 'http://www.w3.org/2004/02/skos/core#',
+            predicates: [
+                'sameAs',
+                'broadMatch',
+                'closeMatch',
+                'exactMatch',
+                'narrowMatch',
+                'relatedMatch',
+            ]
+        },
+        OWL: {
+            prefix: 'owl',
+            uri: 'http://www.w3.org/2002/07/owl#',
+            predicates: [
+                'sameAs'
+            ]
+        },
+    },
     tNorms: {
         MINIMUM_T_NORM: 'Minimum t-norm (⊤min)',
         PRODUCT_T_NORM: 'Product t-norm (⊤prod)',

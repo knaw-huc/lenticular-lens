@@ -8,6 +8,10 @@ from os.path import join, dirname, realpath
 from ll.util.config_db import db_conn
 
 
+def flatten(i, filter=True):
+    return [i] if not isinstance(i, list) else [k for j in i for k in flatten(j) if not filter or k]
+
+
 def file_date():
     today = datetime.date.isoformat(datetime.date.today()).replace('-', '')
     return f"{today}_{re.findall('..:.*', str(datetime.datetime.now()))[0]}"
@@ -26,16 +30,20 @@ def get_string_from_sql(sql):
         return sql.as_string(conn)
 
 
-def is_nt_format(resource):
-    temp = resource.strip()
-    return temp.startswith('<') and temp.endswith('>')
+def n3_pred_val(predicate, value, end=False, line=True):
+    new_line = '\n' if line is True else ''
+    tab = '\t' if line is True else ''
+    return f"{tab}{predicate:{40}} {value} {'.' if end is True else ';'}{new_line}"
 
 
-def to_nt_format(resource):
-    if is_nt_format(resource):
-        return resource
+def get_namespace_from_uris(shortened_uri, full_uri):
+    if shortened_uri == full_uri:
+        return {'prefix': None, 'uri': full_uri}
 
-    return '<{}>'.format(resource)
+    ns = shortened_uri.split(':')
+    ns[1] = full_uri.replace(ns[1], '')
+
+    return {'prefix': ns[0], 'uri': ns[1]}
 
 
 def get_id_of_uri(uri):

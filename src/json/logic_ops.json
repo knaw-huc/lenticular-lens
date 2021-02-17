@@ -1,0 +1,50 @@
+{
+  "MINIMUM_T_NORM": {
+    "sql": "t_min",
+    "sql_agg": "t_min_agg"
+  },
+  "PRODUCT_T_NORM": {
+    "sql": "t_prod",
+    "sql_agg": "t_prod_agg"
+  },
+  "LUKASIEWICZ_T_NORM": {
+    "sql": "t_luk",
+    "sql_agg": "t_luk_agg"
+  },
+  "DRASTIC_T_NORM": {
+    "sql": "t_d",
+    "sql_agg": "t_d_agg"
+  },
+  "NILPOTENT_MINIMUM": {
+    "sql": "t_nm",
+    "sql_agg": "t_nm_agg"
+  },
+  "HAMACHER_PRODUCT": {
+    "sql": "t_h0",
+    "sql_agg": "t_h0_agg"
+  },
+  "MAXIMUM_T_CONORM": {
+    "sql": "tc_max",
+    "sql_agg": "tc_max_agg"
+  },
+  "PROBABILISTIC_SUM": {
+    "sql": "tc_sum",
+    "sql_agg": "tc_sum_agg"
+  },
+  "BOUNDED_SUM": {
+    "sql": "tc_luk",
+    "sql_agg": "tc_luk_agg"
+  },
+  "DRASTIC_T_CONORM": {
+    "sql": "tc_d",
+    "sql_agg": "tc_d_agg"
+  },
+  "NILPOTENT_MAXIMUM": {
+    "sql": "tc_nm",
+    "sql_agg": "tc_nm_agg"
+  },
+  "EINSTEIN_SUM": {
+    "sql": "tc_h2",
+    "sql_agg": "tc_h2_agg"
+  }
+}

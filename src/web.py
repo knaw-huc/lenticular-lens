@@ -1,14 +1,14 @@
-import io
-import csv
 import decimal
 import psycopg2
 
-from flask import Flask, jsonify, request, abort, make_response
+from flask import Flask, jsonify, request, abort, Response
 from flask_cors import CORS
 from flask.json import JSONEncoder
+from flask_compress import Compress
 
 from werkzeug.routing import BaseConverter, ValidationError
 
+from ll.job.export import Export
 from ll.job.job import Job, Validation
 
 from ll.util.hasher import hash_string
@@ -42,7 +42,11 @@ class TypeConverter(BaseConverter):
 config_logger()
 
 app = Flask(__name__)
+app.config['COMPRESS_MIMETYPES'] = ['text/html', 'text/css', 'text/plain', 'text/csv', 'text/turtle',
+                                    'application/json', 'application/javascript', 'application/trig']
+
 CORS(app)
+Compress(app)
 
 app.json_encoder = DecimalJSONEncoder
 app.url_map.converters['job'] = JobConverter
@@ -62,6 +66,12 @@ def datasets():
 @app.route('/datasets/update', methods=['POST'])
 def datasets_update():
     TimbuctooDatasets(request.form.get('endpoint'), request.form.get('hsid')).update()
+    return jsonify({'result': 'updated'})
+
+
+@app.route('/datasets/temp_update', methods=['POST'])
+def datasets_temp_update():
+    TimbuctooDatasets(request.form.get('endpoint'), request.form.get('hsid')).temp_update()
     return jsonify({'result': 'updated'})
 
 
@@ -289,21 +299,41 @@ def get_cluster_graph_data(job, type, id, cluster_id):
     return jsonify(job.visualize(id, type, cluster_id))
 
 
-@app.route('/job/<job:job>/export/<type:type>/<int:id>/csv')
+@app.route('/job/<job:job>/csv/<type:type>/<int:id>')
 def export_to_csv(job, type, id):
-    stream = io.StringIO()
-    writer = csv.writer(stream)
+    export = Export(job, type, id)
 
-    writer.writerow(['Source URI', 'Target URI', 'Max Strength', 'Valid'])
-    for link in job.get_links(id, type, validation_filter=validation_filter_helper(request.args.getlist('valid'))):
-        similarity = round(link['similarity'], 3) if link['similarity'] else 1
-        writer.writerow([link['source'], link['target'], similarity, link['valid']])
+    validation_filter = validation_filter_helper(request.args.getlist('valid'))
+    export_generator = export.csv_export_generator(validation_filter)
 
-    output = make_response(stream.getvalue())
-    output.headers['Content-Disposition'] = 'attachment; filename=' + job.job_id + '_' + type + '_' + str(id) + '.csv'
-    output.headers['Content-Type'] = 'text/csv'
+    return Response(export_generator, mimetype='text/csv',
+                    headers={'Content-Disposition': 'attachment; filename=' + type + '_' + str(id) + '.csv'})
 
-    return output
+
+@app.route('/job/<job:job>/rdf/<type:type>/<int:id>')
+def export_to_rdf(job, type, id):
+    export = Export(job, type, id)
+
+    link_pred_namespace = request.args.get('link_pred_namespace')
+    link_pred_shortname = request.args.get('link_pred_shortname')
+    export_metadata = request.args.get('export_metadata', default=True) == 'true'
+    export_link_metadata = request.args.get('export_link_metadata', default=True) == 'true'
+    export_linkset = request.args.get('export_linkset', default=True) == 'true'
+    rdf_star = request.args.get('rdf_star', default=False) == 'true'
+    use_graphs = request.args.get('use_graphs', default=True) == 'true'
+    creator = request.args.get('creator')
+    publisher = request.args.get('publisher')
+    validation_filter = validation_filter_helper(request.args.getlist('valid'))
+
+    export_generator = export.rdf_export_generator(
+        link_pred_namespace, link_pred_shortname, export_metadata, export_link_metadata,
+        export_linkset, rdf_star, use_graphs, creator, publisher, validation_filter)
+
+    mimetype = 'application/trig' if use_graphs else 'text/turtle'
+    extension = '.trig' if use_graphs else '.ttl'
+
+    return Response(export_generator, mimetype=mimetype,
+                    headers={'Content-Disposition': 'attachment; filename=' + type + '_' + str(id) + extension})
 
 
 def validation_filter_helper(valid):

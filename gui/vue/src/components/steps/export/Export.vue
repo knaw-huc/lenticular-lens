@@ -1,6 +1,35 @@
 <template>
   <card :id="'export_' + type + '_' + spec.id" type="export" :res-id="spec.id" :label="spec.label">
     <div class="row align-items-stretch justify-content-around">
+      <sub-card label="Format" class="col-export">
+        <div class="custom-control custom-switch mt-3">
+          <input type="radio" class="custom-control-input" autocomplete="off"
+                 :id="'export_csv_' + type + '_' + spec.id" value="csv"
+                 v-model="format" @change="updateState('export_csv')"/>
+          <label class="custom-control-label" :for="'export_csv_' + type + '_' + spec.id">
+            CSV
+          </label>
+        </div>
+
+        <div class="custom-control custom-switch">
+          <input type="radio" class="custom-control-input" autocomplete="off"
+                 :id="'export_turtle_' + type + '_' + spec.id" value="turtle"
+                 v-model="format" @change="updateState('export_turtle')"/>
+          <label class="custom-control-label" :for="'export_turtle_' + type + '_' + spec.id">
+            RDF Turtle
+          </label>
+        </div>
+
+        <div class="custom-control custom-switch">
+          <input type="radio" class="custom-control-input" autocomplete="off"
+                 :id="'export_trig_' + type + '_' + spec.id" value="trig"
+                 v-model="format" @change="updateState('export_trig')"/>
+          <label class="custom-control-label" :for="'export_trig_' + type + '_' + spec.id">
+            RDF TriG
+          </label>
+        </div>
+      </sub-card>
+
       <sub-card label="Data" class="col-export">
         <div class="custom-control custom-switch mt-3">
           <input type="checkbox" class="custom-control-input" autocomplete="off"
@@ -13,7 +42,7 @@
 
         <div class="custom-control custom-switch">
           <input type="checkbox" class="custom-control-input" autocomplete="off"
-                 :id="'export_links_md_' + type + '_' + spec.id"
+                 :id="'export_links_md_' + type + '_' + spec.id" :disabled="format === 'csv'"
                  v-model="exportLinksMd" @change="updateState('export_links_md')"/>
           <label class="custom-control-label" :for="'export_links_md_' + type + '_' + spec.id">
             Links metadata
@@ -22,7 +51,7 @@
 
         <div class="custom-control custom-switch">
           <input type="checkbox" class="custom-control-input" autocomplete="off"
-                 :id="'export_generic_md_' + type + '_' + spec.id"
+                 :id="'export_generic_md_' + type + '_' + spec.id" :disabled="format === 'csv'"
                  v-model="exportGenericMd" @change="updateState('export_generic_md')"/>
           <label class="custom-control-label" :for="'export_generic_md_' + type + '_' + spec.id">
             Generic metadata
@@ -77,78 +106,90 @@
         </div>
       </sub-card>
 
-      <sub-card label="Format" class="col-export">
+      <sub-card label="RDF reification" class="col-export">
         <div class="custom-control custom-switch mt-3">
-          <input type="checkbox" class="custom-control-input" autocomplete="off"
-                 :id="'export_csv_' + type + '_' + spec.id"
-                 v-model="exportCSV" @change="updateState('export_csv')"/>
-          <label class="custom-control-label" :for="'export_csv_' + type + '_' + spec.id">
-            CSV
-          </label>
-        </div>
-
-        <div class="custom-control custom-switch">
-          <input type="checkbox" class="custom-control-input" autocomplete="off"
-                 :id="'export_turtle_' + type + '_' + spec.id"
-                 v-model="exportTurtle" @change="updateState('export_turtle')"/>
-          <label class="custom-control-label" :for="'export_turtle_' + type + '_' + spec.id">
-            RDF Turtle
-          </label>
-        </div>
-
-        <div class="custom-control custom-switch">
-          <input type="checkbox" class="custom-control-input" autocomplete="off"
-                 :id="'export_trig_' + type + '_' + spec.id"
-                 v-model="exportTrig" @change="updateState('export_trig')"/>
-          <label class="custom-control-label" :for="'export_trig_' + type + '_' + spec.id">
-            RDF TriG
-          </label>
-        </div>
-      </sub-card>
-
-      <sub-card label="RDF reification" class="col-export-rdf">
-        <div class="custom-control custom-switch mt-3">
-          <input type="checkbox" class="custom-control-input" autocomplete="off"
-                 :id="'export_standard_reif_' + type + '_' + spec.id"
-                 v-model="exportStandardReif" @change="updateState('export_standard_reif')"/>
+          <input type="radio" class="custom-control-input" autocomplete="off"
+                 :id="'export_standard_reif_' + type + '_' + spec.id" value="standard" :disabled="format === 'csv'"
+                 v-model="reification" @change="updateState('export_standard_reif')"/>
           <label class="custom-control-label" :for="'export_standard_reif_' + type + '_' + spec.id">
             Standard RDF reification
           </label>
         </div>
 
         <div class="custom-control custom-switch">
-          <input type="checkbox" class="custom-control-input" autocomplete="off"
-                 :id="'export_rdf_star_reif_' + type + '_' + spec.id"
-                 v-model="exportRdfStarReif" @change="updateState('export_rdf_star_reif')"/>
+          <input type="radio" class="custom-control-input" autocomplete="off"
+                 :id="'export_rdf_star_reif_' + type + '_' + spec.id" value="star" :disabled="format === 'csv'"
+                 v-model="reification" @change="updateState('export_rdf_star_reif')"/>
           <label class="custom-control-label" :for="'export_rdf_star_reif_' + type + '_' + spec.id">
             RDF*
           </label>
         </div>
 
         <div class="custom-control custom-switch">
-          <input type="checkbox" class="custom-control-input" autocomplete="off"
-                 :id="'export_singleton_reif_' + type + '_' + spec.id"
-                 v-model="exportSingletonReif" @change="updateState('export_singleton_reif')"/>
+          <input type="radio" class="custom-control-input" autocomplete="off"
+                 :id="'export_singleton_reif_' + type + '_' + spec.id" value="singleton"
+                 :disabled="true && format === 'csv'"
+                 v-model="reification" @change="updateState('export_singleton_reif')"/>
           <label class="custom-control-label" :for="'export_singleton_reif_' + type + '_' + spec.id">
             Singleton
           </label>
         </div>
       </sub-card>
 
-      <sub-card label="RDF vocabulary" class="col-export-rdf">
-        <div class="input-group input-group-sm mt-3">
-          <div class="input-group-prepend">
-            <span class="input-group-text">Namespace</span>
+      <sub-card label="RDF link predicate" class="col-export">
+        <v-select :value="selectedLinkPredicate" :options="linkPredicatesList"
+                  :clearable="false" :disabled="format === 'csv'"
+                  class="mt-3" autocomplete="off" placeholder="Select a link predicate" @input="selectLinkPredicate">
+          <div slot="option" slot-scope="option">
+            <div v-if="!option.predicate" class="text-info text-bold font-italic">
+              Provide another link predicate
+            </div>
+
+            <template v-else>
+              <div class="font-weight-bold">{{ option.label }}</div>
+              <div class="text-muted text-wrap font-italic smaller pt-1">
+                {{ option.uri + option.predicate }}
+              </div>
+            </template>
           </div>
-          <input type="text" class="form-control" placeholder="Prefix" style="max-width:80px;" v-model="prefix"/>
-          <input type="text" class="form-control" placeholder="URI" v-model="uri"/>
+        </v-select>
+
+        <template v-if="!predicate">
+          <div class="input-group input-group-sm mt-3">
+            <div class="input-group-prepend">
+              <span class="input-group-text">Namespace</span>
+            </div>
+            <input type="text" class="form-control" placeholder="Prefix" style="max-width:80px;"
+                   v-model="prefix" :disabled="format === 'csv'"/>
+            <input type="text" class="form-control" placeholder="URI"
+                   v-model="uri" :disabled="format === 'csv'"/>
+          </div>
+
+          <div class="input-group input-group-sm mt-3">
+            <div class="input-group-prepend">
+              <span class="input-group-text">{{ prefix }}:</span>
+            </div>
+            <input type="text" class="form-control" placeholder="Match predicate"
+                   v-model="predicate" :disabled="format === 'csv'"/>
+          </div>
+        </template>
+      </sub-card>
+
+      <sub-card label="Metadata" class="col-export">
+        <div class="row form-group mt-3">
+          <label :for="'creator_' + type + '_' + spec.id" class="col-auto">Creator:</label>
+          <div class="col-auto">
+            <input type="text" class="form-control form-control-sm" :id="'creator_' + type + '_' + spec.id"
+                   v-model="creator" :disabled="format === 'csv'"/>
+          </div>
         </div>
 
-        <div class="input-group input-group-sm mt-3">
-          <div class="input-group-prepend">
-            <span class="input-group-text">{{ prefix }}:</span>
+        <div class="row form-group mt-3">
+          <label :for="'publisher_' + type + '_' + spec.id" class="col-auto">Publisher:</label>
+          <div class="col-auto">
+            <input type="text" class="form-control form-control-sm" :id="'publisher_' + type + '_' + spec.id"
+                   v-model="publisher" :disabled="format === 'csv'"/>
           </div>
-          <input type="text" class="form-control" placeholder="Match predicate" v-model="predicate"/>
         </div>
       </sub-card>
     </div>
@@ -162,27 +203,51 @@
 </template>
 
 <script>
+    import props from "@/utils/props";
+
+    const linkPredicates = Object.values(props.linkPredicates)
+        .flatMap(linkPredicateScope => linkPredicateScope.predicates.map(pred => ({
+            label: `${linkPredicateScope.prefix}:${pred}`,
+            prefix: linkPredicateScope.prefix,
+            uri: linkPredicateScope.uri,
+            predicate: pred
+        })))
+        .sort((lpA, lpB) => {
+            const prefixCmp = lpA.prefix.localeCompare(lpB.prefix);
+            if (prefixCmp === 0)
+                return lpA.predicate.localeCompare(lpB.predicate);
+
+            return prefixCmp;
+        });
+
+    linkPredicates.push({
+        label: 'Provide another link predicate',
+        prefix: null,
+        uri: null,
+        predicate: null
+    });
+
     export default {
         name: "Export",
         data() {
             return {
-                exportLinkset: false,
+                format: 'turtle',
+                exportLinkset: true,
                 exportLinksMd: false,
                 exportGenericMd: false,
-                exportAllLinks: false,
-                exportValidatedLinks: false,
-                exportNotValidatedLinks: false,
-                exportAcceptedLinks: false,
-                exportRejectedLinks: false,
-                exportCSV: false,
-                exportTurtle: false,
-                exportTrig: false,
-                exportStandardReif: false,
-                exportRdfStarReif: false,
-                exportSingletonReif: false,
-                prefix: null,
-                uri: null,
-                predicate: null,
+                exportAllLinks: true,
+                exportValidatedLinks: true,
+                exportNotValidatedLinks: true,
+                exportAcceptedLinks: true,
+                exportRejectedLinks: true,
+                reification: 'standard',
+                linkPredicatesList: linkPredicates,
+                selectedLinkPredicate: linkPredicates[0],
+                prefix: linkPredicates[0].prefix,
+                uri: linkPredicates[0].uri,
+                predicate: linkPredicates[0].predicate,
+                creator: null,
+                publisher: null,
             }
         },
         props: {
@@ -219,27 +284,62 @@
                     case 'export_rejected_links':
                         this.exportValidatedLinks = this.exportAcceptedLinks && this.exportRejectedLinks;
                         break;
-                    case 'export_turtle':
-                    case 'export_trig':
-                        if (!this.exportTurtle && !this.exportTrig) {
-                            this.exportStandardReif = false;
-                            this.exportRdfStarReif = false;
-                            this.exportSingletonReif = false;
-                        }
-                        break;
-                    case 'export_standard_reif':
-                    case 'export_rdf_star_reif':
-                    case 'export_singleton_reif':
-                        if ((this.exportStandardReif || this.exportRdfStarReif || this.exportSingletonReif)
-                            && !this.exportTurtle && !this.exportTrig)
-                            this.exportTurtle = true;
+                    case 'export_csv':
+                        this.exportLinksMd = false;
+                        this.exportGenericMd = false;
+                        this.reification = 'standard';
                         break;
                 }
             },
 
-            doExport() {
-                // TODO return this.$root.exportCsvLink(this.type, this.spec.id, exportAccepted, exportRejected, exportNotValidated, exportMixed);
+            selectLinkPredicate(linkPredicate) {
+                this.selectedLinkPredicate = linkPredicate;
+                this.prefix = linkPredicate.prefix;
+                this.uri = linkPredicate.uri;
+                this.predicate = linkPredicate.predicate;
             },
+
+            doExport() {
+                if (this.format === 'csv')
+                    this.doCsvExport();
+                else
+                    this.doRdfExport();
+            },
+
+            doCsvExport() {
+                const params = [];
+
+                if (this.exportAcceptedLinks) params.push('valid=accepted');
+                if (this.exportRejectedLinks) params.push('valid=rejected');
+                if (this.exportNotValidatedLinks) params.push('valid=not_validated');
+                if (this.exportAcceptedLinks && this.exportRejectedLinks) params.push('valid=mixed');
+
+                this.$root.exportCsv(this.type, this.spec.id, params);
+            },
+
+            doRdfExport() {
+                const params = [];
+
+                params.push(`export_metadata=${this.exportGenericMd}`);
+                params.push(`export_link_metadata=${this.exportLinksMd}`);
+                params.push(`export_linkset=${this.exportLinkset}`);
+
+                if (this.exportAcceptedLinks) params.push('valid=accepted');
+                if (this.exportRejectedLinks) params.push('valid=rejected');
+                if (this.exportNotValidatedLinks) params.push('valid=not_validated');
+                if (this.exportAcceptedLinks && this.exportRejectedLinks) params.push('valid=mixed');
+
+                params.push(`rdf_star=${this.reification === 'star'}`);
+                params.push(`use_graphs=${this.format === 'trig'}`);
+
+                params.push(`link_pred_namespace=${encodeURIComponent(this.uri)}`);
+                params.push(`link_pred_shortname=${encodeURIComponent(this.prefix + ':' + this.predicate)}`);
+
+                if (this.creator) params.push(`creator=${encodeURIComponent(this.creator)}`);
+                if (this.publisher) params.push(`publisher=${encodeURIComponent(this.publisher)}`);
+
+                this.$root.exportRdf(this.type, this.spec.id, params);
+            }
         },
     };
 </script>
