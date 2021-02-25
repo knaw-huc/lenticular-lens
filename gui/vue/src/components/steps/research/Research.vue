@@ -41,9 +41,9 @@
         </div>
 
         <div class="col-auto">
-          <b-button @click="saveResearch" variant="secondary">
+          <button class="btn btn-secondary" @click="saveResearch">
             {{ $root.job ? 'Update' : 'Create' }}
-          </b-button>
+          </button>
         </div>
       </div>
     </div>
@@ -78,7 +78,7 @@
                  v-on:keyup.enter="$emit('load', idToLoad)"/>
 
           <div class="col-auto">
-            <b-button @click="$emit('load', idToLoad)" variant="secondary">Load</b-button>
+            <button class="btn btn-secondary" @click="$emit('load', idToLoad)">Load</button>
           </div>
         </template>
       </div>

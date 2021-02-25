@@ -196,7 +196,7 @@
 
     <div class="row justify-content-end align-items-center pt-3 mb-0">
       <div class="col-auto">
-        <b-button @click="doExport" variant="secondary">Export</b-button>
+        <button class="btn btn-secondary"@click="doExport" variant="secondary">Export</button>
       </div>
     </div>
   </card>

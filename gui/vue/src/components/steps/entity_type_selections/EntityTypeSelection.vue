@@ -13,7 +13,7 @@
       </div>
 
       <div v-if="!isOpen" class="col-auto">
-        <b-button variant="secondary" @click="$emit('duplicate', entityTypeSelection)">Duplicate</b-button>
+        <button class="btn btn-secondary" @click="$emit('duplicate', entityTypeSelection)">Duplicate</button>
       </div>
 
       <div v-if="!isOpen" class="col-auto">

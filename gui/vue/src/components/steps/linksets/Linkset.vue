@@ -15,26 +15,21 @@
       </div>
 
       <div v-if="!isOpen" class="col-auto">
-        <b-button variant="secondary" @click="$emit('duplicate', linksetSpec)">Duplicate</b-button>
+        <button class="btn btn-secondary" @click="$emit('duplicate', linksetSpec)">Duplicate</button>
       </div>
 
       <div v-if="linksetStatus === 'downloading' || linksetStatus === 'running'" class="col-auto">
-        <b-button variant="danger" @click="killLinkset">
-          Stop
-        </b-button>
+        <button class="btn btn-danger" @click="killLinkset">Stop</button>
       </div>
 
       <div v-if="clusteringStatus === 'running'" class="col-auto">
-        <b-button variant="danger" @click="killClustering">
-          Stop
-        </b-button>
+        <button class="btn btn-danger" @click="killClustering">Stop</button>
       </div>
 
       <div v-if="!linkset || linksetStatus === 'failed'" class="col-auto">
-        <b-button variant="secondary" @click="runLinkset()">
-          Run
-          <template v-if="linksetStatus === 'failed'">again</template>
-        </b-button>
+        <button class="btn btn-secondary" @click="runLinkset()">
+          Run <template v-if="linksetStatus === 'failed'">again</template>
+        </button>
       </div>
 
       <div v-if="linksetStatus === 'done' && linkset.distinct_links_count > 0" class="col-auto">

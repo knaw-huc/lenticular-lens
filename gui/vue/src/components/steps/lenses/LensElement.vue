@@ -74,7 +74,7 @@
 
                 const lensSpecs = this.$root.lensSpecs.filter(lensSpec => {
                     return this.$root.lenses.find(lens => {
-                        return lens.spec_id === lensSpec.id && lens.status === 'done' && lens.links_count > 0;
+                        return lens.spec_id === lensSpec.id && lens.status === 'done' && lens.distinct_links_count > 0;
                     });
                 });
 

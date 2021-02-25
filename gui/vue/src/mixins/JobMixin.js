@@ -427,8 +427,22 @@ export default {
             return callApi(`/job/${this.job.job_id}/cluster/${type}/${id}/${clusterId}/graph?${params.join('&')}`);
         },
 
-        async validateLink(type, id, source, target, valid) {
-            return callApi(`/job/${this.job.job_id}/validate/${type}/${id}`, {source, target, valid});
+        async validateLink(type, id, valid, source, target) {
+            return callApi(`/job/${this.job.job_id}/validate/${type}/${id}`, {valid, source, target});
+        },
+
+        async validateSelection(type, id, valid, clusterId, accepted, rejected, notSure, notValidated, mixed) {
+            const body = {valid, validation: []};
+
+            if (accepted) body.validation.push('accepted');
+            if (rejected) body.validation.push('rejected');
+            if (notSure) body.validation.push('not_sure');
+            if (notValidated) body.validation.push('not_validated');
+            if (mixed) body.validation.push('mixed');
+
+            if (clusterId) body['cluster_id'] = clusterId;
+
+            return callApi(`/job/${this.job.job_id}/validate/${type}/${id}`, body);
         },
 
         async loadDatasets(graphqlEndpoint, hsid) {

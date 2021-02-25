@@ -10,14 +10,14 @@
 
     <slot></slot>
 
-    <b-alert :show="isSaved && tabError !== ''" variant="warning" class="mt-4 mb-0">
+    <div v-show="isSaved && tabError !== ''" class="alert alert-warning mt-4 mb-0" role="alert">
       Successfully saved, but with errors:
       {{ tabError }}
-    </b-alert>
+    </div>
 
-    <b-alert :show="!isSaved && tabError !== ''" variant="danger" class="mt-4 mb-0">
+    <div v-show="!isSaved && tabError !== ''" class="alert alert-danger mt-4 mb-0" role="alert">
       {{ tabError }}
-    </b-alert>
+    </div>
   </div>
 </template>
 

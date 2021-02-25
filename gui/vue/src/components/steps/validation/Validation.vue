@@ -1,6 +1,7 @@
 <template>
-  <card :id="'validation_' + type + '_' + spec.id" type="validation" :res-id="spec.id" :label="spec.label"
-        :has-extra-row="true" :open-card="show" @show="updateShow('open')" @hide="updateShow('close')">
+  <card :id="'validation_' + type + '_' + spec.id" type="validation" :res-id="spec.id" :res-type="type"
+        :label="spec.label" :has-extra-row="true" :open-card="show"
+        @show="updateShow('open')" @hide="updateShow('close')">
     <template v-slot:columns>
       <div class="col">
         <sub-card :is-first="true" class="small">
@@ -75,13 +76,13 @@
               <div class="btn-toolbar" role="toolbar" aria-label="Toolbar">
                 <div class="btn-group btn-group-toggle mr-4">
                   <label class="btn btn-secondary btn-sm" v-bind:class="{'active': showInfo}">
-                    <input type="checkbox" autocomplete="off" v-model="showInfo" @change="updateShow"/>
+                    <input type="checkbox" autocomplete="off" v-model="showInfo"/>
                     <fa-icon icon="info-circle"/>
                     Show {{ type }} specs
                   </label>
 
                   <label class="btn btn-secondary btn-sm" v-bind:class="{'active': showPropertySelection}">
-                    <input type="checkbox" autocomplete="off" v-model="showPropertySelection" @change="updateShow"/>
+                    <input type="checkbox" autocomplete="off" v-model="showPropertySelection"/>
                     <fa-icon icon="cog"/>
                     Show property config
                   </label>
@@ -89,15 +90,17 @@
 
                 <div class="btn-group btn-group-toggle">
                   <label class="btn btn-secondary btn-sm" v-bind:class="{'active': showAllLinks}">
-                    <input type="checkbox" autocomplete="off" v-model="showAllLinks" @change="updateShow('links')"/>
+                    <input type="checkbox" autocomplete="off"
+                           v-model="showAllLinks" @change="updateShow('links')"/>
                     <fa-icon icon="list"/>
-                    Overview of all links
+                    Show all links
                   </label>
 
                   <label v-if="clustering" class="btn btn-secondary btn-sm" v-bind:class="{'active': showClusters}">
-                    <input type="checkbox" autocomplete="off" v-model="showClusters" @change="updateShow('clusters')"/>
+                    <input type="checkbox" autocomplete="off"
+                           v-model="showClusters" @change="updateShow('clusters')"/>
                     <fa-icon icon="list"/>
-                    Overview of all clusters
+                    Show links by cluster
                   </label>
                 </div>
               </div>
@@ -165,6 +168,31 @@
                     Reset
                   </button>
                 </div>
+
+                <b-dropdown class="ml-4" variant="secondary" size="sm">
+                  <template #button-content>
+                    <fa-icon icon="check-square"/>
+                    With selection
+                  </template>
+
+                  <b-dropdown-item-button variant="success" :disabled="isUpdating"
+                                          @click="validateSelection('accepted')">
+                    <fa-icon icon="check"/>
+                    Accept
+                  </b-dropdown-item-button>
+
+                  <b-dropdown-item-button variant="danger" :disabled="isUpdating"
+                                          @click="validateSelection('rejected')">
+                    <fa-icon icon="times"/>
+                    Reject
+                  </b-dropdown-item-button>
+
+                  <b-dropdown-item-button variant="warning" :disabled="isUpdating"
+                                          @click="validateSelection('not_sure')">
+                    <fa-icon icon="question"/>
+                    Not sure
+                  </b-dropdown-item-button>
+                </b-dropdown>
               </div>
             </div>
           </div>
@@ -200,7 +228,7 @@
                 <div class="btn-toolbar" role="toolbar" aria-label="Toolbar">
                   <div class="btn-group btn-group-toggle mr-2">
                     <label class="btn btn-sm btn-secondary" v-bind:class="{'active': showSelectedCluster}">
-                      <input type="checkbox" autocomplete="off" v-model="showSelectedCluster" @change="updateShow"/>
+                      <input type="checkbox" autocomplete="off" v-model="showSelectedCluster"/>
                       <fa-icon icon="info-circle"/>
                       Show selected cluster spec
                     </label>
@@ -259,15 +287,15 @@
         :association="clustering.association"
         ref="visualization"/>
 
-    <template v-if="showLinks">
+    <template v-if="showLinks && !isUpdatingSelection">
       <link-component
           v-for="(link, idx) in links"
           :key="idx"
           :index="idx"
           :link="link"
-          @accepted="acceptLink(link)"
-          @rejected="rejectLink(link)"
-          @not_sure="notSureLink(link)"/>
+          @accepted="validateLink(link,'accepted')"
+          @rejected="validateLink(link,'rejected')"
+          @not_sure="validateLink(link,'not_sure')"/>
 
       <infinite-loading :identifier="linksIdentifier" @infinite="getLinks">
         <template v-slot:spinner>
@@ -313,6 +341,9 @@
         },
         data() {
             return {
+                isUpdating: false,
+                isUpdatingSelection: false,
+
                 show: false,
                 showInfo: false,
                 showPropertySelection: false,
@@ -425,10 +456,8 @@
                     this.showSelectedCluster = false;
                     this.showClusters = false;
                 }
-                else if (state === 'clusters' && this.showAllLinks) {
-                    this.showSelectedCluster = true;
+                else if (state === 'clusters' && this.showAllLinks)
                     this.showAllLinks = false;
-                }
 
                 if (this.showAllLinks || this.showClusters)
                     this.resetLinks();
@@ -450,8 +479,6 @@
             },
 
             async resetLinks(resetClusters = false) {
-                await this.getLinkTotals();
-
                 this.links = [];
                 this.linksIdentifier += 1;
                 this.resetShownLinks = false;
@@ -460,6 +487,8 @@
                     this.clusters = [];
                     this.clustersIdentifier += 1;
                 }
+
+                await this.getLinkTotals();
             },
 
             async saveProperties() {
@@ -539,97 +568,72 @@
                 this.loadingClusters = false;
             },
 
-            async acceptLink(link) {
+            async validateLink(link, validation) {
                 const before = link.valid;
-                const after = (before === 'accepted') ? 'not_validated' : 'accepted';
+                const after = before === validation ? 'not_validated' : validation;
 
+                this.isUpdating = true;
                 link.updating = true;
-                const result = await this.$root.validateLink(this.type, this.spec.id, link.source, link.target, after);
+
+                const result = await this.$root.validateLink(this.type, this.spec.id, after, link.source, link.target);
+
+                this.isUpdating = false;
                 link.updating = false;
 
                 if (result !== null) {
                     link.valid = after;
 
-                    if (before === 'accepted')
-                        this.acceptedLinks--;
-                    else
-                        this.acceptedLinks++;
+                    switch (before) {
+                        case 'not_validated':
+                            this.notValidatedLinks--;
+                            break;
+                        case 'accepted':
+                            this.acceptedLinks--;
+                            break;
+                        case 'rejected':
+                            this.rejectedLinks--;
+                            break;
+                        case 'not_sure':
+                            this.notSureLinks--;
+                            break;
+                        case 'mixed':
+                            this.mixedLinks--;
+                            break;
+                    }
 
-                    if (before === 'not_validated')
-                        this.notValidatedLinks--;
-                    else if (before === 'accepted')
-                        this.notValidatedLinks++;
-                    else if (before === 'not_sure')
-                        this.notSureLinks--;
-                    else if (before === 'mixed')
-                        this.mixedLinks--;
-                    else
-                        this.rejectedLinks--;
+                    switch (after) {
+                        case 'not_validated':
+                            this.notValidatedLinks++;
+                            break;
+                        case 'accepted':
+                            this.acceptedLinks++;
+                            break;
+                        case 'rejected':
+                            this.rejectedLinks++;
+                            break;
+                        case 'not_sure':
+                            this.notSureLinks++;
+                            break;
+                    }
 
                     this.resetShownLinks = true;
                 }
             },
 
-            async rejectLink(link) {
-                const before = link.valid;
-                const after = (before === 'rejected') ? 'not_validated' : 'rejected';
+            async validateSelection(validation) {
+                this.isUpdating = true;
+                this.isUpdatingSelection = true;
 
-                link.updating = true;
-                const result = await this.$root.validateLink(this.type, this.spec.id, link.source, link.target, after);
-                link.updating = false;
+                const clusterId = this.showClusterLinks ? this.clusterIdSelected : undefined;
+                const result = await this.$root.validateSelection(this.type, this.spec.id, validation, clusterId,
+                    this.showAcceptedLinks, this.showRejectedLinks, this.showNotSureLinks,
+                    this.showNotValidatedLinks, this.showMixedLinks);
 
-                if (result !== null) {
-                    link.valid = after;
+                this.isUpdating = false;
+                this.isUpdatingSelection = false;
 
-                    if (before === 'rejected')
-                        this.rejectedLinks--;
-                    else
-                        this.rejectedLinks++;
-
-                    if (before === 'not_validated')
-                        this.notValidatedLinks--;
-                    else if (before === 'rejected')
-                        this.notValidatedLinks++;
-                    else if (before === 'not_sure')
-                        this.notSureLinks--;
-                    else if (before === 'mixed')
-                        this.mixedLinks--;
-                    else
-                        this.acceptedLinks--;
-
-                    this.resetShownLinks = true;
-                }
-            },
-
-            async notSureLink(link) {
-                const before = link.valid;
-                const after = (before === 'not_sure') ? 'not_validated' : 'not_sure';
-
-                link.updating = true;
-                const result = await this.$root.validateLink(this.type, this.spec.id, link.source, link.target, after);
-                link.updating = false;
-
-                if (result !== null) {
-                    link.valid = after;
-
-                    if (before === 'not_sure')
-                        this.notSureLinks--;
-                    else
-                        this.notSureLinks++;
-
-                    if (before === 'not_validated')
-                        this.notValidatedLinks--;
-                    else if (before === 'not_sure')
-                        this.notValidatedLinks++;
-                    else if (before === 'rejected')
-                        this.rejectedLinks--;
-                    else if (before === 'mixed')
-                        this.mixedLinks--;
-                    else
-                        this.acceptedLinks--;
-
-                    this.resetShownLinks = true;
-                }
+                if (result !== null)
+                    this.resetLinks();
             },
         }
     };

@@ -146,7 +146,7 @@ class MatchingSql:
                        array_agg(DISTINCT target.collection) AS target_collections,
                        {similarities} AS similarity
                 FROM source
-                JOIN target ON (source.uri != target.uri)
+                JOIN target ON source.uri != target.uri
                 AND {conditions}
                 GROUP BY source_uri, target_uri
             """

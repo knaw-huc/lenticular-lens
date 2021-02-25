@@ -77,7 +77,7 @@ class QueryBuilder:
                 for values in cur:
                     key = [key for key in values.keys() if key != 'uri'][0]
                     filtered_values = list(filter(None, values[key]))
-                    if len(values) > 0:
+                    if len(filtered_values) > 0:
                         property_values[values['uri']] = filtered_values[0]
 
         return property_values

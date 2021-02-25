@@ -4,26 +4,26 @@
         @show="onToggle(true)" @hide="onToggle(false)">
     <template v-slot:title-columns>
       <div v-if="!isOpen" class="col-auto">
-        <b-button variant="secondary" @click="$emit('duplicate', lensSpec)">Duplicate</b-button>
+        <button class="btn btn-secondary" @click="$emit('duplicate', lensSpec)">Duplicate</button>
       </div>
 
       <div v-if="lensStatus === 'downloading' || lensStatus === 'running'" class="col-auto">
-        <b-button variant="danger" @click="killLens">
+        <button class="btn btn-danger" @click="killLens">
           Stop
-        </b-button>
+        </button>
       </div>
 
       <div v-if="clusteringStatus === 'running'" class="col-auto">
-        <b-button variant="danger" @click="killClustering">
+        <button class="btn btn-danger" @click="killClustering">
           Stop
-        </b-button>
+        </button>
       </div>
 
       <div v-if="!lens || lensStatus === 'failed'" class="col-auto">
-        <b-button variant="secondary" @click="runLens()">
+        <button class="btn btn-secondary" @click="runLens()">
           Run
           <template v-if="lensStatus === 'failed'">again</template>
-        </b-button>
+        </button>
       </div>
 
       <div v-if="lensStatus === 'done' && lens.distinct_links_count > 0" class="col-auto">

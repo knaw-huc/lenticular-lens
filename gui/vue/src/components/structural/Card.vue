@@ -8,8 +8,8 @@
           <fa-icon icon="chevron-down" size="2x" v-b-toggle="hasCollapse ? id : {}"></fa-icon>
         </div>
 
-        <div class="col-auto small text-muted p-0">
-          #{{ resId }}
+        <div class="col-auto small text-uppercase text-muted p-0">
+          {{ resType ? resType + ' ' : '' }}#{{ resId }}
         </div>
 
         <div class="flex-shrink-1 mr-auto" v-bind:class="[isEditing ? 'col' : 'col-auto']">
@@ -53,6 +53,7 @@
             id: String,
             type: String,
             resId: Number,
+            resType: String,
             label: String,
             value: String,
             openCard: {

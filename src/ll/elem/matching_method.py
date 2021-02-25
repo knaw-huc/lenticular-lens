@@ -69,7 +69,7 @@ class MatchingMethod:
     @property
     def similarity_logic_ops_sql(self):
         if self.similarity_sql:
-            return sql.SQL('{function}(sim.{field})').format(
+            return sql.SQL('(SELECT {function}(x) FROM unnest(sim.{field}) AS x)').format(
                 function=sql.SQL(self._logic_ops[self._t_conorm]['sql_agg']),
                 field=sql.Identifier(self.field_name)
             )

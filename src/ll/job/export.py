@@ -9,7 +9,7 @@ from rdflib import Literal, URIRef, XSD, Graph
 from rdflib.namespace import NamespaceManager
 from anytree import Node, RenderTree, DoubleStyle, PostOrderIter
 
-from ll.job.job import Validation
+from ll.job.validation import Validation
 
 from ll.namespaces.ll_namespace import LLNamespace as LL
 from ll.namespaces.shared_ontologies import Namespaces as NS

@@ -1,14 +1,15 @@
 from json import dumps
 from uuid import uuid4
-from enum import IntFlag
 
 from psycopg2 import extras, sql
 from psycopg2.extensions import AsIs
 
 from ll.job.joins import Joins
 from ll.job.transformer import transform
-from ll.job.visualize import get_visualization
+from ll.job.validation import Validation
+from ll.job.links_filter import LinksFilter
 from ll.job.query_builder import QueryBuilder
+from ll.job.visualize import get_visualization
 
 from ll.elem.lens import Lens
 from ll.elem.linkset import Linkset
@@ -16,32 +17,6 @@ from ll.elem.entity_type_selection import EntityTypeSelection
 
 from ll.util.helpers import get_pagination_sql
 from ll.util.config_db import db_conn, fetch_one, fetch_many
-
-
-class Validation(IntFlag):
-    ALL = 31
-    ACCEPTED = 16
-    REJECTED = 8
-    NOT_SURE = 4
-    NOT_VALIDATED = 2
-    MIXED = 1
-
-    @staticmethod
-    def get(valid):
-        validation_filter = 0
-        for type in valid:
-            if type == 'accepted':
-                validation_filter |= Validation.ACCEPTED
-            if type == 'rejected':
-                validation_filter |= Validation.REJECTED
-            if type == 'not_sure':
-                validation_filter |= Validation.NOT_SURE
-            if type == 'not_validated':
-                validation_filter |= Validation.NOT_VALIDATED
-            if type == 'mixed':
-                validation_filter |= Validation.MIXED
-
-        return validation_filter if validation_filter != 0 else Validation.ALL
 
 
 class Job:
@@ -244,44 +219,106 @@ class Job:
                 cur.execute(sql.SQL('DROP TABLE IF EXISTS lenses.{}')
                             .format(sql.Identifier(self.table_name(id))))
 
-    def validate_link(self, id, type, source_uri, target_uri, valid):
+    def validate_link(self, id, type, valid, validation_filter=Validation.ALL, cluster_id=None, link=(None, None)):
+        links_filter = LinksFilter()
+        links_filter.filter_on_validation(validation_filter)
+        links_filter.filter_on_cluster(cluster_id)
+        links_filter.filter_on_link(link[0], link[1])
+
         with db_conn() as conn, conn.cursor() as cur:
             if type == 'lens':
+                temp_table_id = uuid4().hex
                 lens = self.get_lens_spec_by_id(id)
 
-                query = sql.SQL('UPDATE lenses.{} SET valid = %s WHERE source_uri = %s AND target_uri = %s') \
-                    .format(sql.Identifier(self.table_name(id)))
-                cur.execute(query, (valid, source_uri, target_uri))
+                cur.execute(sql.SQL('''
+                    CREATE TEMPORARY TABLE {table_name} ON COMMIT DROP AS 
+                    SELECT source_uri, target_uri
+                    FROM lenses.{lens_table}
+                    {filter}
+                ''').format(
+                    table_name=sql.Identifier(temp_table_id),
+                    lens_table=sql.Identifier(self.table_name(id)),
+                    filter=links_filter.sql()
+                ))
 
-                for linkset in lens.linksets:
-                    query = sql.SQL('UPDATE linksets.{} SET valid = %s WHERE source_uri = %s AND target_uri = %s') \
-                        .format(sql.Identifier(self.table_name(linkset.id)))
-                    cur.execute(query, (valid, source_uri, target_uri))
+                # If links in a lens are updated, then also update the same links from the originating linksets/lenses
+                update_sqls = [
+                    sql.SQL('''
+                        UPDATE {schema}.{table_name} AS trg
+                        SET valid = {valid} 
+                        FROM {selection_table_name} AS sel
+                        WHERE trg.source_uri = sel.source_uri 
+                        AND trg.target_uri = sel.target_uri;
+                    ''').format(
+                        schema=sql.Identifier(schema),
+                        table_name=sql.Identifier(self.table_name(spec.id)),
+                        valid=sql.Literal(valid),
+                        selection_table_name=sql.Identifier(temp_table_id)
+                    )
+                    for (schema, selection) in [('linksets', lens.linksets), ('lenses', lens.lenses)]
+                    for spec in selection
+                ]
+
+                update_sqls.append(sql.SQL('''
+                    UPDATE lenses.{table_name} AS lens 
+                    SET valid = {valid}
+                    FROM {selection_table_name} AS sel
+                    WHERE lens.source_uri = sel.source_uri
+                    AND lens.target_uri = sel.target_uri;
+                ''').format(
+                    table_name=sql.Identifier(self.table_name(id)),
+                    valid=sql.Literal(valid),
+                    selection_table_name=sql.Identifier(temp_table_id)
+                ))
+
+                to_exec = sql.Composed(update_sqls)
+
+                cur.execute(to_exec)
             else:
-                query = sql.SQL('UPDATE linksets.{} SET valid = %s WHERE source_uri = %s AND target_uri = %s') \
-                    .format(sql.Identifier(self.table_name(id)))
-                cur.execute(query, (valid, source_uri, target_uri))
+                query = sql.SQL('UPDATE linksets.{} SET valid = %s {}') \
+                    .format(sql.Identifier(self.table_name(id)), links_filter.sql())
+                cur.execute(query, (valid,))
 
+                # If links in a linkset are updated, then also update the same links from lenses based on this linkset
+                # However, if the same link yield different validations among the linksets, then use 'mixed'
                 for lens_spec in self.lens_specs:
                     if id in [linkset.id for linkset in lens_spec.linksets]:
                         validities_sql = sql.SQL(' UNION ALL ').join(
-                            sql.Composed([
-                                sql.SQL('SELECT valid '
-                                        'FROM linksets.{table} '
-                                        'WHERE source_uri = {source_uri} AND target_uri = {target_uri}').format(
-                                    table=sql.Identifier(self.table_name(linkset)),
-                                    source_uri=sql.Literal(source_uri), target_uri=sql.Literal(target_uri)
-                                ) for linkset in lens_spec.linksets if linkset.id != id
-                            ])
+                            sql.SQL('''
+                                SELECT ls.source_uri, ls.target_uri, ls.valid 
+                                FROM linksets.{} AS ls
+                                INNER JOIN links_selection AS sel
+                                ON ls.source_uri = sel.source_uri
+                                AND ls.target_uri = sel.target_uri
+                            ''').format(sql.Identifier(self.table_name(linkset.id)))
+                            for linkset in lens_spec.linksets
                         )
 
-                        cur.execute(validities_sql)
-                        validities = [result[0] for result in cur.fetchall()]
-                        valid_lens = 'mixed' if validities and valid not in validities else valid
+                        cur.execute(sql.SQL('''
+                            WITH links_selection AS (
+                                SELECT source_uri, target_uri
+                                FROM linksets.{linkset_table}
+                                {filter} 
+                            )
 
-                        query = sql.SQL('UPDATE lenses.{} SET valid = %s WHERE source_uri = %s AND target_uri = %s') \
-                            .format(sql.Identifier(self.table_name(lens_spec.id)))
-                        cur.execute(query, (valid_lens, source_uri, target_uri))
+                            UPDATE lenses.{lens_table} AS lens
+                            SET valid = linkset.valid
+                            FROM (
+                                SELECT source_uri, target_uri, 
+                                       CASE WHEN count(DISTINCT valid) > 1 
+                                            THEN 'mixed'::link_validity 
+                                            ELSE min(valid) END AS valid
+                                FROM ({validaties_select}) AS x
+                                GROUP BY source_uri, target_uri
+                            ) AS linkset
+                            WHERE lens.source_uri = linkset.source_uri 
+                            AND lens.target_uri = linkset.target_uri 
+                        ''').format(
+                            linkset_table=sql.Identifier(self.table_name(id)),
+                            filter=links_filter.sql(),
+                            lens_table=sql.Identifier(self.table_name(lens_spec.id)),
+                            validaties_select=validities_sql,
+                        ))
 
     def schema_name(self, id):
         return 'job_' + self.job_id + '_' + str(id)
@@ -375,30 +412,13 @@ class Job:
         schema = 'lenses' if type == 'lens' else 'linksets'
         spec = self.get_spec_by_id(id, type)
 
-        validation_filter_sql = []
-        if validation_filter < Validation.ALL:
-            if Validation.ACCEPTED in validation_filter:
-                validation_filter_sql.append('valid = {}'.format("'accepted'"))
-            if Validation.REJECTED in validation_filter:
-                validation_filter_sql.append('valid = {}'.format("'rejected'"))
-            if Validation.NOT_SURE in validation_filter:
-                validation_filter_sql.append('valid = {}'.format("'not_sure'"))
-            if Validation.NOT_VALIDATED in validation_filter:
-                validation_filter_sql.append('valid = {}'.format("'not_validated'"))
-            if Validation.MIXED in validation_filter:
-                validation_filter_sql.append('valid = {}'.format("'mixed'"))
-
-        conditions = []
-        if cluster_id:
-            conditions.append(sql.SQL('cluster_id = {cluster_id}').format(cluster_id=sql.Literal(cluster_id)))
-        if uri:
-            conditions.append(sql.SQL('(source_uri = {uri} OR target_uri = {uri})').format(uri=sql.Literal(uri)))
-        if len(validation_filter_sql) > 0:
-            conditions.append(sql.SQL('(' + ' OR '.join(validation_filter_sql) + ')'))
+        links_filter = LinksFilter()
+        links_filter.filter_on_validation(validation_filter)
+        links_filter.filter_on_cluster(cluster_id)
+        links_filter.filter_on_uri(uri)
 
         limit_offset_sql = get_pagination_sql(limit, offset)
-        where_sql = sql.SQL('WHERE {}').format(sql.SQL(' AND ').join(conditions)) \
-            if len(conditions) > 0 else sql.SQL('')
+        where_sql = links_filter.sql()
 
         sim_fields_sql = sql.SQL('')
         if spec.similarity_fields:
@@ -452,14 +472,9 @@ class Job:
                 }
 
     def get_links_totals(self, id, type, cluster_id=None, uri=None):
-        conditions = []
-        if cluster_id:
-            conditions.append(sql.SQL('cluster_id = {cluster_id}').format(cluster_id=sql.Literal(cluster_id)))
-        if uri:
-            conditions.append(sql.SQL('(source_uri = {uri} OR target_uri = {uri})').format(uri=sql.Literal(uri)))
-
-        where_sql = sql.SQL('WHERE {}').format(sql.SQL(' AND ').join(conditions)) \
-            if len(conditions) > 0 else sql.SQL('')
+        links_filter = LinksFilter()
+        links_filter.filter_on_cluster(cluster_id)
+        links_filter.filter_on_uri(uri)
 
         with db_conn() as conn, conn.cursor() as cur:
             cur.execute(sql.SQL('SELECT valid, count(*) AS valid_count '
@@ -468,7 +483,7 @@ class Job:
                                 'GROUP BY valid').format(
                 schema=sql.Identifier('lenses' if type == 'lens' else 'linksets'),
                 view_name=sql.Identifier(self.table_name(id)),
-                where_sql=where_sql
+                where_sql=links_filter.sql()
             ))
 
             return {row[0]: row[1] for row in cur.fetchall()}

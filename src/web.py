@@ -291,8 +291,11 @@ def clusters(job, type, id):
 def validate_link(job, type, id):
     source = request.json.get('source')
     target = request.json.get('target')
+    cluster_id = request.json.get('cluster_id')
+    validation = Validation.get(request.json.get('validation', []))
     valid = request.json.get('valid')
-    job.validate_link(id, type, source, target, valid)
+
+    job.validate_link(id, type, valid, validation_filter=validation, cluster_id=cluster_id, link=(source, target))
     return jsonify({'result': 'ok'})
 
 

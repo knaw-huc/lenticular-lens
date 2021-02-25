@@ -92,11 +92,12 @@ class TimbuctooJob(WorkerJob):
 
             query_result = query_result['dataSets'][self._dataset_id][self._collection_id + 'List']
 
-            results = []
-            for item in query_result['items']:
-                # Property names can be too long for column names in Postgres, so make them shorter
-                # We use hashing, because that keeps the column names unique and uniform
-                results.append({column_name_hash(name): self.extract_value(item[name]) for name in item})
+            # Property names can be too long for column names in Postgres, so make them shorter
+            # We use hashing, because that keeps the column names unique and uniform
+            results = [
+                {column_name_hash(name): self.extract_value(item[name]) for name in item}
+                for item in query_result['items']
+            ]
 
             with self._db_conn.cursor() as cur:
                 cur.execute("LOCK TABLE timbuctoo_tables IN ACCESS EXCLUSIVE MODE;")

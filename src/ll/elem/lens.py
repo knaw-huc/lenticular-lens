@@ -44,7 +44,7 @@ class Lens:
     @property
     def lenses(self):
         return set(self.with_lenses_recursive(
-            lambda left, right: flatten([left, right]),
+            lambda left, right, type, t_conorm, threshold, only_left: flatten([left, right]),
             lambda spec, id, type: list(spec) + spec.lenses if type == 'lens' else None
         ))
 
@@ -111,7 +111,7 @@ class Lens:
             return right
 
         return sql.SQL('{function}({a}, {b})').format(
-            operation=sql.SQL(Lens._logic_ops[t_conorm]['sql']),
+            function=sql.SQL(Lens._logic_ops[t_conorm]['sql']),
             a=left,
             b=right
         )
