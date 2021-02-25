@@ -358,7 +358,7 @@ class MatchingSql:
                         else:
                             joins.append(
                                 sql.SQL('CROSS JOIN unnest(ARRAY[{fields_org}]) \n'
-                                        'AS field_name_org').format(
+                                        'AS {field_name_org}').format(
                                     fields_org=sql.SQL(', ').join(
                                         [sql.SQL('{target}.{property_field}').format(
                                             target=sql.Identifier(target),
