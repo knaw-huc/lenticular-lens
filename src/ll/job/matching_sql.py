@@ -98,7 +98,7 @@ class MatchingSql:
                 ANALYZE target;
             """
         ) + '\n').format(
-            self._get_combined_entity_type_selections_sql(self._linkset.get_fields(['targets']), is_source=True))
+            self._get_combined_entity_type_selections_sql(self._linkset.get_fields(['targets']), is_source=False))
 
     def generate_match_index_and_sequence_sql(self):
         sequence_sql = sql.SQL(cleandoc(
