@@ -15,7 +15,7 @@ from ll.elem.lens import Lens
 from ll.elem.linkset import Linkset
 from ll.elem.entity_type_selection import EntityTypeSelection
 
-from ll.util.helpers import get_pagination_sql
+from ll.util.helpers import get_pagination_sql, get_sql_empty
 from ll.util.config_db import db_conn, fetch_one, fetch_many
 
 
@@ -395,6 +395,10 @@ class Job:
         joins = Joins()
         joins.set_joins_for_props(filter_properties)
 
+        where_sql = entity_type_selection.filters_sql
+        if where_sql:
+            where_sql = sql.SQL('WHERE {}').format(where_sql)
+
         return fetch_one(sql.SQL('''
             SELECT count({resource}.uri) AS total
             FROM timbuctoo.{table_name} AS {resource} 
@@ -404,7 +408,7 @@ class Job:
             resource=sql.Identifier(entity_type_selection.alias),
             table_name=sql.Identifier(entity_type_selection.table_name),
             joins=joins.sql,
-            condition=entity_type_selection.filters_sql
+            condition=get_sql_empty(where_sql)
         ), dict=True)
 
     def get_links(self, id, type, validation_filter=Validation.ALL, cluster_id=None, uri=None,
