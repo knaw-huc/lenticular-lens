@@ -70,7 +70,7 @@ class MatchingSql:
             )
 
             if prepare_sqls:
-                ets_sql = sql.Composed([sql.SQL('\n').join(prepare_sqls), ets_sql])
+                ets_sql = sql.Composed([sql.SQL('\n').join(prepare_sqls), sql.SQL('\n'), ets_sql])
 
             entity_type_selections_sql.append(ets_sql)
 
