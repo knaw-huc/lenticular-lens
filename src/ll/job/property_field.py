@@ -69,7 +69,8 @@ class PropertyField:
             if ns['prefix'] not in property_ns:
                 property_ns[ns['prefix']] = ns['uri']
 
-            ns = get_namespace_from_uris(prop_in_path['columns']['shortenedUri'], prop_in_path['columns']['uri'])
+            ns = get_namespace_from_uris(prop_in_path['columns']['shortenedUri'],
+                                         prop_in_path['columns']['uri'])
             if ns['prefix'] not in property_ns:
                 property_ns[ns['prefix']] = ns['uri']
 
@@ -178,7 +179,7 @@ class PropertyField:
                     'table_name': table_data['table_name'] if table_data else None,
                     'collection_uri': table_data['collection_uri'] if table_data else None,
                     'collection_shortened_uri': table_data['collection_shortened_uri'] if table_data else None,
-                    'columns': table_data['columns'] if table_data else None,
+                    'columns': table_data['columns'][prop] if table_data else None,
                     'alias': hash_string_min(path),
                     'property': column_name_hash(prop),
                     'downloaded': downloaded

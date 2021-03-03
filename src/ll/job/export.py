@@ -204,9 +204,9 @@ class Export:
                 buffer.write(n3_pred_val(NS.DCterms.created_ttl,
                                          Literal(datetime.utcnow(), datatype=XSD.dateTime).n3(ns_manager)))
 
-                if len(creator.strip()) > 0:
+                if creator and len(creator.strip()) > 0:
                     buffer.write(n3_pred_val(NS.DCterms.creator_ttl, Literal(creator.strip()).n3(ns_manager)))
-                if len(publisher.strip()) > 0:
+                if publisher and len(publisher.strip()) > 0:
                     buffer.write(n3_pred_val(NS.DCterms.creator_ttl, Literal(publisher.strip()).n3(ns_manager)))
 
                 buffer.write(n3_pred_val(NS.VoID.linkPredicate_tt, link_pred_shortname))
