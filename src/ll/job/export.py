@@ -20,7 +20,7 @@ from ll.util.helpers import n3_pred_val, get_json_from_file, get_id_of_uri
 
 class Export:
     _matching_methods_info = get_json_from_file('matching_methods.json')
-    _predefined_metadata_namespaces = {
+    _predefined_metadata_prefix_mappings = {
         NS.RDF.prefix: str(NS.RDF.rdf),
         NS.RDFS.prefix: str(NS.RDFS.rdfs),
         NS.VoID.prefix: str(NS.VoID.void),
@@ -29,7 +29,7 @@ class Export:
         NS.CC.prefix: str(NS.CC.cc),
         NS.XSD.prefix: str(NS.XSD.xsd),
     }
-    _predefined_export_only_namespaces = {
+    _predefined_export_only_prefix_mappings = {
         NS.RDF.prefix: str(NS.RDF.rdf)
     }
 
@@ -109,8 +109,8 @@ class Export:
                         {LL.ontology_prefix}
                 """) + '\n\n')
 
-            for prefix, uri in namespaces.items():
-                if prefix not in predefined_namespaces:
+            for prefix, uri in prefix_mappings.items():
+                if prefix not in predefined_prefix_mappings:
                     buffer.write(F"@prefix {prefix:>{20}}: {URIRef(uri).n3()} .\n")
 
             return buffer.getvalue()
@@ -119,47 +119,43 @@ class Export:
             yield rdf_namespaces_export()
 
             if export_metadata:
-                yield self._rdf_metadata_export(namespaces, link_pred_shortname, creator, publisher)
+                yield self._rdf_metadata_export(prefix_mappings, link_pred_shortname, creator, publisher)
 
         link_pred = link_pred_shortname.split(':')
-        predefined_namespaces = self._get_predefined_namespaces(export_metadata)
-        namespaces = self._determine_namespaces(link_pred[0], link_pred_namespace, export_metadata)
+        predefined_prefix_mappings = self._get_predefined_prefix_mappings(export_metadata)
+        prefix_mappings = self._determine_prefix_mappings(link_pred[0], link_pred_namespace,
+                                                          export_metadata, export_link_metadata, export_linkset)
 
         if export_linkset:
             links_iter = self._job.get_links(self._id, self._type, validation_filter=validation_filter)
             return itertools.chain(
                 namespaces_metadata_generator(),
-                self._rdf_linkset_export_generator(links_iter, link_pred_shortname, namespaces,
+                self._rdf_linkset_export_generator(links_iter, link_pred_shortname, prefix_mappings,
                                                    export_link_metadata, rdf_star, use_graphs))
 
         return namespaces_metadata_generator()
 
-    def _get_predefined_namespaces(self, export_metadata):
-        return self._predefined_metadata_namespaces.copy() \
-            if export_metadata else self._predefined_export_only_namespaces.copy()
+    def _get_predefined_prefix_mappings(self, export_metadata):
+        return self._predefined_metadata_prefix_mappings.copy() \
+            if export_metadata else self._predefined_export_only_prefix_mappings.copy()
 
-    def _determine_namespaces(self, link_pred_prefix, link_pred_uri, export_metadata):
-        predefined_namespaces = self._get_predefined_namespaces(export_metadata)
+    def _determine_prefix_mappings(self, link_pred_prefix, link_pred_uri,
+                                   export_metadata, export_link_metadata, export_linkset):
+        predefined_prefix_mappings = self._get_predefined_prefix_mappings(export_metadata)
 
-        if link_pred_prefix not in predefined_namespaces:
-            predefined_namespaces[link_pred_prefix] = link_pred_uri
+        if export_metadata:
+            for property in self._all_props:
+                predefined_prefix_mappings = {**predefined_prefix_mappings, **property.prefix_mappings}
 
-        for property in self._all_props:
-            predefined_namespaces = {**predefined_namespaces, **property.namespaces}
+        if export_link_metadata:
+            if link_pred_prefix not in predefined_prefix_mappings:
+                predefined_prefix_mappings[link_pred_prefix] = link_pred_uri
 
-        for ets in self._entity_type_selections:
-            for ns_uri in ets.collection.table_data['uri_namespaces']:
-                if ns_uri not in predefined_namespaces.values():
-                    prefix = get_id_of_uri(ns_uri)
+        if export_linkset:
+            for ets in self._entity_type_selections:
+                predefined_prefix_mappings = {**predefined_prefix_mappings, **ets.collection.uri_prefix_mappings}
 
-                    i = 0
-                    while prefix in predefined_namespaces:
-                        prefix += i
-                        i += 1
-
-                    predefined_namespaces[prefix] = ns_uri
-
-        return predefined_namespaces
+        return predefined_prefix_mappings
 
     def _rdf_metadata_export(self, namespaces, link_pred_shortname, creator=None, publisher=None):
         def header(x):

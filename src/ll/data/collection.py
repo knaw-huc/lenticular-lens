@@ -47,6 +47,21 @@ class Collection:
         return self.table_data['columns']
 
     @property
+    def uri_prefix_mappings(self):
+        return self.table_data['uri_prefix_mappings']
+
+    @property
+    def prefix_info(self):
+        uri = self.table_data['collection_uri']
+        short_uri = self.table_data['collection_shortened_uri']
+
+        prefix = short_uri[:short_uri.index(':')] if uri != short_uri and ':' in short_uri else None
+        prefix_uri = self.table_data['prefix_mappings'][prefix] \
+            if prefix and prefix in self.table_data['prefix_mappings'] else None
+
+        return prefix, prefix_uri
+
+    @property
     def rows_downloaded(self):
         if self.table_data['update_finish_time'] is None or \
                 self.table_data['update_finish_time'] < self.table_data['update_start_time']:
@@ -94,12 +109,12 @@ class Collection:
                         "table_name", graphql_endpoint, hsid, dataset_id, collection_id, 
                         dataset_uri, dataset_name, title, description, 
                         collection_uri, collection_title, collection_shortened_uri, 
-                        total, columns, create_time)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, now())
+                        total, columns, prefix_mappings, create_time)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, now())
                 ''', (self.table_name, self._graphql_endpoint, self._hsid, self._dataset_id, self._collection_id,
                       dataset['uri'], dataset['name'], dataset['title'], dataset['description'],
                       collection['uri'], collection['title'], collection['shortenedUri'],
-                      collection['total'], dumps(columns)))
+                      collection['total'], dumps(columns), dumps(dataset['prefixMappings'])))
 
     def update(self):
         (dataset, collection) = self.timbuctoo_dataset_and_collection
@@ -111,46 +126,30 @@ class Collection:
                     UPDATE timbuctoo_tables
                     SET dataset_uri = %s, dataset_name = %s, title = %s, description = %s, 
                         collection_uri = %s, collection_title = %s, collection_shortened_uri = %s,
-                        total = %s, columns = %s
+                        total = %s, columns = %s, prefix_mappings = %s
                     WHERE "table_name" = %s
                 ''', (dataset['uri'], dataset['name'], dataset['title'], dataset['description'],
                       collection['uri'], collection['title'], collection['shortenedUri'],
-                      collection['total'], dumps(columns), self.table_name))
+                      collection['total'], dumps(columns), dumps(dataset['prefixMappings']), self.table_name))
 
     def temp_update(self):
         from uuid import uuid4
-        from os.path import commonprefix
         from ll.util.config_db import fetch_many
 
-        namespaces = []
+        uri_prefix_mappings = {}
         with db_conn() as conn, conn.cursor(name=uuid4().hex) as cur:
             cur.execute(psycopg2_sql.SQL('SELECT uri FROM timbuctoo.{}')
                         .format(psycopg2_sql.Identifier(self.table_name)))
 
             for uri in fetch_many(cur):
-                prefix_found = False
+                for prefix, prefix_uri in self.table_data['prefix_mappings'].items():
+                    if uri[0].startswith(prefix_uri):
+                        if prefix not in uri_prefix_mappings:
+                            uri_prefix_mappings[prefix] = prefix_uri
+                        break
 
-                for ns in namespaces:
-                    common_prefix = commonprefix([uri[0], ns])
-
-                    prefix_allowed = common_prefix != '' and common_prefix != 'http'
-                    if common_prefix.startswith('http://') or common_prefix.startswith('https://'):
-                        domain = common_prefix.replace('http://', '').replace('https://', '')
-                        prefix_allowed = '/' in domain
-
-                    if prefix_allowed:
-                        prefix_found = True
-
-                        if ns != common_prefix and ns.startswith(common_prefix):
-                            namespaces.remove(ns)
-                        if common_prefix not in namespaces:
-                            namespaces.append(common_prefix)
-
-                if not prefix_found:
-                    namespaces.append(uri[0])
-
-            cur.execute('UPDATE timbuctoo_tables SET uri_namespaces = %s WHERE "table_name" = %s',
-                        (namespaces, self.table_name,))
+            cur.execute('UPDATE timbuctoo_tables SET uri_prefix_mappings = %s WHERE "table_name" = %s',
+                        (dumps(uri_prefix_mappings), self.table_name,))
 
     @staticmethod
     def columns_sql(columns):

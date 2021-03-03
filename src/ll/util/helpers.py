@@ -36,16 +36,6 @@ def n3_pred_val(predicate, value, end=False, line=True):
     return f"{tab}{predicate:{40}} {value} {'.' if end is True else ';'}{new_line}"
 
 
-def get_namespace_from_uris(shortened_uri, full_uri):
-    if shortened_uri == full_uri:
-        return {'prefix': None, 'uri': full_uri}
-
-    ns = shortened_uri.split(':')
-    ns[1] = full_uri.replace(ns[1], '')
-
-    return {'prefix': ns[0], 'uri': ns[1]}
-
-
 def get_id_of_uri(uri):
     local = re.findall(".*[/#:](.*)$", uri)
     if len(local) > 0 and len(local[0]) > 0:

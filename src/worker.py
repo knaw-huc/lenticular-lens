@@ -152,6 +152,7 @@ class Worker:
                                  hsid=self._job_data['hsid'],
                                  dataset_id=self._job_data['dataset_id'],
                                  collection_id=self._job_data['collection_id'],
+                                 prefix_mappings=self._job_data['prefix_mappings'],
                                  columns=self._job_data['columns'],
                                  cursor=self._job_data['next_page'],
                                  rows_count=self._job_data['rows_count'],

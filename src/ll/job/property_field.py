@@ -1,7 +1,7 @@
 from psycopg2 import sql as psycopg2_sql
 
 from ll.util.hasher import hash_string_min, column_name_hash
-from ll.util.helpers import get_string_from_sql, n3_pred_val, get_namespace_from_uris
+from ll.util.helpers import get_string_from_sql, n3_pred_val
 
 from ll.namespaces.shared_ontologies import Namespaces as NS
 
@@ -62,29 +62,24 @@ class PropertyField:
         return sql
 
     @property
-    def namespaces(self):
-        property_ns = {}
+    def prefix_mappings(self):
+        property_prefix_mappings = {}
         for prop_in_path in self._intermediate_property_path:
-            ns = get_namespace_from_uris(prop_in_path['collection_shortened_uri'], prop_in_path['collection_uri'])
-            if ns['prefix'] not in property_ns:
-                property_ns[ns['prefix']] = ns['uri']
+            if prop_in_path['prefix'] not in property_prefix_mappings:
+                property_prefix_mappings[prop_in_path['prefix']] = prop_in_path['prefix_uri']
 
-            ns = get_namespace_from_uris(prop_in_path['columns']['shortenedUri'],
-                                         prop_in_path['columns']['uri'])
-            if ns['prefix'] not in property_ns:
-                property_ns[ns['prefix']] = ns['uri']
+            if prop_in_path['columns']['prefix'] not in property_prefix_mappings:
+                property_prefix_mappings[prop_in_path['columns']['prefix']] = prop_in_path['columns']['prefixUri']
 
-        ns = get_namespace_from_uris(self.ets.collection.table_data['collection_shortened_uri'],
-                                     self.ets.collection.table_data['collection_uri'])
-        if ns['prefix'] not in property_ns:
-            property_ns[ns['prefix']] = ns['uri']
+        collection_prefix_info = self.ets.collection.prefix_info
+        if collection_prefix_info[0] not in property_prefix_mappings:
+            property_prefix_mappings[collection_prefix_info[0]] = collection_prefix_info[1]
 
-        ns = get_namespace_from_uris(self.ets.columns[self.prop_label]['shortenedUri'],
-                                     self.ets.columns[self.prop_label]['uri'])
-        if ns['prefix'] not in property_ns:
-            property_ns[ns['prefix']] = ns['uri']
+        if self.ets.columns[self.prop_label]['prefix'] not in property_prefix_mappings:
+            property_prefix_mappings[self.ets.columns[self.prop_label]['prefix']] \
+                = self.ets.columns[self.prop_label]['prefixUri']
 
-        return property_ns
+        return property_prefix_mappings
 
     def n3(self, end=False):
         if len(self._data) == 1:
@@ -175,10 +170,20 @@ class PropertyField:
                                  and table_data['update_finish_time'] >= table_data['update_start_time']
                     path += table_data['table_name']
 
+                uri = table_data['collection_uri'] if table_data else None
+                short_uri = table_data['collection_shortened_uri'] if table_data else None
+
+                prefix = short_uri[:short_uri.index(':')] \
+                    if uri and short_uri and uri != short_uri and ':' in short_uri else None
+                prefix_uri = table_data['prefix_mapping'][prefix] \
+                    if prefix and prefix in table_data['prefix_mapping'] else None
+
                 self._prop_path.append({
                     'table_name': table_data['table_name'] if table_data else None,
-                    'collection_uri': table_data['collection_uri'] if table_data else None,
-                    'collection_shortened_uri': table_data['collection_shortened_uri'] if table_data else None,
+                    'collection_uri': uri,
+                    'collection_shortened_uri': short_uri,
+                    'prefix': prefix,
+                    'prefix_uri': prefix_uri,
                     'columns': table_data['columns'][prop] if table_data else None,
                     'alias': hash_string_min(path),
                     'property': column_name_hash(prop),

@@ -69,7 +69,9 @@ class TimbuctooDatasets:
                             'isValueType': column_info.get('isValueType', True),
                             'isLink': column_info.get('isLink', False),
                             'density': column_info.get('density', 100),
-                            'referencedCollections': column_info.get('referencedCollections', [])
+                            'referencedCollections': column_info.get('referencedCollections', []),
+                            'prefix': column_info.get('prefix', None),
+                            'prefixUri': column_info.get('prefixUri', None),
                         } for column_info in table['columns'].values()
                     },
                 }

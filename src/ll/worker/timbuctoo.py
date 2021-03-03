@@ -1,6 +1,6 @@
+from json import dumps
 from uuid import uuid4
-from os.path import commonprefix
-from psycopg2 import sql as psycopg2_sql
+from psycopg2 import sql
 
 from ll.util.hasher import column_name_hash
 from ll.util.config_db import db_conn, fetch_many
@@ -11,17 +11,18 @@ from ll.data.timbuctoo import Timbuctoo
 
 class TimbuctooJob(WorkerJob):
     def __init__(self, table_name, graphql_endpoint, hsid, dataset_id, collection_id,
-                 columns, cursor, rows_count, rows_per_page):
+                 prefix_mappings, columns, cursor, rows_count, rows_per_page):
         self._table_name = table_name
         self._graphql_endpoint = graphql_endpoint
         self._hsid = hsid
         self._dataset_id = dataset_id
         self._collection_id = collection_id
+        self._prefix_mappings = prefix_mappings
         self._columns = columns
         self._cursor = cursor
         self._rows_count = rows_count
         self._rows_per_page = rows_per_page
-        self._namespaces = []
+        self._uri_prefix_mappings = {}
 
         super().__init__(self.run_process)
 
@@ -58,7 +59,7 @@ class TimbuctooJob(WorkerJob):
 
     def run_process(self):
         self.download()
-        self.determine_namespaces()
+        self.determine_prefix_mappings()
 
     def download(self):
         total_insert = 0
@@ -73,6 +74,7 @@ class TimbuctooJob(WorkerJob):
                             {list_id}(cursor: $cursor, count: {count}) {{
                                 nextCursor
                                 items {{
+                                    uri
                                     {columns}
                                 }}
                             }}
@@ -121,8 +123,8 @@ class TimbuctooJob(WorkerJob):
                                     'Someone else updated the job for table %s '
                                     'while I was fetching data.' % self._table_name)
 
-                cur.execute(psycopg2_sql.SQL('SELECT count(*) FROM timbuctoo.{}')
-                            .format(psycopg2_sql.Identifier(self._table_name)))
+                cur.execute(sql.SQL('SELECT count(*) FROM timbuctoo.{}')
+                            .format(sql.Identifier(self._table_name)))
                 table_rows = cur.fetchone()[0]
 
                 if table_rows != self._rows_count + total_insert:
@@ -130,12 +132,12 @@ class TimbuctooJob(WorkerJob):
                                     % (self._table_name, table_rows, self._rows_count + total_insert))
 
                 if len(results) > 0:
-                    columns_sql = psycopg2_sql.SQL(', ').join(
-                        [psycopg2_sql.Identifier(key) for key in results[0].keys()])
+                    columns_sql = sql.SQL(', ').join(
+                        [sql.Identifier(key) for key in results[0].keys()])
 
                     for result in results:
-                        cur.execute(psycopg2_sql.SQL('INSERT INTO timbuctoo.{} ({}) VALUES %s').format(
-                            psycopg2_sql.Identifier(self._table_name),
+                        cur.execute(sql.SQL('INSERT INTO timbuctoo.{} ({}) VALUES %s').format(
+                            sql.Identifier(self._table_name),
                             columns_sql,
                         ), (tuple(result.values()),))
 
@@ -151,39 +153,26 @@ class TimbuctooJob(WorkerJob):
 
             self._cursor = query_result['nextCursor']
 
-    def determine_namespaces(self):
+    def determine_prefix_mappings(self):
         with self._db_conn.cursor(name=uuid4().hex) as cur:
-            cur.execute(psycopg2_sql.SQL('SELECT uri FROM timbuctoo.{}')
-                        .format(psycopg2_sql.Identifier(self._table_name)))
+            cur.execute(sql.SQL('SELECT uri FROM timbuctoo.{}')
+                        .format(sql.Identifier(self._table_name)))
 
             for uri in fetch_many(cur):
-                prefix_found = False
-
-                for ns in self._namespaces:
-                    common_prefix = commonprefix([uri[0], ns])
-
-                    prefix_allowed = common_prefix != '' and common_prefix != 'http'
-                    if common_prefix.startswith('http://') or common_prefix.startswith('https://'):
-                        domain = common_prefix.replace('http://', '').replace('https://', '')
-                        prefix_allowed = '/' in domain
-
-                    if prefix_allowed:
-                        prefix_found = True
-
-                        if ns != common_prefix and ns.startswith(common_prefix):
-                            self._namespaces.remove(ns)
-                        if common_prefix not in self._namespaces:
-                            self._namespaces.append(common_prefix)
-
-                if not prefix_found:
-                    self._namespaces.append(uri[0])
+                for prefix, prefix_uri in self._prefix_mappings.items():
+                    if uri[0].startswith(prefix_uri):
+                        if prefix not in self._uri_prefix_mappings:
+                            self._uri_prefix_mappings[prefix] = prefix_uri
+                        break
 
     def on_finish(self):
         if self._cursor is None:
             with db_conn() as conn, conn.cursor() as cur:
+                cur.execute(sql.SQL('ANALYZE timbuctoo.{}').format(sql.Identifier(self._table_name)))
+
                 cur.execute('UPDATE timbuctoo_tables '
-                            'SET uri_namespaces = %s, update_finish_time = now() '
-                            'WHERE "table_name" = %s', (self._namespaces, self._table_name,))
+                            'SET uri_prefix_mappings = %s, update_finish_time = now() '
+                            'WHERE "table_name" = %s', (dumps(self._uri_prefix_mappings), self._table_name,))
 
     def watch_process(self):
         pass

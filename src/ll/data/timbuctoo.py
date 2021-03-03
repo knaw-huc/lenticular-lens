@@ -38,6 +38,10 @@ class Timbuctoo:
                     published
                     title { value }
                     description { value }
+                    prefixMappings {
+                        prefix
+                        uri
+                    }
                     collectionList {
                         items {
                             uri
@@ -75,12 +79,16 @@ class Timbuctoo:
             dataset_description = dataset['description']['value'] \
                 if dataset['description'] and dataset['description']['value'] else None
 
+            prefix_mapping = {prefixMapping['prefix']: prefixMapping['uri']
+                              for prefixMapping in dataset['prefixMappings']}
+
             datasets[dataset_id] = {
                 'uri': dataset['uri'],
                 'published': dataset['published'],
                 'name': dataset_name,
                 'title': dataset_title,
                 'description': dataset_description,
+                'prefixMappings': prefix_mapping,
                 'collections': {},
             }
 
@@ -96,19 +104,7 @@ class Timbuctoo:
                         'shortenedUri': collection['shortenedUri'],
                         'total': collection['total'],
                         'downloaded': False,
-                        'properties': {
-                            'uri': {
-                                'uri': None,
-                                'name': 'uri',
-                                'shortenedUri': 'uri',
-                                'isInverse': False,
-                                'isList': False,
-                                'isValueType': False,
-                                'isLink': False,
-                                'density': 100,
-                                'referencedCollections': []
-                            }
-                        }
+                        'properties': {}
                     }
 
                     for collection_property in collection['properties']['items']:
@@ -118,16 +114,24 @@ class Timbuctoo:
                         referenced_collections_filtered = \
                             list(filter(lambda ref_col: ref_col != 'tim_unknown', referenced_collections))
 
+                        uri = collection_property['uri']
+                        short_uri = collection_property['shortenedUri']
+
+                        prefix = short_uri[:short_uri.index(':')] if uri != short_uri and ':' in short_uri else None
+                        prefix_uri = prefix_mapping[prefix] if prefix and prefix in prefix_mapping else None
+
                         datasets[dataset_id]['collections'][collection_id]['properties'][property_name] = {
-                            'uri':  collection_property['uri'],
+                            'uri': uri,
                             'name': property_name,
-                            'shortenedUri': collection_property['shortenedUri'],
+                            'shortenedUri': short_uri,
                             'isInverse': collection_property['isInverse'],
                             'isList': collection_property['isList'],
                             'isValueType': collection_property['isValueType'],
                             'isLink': len(referenced_collections) > 0,
                             'density': collection_property['density'],
                             'referencedCollections': referenced_collections_filtered,
+                            'prefix': prefix,
+                            'prefixUri': prefix_uri,
                         }
 
         return datasets
