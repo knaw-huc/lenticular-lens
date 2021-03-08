@@ -27,7 +27,7 @@ class LensSql:
                 )
 
             return sql.SQL('SELECT {default_columns}, linksets, ARRAY[{id}] AS lenses '
-                           'FROM linksets.{table}').format(
+                           'FROM lenses.{table}').format(
                 default_columns=default_columns,
                 id=sql.Literal(id),
                 table=sql.Identifier(self._job.table_name(id))
