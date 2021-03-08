@@ -72,7 +72,10 @@ class Export:
             similarity = round(link['similarity'], 5) if link['similarity'] else 1
             cluster_id = link['cluster_id'] if link['cluster_id'] else ''
 
-            writer.writerow([link['source'], link['target'], similarity, link['valid'], cluster_id])
+            source_uri = link['source'] if link['link_order'] != 'target_source' else link['target']
+            target_uri = link['target'] if link['link_order'] != 'target_source' else link['source']
+
+            writer.writerow([source_uri, target_uri, similarity, link['valid'], cluster_id])
 
             i += 1
             if i > 1000:
@@ -408,13 +411,16 @@ class Export:
 
         i = 0
         for link in links_iter:
-            shortened_source_uri = link['source']
-            shortened_target_uri = link['target']
+            source_uri = link['source'] if link['link_order'] != 'target_source' else link['target']
+            target_uri = link['target'] if link['link_order'] != 'target_source' else link['source']
+
+            shortened_source_uri = source_uri
+            shortened_target_uri = target_uri
             for prefix, uri in namespaces.items():
-                if link['source'].startswith(uri):
-                    shortened_source_uri = F"{prefix}:{link['source'].replace(uri, '')}"
-                if link['target'].startswith(uri):
-                    shortened_target_uri = F"{prefix}:{link['target'].replace(uri, '')}"
+                if source_uri.startswith(uri):
+                    shortened_source_uri = F"{prefix}:{source_uri.replace(uri, '')}"
+                if target_uri.startswith(uri):
+                    shortened_target_uri = F"{prefix}:{target_uri.replace(uri, '')}"
 
             if export_link_metadata and rdf_star:
                 buffer.write(F"\t<<{shortened_source_uri}    {link_pred_shortname}    {shortened_target_uri}>>\n")
