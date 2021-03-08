@@ -38,7 +38,7 @@ class Lens:
     def linksets(self):
         return set(self.with_lenses_recursive(
             lambda left, right, type, t_conorm, threshold, only_left: flatten([left, right]),
-            lambda spec, id, type: spec if type == 'linkset' else spec.linksets
+            lambda spec, id, type: spec if type == 'linkset' else list(spec.linksets)
         ))
 
     @property
