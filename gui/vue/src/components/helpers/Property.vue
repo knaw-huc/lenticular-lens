@@ -252,31 +252,38 @@
                 if (!this.dataset.collections.hasOwnProperty(collectionId))
                     return null;
 
-                return Object.fromEntries(
-                    Object
-                        .entries(this.dataset.collections[collectionId].properties)
-                        .sort(([idA, propA], [idB, propB]) => {
-                            if (idA === 'uri')
-                                return -1;
-                            if (idB === 'uri')
-                                return 1;
+                return {
+                    uri: {
+                        density: 100,
+                        isInverse: false,
+                        isLink: false,
+                        isList: false,
+                        isValueType: false,
+                        name: 'uri',
+                        referencedCollections: [],
+                        shortenedUri: 'uri',
+                        uri: 'uri'
+                    }, ...Object.fromEntries(
+                        Object
+                            .entries(this.dataset.collections[collectionId].properties)
+                            .sort(([idA, propA], [idB, propB]) => {
+                                if (propA.shortenedUri && propB.shortenedUri) {
+                                    if (propA.shortenedUri === propA.uri && propB.shortenedUri !== propB.uri)
+                                        return 1;
 
-                            if (propA.shortenedUri && propB.shortenedUri) {
-                                if (propA.shortenedUri === propA.uri && propB.shortenedUri !== propB.uri)
-                                    return 1;
+                                    if (propB.shortenedUri === propB.uri && propA.shortenedUri !== propA.uri)
+                                        return -1;
 
-                                if (propB.shortenedUri === propB.uri && propA.shortenedUri !== propA.uri)
-                                    return -1;
+                                    if (propA.shortenedUri === propB.shortenedUri)
+                                        return propB.isInverse ? -1 : 1;
 
-                                if (propA.shortenedUri === propB.shortenedUri)
-                                    return propB.isInverse ? -1 : 1;
+                                    return propA.shortenedUri < propB.shortenedUri ? -1 : 1;
+                                }
 
-                                return propA.shortenedUri < propB.shortenedUri ? -1 : 1;
-                            }
-
-                            return idA < idB ? -1 : 1;
-                        })
-                );
+                                return idA < idB ? -1 : 1;
+                            })
+                    )
+                };
             },
 
             getCollectionsForIndex(index) {

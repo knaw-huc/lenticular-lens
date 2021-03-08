@@ -148,6 +148,7 @@ class Collection:
                             uri_prefix_mappings[prefix] = prefix_uri
                         break
 
+        with db_conn() as conn, conn.cursor() as cur:
             cur.execute('UPDATE timbuctoo_tables SET uri_prefix_mappings = %s WHERE "table_name" = %s',
                         (dumps(uri_prefix_mappings), self.table_name,))
 
