@@ -90,9 +90,7 @@ def get_visualization(job, id, type, cluster_id, associations=None, include_comp
                 sub_cluster_link_count[key] = 1 + additional
 
         def vis_community(vis, reducer=1, children=None):
-            def swallow(complex=False):
-                global parent
-
+            def swallow(complex=False, parent=None):
                 if len(vis['links']) == 0:
                     return
 
@@ -218,7 +216,7 @@ def get_visualization(job, id, type, cluster_id, associations=None, include_comp
             for parent, infants in parents.items():
                 for child in infants:
                     if child not in parents and len(children[child]) == 1:
-                        swallow()
+                        swallow(parent=parent)
                         cond = True
                         del children[child]
 
