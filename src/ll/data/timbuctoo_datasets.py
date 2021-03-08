@@ -29,16 +29,6 @@ class TimbuctooDatasets:
                     collection = Collection(self._graphql_uri, self._hsid, dataset_id, collection_id, timbuctoo_data)
                     collection.update()
 
-    def temp_update(self):
-        timbuctoo_data = Timbuctoo(self._graphql_uri, self._hsid).datasets
-        database_data = self._datasets_from_database()
-
-        for dataset_id, dataset_data in database_data.items():
-            for collection_id, collection_data in dataset_data['collections'].items():
-                if dataset_id in timbuctoo_data and collection_id in timbuctoo_data[dataset_id]['collections']:
-                    collection = Collection(self._graphql_uri, self._hsid, dataset_id, collection_id, timbuctoo_data)
-                    collection.temp_update()
-
     def _datasets_from_database(self):
         with db_conn() as conn, conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) as cur:
             cur.execute('SELECT * FROM timbuctoo_tables WHERE graphql_endpoint = %s', (self._graphql_uri,))

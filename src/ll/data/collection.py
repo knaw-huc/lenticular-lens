@@ -132,26 +132,6 @@ class Collection:
                       collection['uri'], collection['title'], collection['shortenedUri'],
                       collection['total'], dumps(columns), dumps(dataset['prefixMappings']), self.table_name))
 
-    def temp_update(self):
-        from uuid import uuid4
-        from ll.util.config_db import fetch_many
-
-        uri_prefix_mappings = {}
-        with db_conn() as conn, conn.cursor(name=uuid4().hex) as cur:
-            cur.execute(psycopg2_sql.SQL('SELECT uri FROM timbuctoo.{}')
-                        .format(psycopg2_sql.Identifier(self.table_name)))
-
-            for uri in fetch_many(cur):
-                for prefix, prefix_uri in self.table_data['prefix_mappings'].items():
-                    if uri[0].startswith(prefix_uri):
-                        if prefix not in uri_prefix_mappings:
-                            uri_prefix_mappings[prefix] = prefix_uri
-                        break
-
-        with db_conn() as conn, conn.cursor() as cur:
-            cur.execute('UPDATE timbuctoo_tables SET uri_prefix_mappings = %s WHERE "table_name" = %s',
-                        (dumps(uri_prefix_mappings), self.table_name,))
-
     @staticmethod
     def columns_sql(columns):
         def column_sql(column_name, column_type):

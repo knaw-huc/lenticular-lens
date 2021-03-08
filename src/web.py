@@ -71,12 +71,6 @@ def datasets_update():
     return jsonify({'result': 'updated'})
 
 
-@app.route('/datasets/temp_update', methods=['POST'])
-def datasets_temp_update():
-    TimbuctooDatasets(request.form.get('endpoint'), request.form.get('hsid')).temp_update()
-    return jsonify({'result': 'updated'})
-
-
 @app.route('/downloads')
 def downloads():
     return jsonify(Collection.download_status())

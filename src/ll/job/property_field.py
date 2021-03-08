@@ -175,8 +175,10 @@ class PropertyField:
 
                 prefix = short_uri[:short_uri.index(':')] \
                     if uri and short_uri and uri != short_uri and ':' in short_uri else None
-                prefix_uri = table_data['prefix_mapping'][prefix] \
-                    if prefix and prefix in table_data['prefix_mapping'] else None
+                prefix_uri = table_data['prefix_mappings'][prefix] \
+                    if prefix and prefix in table_data['prefix_mappings'] else None
+
+                property = column_name_hash(prop)
 
                 self._prop_path.append({
                     'table_name': table_data['table_name'] if table_data else None,
@@ -184,9 +186,9 @@ class PropertyField:
                     'collection_shortened_uri': short_uri,
                     'prefix': prefix,
                     'prefix_uri': prefix_uri,
-                    'columns': table_data['columns'][prop] if table_data else None,
+                    'columns': table_data['columns'] if table_data else None,
                     'alias': hash_string_min(path),
-                    'property': column_name_hash(prop),
+                    'property': property,
                     'downloaded': downloaded
                 })
 
