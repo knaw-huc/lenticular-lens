@@ -224,31 +224,31 @@ export default {
                                 delete method.method_config.threshold;
                                 method.method_sim_normalized = true;
                             }
-
-                            method.sources.forEach(source => {
-                                source.transformers = source.transformers.filter(transformer =>
-                                    transformer.name !== 'PARSE_DATE' && transformer.name !== 'PARSE_NUMERIC');
-
-                                source.transformers.forEach(transformer => {
-                                    if (transformer.name === 'ECARTICO_FULL_NAME') {
-                                        transformer.name = 'TRANSFORM_LAST_NAME_FORMAT';
-                                        transformer.parameters = {infix: true};
-                                    }
-                                });
-                            });
-
-                            method.targets.forEach(target => {
-                                target.transformers = target.transformers.filter(transformer =>
-                                    transformer.name !== 'PARSE_DATE' && transformer.name !== 'PARSE_NUMERIC');
-
-                                target.transformers.forEach(transformer => {
-                                    if (transformer.name === 'ECARTICO_FULL_NAME') {
-                                        transformer.name = 'TRANSFORM_LAST_NAME_FORMAT';
-                                        transformer.parameters = {infix: true};
-                                    }
-                                });
-                            });
                         }
+
+                        method.sources.forEach(source => {
+                            source.transformers = source.transformers.filter(transformer =>
+                                transformer.name !== 'PARSE_DATE' && transformer.name !== 'PARSE_NUMERIC');
+
+                            source.transformers.forEach(transformer => {
+                                if (transformer.name === 'ECARTICO_FULL_NAME') {
+                                    transformer.name = 'TRANSFORM_LAST_NAME_FORMAT';
+                                    transformer.parameters = {infix: true};
+                                }
+                            });
+                        });
+
+                        method.targets.forEach(target => {
+                            target.transformers = target.transformers.filter(transformer =>
+                                transformer.name !== 'PARSE_DATE' && transformer.name !== 'PARSE_NUMERIC');
+
+                            target.transformers.forEach(transformer => {
+                                if (transformer.name === 'ECARTICO_FULL_NAME') {
+                                    transformer.name = 'TRANSFORM_LAST_NAME_FORMAT';
+                                    transformer.parameters = {infix: true};
+                                }
+                            });
+                        });
 
                         if (method.hasOwnProperty('list_threshold')) {
                             method.list_matching = {
