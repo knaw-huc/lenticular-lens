@@ -5,7 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.postgres
-    image: knawhuc/lenticular-lenses-postgres:latest
+    image: knawhuc/lenticular-lens-postgres:latest
     shm_size: 1g
     volumes:
       - ./pgdata:/pgdata

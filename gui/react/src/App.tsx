@@ -57,7 +57,7 @@ export default function App() {
 
     return (
         <div>
-            <h2>Lenticular Lenses</h2>
+            <h2>Lenticular Lens</h2>
 
             <h3>Property</h3>
 

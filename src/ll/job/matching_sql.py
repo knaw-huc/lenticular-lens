@@ -240,7 +240,7 @@ class MatchingSql:
 
         # Get the properties needed for the source or target per entity-type selection
         for ets_id, ets_properties in properties.items():
-            joins, matching_fields, props_not_null = [], [], []
+            joins, matching_fields = [], []
 
             # Then for get all properties from this entity-type selection required for a single matching function
             for ets_index, (property_label, ets_matching_func_props) in enumerate(ets_properties.items()):
@@ -248,29 +248,26 @@ class MatchingSql:
                 ets_method_properties = ets_matching_func_props['properties']
 
                 MatchingSql._matching_methods_sql(ets_id, matching_method, ets_method_properties,
-                                                  is_source, joins, matching_fields, props_not_null, ets_index)
+                                                  is_source, joins, matching_fields, ets_index)
 
             sqls.append(
                 sql.SQL(cleandoc(
                     """ SELECT DISTINCT {collection} AS collection, target.uri, 
                                         {matching_fields}
                         FROM {res} AS target {joins}
-                        WHERE {props_not_null}
                    """
                 )).format(
                     collection=sql.Literal(int(ets_id)),
                     matching_fields=sql.SQL(',\n                ').join(matching_fields),
                     res=sql.Identifier(hash_string_min(ets_id)),
                     joins=get_sql_empty(sql.SQL('\n').join(joins)),
-                    props_not_null=sql.SQL('\nAND ').join(props_not_null),
                 )
             )
 
         return sql.SQL('\nUNION ALL\n').join(sqls)
 
     @staticmethod
-    def _matching_methods_sql(ets_id, matching_method, properties,
-                              is_source, joins, matching_fields, props_not_null, ets_index):
+    def _matching_methods_sql(ets_id, matching_method, properties, is_source, joins, matching_fields, ets_index):
         field_name_org = matching_method.field_name
         field_name_norm = field_name_org + '_norm'
 
@@ -308,66 +305,54 @@ class MatchingSql:
                     ),
                     field_name=sql.Identifier(field_name + '_extended')
                 ))
-            else:
-                target = 'target'
+            # In case of multiple props, combine all values into a new field to use as a join
+            elif len(props) > 1:
+                target_field = sql.Identifier(field_name)
 
-                # Add a join for this particular field if it is not the first one (first one will be used as 'from')
-                if ets_index > 0:
-                    target += str(ets_index)
-
-                    if not is_normalized:
+                if not is_normalized:
+                    if props_norm:
                         joins.append(
-                            sql.SQL('INNER JOIN {res} AS {join_name} ON target.uri = {join_name}.uri').format(
-                                res=sql.Identifier(hash_string_min(ets_id)),
-                                join_name=sql.Identifier(target)
+                            sql.SQL('CROSS JOIN unnest(ARRAY[{fields_org}], ARRAY[{fields_norm}]) \n'
+                                    'AS {join_name}({field_name_org}, {field_name_norm})').format(
+                                fields_org=sql.SQL(', ').join(
+                                    [sql.SQL('target.{}').format(sql.Identifier(prop.hash)) for prop in props_org]
+                                ),
+                                fields_norm=sql.SQL(', ').join(
+                                    [sql.SQL('target.{}').format(sql.Identifier(prop.hash)) for prop in props_norm]
+                                ),
+                                join_name=sql.Identifier('join_' + field_name_org),
+                                field_name_org=sql.Identifier(field_name_org),
+                                field_name_norm=sql.Identifier(field_name_norm)
                             )
                         )
+                    else:
+                        joins.append(
+                            sql.SQL('CROSS JOIN unnest(ARRAY[{fields_org}]) \n'
+                                    'AS {field_name_org}').format(
+                                fields_org=sql.SQL(', ').join(
+                                    [sql.SQL('target.{}').format(sql.Identifier(prop.hash)) for prop in props_org]
+                                ),
+                                field_name_org=sql.Identifier(field_name_org),
+                            )
+                        )
+            else:
+                target = 'target' + str(ets_index)
 
-                # Default case: if we have just one property, just select that property field from the target
+                if not is_normalized:
+                    joins.append(
+                        sql.SQL('LEFT JOIN {res} AS {join_name} \n'
+                                'ON target.uri = {join_name}.uri \n'
+                                'AND {join_name}.{property_field} IS NOT NULL').format(
+                            res=sql.Identifier(hash_string_min(ets_id)),
+                            join_name=sql.Identifier(target),
+                            property_field=sql.Identifier(props[0].hash)
+                        )
+                    )
+
                 target_field = sql.SQL('{target}.{property_field}').format(
                     target=sql.Identifier(target),
                     property_field=sql.Identifier(props[0].hash)
                 )
-
-                # In case of multiple props, combine all values into a new field to use as a join
-                if len(props) > 1:
-                    target_field = sql.Identifier(field_name)
-
-                    if not is_normalized:
-                        if props_norm:
-                            joins.append(
-                                sql.SQL('CROSS JOIN unnest(ARRAY[{fields_org}], ARRAY[{fields_norm}]) \n'
-                                        'AS {join_name}({field_name_org}, {field_name_norm})').format(
-                                    fields_org=sql.SQL(', ').join(
-                                        [sql.SQL('{target}.{property_field}').format(
-                                            target=sql.Identifier(target),
-                                            property_field=sql.Identifier(prop.hash)
-                                        ) for prop in props_org]
-                                    ),
-                                    fields_norm=sql.SQL(', ').join(
-                                        [sql.SQL('{target}.{property_field}').format(
-                                            target=sql.Identifier(target),
-                                            property_field=sql.Identifier(prop.hash)
-                                        ) for prop in props_norm]
-                                    ),
-                                    join_name=sql.Identifier('join_' + target),
-                                    field_name_org=sql.Identifier(field_name_org),
-                                    field_name_norm=sql.Identifier(field_name_norm)
-                                )
-                            )
-                        else:
-                            joins.append(
-                                sql.SQL('CROSS JOIN unnest(ARRAY[{fields_org}]) \n'
-                                        'AS {field_name_org}').format(
-                                    fields_org=sql.SQL(', ').join(
-                                        [sql.SQL('{target}.{property_field}').format(
-                                            target=sql.Identifier(target),
-                                            property_field=sql.Identifier(prop.hash)
-                                        ) for prop in props_org]
-                                    ),
-                                    field_name_org=sql.Identifier(field_name_org),
-                                )
-                            )
 
             if target_field:
                 # Now that we have determined the target field, add it to the list of matching fields
@@ -375,12 +360,6 @@ class MatchingSql:
                     target_field=target_field,
                     field_name=sql.Identifier(field_name)
                 ))
-
-                # Add is not null or is not empty check
-                if matching_method.is_list_match:
-                    props_not_null.append(sql.SQL('cardinality({}) > 0').format(target_field))
-                else:
-                    props_not_null.append(sql.SQL('{} IS NOT NULL').format(target_field))
 
                 # Add properties to do the intermediate dataset matching
                 if matching_method.method_name == 'INTERMEDIATE':

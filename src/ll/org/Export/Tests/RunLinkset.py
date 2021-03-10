@@ -5,7 +5,7 @@ from ll.org.Export.Tests.TestData import DATA_DIR as DIR
 from os.path import join
 
 test, chiara, leon = False, False, True
-save_in, csv = "/Users/kerim/git/lenticular-lenses/", "Accepted.csv"
+save_in, csv = "/Users/kerim/git/lenticular-lens/", "Accepted.csv"
 chiara_csv = ["ef3849ec51b1aaee68cbca751ddcb652-6.csv"]
 n = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
 

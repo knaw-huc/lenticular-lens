@@ -18,6 +18,10 @@ $vs-component-placeholder-color: lightgrey;
 @import "~vue-select/src/scss/vue-select.scss";
 @import '~vue-form-wizard/dist/vue-form-wizard.min.css';
 
+.container {
+  min-width: 1500px;
+}
+
 .vue-form-wizard {
   .wizard-btn {
     color: $dark !important;

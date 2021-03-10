@@ -1,6 +1,6 @@
 # SCRIPT OVERVIEW ######################################################################################################
 #                                                                                                                      #
-#   This keeps track of the namespace of the Lenticular Lenses Ontology used for documenting matching methods.         #
+#   This keeps track of the namespace of the Lenticular Lens Ontology used for documenting matching methods.         #
 #   It defines:                                                                                                        #
 #       1. prefixes:                                                                                                   #
 #           ll      : http://lenticularlens.org/ontology/                                                              #

@@ -197,7 +197,7 @@ class Export:
                 buffer.write(n3_pred_val('a', LL.Linkset_ttl))
 
                 buffer.write(n3_pred_val(NS.VoID.feature_ttl, NS.Formats.turtle_ttl))
-                buffer.write(n3_pred_val(NS.CC.attributionName_ttl, Literal('Lenticular Lenses', 'en').n3(ns_manager)))
+                buffer.write(n3_pred_val(NS.CC.attributionName_ttl, Literal('Lenticular Lens', 'en').n3(ns_manager)))
                 buffer.write(n3_pred_val(NS.CC.license_ttl,
                                          URIRef('http://purl.org/NET/rdflicense/W3C1.0').n3(ns_manager)))
                 buffer.write(n3_pred_val(NS.DCterms.created_ttl,

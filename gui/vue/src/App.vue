@@ -1,7 +1,7 @@
 <template>
   <div class="container" id="app">
     <form-wizard
-        title="Lenticular Lenses"
+        title="Lenticular Lens"
         subtitle="Reconcile data for Golden Agents"
         color="#efc501"
         shape="square"
