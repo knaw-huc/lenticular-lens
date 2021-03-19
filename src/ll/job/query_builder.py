@@ -10,41 +10,45 @@ class QueryBuilder:
     def __init__(self):
         self._queries = []
 
-    def add_query(self, dataset, entity, resource, target, filter_properties, selection_properties,
+    def add_query(self, graphql_endpoint, dataset_id, collection_id, resource, target,
+                  filter_properties, selection_properties,
                   condition=None, invert=False, single_value=False, limit=None, offset=0):
         query = self._create_query(resource, target, filter_properties, selection_properties,
                                    condition=condition, invert=invert, single_value=single_value,
                                    limit=limit, offset=offset)
         if query:
             self._queries.append({
-                'dataset': dataset,
-                'entity': entity,
+                'graphql_endpoint': graphql_endpoint,
+                'dataset_id': dataset_id,
+                'collection_id': collection_id,
                 'properties': selection_properties,
                 'query': query
             })
 
-    def add_linkset_query(self, schema, linkset, dataset, entity, resource, target, filter_properties,
+    def add_linkset_query(self, schema, linkset, graphql_endpoint, dataset_id, collection_id, resource, target,
                           selection_properties, condition=None, single_value=False, limit=None, offset=0):
         linkset_join = self._linkset_join_sql(schema, linkset, resource, condition, limit, offset)
-        query = self._create_query(resource, target, filter_properties, selection_properties,
+        query = self._create_query(resource, target, [], selection_properties,
                                    extra_join=linkset_join, single_value=single_value)
         if query:
             self._queries.append({
-                'dataset': dataset,
-                'entity': entity,
+                'graphql_endpoint': graphql_endpoint,
+                'dataset_id': dataset_id,
+                'collection_id': collection_id,
                 'properties': selection_properties,
                 'query': query
             })
 
-    def add_cluster_query(self, cluster, dataset, entity, resource, target,
-                          filter_properties, selection_properties, single_value=False, limit=None, offset=0):
-        cluster_join = self._linkset_cluster_join_sql(cluster, resource, limit, offset)
-        query = self._create_query(resource, target, filter_properties, selection_properties,
+    def add_cluster_query(self, schema, linkset, graphql_endpoint, dataset_id, collection_id, resource, target,
+                          selection_properties, single_value=False, limit=None, offset=0):
+        cluster_join = self._linkset_cluster_join_sql(schema, linkset, resource, limit, offset)
+        query = self._create_query(resource, target, [], selection_properties,
                                    extra_join=cluster_join, single_value=single_value)
         if query:
             self._queries.append({
-                'dataset': dataset,
-                'entity': entity,
+                'graphql_endpoint': graphql_endpoint,
+                'dataset_id': dataset_id,
+                'collection_id': collection_id,
                 'properties': selection_properties,
                 'query': query
             })
@@ -56,8 +60,9 @@ class QueryBuilder:
                 cur.execute(query_info['query'])
                 for values in cur:
                     prop_and_values = [{
-                        'dataset': query_info['dataset'],
-                        'entity': query_info['entity'],
+                        'graphql_endpoint': query_info['graphql_endpoint'],
+                        'dataset_id': query_info['dataset_id'],
+                        'collection_id': query_info['collection_id'],
                         'property': property.property_path,
                         'values': list(filter(None, values[property.hash])) if property.hash in values else []
                     } for property in query_info['properties']]
@@ -156,14 +161,14 @@ class QueryBuilder:
         )
 
     @staticmethod
-    def _linkset_cluster_join_sql(table_name, resource, limit=None, offset=0, uri_limit=5):
+    def _linkset_cluster_join_sql(schema, linkset, resource, limit=None, offset=0, uri_limit=5):
         return sql.SQL('''
             INNER JOIN (
                 SELECT nodes.uri, ROW_NUMBER() OVER (PARTITION BY ls.cluster_id) AS cluster_row_number
                 FROM linksets.{linkset} AS ls
                 INNER JOIN (
                     SELECT cluster_id
-                    FROM linksets.{linkset}
+                    FROM {schema}.{linkset}
                     CROSS JOIN LATERAL (VALUES (source_uri), (target_uri)) AS nodes(uri)
                     GROUP BY cluster_id
                     ORDER BY count(DISTINCT nodes.uri) DESC, cluster_id ASC
@@ -173,7 +178,8 @@ class QueryBuilder:
             ) AS linkset 
             ON {resource}.uri = linkset.uri AND linkset.cluster_row_number < {uri_limit}
         ''').format(
-            linkset=sql.Identifier(table_name),
+            schema=sql.Identifier(schema),
+            linkset=sql.Identifier(linkset),
             limit_offset=sql.SQL(get_pagination_sql(limit, offset)),
             uri_limit=sql.Literal(uri_limit),
             resource=sql.Identifier(resource)

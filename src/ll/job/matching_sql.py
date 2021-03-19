@@ -63,7 +63,7 @@ class MatchingSql:
                 pre=sql.SQL('SELECT * FROM (') if entity_type_selection.limit > -1 else sql.SQL(''),
                 view_name=sql.Identifier(entity_type_selection.alias),
                 matching_fields=sql.SQL(',\n       ').join(matching_fields_sqls),
-                table_name=sql.Identifier(entity_type_selection.table_name),
+                table_name=sql.Identifier(entity_type_selection.collection.table_name),
                 joins=get_sql_empty(joins.sql),
                 wheres=get_sql_empty(where_sql),
                 limit=get_sql_empty(limit),
@@ -116,20 +116,24 @@ class MatchingSql:
         return sequence_sql
 
     def generate_match_linkset_sql(self):
-        fields_sqls = []
-        fields_added = set()
+        similarities_sqls, source_intermediates_sqls, target_intermediates_sqls = [], [], []
         for matching_method in self._linkset.matching_methods:
+            field_name = matching_method.field_name
             if matching_method.similarity_sql:
-                name = matching_method.field_name
+                similarities_sqls \
+                    .append(sql.SQL('{}, array_agg(DISTINCT {})')
+                            .format(sql.Literal(field_name), matching_method.similarity_sql))
 
-                # Add source and target values; if not done already
-                if name not in fields_added:
-                    fields_added.add(name)
-                    fields_sqls.append(sql.SQL('{}, array_agg(DISTINCT {})')
-                                       .format(sql.Literal(name), matching_method.similarity_sql))
+            if matching_method.is_intermediate:
+                source_intermediates_sqls \
+                    .append(sql.SQL('{}, array_agg(DISTINCT source.{})')
+                            .format(sql.Literal(field_name), sql.Identifier(field_name + '_intermediate')))
+                target_intermediates_sqls \
+                    .append(sql.SQL('{}, array_agg(DISTINCT target.{})')
+                            .format(sql.Literal(field_name), sql.Identifier(field_name + '_intermediate')))
 
         conditions_sql = self._linkset.with_matching_methods_recursive(
-            lambda sqls, operator, fuzzy: sql.SQL('({})').format(sql.SQL('\n%s ' % operator).join(sqls)),
+            lambda sqls, operator, fuzzy, threshold: sql.SQL('({})').format(sql.SQL('\n%s ' % operator).join(sqls)),
             lambda matching_method: matching_method.sql
         )
 
@@ -144,6 +148,8 @@ class MatchingSql:
                             ELSE 'both'::link_order END AS link_order,
                        array_agg(DISTINCT source.collection) AS source_collections,
                        array_agg(DISTINCT target.collection) AS target_collections,
+                       {source_intermediates} AS source_intermediates,
+                       {target_intermediates} AS target_intermediates,
                        {similarities} AS similarity
                 FROM source
                 JOIN target ON source.uri != target.uri
@@ -151,24 +157,27 @@ class MatchingSql:
                 GROUP BY source_uri, target_uri
             """
         )).format(
-            similarities=sql.SQL('jsonb_build_object({})').format(sql.SQL(', ').join(fields_sqls)) \
-                if fields_sqls else sql.SQL('NULL::jsonb'),
+            source_intermediates=sql.SQL('jsonb_build_object({})').format(sql.SQL(', ').join(source_intermediates_sqls)) \
+                if source_intermediates_sqls else sql.SQL('NULL::jsonb'),
+            target_intermediates=sql.SQL('jsonb_build_object({})').format(sql.SQL(', ').join(target_intermediates_sqls)) \
+                if target_intermediates_sqls else sql.SQL('NULL::jsonb'),
+            similarities=sql.SQL('jsonb_build_object({})').format(sql.SQL(', ').join(similarities_sqls)) \
+                if similarities_sqls else sql.SQL('NULL::jsonb'),
             conditions=conditions_sql
         )
 
-        sim_conditions_sqls = [match_method.similarity_threshold_sql
-                               for match_method in self._linkset.matching_methods
-                               if match_method.similarity_threshold_sql]
+        sim_matching_methods_conditions_sqls = [match_method.similarity_threshold_sql
+                                                for match_method in self._linkset.matching_methods
+                                                if match_method.similarity_threshold_sql]
 
-        if self._linkset.similarity_fields and (self._linkset.threshold or sim_conditions_sqls):
+        sim_grouping_conditions_sqls = [sql.SQL('{similarity} >= {threshold}').format(
+            similarity=similarity,
+            threshold=sql.Literal(threshold)
+        ) for (threshold, similarity) in self._linkset.similarity_logic_ops_sql_per_threshold]
+
+        if self._linkset.similarity_fields and (sim_matching_methods_conditions_sqls or sim_grouping_conditions_sqls):
             sim_fields_sqls = [sql.SQL('{} numeric[]').format(sql.Identifier(sim_field))
                                for sim_field in self._linkset.similarity_fields]
-
-            if self._linkset.threshold:
-                sim_conditions_sqls.append(sql.SQL('{sim_logic_ops_sql} >= {threshold}').format(
-                    sim_logic_ops_sql=self._linkset.similarity_logic_ops_sql,
-                    threshold=sql.Literal(self._linkset.threshold)
-                ))
 
             return sql.SQL(cleandoc(
                 """ DROP TABLE IF EXISTS linksets.{linkset} CASCADE;
@@ -185,7 +194,8 @@ class MatchingSql:
                 linkset=sql.Identifier(self._job.table_name(self._linkset.id)),
                 linkset_sql=linkset_sql,
                 sim_fields_sql=sql.SQL(', ').join(sim_fields_sqls),
-                sim_conditions=sql.SQL(' AND ').join(sim_conditions_sqls)
+                sim_conditions=sql.SQL(' AND ').join(
+                    sim_matching_methods_conditions_sqls + sim_grouping_conditions_sqls)
             )
 
         return sql.SQL(cleandoc(
@@ -362,22 +372,29 @@ class MatchingSql:
                 ))
 
                 # Add properties to do the intermediate dataset matching
-                if matching_method.method_name == 'INTERMEDIATE':
+                if matching_method.is_intermediate:
                     for intermediate_ets, intermediate_ets_props in matching_method.intermediates.items():
                         intermediate_res = hash_string_min(intermediate_ets)
                         intermediate_target = 'intermediate' + str(ets_index)
-                        intermediate_field = intermediate_ets_props['source'].prop_original \
-                            if is_source else intermediate_ets_props['target'].prop_original
+                        intermediate_fields = intermediate_ets_props['source' if is_source else 'target']
+
+                        intermediate_match_sqls = [
+                            sql.SQL('{target_field} = {intermediate_target}.{intermediate_field}').format(
+                                target_field=target_field,
+                                intermediate_target=sql.Identifier(intermediate_target),
+                                intermediate_field=sql.Identifier(intermediate_field.prop_original.hash)
+                            )
+                            for intermediate_field in intermediate_fields
+                        ]
 
                         joins.append(
                             sql.SQL(cleandoc('''
                                 LEFT JOIN {intermediate_res} AS {intermediate_target}
-                                ON {target_field} = {intermediate_target}.{intermediate_field}
+                                ON {match_sqls}
                             ''')).format(
                                 intermediate_res=sql.Identifier(intermediate_res),
                                 intermediate_target=sql.Identifier(intermediate_target),
-                                target_field=target_field,
-                                intermediate_field=sql.Identifier(intermediate_field.hash)
+                                match_sqls=sql.SQL(' OR ').join(intermediate_match_sqls)
                             )
                         )
 

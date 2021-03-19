@@ -118,7 +118,7 @@ def get_visualization(job, id, type, cluster_id, associations=None, include_comp
 
                 if parent not in visited_parent:
                     visited_parent.add(parent)
-                    nodes[parent]['child'] = {'nodes': deepcopy(nodes[parent]), 'links': []}
+                    nodes[parent]['child'] = {'nodes': [deepcopy(nodes[parent])], 'links': []}
 
                 if complex or parent not in visited_parent:
                     nodes[parent]['satellite'] = True
@@ -410,7 +410,7 @@ def get_visualization(job, id, type, cluster_id, associations=None, include_comp
 
     nodes = {}
     links = []
-    for link in job.get_links(id, type, cluster_id=cluster_id, include_props=True, single_value=True):
+    for link in job.get_links(id, type, cluster_id=cluster_id, with_properties='single'):
         for (node, ets_id, value) in [(link['source'], link['source_collections'][0], link['source_values']),
                                       (link['target'], link['target_collections'][0], link['target_values'])]:
             if node not in nodes:

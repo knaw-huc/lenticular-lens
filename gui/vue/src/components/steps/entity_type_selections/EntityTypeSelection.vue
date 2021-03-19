@@ -44,17 +44,8 @@
                    v-bind:class="{'is-invalid': errors.includes('graphql_endpoint')}"/>
           </div>
 
-          <div v-if="!entityTypeSelection.dataset.timbuctoo_hsid || !datasetsLoaded" class="col-4">
+          <div v-if="!datasetsLoaded" class="col-4">
             <button v-if="!datasetsLoaded" class="btn btn-primary" @click="loadDatasets">Load datasets</button>
-
-            <form v-if="!entityTypeSelection.dataset.timbuctoo_hsid" class="d-inline-block"
-                  :id="'login_' + entityTypeSelection.id"
-                  method="post" action="https://secure.huygens.knaw.nl/saml2/login" target="loginWindow">
-              <input type="hidden" name="hsurl" :value="hsurl()"/>
-              <button class="btn btn-primary" v-bind:class="{'ml-2': !datasetsLoaded}" @click="login">
-                {{ !datasetsLoaded ? 'Login and load datasets' : 'Login and reload datasets' }}
-              </button>
-            </form>
           </div>
 
           <div class="invalid-feedback" v-show="errors.includes('graphql_endpoint')">
@@ -168,86 +159,86 @@
         </div>
       </sub-card>
 
-      <sub-card v-if="entityTypeSelection.dataset.collection_id !== ''" label="Relations" add-button="Add Relation"
-                :hasError="errors.find(err => err.startsWith('relations_'))" @add="addRelation">
-        <div v-if="entityTypeSelection.related.length === 0" class="font-italic mt-3">
-          No relations
-        </div>
+<!--      <sub-card v-if="entityTypeSelection.dataset.collection_id !== ''" label="Relations" add-button="Add Relation"-->
+<!--                :hasError="errors.find(err => err.startsWith('relations_'))" @add="addRelation">-->
+<!--        <div v-if="entityTypeSelection.related.length === 0" class="font-italic mt-3">-->
+<!--          No relations-->
+<!--        </div>-->
 
-        <div v-if="entityTypeSelection.related.length > 0" class="form-group form-check mt-3">
-          <input :id="entityTypeSelection.label + 'related_array'" class="form-check-input" type="checkbox"
-                 v-model="entityTypeSelection.related_array">
+<!--        <div v-if="entityTypeSelection.related.length > 0" class="form-group form-check mt-3">-->
+<!--          <input :id="entityTypeSelection.label + 'related_array'" class="form-check-input" type="checkbox"-->
+<!--                 v-model="entityTypeSelection.related_array">-->
 
-          <label :for="entityTypeSelection.label + 'related_array'" class="form-check-label">
-            Use relations as combined source
-          </label>
-        </div>
+<!--          <label :for="entityTypeSelection.label + 'related_array'" class="form-check-label">-->
+<!--            Use relations as combined source-->
+<!--          </label>-->
+<!--        </div>-->
 
-        <div v-for="(relation, index) in entityTypeSelection.related" class="row">
-          <div class="form-group col-4">
-            <label :for="'entity_type_selection_' + entityTypeSelection.id + '_related_' + relation.id">
-              Related entity-type selection
-            </label>
+<!--        <div v-for="(relation, index) in entityTypeSelection.related" class="row">-->
+<!--          <div class="form-group col-4">-->
+<!--            <label :for="'entity_type_selection_' + entityTypeSelection.id + '_related_' + relation.id">-->
+<!--              Related entity-type selection-->
+<!--            </label>-->
 
-            <select-box v-model="relation.entityTypeSelection"
-                        :id="'entity_type_selection_' + entityTypeSelection.id + '_related_' + relation.id"
-                        v-bind:class="{'is-invalid': errors.includes(`relations_entity_type_selection_${index}`)}">
-              <option disabled selected value="">Choose an entity-type selection</option>
-              <option v-if="ets.id !== entityTypeSelection.id"
-                      v-for="ets in $root.entityTypeSelections" :value="ets.id">
-                {{ ets.label }}
-              </option>
-            </select-box>
+<!--            <select-box v-model="relation.entityTypeSelection"-->
+<!--                        :id="'entity_type_selection_' + entityTypeSelection.id + '_related_' + relation.id"-->
+<!--                        v-bind:class="{'is-invalid': errors.includes(`relations_entity_type_selection_${index}`)}">-->
+<!--              <option disabled selected value="">Choose an entity-type selection</option>-->
+<!--              <option v-if="ets.id !== entityTypeSelection.id"-->
+<!--                      v-for="ets in $root.entityTypeSelections" :value="ets.id">-->
+<!--                {{ ets.label }}-->
+<!--              </option>-->
+<!--            </select-box>-->
 
-            <div class="invalid-feedback" v-show="errors.includes(`relations_entity_type_selection_${index}`)">
-              Please provide a related entity-type selection
-            </div>
-          </div>
+<!--            <div class="invalid-feedback" v-show="errors.includes(`relations_entity_type_selection_${index}`)">-->
+<!--              Please provide a related entity-type selection-->
+<!--            </div>-->
+<!--          </div>-->
 
-          <div v-if="relation.entityTypeSelection > 0" class="form-group col-4">
-            <label
-                :for="'entity_type_selection_' + entityTypeSelection.id + '_related_' + relation.id + '_local_property'">
-              Local property
-            </label>
+<!--          <div v-if="relation.entityTypeSelection > 0" class="form-group col-4">-->
+<!--            <label-->
+<!--                :for="'entity_type_selection_' + entityTypeSelection.id + '_related_' + relation.id + '_local_property'">-->
+<!--              Local property-->
+<!--            </label>-->
 
-            <select-box v-model="relation.local_property"
-                        v-bind:class="{'is-invalid': errors.includes(`relations_local_prop_${index}`)}">
-              <option value="" selected disabled>Select local property</option>
-              <option v-for="(_, property) in selectedCollection['properties']" :value="property">
-                {{ property }}
-              </option>
-            </select-box>
+<!--            <select-box v-model="relation.local_property"-->
+<!--                        v-bind:class="{'is-invalid': errors.includes(`relations_local_prop_${index}`)}">-->
+<!--              <option value="" selected disabled>Select local property</option>-->
+<!--              <option v-for="(_, property) in selectedCollection['properties']" :value="property">-->
+<!--                {{ property }}-->
+<!--              </option>-->
+<!--            </select-box>-->
 
-            <div class="invalid-feedback" v-show="errors.includes(`relations_local_prop_${index}`)">
-              Please provide a local property
-            </div>
-          </div>
+<!--            <div class="invalid-feedback" v-show="errors.includes(`relations_local_prop_${index}`)">-->
+<!--              Please provide a local property-->
+<!--            </div>-->
+<!--          </div>-->
 
-          <div v-if="relation.entityTypeSelection > 0" class="form-group col-3">
-            <label
-                :for="'entityTypeSelection_' + entityTypeSelection.id + '_related_' + relation.id + '_remote_property'">
-              Remote property
-            </label>
+<!--          <div v-if="relation.entityTypeSelection > 0" class="form-group col-3">-->
+<!--            <label-->
+<!--                :for="'entityTypeSelection_' + entityTypeSelection.id + '_related_' + relation.id + '_remote_property'">-->
+<!--              Remote property-->
+<!--            </label>-->
 
-            <select-box v-model="relation.remote_property"
-                        v-bind:class="{'is-invalid': errors.includes(`relations_remote_prop_${index}`)}">
-              <option value="" selected disabled>Select remote property</option>
-              <option v-for="(_, property) in getPropertiesForEntityTypeSelection(relation.entityTypeSelection)"
-                      :value="property">
-                {{ property }}
-              </option>
-            </select-box>
+<!--            <select-box v-model="relation.remote_property"-->
+<!--                        v-bind:class="{'is-invalid': errors.includes(`relations_remote_prop_${index}`)}">-->
+<!--              <option value="" selected disabled>Select remote property</option>-->
+<!--              <option v-for="(_, property) in getPropertiesForEntityTypeSelection(relation.entityTypeSelection)"-->
+<!--                      :value="property">-->
+<!--                {{ property }}-->
+<!--              </option>-->
+<!--            </select-box>-->
 
-            <div class="invalid-feedback" v-show="errors.includes(`relations_remote_prop_${index}`)">
-              Please provide a remote property
-            </div>
-          </div>
+<!--            <div class="invalid-feedback" v-show="errors.includes(`relations_remote_prop_${index}`)">-->
+<!--              Please provide a remote property-->
+<!--            </div>-->
+<!--          </div>-->
 
-          <div class="form-group col-1 align-self-end">
-            <button-delete size="sm" v-on:click="entityTypeSelection.related.splice(index, 1)"/>
-          </div>
-        </div>
-      </sub-card>
+<!--          <div class="form-group col-1 align-self-end">-->
+<!--            <button-delete size="sm" v-on:click="entityTypeSelection.related.splice(index, 1)"/>-->
+<!--          </div>-->
+<!--        </div>-->
+<!--      </sub-card>-->
     </fieldset>
   </card>
 </template>
@@ -279,10 +270,8 @@
         },
         computed: {
             datasets() {
-                return this.datasetsLoaded ? this.$root.getDatasets(
-                    this.entityTypeSelection.dataset.timbuctoo_graphql,
-                    this.entityTypeSelection.dataset.timbuctoo_hsid
-                ) : {};
+                return this.datasetsLoaded
+                    ? this.$root.getDatasets(this.entityTypeSelection.dataset.timbuctoo_graphql) : {};
             },
 
             collections() {
@@ -382,35 +371,36 @@
                 const limit = parseInt(this.entityTypeSelection.limit);
                 const limitValid = this.validateField('limit', !isNaN(limit) && (limit === -1 || limit > 0));
 
-                let relatedValid = true;
-                this.errors = this.errors.filter(err => !err.startsWith('relations_'));
-                this.entityTypeSelection.related.forEach((related, idx) => {
-                    const remoteentityTypeSelection = this.$root.entityTypeSelections.find(res => res.id === parseInt(related.entityTypeSelection));
-                    const entityTypeSelectionValid = this.validateField(`relations_entity_type_selection_${idx}`,
-                        related.entityTypeSelection && remoteentityTypeSelection);
-
-                    const localProperties = dataset && dataset.collections
-                        [this.entityTypeSelection.dataset.collection_id].properties;
-                    const localPropValid = this.validateField(`relations_local_prop_${idx}`,
-                        related.local_property && localProperties && localProperties.hasOwnProperty(related.local_property));
-
-                    const remoteDatasets = remoteentityTypeSelection && this.datasets[remoteentityTypeSelection.dataset.dataset_id];
-                    const remoteProperties = remoteDatasets && remoteDatasets.collections
-                        [remoteentityTypeSelection.dataset.collection_id].properties;
-                    const remotePropValid = this.validateField(`relations_remote_prop_${idx}`,
-                        related.remote_property && remoteProperties &&
-                        remoteProperties.hasOwnProperty(related.remote_property));
-
-                    if (!(entityTypeSelectionValid && localPropValid && remotePropValid))
-                        relatedValid = false;
-                });
+                // let relatedValid = true;
+                // this.errors = this.errors.filter(err => !err.startsWith('relations_'));
+                // this.entityTypeSelection.related.forEach((related, idx) => {
+                //     const remoteentityTypeSelection = this.$root.entityTypeSelections.find(res => res.id === parseInt(related.entityTypeSelection));
+                //     const entityTypeSelectionValid = this.validateField(`relations_entity_type_selection_${idx}`,
+                //         related.entityTypeSelection && remoteentityTypeSelection);
+                //
+                //     const localProperties = dataset && dataset.collections
+                //         [this.entityTypeSelection.dataset.collection_id].properties;
+                //     const localPropValid = this.validateField(`relations_local_prop_${idx}`,
+                //         related.local_property && localProperties && localProperties.hasOwnProperty(related.local_property));
+                //
+                //     const remoteDatasets = remoteentityTypeSelection && this.datasets[remoteentityTypeSelection.dataset.dataset_id];
+                //     const remoteProperties = remoteDatasets && remoteDatasets.collections
+                //         [remoteentityTypeSelection.dataset.collection_id].properties;
+                //     const remotePropValid = this.validateField(`relations_remote_prop_${idx}`,
+                //         related.remote_property && remoteProperties &&
+                //         remoteProperties.hasOwnProperty(related.remote_property));
+                //
+                //     if (!(entityTypeSelectionValid && localPropValid && remotePropValid))
+                //         relatedValid = false;
+                // });
 
                 let filtersGroupsValid = true;
                 if (this.$refs.filterGroupComponent)
                     filtersGroupsValid = this.$refs.filterGroupComponent.validateLogicBox();
                 filtersGroupsValid = this.validateField('filters', filtersGroupsValid);
 
-                return collectionValid && datasetValid && limitValid && relatedValid && filtersGroupsValid;
+                //return collectionValid && datasetValid && limitValid && relatedValid && filtersGroupsValid;
+                return collectionValid && datasetValid && limitValid && filtersGroupsValid;
             },
 
             onToggle(isOpen) {
@@ -428,7 +418,6 @@
             updateDataset(dataset) {
                 this.entityTypeSelection.dataset.dataset_id = dataset.id;
                 this.entityTypeSelection.dataset.collection_id = '';
-                this.entityTypeSelection.dataset.published = dataset.published;
 
                 this.clearFilter();
             },
@@ -438,25 +427,11 @@
                 this.clearFilter();
             },
 
-            addRelation() {
-                this.entityTypeSelection.related.push({
-                    entityTypeSelection: '',
-                    local_property: '',
-                    remote_property: '',
-                });
-            },
-
             addFilterCondition(group) {
                 group.conditions.push({
                     type: '',
                     property: [''],
                 });
-            },
-
-            getPropertiesForEntityTypeSelection(entityTypeSelectionId) {
-                const entityTypeSelection = this.$root.getEntityTypeSelectionById(entityTypeSelectionId);
-                return this.datasets[entityTypeSelection.dataset.dataset_id]['collections']
-                    [entityTypeSelection.dataset.collection_id]['properties'];
             },
 
             resetDatasets() {
@@ -465,23 +440,6 @@
                 this.entityTypeSelection.dataset.collection_id = '';
 
                 this.clearFilter();
-            },
-
-            login() {
-                this.resetDatasets();
-
-                const loginWindow = window.open('', 'loginWindow');
-                window.addEventListener('message', event => {
-                    if (event.origin !== window.location.origin || !event.data.hasOwnProperty('timbuctoo-hsid'))
-                        return;
-
-                    this.entityTypeSelection.dataset.timbuctoo_hsid = event.data['timbuctoo-hsid'];
-
-                    loginWindow.close();
-                    this.loadDatasets();
-                }, false);
-
-                document.getElementById('login_' + this.entityTypeSelection.id).submit();
             },
 
             async runSample() {
@@ -496,8 +454,7 @@
             },
 
             async loadDatasets() {
-                await this.$root.loadDatasets(
-                    this.entityTypeSelection.dataset.timbuctoo_graphql, this.entityTypeSelection.dataset.timbuctoo_hsid);
+                await this.$root.loadDatasets(this.entityTypeSelection.dataset.timbuctoo_graphql);
                 this.datasetsLoaded = true;
             },
         },

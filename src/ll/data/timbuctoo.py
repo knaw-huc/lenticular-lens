@@ -7,16 +7,15 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 class Timbuctoo:
-    def __init__(self, graphql_uri, hsid=None):
+    def __init__(self, graphql_uri):
         self._graphql_uri = graphql_uri
-        self._hsid = hsid
 
     def fetch_graph_ql(self, query, variables=None):
         try:
             response = requests.post(self._graphql_uri, json={
                 'query': query,
                 'variables': variables
-            }, headers={'Authorization': self._hsid} if self._hsid else {}, timeout=60, verify=False)
+            }, timeout=60, verify=False)
             response.raise_for_status()
 
             result = response.json()
@@ -34,8 +33,7 @@ class Timbuctoo:
                 dataSetMetadataList(promotedOnly: false, publishedOnly: false) {
                     uri
                     dataSetId
-                    dataSetName
-                    published
+                    dataSetName                    
                     title { value }
                     description { value }
                     prefixMappings {
@@ -84,7 +82,6 @@ class Timbuctoo:
 
             datasets[dataset_id] = {
                 'uri': dataset['uri'],
-                'published': dataset['published'],
                 'name': dataset_name,
                 'title': dataset_title,
                 'description': dataset_description,

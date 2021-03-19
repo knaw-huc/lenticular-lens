@@ -1,8 +1,8 @@
 <template>
   <div class="ml-5 p-3" v-bind:class="{'border-top': !isFirst}">
-    <property :entity-type-selection="$root.getEntityTypeSelectionById(conditionProperty.entity_type_selection)"
-              :property="conditionProperty.property" :allow-delete="allowDelete"
-              @clone="$emit('clone')" @delete="$emit('delete')" ref="propertyComponent"/>
+    <ets-property :entity-type-selection="entityTypeSelection"
+                  :property="conditionProperty.property" :allow-delete="allowDelete"
+                  @clone="$emit('clone')" @delete="$emit('delete')" ref="propertyComponent"/>
 
     <div class="row align-items-top mt-2">
       <div class="col-auto h5">Transformers</div>
@@ -124,6 +124,7 @@
         },
         props: {
             conditionProperty: Object,
+            entityTypeSelection: Object,
             allowDelete: {
                 type: Boolean,
                 default: true,

@@ -1,7 +1,7 @@
 <template>
   <div class="border p-3 mb-2"
        v-bind:class="[{'clickable': selectable}, selected ? 'bg-secondary-light' : 'bg-primary-very-light']"
-       @click="selectable && $emit('select:clusterId', cluster.id)">
+       @click="selectable && $emit('select')">
     <div class="row">
       <div class="col">
         <div class="text-secondary">
@@ -16,7 +16,9 @@
 
           <div class="col">
             <strong>Extended: </strong>
-            <span v-bind:class="'ext_' + cluster.extended">{{ cluster.extended }}</span>
+            <span v-bind:class="'ext_' + (cluster.extended ? 'yes' : 'no')">
+              {{ cluster.extended ? 'yes' : 'no' }}
+            </span>
           </div>
         </div>
 
@@ -28,25 +30,30 @@
 
           <div class="col">
             <strong>Reconciled: </strong>
-            <span v-bind:class="'ext_' + cluster.reconciled">{{ cluster.reconciled }}</span>
+            <span v-bind:class="'ext_' + (cluster.reconciled ? 'yes' : 'no')">
+              {{ cluster.reconciled ? 'yes' : 'no' }}
+            </span>
           </div>
         </div>
       </div>
 
       <div class="col-8">
-        <properties :properties="cluster.values"/>
+        <property-values v-for="(prop, idx) in cluster.values"
+                         :key="idx" v-if="prop.values.length > 0"
+                         :graphql-endpoint="prop.graphql_endpoint" :dataset-id="prop.dataset_id"
+                         :collection-id="prop.collection_id" :property="prop.property" :values="prop.values"/>
       </div>
     </div>
   </div>
 </template>
 
 <script>
-    import Properties from "../../helpers/Properties";
+    import PropertyValues from "../../helpers/PropertyValues";
 
     export default {
         name: "Cluster",
         components: {
-            Properties,
+            PropertyValues,
         },
         props: {
             index: Number,
@@ -61,15 +68,15 @@
 </script>
 
 <style>
-  .ext_cyc {
+.ext_cyc {
     color: purple;
-  }
+}
 
-  .ext_yes {
+.ext_yes {
     color: blue;
-  }
+}
 
-  .ext_no {
+.ext_no {
     color: red;
-  }
+}
 </style>

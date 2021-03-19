@@ -1,7 +1,7 @@
 <template>
   <card :id="'validation_' + type + '_' + spec.id" type="validation" :res-id="spec.id" :res-type="type"
-        :label="spec.label" :has-extra-row="true" :open-card="show"
-        @show="updateShow('open')" @hide="updateShow('close')">
+        :label="spec.label" :has-extra-row="true"
+        @show="onToggle(true)" @hide="onToggle(false)">
     <template v-slot:columns>
       <div class="col">
         <sub-card :is-first="true" class="small">
@@ -71,43 +71,7 @@
             </div>
           </div>
 
-          <div class="row justify-content-center mt-2">
-            <div class="col-auto">
-              <div class="btn-toolbar" role="toolbar" aria-label="Toolbar">
-                <div class="btn-group btn-group-toggle mr-4">
-                  <label class="btn btn-secondary btn-sm" v-bind:class="{'active': showInfo}">
-                    <input type="checkbox" autocomplete="off" v-model="showInfo"/>
-                    <fa-icon icon="info-circle"/>
-                    Show {{ type }} specs
-                  </label>
-
-                  <label class="btn btn-secondary btn-sm" v-bind:class="{'active': showPropertySelection}">
-                    <input type="checkbox" autocomplete="off" v-model="showPropertySelection"/>
-                    <fa-icon icon="cog"/>
-                    Show property config
-                  </label>
-                </div>
-
-                <div class="btn-group btn-group-toggle">
-                  <label class="btn btn-secondary btn-sm" v-bind:class="{'active': showAllLinks}">
-                    <input type="checkbox" autocomplete="off"
-                           v-model="showAllLinks" @change="updateShow('links')"/>
-                    <fa-icon icon="list"/>
-                    Show all links
-                  </label>
-
-                  <label v-if="clustering" class="btn btn-secondary btn-sm" v-bind:class="{'active': showClusters}">
-                    <input type="checkbox" autocomplete="off"
-                           v-model="showClusters" @change="updateShow('clusters')"/>
-                    <fa-icon icon="list"/>
-                    Show links by cluster
-                  </label>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div v-if="showLinks" class="row justify-content-center mt-2">
+          <div v-if="isOpen" class="row justify-content-center mt-2">
             <div class="col-auto">
               <div class="btn-toolbar" role="toolbar" aria-label="Toolbar">
                 <div class="btn-group btn-group-toggle ml-auto">
@@ -162,8 +126,9 @@
                   </label>
                 </div>
 
-                <div v-if="resetShownLinks" class="btn-group ml-4" role="group">
-                  <button type="button" class="btn btn-sm btn-white border" @click="resetLinks()">
+                <div class="btn-group ml-4" role="group">
+                  <button type="button" class="btn btn-sm btn-white border"
+                          :disabled="!resetShownLinks" @click="resetLinks()">
                     <fa-icon icon="sync"/>
                     Reset
                   </button>
@@ -196,98 +161,73 @@
               </div>
             </div>
           </div>
-        </sub-card>
 
-        <spec-info v-if="showInfo" :type="type" :spec="spec" :override-fuzzy-logic="true"/>
+          <div v-if="isOpen" class="row justify-content-center mt-2">
+            <div class="col-auto">
+              <div class="btn-toolbar align-items-baseline" role="toolbar" aria-label="Toolbar">
+                <div class="btn-group mr-4">
+                  <button type="button" class="btn btn-secondary btn-sm" @click="showSimilarityConfig">
+                    <fa-icon icon="info-circle"/>
+                    Show spec info
+                  </button>
 
-        <sub-card v-if="showPropertySelection" id="properties-card" type="properties" label="Property selection"
-                  :has-margin-auto="true" :has-columns="true">
-          <template v-slot:columns>
-            <div class="col-auto ml-auto">
-              <button type="button" class="btn btn-secondary" @click="saveProperties">
-                Save
-              </button>
-            </div>
-          </template>
+                  <button type="button" class="btn btn-secondary btn-sm" :disabled="!view" @click="showPropertyConfig">
+                    <fa-icon icon="cog"/>
+                    Configure property labels
+                  </button>
+                </div>
 
-          <property-selection class="mt-4" :properties="spec.properties"/>
-        </sub-card>
+                <div class="btn-group mr-4">
+                  <!--                  <button type="button" class="btn btn-secondary btn-sm" :disabled="!view">-->
+                  <!--                    Filter on properties-->
+                  <!--                  </button>-->
 
-        <sub-card v-if="showClusters && clustering" label="Clusters" id="clusters-list" type="clusters-list"
-                  :open-card="openClusters" :has-collapse="true"
-                  :has-extra-row="!!(!openClusters && clusterIdSelected && showSelectedCluster)"
-                  @show="openClusters = true" @hide="openClusters = false">
-          <template v-slot:columns>
-            <template v-if="clusterIdSelected">
-              <div class="col-auto small ml-auto mr-auto">
-                <strong>Selected cluster: </strong>
-                {{ clusterIdSelected }}
-              </div>
+                  <button type="button" class="btn btn-secondary btn-sm" v-bind:class="{'active': !!clusterSelected}"
+                          :disabled="!clustering" @click="showClusters">
+                    Filter by cluster
+                  </button>
+                </div>
 
-              <div class="col-auto">
-                <div class="btn-toolbar" role="toolbar" aria-label="Toolbar">
-                  <div class="btn-group btn-group-toggle mr-2">
-                    <label class="btn btn-sm btn-secondary" v-bind:class="{'active': showSelectedCluster}">
-                      <input type="checkbox" autocomplete="off" v-model="showSelectedCluster"/>
-                      <fa-icon icon="info-circle"/>
-                      Show selected cluster spec
-                    </label>
+                <!--                <div class="btn-group align-items-baseline">-->
+                <!--                  <span class="mr-1">Similarity:</span>-->
+                <!--                  <vue-slider v-model="similarityRange" class="mx-5"-->
+                <!--                              :width="150" :min="0" :max="1" :interval="0.05" :lazy="true"-->
+                <!--                              :tooltip-placement="['left', 'right']" tooltip="always" @change="resetLinks()"/>-->
+                <!--                </div>-->
 
-                    <label v-if="hasProperties" class="btn btn-sm btn-secondary" @click="showVisualization">
-                      <fa-icon icon="project-diagram"/>
-                      Visualize
-                    </label>
-                  </div>
+                <div class="btn-group ml-4" role="group">
+                  <button class="btn btn-sm btn-secondary" :disabled="!hasProperties || !clusterSelected"
+                          @click="showVisualization">
+                    <fa-icon icon="project-diagram"/>
+                    Visualize
+                  </button>
                 </div>
               </div>
-            </template>
-          </template>
-
-          <template v-if="!openClusters && clusterIdSelected && showSelectedCluster" v-slot:row-columns>
-            <div class="col">
-              <cluster :index="0" :cluster="selectedCluster" :selected="true" :selectable="false"/>
             </div>
-          </template>
-
-          <div class="max-overflow mt-4">
-            <cluster
-                v-for="(cluster, idx) in clusters"
-                :key="idx"
-                :index="idx"
-                :cluster="cluster"
-                :selected="clusterIdSelected === cluster.id"
-                @select:clusterId="selectClusterId($event)"/>
-
-            <infinite-loading :identifier="clustersIdentifier" @infinite="getClusters">
-              <template v-slot:spinner>
-                <loading class="mt-4"/>
-              </template>
-
-              <template v-slot:no-more>
-                No more clusters
-              </template>
-
-              <template v-slot:error="{trigger}">
-                <div class="text-danger mb-2">
-                  Failed to obtain clusters
-                </div>
-                <button type="button" class="btn btn-sm btn-danger" @click="trigger">Retry</button>
-              </template>
-            </infinite-loading>
           </div>
         </sub-card>
       </div>
     </template>
 
+    <similarity-config :type="type" :spec="spec" ref="similarityConfig"/>
+
+    <property-config v-if="view" :properties="view.properties" ref="propertyConfig" @save="resetLinks()"/>
+
+    <clusters v-if="clustering"
+              :type="type"
+              :spec-id="spec.id"
+              :cluster-selected="clusterSelected"
+              ref="clusters"
+              @select="selectCluster"/>
+
     <cluster-visualization
-        v-if="showClusters && clustering && clusterIdSelected && hasProperties"
+        v-if="clustering && clusterSelected && hasProperties"
         :type="type"
         :spec-id="spec.id"
-        :cluster="selectedCluster"
-        :association="clustering.association"
+        :cluster="clusterSelected"
         ref="visualization"/>
 
-    <template v-if="showLinks && !isUpdatingSelection">
+    <template v-if="isOpen && !isUpdatingSelection">
       <link-component
           v-for="(link, idx) in links"
           :key="idx"
@@ -318,39 +258,31 @@
 </template>
 
 <script>
+    import VueSlider from 'vue-slider-component';
     import InfiniteLoading from 'vue-infinite-loading';
 
-    import Properties from "../../helpers/Properties";
-    import PropertySelection from "../../helpers/PropertySelection";
-    import SpecInfo from "../../spec/SpecInfo";
-
     import Link from "./Link";
-    import Cluster from "./Cluster";
+    import SimilarityConfig from "./SimilarityConfig";
+    import PropertyConfig from "./PropertyConfig";
+    import Clusters from "./Clusters";
     import ClusterVisualization from "./ClusterVisualization";
 
     export default {
         name: "Validation",
         components: {
+            VueSlider,
             InfiniteLoading,
-            Properties,
-            PropertySelection,
-            SpecInfo,
             LinkComponent: Link,
-            Cluster,
+            SimilarityConfig,
+            PropertyConfig,
+            Clusters,
             ClusterVisualization,
         },
         data() {
             return {
+                isOpen: false,
                 isUpdating: false,
                 isUpdatingSelection: false,
-
-                show: false,
-                showInfo: false,
-                showPropertySelection: false,
-                showSelectedCluster: false,
-
-                showAllLinks: false,
-                showClusters: false,
 
                 showAcceptedLinks: false,
                 showRejectedLinks: false,
@@ -367,17 +299,12 @@
 
                 loadingTotals: false,
                 loadingLinks: false,
-                loadingClusters: false,
 
                 links: [],
                 linksIdentifier: +new Date(),
 
-                clusters: [],
-                clustersIdentifier: +new Date(),
-
-                openClusters: true,
-                clusterIdSelected: null,
-                clusterView: '',
+                clusterSelected: null,
+                similarityRange: [0, 1],
             };
         },
         props: {
@@ -385,16 +312,16 @@
             spec: Object,
         },
         computed: {
-            hasProperties() {
-                return !this.spec.properties.map(res => res.property[0] !== '').includes(false);
-            },
-
             isLinkset() {
                 return this.type === 'linkset';
             },
 
             isLens() {
                 return this.type === 'lens';
+            },
+
+            view() {
+                return this.$root.getViewByIdAndType(this.spec.id, this.type);
             },
 
             linkset() {
@@ -418,83 +345,48 @@
                 return null;
             },
 
-            showLinks() {
-                return this.showAllLinks || this.showClusterLinks;
-            },
-
-            showClusterLinks() {
-                return this.showClusters && this.clusterIdSelected;
-            },
-
-            selectedCluster() {
-                if (!this.clusterIdSelected)
-                    return null;
-
-                return this.clusters.find(cluster => cluster.id === this.clusterIdSelected);
+            hasProperties() {
+                return this.view && !Object.values(this.view.properties)
+                    .flatMap(datasetProperty => datasetProperty.properties)
+                    .map(prop => prop[0] !== '')
+                    .includes(false);
             },
         },
         methods: {
-            updateShow(state) {
-                const showSomething = this.showInfo || this.showPropertySelection
-                    || this.showAllLinks || this.showClusters;
-
-                if (state === 'open' && !showSomething)
-                    this.showInfo = true;
-                else if (state === 'close' && showSomething) {
-                    this.showInfo = false;
-                    this.showPropertySelection = false;
-                    this.showSelectedCluster = false;
-
-                    this.showAllLinks = false;
-                    this.showClusters = false;
-                }
-
-                if (this.show !== showSomething)
-                    this.show = showSomething;
-
-                if (state === 'links' && this.showClusters) {
-                    this.showSelectedCluster = false;
-                    this.showClusters = false;
-                }
-                else if (state === 'clusters' && this.showAllLinks)
-                    this.showAllLinks = false;
-
-                if (this.showAllLinks || this.showClusters)
-                    this.resetLinks();
-
-                if (this.showInfo || this.showPropertySelection || this.showAllLinks || this.showClusters)
-                    this.$emit('show');
-                else
-                    this.$emit('hide');
+            async onToggle(isOpen) {
+                this.isOpen = isOpen;
+                isOpen ? this.$emit('show') : this.$emit('hide');
+                await this.resetLinks(isOpen);
             },
 
-            selectClusterId(clusterId) {
-                this.openClusters = false;
-                this.clusterIdSelected = clusterId;
-                this.resetLinks();
+            showSimilarityConfig() {
+                this.$refs.similarityConfig.show();
+            },
+
+            showPropertyConfig() {
+                this.$refs.propertyConfig.show();
+            },
+
+            showClusters() {
+                this.$refs.clusters.show();
             },
 
             showVisualization() {
                 this.$refs.visualization.showVisualization();
             },
 
-            async resetLinks(resetClusters = false) {
+            async selectCluster(cluster) {
+                this.clusterSelected = this.clusterSelected !== cluster ? cluster : null;
+                await this.resetLinks();
+            },
+
+            async resetLinks(resetLinkTotals = true) {
                 this.links = [];
                 this.linksIdentifier += 1;
                 this.resetShownLinks = false;
 
-                if (resetClusters) {
-                    this.clusters = [];
-                    this.clustersIdentifier += 1;
-                }
-
-                await this.getLinkTotals();
-            },
-
-            async saveProperties() {
-                await this.$root.submit();
-                this.clusterIdSelected = null;
-                await this.resetLinks(true);
+                if (resetLinkTotals)
+                    await this.getLinkTotals();
             },
 
             async getLinkTotals() {
@@ -503,8 +395,9 @@
 
                 this.loadingTotals = true;
 
-                const clusterId = this.showClusterLinks ? this.clusterIdSelected : undefined;
-                const totals = await this.$root.getLinksTotals(this.type, this.spec.id, clusterId);
+                const clusterId = this.clusterSelected ? this.clusterSelected.id : null;
+                const totals = await this.$root.getLinksTotals(this.type, this.spec.id,
+                    this.similarityRange[0], this.similarityRange[1], clusterId);
 
                 if (totals) {
                     this.acceptedLinks = totals.accepted || 0;
@@ -523,11 +416,11 @@
 
                 this.loadingLinks = true;
 
-                const clusterId = this.showClusterLinks ? this.clusterIdSelected : undefined;
+                const clusterId = this.clusterSelected ? this.clusterSelected.id : null;
                 const links = await this.$root.getLinks(this.type, this.spec.id,
                     this.showAcceptedLinks, this.showRejectedLinks, this.showNotSureLinks,
                     this.showNotValidatedLinks, this.showMixedLinks,
-                    clusterId, 50, this.links.length);
+                    this.similarityRange[0], this.similarityRange[1], clusterId, 50, this.links.length);
 
                 if (links !== null)
                     this.links.push(...links);
@@ -542,30 +435,6 @@
                 }
 
                 this.loadingLinks = false;
-            },
-
-            async getClusters(state) {
-                if (!this.clustering || this.loadingClusters)
-                    return;
-
-                this.loadingClusters = true;
-
-                const clusters = await this.$root.getClusters(
-                    this.type, this.spec.id, this.clustering.association, 5, this.clusters.length);
-
-                if (clusters !== null)
-                    this.clusters.push(...clusters);
-
-                if (state) {
-                    if (clusters === null)
-                        state.error();
-                    else if (clusters.length > 0)
-                        state.loaded();
-                    else
-                        state.complete();
-                }
-
-                this.loadingClusters = false;
             },
 
             async validateLink(link, validation) {
@@ -624,7 +493,7 @@
                 this.isUpdating = true;
                 this.isUpdatingSelection = true;
 
-                const clusterId = this.showClusterLinks ? this.clusterIdSelected : undefined;
+                const clusterId = this.clusterSelected ? this.clusterSelected.id : null;
                 const result = await this.$root.validateSelection(this.type, this.spec.id, validation, clusterId,
                     this.showAcceptedLinks, this.showRejectedLinks, this.showNotSureLinks,
                     this.showNotValidatedLinks, this.showMixedLinks);
@@ -633,7 +502,7 @@
                 this.isUpdatingSelection = false;
 
                 if (result !== null)
-                    this.resetLinks();
+                    await this.resetLinks();
             },
         }
     };

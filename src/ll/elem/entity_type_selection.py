@@ -13,14 +13,11 @@ class EntityTypeSelection:
         self._data = data
         self._job = job
 
-        graphql = data['dataset']['timbuctoo_graphql']
-        hsid = data['dataset']['timbuctoo_hsid'] if not data['dataset']['published'] else None
-        dataset_id = self._data['dataset']['dataset_id']
-        collection_id = self._data['dataset']['collection_id']
+        self.graphql_endpoint = self._data['dataset']['timbuctoo_graphql']
+        self.dataset_id = self._data['dataset']['dataset_id']
+        self.collection_id = self._data['dataset']['collection_id']
 
-        self.collection = Collection(graphql, hsid, dataset_id, collection_id)
-        self.table_name = self.collection.table_name
-        self.columns = self.collection.columns
+        self.collection = Collection(self.graphql_endpoint, self.dataset_id, self.collection_id)
 
     @property
     def id(self):
@@ -39,14 +36,6 @@ class EntityTypeSelection:
         return hash_string_min(self.id)
 
     @property
-    def dataset_id(self):
-        return self._data['dataset']['dataset_id']
-
-    @property
-    def collection_id(self):
-        return self._data['dataset']['collection_id']
-
-    @property
     def limit(self):
         return self._data.get('limit', -1)
 
@@ -56,7 +45,7 @@ class EntityTypeSelection:
 
     @property
     def properties(self):
-        return {PropertyField(property, self) for property in self._data['properties']}
+        return {PropertyField(property, entity_type_selection=self) for property in self._data['properties']}
 
     @property
     def filter_properties(self):
@@ -72,9 +61,6 @@ class EntityTypeSelection:
             lambda conds, type: sql.SQL('({})').format(sql.SQL('\n%s ' % type).join(conds)),
             lambda filter_func: filter_func.sql
         )
-
-    def properties_for_spec_selection(self, spec):
-        return spec.properties.get(self.id, set())
 
     def properties_for_matching(self, linkset_spec):
         return self.filter_properties.union(
@@ -100,5 +86,5 @@ class EntityTypeSelection:
                           for condition in filter_obj['conditions']]
             return with_conditions(conditions, filter_obj['type']) if with_conditions else conditions
 
-        filter_function = FilterFunction(filter_obj, PropertyField(filter_obj['property'], self))
+        filter_function = FilterFunction(filter_obj, PropertyField(filter_obj['property'], entity_type_selection=self))
         return with_filter_function(filter_function) if with_filter_function else filter_function

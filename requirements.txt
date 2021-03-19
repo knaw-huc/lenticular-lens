@@ -1,6 +1,7 @@
 flask==1.1.2
 flask-cors==3.0.10
 flask-compress==1.9.0
+flask-pyoidc==3.7.0
 gunicorn==20.0.4
 jstyleson==0.0.2
 schema==0.7.4

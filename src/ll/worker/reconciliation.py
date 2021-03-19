@@ -16,7 +16,7 @@ CLUSTER_SERIALISATION_DIR = ''
 
 
 class ReconciliationJob(WorkerJob):
-    def __init__(self, job_id, id, type, association_file):
+    def __init__(self, job_id, id, type, association_file = None):
         self._job_id = job_id
         self._id = id
         self._type = type

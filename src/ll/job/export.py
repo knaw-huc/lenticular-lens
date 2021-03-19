@@ -315,7 +315,7 @@ class Export:
 
             for linkset in self._linksets:
                 root = linkset.with_matching_methods_recursive(
-                    lambda children_nodes, operator, fuzzy: Node(operator, children=children_nodes),
+                    lambda children_nodes, operator, fuzzy, threshold: Node(operator, children=children_nodes),
                     lambda matching_method: Node(F"resource:MatchingMethod-{matching_method.field_name}")
                 )
 

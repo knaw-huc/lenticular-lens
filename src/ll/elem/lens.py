@@ -1,7 +1,4 @@
 from psycopg2 import sql
-from collections import defaultdict
-
-from ll.job.property_field import PropertyField
 from ll.util.helpers import flatten, get_json_from_file
 
 
@@ -24,15 +21,6 @@ class Lens:
     @property
     def description(self):
         return self._data['description'].strip()
-
-    @property
-    def properties(self):
-        props = defaultdict(set)
-        for prop in self._data['properties']:
-            ets_id = prop['entity_type_selection']
-            props[ets_id].add(PropertyField(prop['property'], self._job.get_entity_type_selection_by_id(ets_id)))
-
-        return props
 
     @property
     def linksets(self):

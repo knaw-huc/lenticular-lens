@@ -28,6 +28,8 @@
         </div>
       </div>
 
+      <slot name="box-slot" v-bind:index="index" v-bind:element="element"/>
+
       <div class="col-auto ml-auto">
         <div class="row">
           <div v-if="!isRoot && (logicBoxElements.length > 0 || controlledElements)" class="col-auto">
@@ -46,8 +48,6 @@
                 class="max-overflow small" label="Description" :is-small-card="true">
         <p class="mt-2">{{ optionDescriptions[element.type] }}</p>
       </sub-card>
-
-      <slot name="box-slot" v-bind:index="index" v-bind:element="element"/>
 
       <draggable v-model="element[elementsName]" :group="controlledElements ? uid : group"
                  handle=".handle" @change="onMove($event)">

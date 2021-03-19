@@ -5,28 +5,27 @@ from psycopg2 import extras as psycopg2_extras
 
 
 class TimbuctooDatasets:
-    def __init__(self, graphql_uri, hsid):
+    def __init__(self, graphql_uri):
         self._graphql_uri = graphql_uri
-        self._hsid = hsid
         self._datasets = None
 
     @property
     def datasets(self):
         if not self._datasets:
-            timbuctoo_data = Timbuctoo(self._graphql_uri, self._hsid).datasets
+            timbuctoo_data = Timbuctoo(self._graphql_uri).datasets
             database_data = self._datasets_from_database()
             self._datasets = self._combine(timbuctoo_data, database_data)
 
         return self._datasets
 
     def update(self):
-        timbuctoo_data = Timbuctoo(self._graphql_uri, self._hsid).datasets
+        timbuctoo_data = Timbuctoo(self._graphql_uri).datasets
         database_data = self._datasets_from_database()
 
         for dataset_id, dataset_data in database_data.items():
             for collection_id, collection_data in dataset_data['collections'].items():
                 if dataset_id in timbuctoo_data and collection_id in timbuctoo_data[dataset_id]['collections']:
-                    collection = Collection(self._graphql_uri, self._hsid, dataset_id, collection_id, timbuctoo_data)
+                    collection = Collection(self._graphql_uri, dataset_id, collection_id, timbuctoo_data)
                     collection.update()
 
     def _datasets_from_database(self):
@@ -41,7 +40,6 @@ class TimbuctooDatasets:
                         'name': table['dataset_name'],
                         'title': table['title'],
                         'description': table['description'],
-                        'published': table['hsid'] is None,
                         'collections': {},
                     }
 

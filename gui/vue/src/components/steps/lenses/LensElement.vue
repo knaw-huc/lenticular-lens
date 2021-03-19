@@ -2,8 +2,7 @@
   <div class="border border-dark p-3 mt-3">
     <div class="row align-items-center justify-content-between">
       <div class="col-auto ml-4">
-        <v-select :value="selected" label="label"
-                  :options="specs" :clearable="false" :disabled="disabled"
+        <v-select :value="selected" label="label" :options="specs" :clearable="false" :disabled="disabled"
                   autocomplete="off" placeholder="Type to search for a linkset or lens"
                   @input="updateLensElement" v-bind:class="{'is-invalid': errors.includes('spec')}">
           <div slot="option" slot-scope="option">
@@ -21,6 +20,13 @@
            class="col-auto small text-muted font-italic">
         <template v-if="index === 0">Target</template>
         <template v-else>Filter</template>
+      </div>
+
+      <div v-if="selected" class="col-auto small text-muted font-italic">
+        <template v-if="element.type === 'linkset'">Linkset</template>
+        <template v-else>Lens</template>
+
+        #{{ element.id }}
       </div>
 
       <div class="col-auto ml-auto">
@@ -59,7 +65,7 @@
 
             selected() {
                 if (this.selectedSpec)
-                    return {type: this.element.type, id: this.element.id, label: this.selectedSpec.label};
+                    return {type: this.element.type, specId: this.element.id, label: this.selectedSpec.label};
 
                 return null;
             },
@@ -81,12 +87,12 @@
                 const specs = [
                     ...linksetSpecs.map(linksetSpec => ({
                         type: 'linkset',
-                        id: linksetSpec.id,
+                        specId: linksetSpec.id,
                         label: linksetSpec.label
                     })),
                     ...lensSpecs.map(lensSpec => ({
                         type: 'lens',
-                        id: lensSpec.id,
+                        specId: lensSpec.id,
                         label: lensSpec.label
                     }))
                 ];
@@ -103,7 +109,7 @@
 
             updateLensElement(selectedSpec) {
                 this.element.type = selectedSpec.type;
-                this.element.id = selectedSpec.id;
+                this.element.id = selectedSpec.specId;
 
                 this.$emit('update');
             },

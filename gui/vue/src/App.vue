@@ -39,17 +39,16 @@
           </template>
 
           <draggable v-model="$root.entityTypeSelections" group="entityTypeSelections" handle=".handle">
-            <b-collapse v-for="(entityTypeSelection, index) in $root.entityTypeSelections"
-                        :key="entityTypeSelection.id" :id="'entity_type_selection_card_' + entityTypeSelection.id"
-                        :visible="entityTypeSelectionOpen === entityTypeSelection.id || entityTypeSelectionOpen === null">
-              <entity-type-selection
-                  :entity-type-selection="entityTypeSelection"
-                  @duplicate="duplicateEntityTypeSelection($event)"
-                  @remove="$root.entityTypeSelections.splice(index, 1)"
-                  @show="entityTypeSelectionOpen = entityTypeSelection.id"
-                  @hide="entityTypeSelectionOpen = null"
-                  ref="entityTypeSelectionComponents"/>
-            </b-collapse>
+            <entity-type-selection
+                v-for="(entityTypeSelection, index) in $root.entityTypeSelections"
+                v-show="entityTypeSelectionOpen === entityTypeSelection.id || entityTypeSelectionOpen === null"
+                :key="entityTypeSelection.id"
+                :entity-type-selection="entityTypeSelection"
+                @duplicate="duplicateEntityTypeSelection($event)"
+                @remove="$root.entityTypeSelections.splice(index, 1)"
+                @show="entityTypeSelectionOpen = entityTypeSelection.id"
+                @hide="entityTypeSelectionOpen = null"
+                ref="entityTypeSelectionComponents"/>
           </draggable>
         </tab-content-structure>
       </tab-content>
@@ -63,20 +62,19 @@
           </template>
 
           <draggable v-model="$root.linksetSpecs" group="linksetSpecs" handle=".handle">
-            <b-collapse v-for="linksetSpec in $root.linksetSpecs"
-                        :key="linksetSpec.id" :id="'linkset_spec_card_' + linksetSpec.id"
-                        :visible="linksetSpecOpen === linksetSpec.id || linksetSpecOpen === null">
-              <linkset
-                  :linkset-spec="linksetSpec"
-                  :allow-delete="!specsUsedInLens.find(spec => spec.type === 'linkset' && spec.id === linksetSpec.id)"
-                  @duplicate="duplicateLinksetSpec($event)"
-                  @submit="submit"
-                  @remove="removeSpec('linkset', linksetSpec.id)"
-                  @update:label="linksetSpec.label = $event"
-                  @show="linksetSpecOpen = linksetSpec.id"
-                  @hide="linksetSpecOpen = null"
-                  ref="linksetSpecComponents"/>
-            </b-collapse>
+            <linkset
+                v-for="linksetSpec in $root.linksetSpecs"
+                v-show="linksetSpecOpen === linksetSpec.id || linksetSpecOpen === null"
+                :key="linksetSpec.id"
+                :linkset-spec="linksetSpec"
+                :allow-delete="!specsUsedInLens.find(spec => spec.type === 'linkset' && spec.id === linksetSpec.id)"
+                @duplicate="duplicateLinksetSpec($event)"
+                @submit="submit"
+                @remove="removeSpec('linkset', linksetSpec.id)"
+                @update:label="linksetSpec.label = $event"
+                @show="linksetSpecOpen = linksetSpec.id"
+                @hide="linksetSpecOpen = null"
+                ref="linksetSpecComponents"/>
           </draggable>
         </tab-content-structure>
       </tab-content>
@@ -90,36 +88,33 @@
           </template>
 
           <draggable v-model="$root.lensSpecs" group="lensSpecs" handle=".handle">
-            <b-collapse v-for="lensSpec in $root.lensSpecs"
-                        :key="lensSpec.id" :id="'lens_spec_card_' + lensSpec.id"
-                        :visible="lensSpecOpen === lensSpec.id || lensSpecOpen === null">
-              <lens
-                  :lens-spec="lensSpec"
-                  :allow-delete="!specsUsedInLens.find(spec => spec.type === 'lens' && spec.id === lensSpec.id)"
-                  @duplicate="duplicateLensSpec($event)"
-                  @submit="submit"
-                  @remove="removeSpec('lens', lensSpec.id)"
-                  @update:label="lensSpec.label = $event"
-                  @show="lensSpecOpen = lensSpec.id"
-                  @hide="lensSpecOpen = null"
-                  ref="lensSpecComponents"/>
-            </b-collapse>
+            <lens
+                v-for="lensSpec in $root.lensSpecs"
+                v-show="lensSpecOpen === lensSpec.id || lensSpecOpen === null"
+                :key="lensSpec.id"
+                :lens-spec="lensSpec"
+                :allow-delete="!specsUsedInLens.find(spec => spec.type === 'lens' && spec.id === lensSpec.id)"
+                @duplicate="duplicateLensSpec($event)"
+                @submit="submit"
+                @remove="removeSpec('lens', lensSpec.id)"
+                @update:label="lensSpec.label = $event"
+                @show="lensSpecOpen = lensSpec.id"
+                @hide="lensSpecOpen = null"
+                ref="lensSpecComponents"/>
           </draggable>
         </tab-content-structure>
       </tab-content>
 
       <tab-content title="Validation">
         <tab-content-structure title="Validation" :tab-error="tabError" :is-saved="isSaved">
-          <b-collapse v-for="spec in specsWithResults"
-                      :key="spec.uid" :id="'validation_card_' + spec.uid"
-                      :visible="validationOpen === spec.uid || validationOpen === null">
-            <validation
-                :type="spec.type"
-                :spec="spec.spec"
-                :key="spec.uid"
-                @show="validationOpen = spec.uid"
-                @hide="validationOpen = null"/>
-          </b-collapse>
+          <validation
+              v-for="spec in specsWithResults"
+              v-show="validationOpen === spec.uid || validationOpen === null"
+              :key="spec.uid"
+              :type="spec.type"
+              :spec="spec.spec"
+              @show="validationOpen = spec.uid"
+              @hide="validationOpen = null"/>
         </tab-content-structure>
       </tab-content>
 
@@ -127,9 +122,12 @@
         <tab-content-structure title="Export" :tab-error="tabError" :is-saved="isSaved">
           <export
               v-for="spec in specsWithResults"
+              v-show="exportOpen === spec.uid || exportOpen === null"
+              :key="spec.uid"
               :type="spec.type"
               :spec="spec.spec"
-              :key="spec.uid"/>
+              @show="exportOpen = spec.uid"
+              @hide="exportOpen = null"/>
         </tab-content-structure>
       </tab-content>
 
@@ -218,6 +216,7 @@
                 linksetSpecOpen: null,
                 lensSpecOpen: null,
                 validationOpen: null,
+                exportOpen: null,
                 steps: ['research', 'entityTypeSelections', 'linksetSpecs', 'lensSpecs', 'validation', 'export'],
             };
         },
@@ -226,7 +225,8 @@
                 return !Boolean(this.$root.job)
                     || JSON.stringify(this.$root.entityTypeSelections) !== JSON.stringify(this.$root.job['entity_type_selections'])
                     || JSON.stringify(this.$root.linksetSpecs) !== JSON.stringify(this.$root.job['linkset_specs'])
-                    || JSON.stringify(this.$root.lensSpecs) !== JSON.stringify(this.$root.job['lens_specs']);
+                    || JSON.stringify(this.$root.lensSpecs) !== JSON.stringify(this.$root.job['lens_specs'])
+                    || JSON.stringify(this.$root.views) !== JSON.stringify(this.$root.job['views']);
             },
 
             specsWithResults() {
@@ -442,7 +442,7 @@
                         else
                             this.activateStep('linksetSpecs');
 
-                        this.refresh();
+                        await this.refresh();
                     }
                 }
             },
@@ -509,6 +509,10 @@
                         const index = this.$root.linksetSpecs.findIndex(linkset => linkset.id === id);
                         this.$root.linksetSpecs.splice(index, 1);
 
+                        const viewIdx = this.$root.views.findIndex(view => view.id === id && view.type === 'linkset');
+                        if (viewIdx > -1)
+                            this.$root.views.splice(viewIdx, 1);
+
                         await this.submit();
                     }
                     else if (type === 'lens') {
@@ -518,6 +522,10 @@
                         const index = this.$root.lensSpecs.findIndex(lens => lens.id === id);
                         this.$root.lensSpecs.splice(index, 1);
 
+                        const viewIdx = this.$root.views.findIndex(view => view.id === id && view.type === 'lens');
+                        if (viewIdx > -1)
+                            this.$root.views.splice(viewIdx, 1);
+
                         await this.submit();
                     }
                 }
@@ -526,18 +534,11 @@
         mounted() {
             const urlParams = new URLSearchParams(window.location.search);
 
-            const hsid = urlParams.get('hsid');
-            if (hsid) {
-                window.opener.postMessage({'timbuctoo-hsid': hsid});
-                return;
-            }
-
             const jobId = urlParams.get('job_id');
             if (jobId)
                 this.setJobId(jobId, true);
 
             this.refreshDownloadsInProgress();
-            this.$root.loadAssociationFiles();
 
             EventBus.$on('refresh', _ => this.refresh(true));
             EventBus.$on('refreshDownloadsInProgress', _ => this.refreshDownloadsInProgress(true));

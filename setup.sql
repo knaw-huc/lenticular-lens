@@ -21,19 +21,19 @@ CREATE TABLE IF NOT EXISTS jobs
     entity_type_selections_form_data json,
     linkset_specs_form_data          json,
     lens_specs_form_data             json,
+    views_form_data                  json,
     entity_type_selections           json,
     linkset_specs                    json,
     lens_specs                       json,
+    views                            json,
     created_at                       timestamp default now() not null,
-    updated_at                       timestamp default now() not null,
-    UNIQUE (job_title, job_description)
+    updated_at                       timestamp default now() not null
 );
 
 CREATE TABLE IF NOT EXISTS timbuctoo_tables
 (
     table_name               text primary key,
     graphql_endpoint         text                    not null,
-    hsid                     text,
     dataset_id               text                    not null,
     collection_id            text                    not null,
     dataset_uri              text                    not null,
@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS timbuctoo_tables
     rows_count               int  default 0          not null,
     last_push_time           timestamp,
     update_finish_time       timestamp,
-    UNIQUE (graphql_endpoint, hsid, dataset_id, collection_id)
+    UNIQUE (graphql_endpoint, dataset_id, collection_id)
 );
 
 CREATE TABLE IF NOT EXISTS linksets
@@ -97,7 +97,6 @@ CREATE TABLE IF NOT EXISTS clusterings
     spec_id          int       not null,
     spec_type        spec_type not null,
     clustering_type  text      not null,
-    association_file text,
     status           text      not null,
     status_message   text,
     kill             boolean   not null,
@@ -133,29 +132,36 @@ $$ LANGUAGE sql STRICT IMMUTABLE PARALLEL SAFE;
 
 CREATE OR REPLACE FUNCTION match_array_meets_size(arr anyarray, source anyarray, target anyarray,
                                                   min_count numeric, min_count_percentage boolean,
-                                                  min_distinct_count numeric,
-                                                  min_distinct_count_percentage boolean) RETURNS boolean AS $$
+                                                  min_source_count numeric, min_source_count_percentage boolean,
+                                                  min_target_count numeric, min_target_count_percentage boolean)
+    RETURNS boolean AS $$
 DECLARE
-    largest_size numeric;
-    unique_size  numeric;
+    unique_source_size numeric;
+    unique_target_size numeric;
 BEGIN
-    IF min_count_percentage or min_distinct_count_percentage THEN
-        largest_size = greatest(cardinality(source), cardinality(target));
-    END IF;
-
     IF min_count > 0 THEN
-        IF min_count_percentage and array_length(arr, 1) < (largest_size * (min_count / 100.0)) THEN
+        IF min_count_percentage AND
+           array_length(arr, 1) < (greatest(cardinality(source), cardinality(target)) * (min_count / 100.0)) THEN
             RETURN FALSE;
-        ELSIF not min_count_percentage and array_length(arr, 1) < min_count THEN
+        ELSIF NOT min_count_percentage AND array_length(arr, 1) < min_count THEN
             RETURN FALSE;
         END IF;
     END IF;
 
-    IF min_distinct_count > 0 THEN
-        unique_size = cardinality(ARRAY(SELECT DISTINCT unnest(arr[1:])));
-        IF min_distinct_count_percentage and unique_size < (largest_size * (min_distinct_count / 100.0)) THEN
+    IF min_source_count > 0 THEN
+        unique_source_size = cardinality(ARRAY(SELECT DISTINCT unnest(arr[:][1:1])));
+        IF min_source_count_percentage AND unique_source_size < (cardinality(source) * (min_source_count / 100.0)) THEN
             RETURN FALSE;
-        ELSIF not min_distinct_count_percentage and unique_size < min_distinct_count THEN
+        ELSIF NOT min_source_count_percentage AND unique_source_size < min_source_count THEN
+            RETURN FALSE;
+        END IF;
+    END IF;
+
+    IF min_target_count > 0 THEN
+        unique_target_size = cardinality(ARRAY(SELECT DISTINCT unnest(arr[:][2:2])));
+        IF min_target_count_percentage AND unique_target_size < (cardinality(target) * (min_target_count / 100.0)) THEN
+            RETURN FALSE;
+        ELSIF NOT min_target_count_percentage AND unique_target_size < min_target_count THEN
             RETURN FALSE;
         END IF;
     END IF;

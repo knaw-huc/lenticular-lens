@@ -10,11 +10,10 @@ from ll.data.timbuctoo import Timbuctoo
 
 
 class TimbuctooJob(WorkerJob):
-    def __init__(self, table_name, graphql_endpoint, hsid, dataset_id, collection_id,
+    def __init__(self, table_name, graphql_endpoint, dataset_id, collection_id,
                  prefix_mappings, columns, cursor, rows_count, rows_per_page):
         self._table_name = table_name
         self._graphql_endpoint = graphql_endpoint
-        self._hsid = hsid
         self._dataset_id = dataset_id
         self._collection_id = collection_id
         self._prefix_mappings = prefix_mappings
@@ -88,7 +87,7 @@ class TimbuctooJob(WorkerJob):
                 columns="\n".join(columns)
             )
 
-            query_result = Timbuctoo(self._graphql_endpoint, self._hsid).fetch_graph_ql(query, {'cursor': self._cursor})
+            query_result = Timbuctoo(self._graphql_endpoint).fetch_graph_ql(query, {'cursor': self._cursor})
             if not query_result:
                 return
 

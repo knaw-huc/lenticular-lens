@@ -20,7 +20,7 @@
                 Configure
               </label>
 
-              <label v-if="useFuzzyLogic" class="btn btn-secondary btn-sm"
+              <label v-if="allowFuzzyLogic" class="btn btn-secondary btn-sm"
                      v-bind:class="{'active': configureTConorms}" @click="configureTConorms = !configureTConorms">
                 Configure fuzzy logic
               </label>
@@ -49,170 +49,20 @@
       </div>
     </div>
 
-    <div class="row pl-5">
-      <div class="col">
-        <div class="my-3 ml-5">
-          <condition-method v-if="configureMatching && method.items.length > 0" :id="'method_' + id"
-                            :method="method" :condition="condition" config-key="method_config" ref="methodConfig"/>
-
-          <template v-if="useFuzzyLogic && configureTConorms">
-            <div class="form-group row">
-              <label :for="'t_conorm_' + id" class="col-sm-3 col-form-label">
-                T-conorm
-              </label>
-
-              <div class="col-sm-3">
-                <select :id="'t_conorm_' + id" class="form-control form-control-sm" v-model="condition.t_conorm">
-                  <option v-for="(description, key) in tConorms" :value="key">
-                    {{ description }}
-                  </option>
-                </select>
-              </div>
-            </div>
-
-            <div class="form-group row">
-              <label :for="'threshold_' + id" class="col-sm-3 col-form-label">
-                Threshold
-              </label>
-
-              <div class="col-sm-2">
-                <range :id="'threshold_' + id" v-model.number="condition.threshold"/>
-              </div>
-            </div>
-          </template>
-
-          <template v-if="applySimMethod && method.items.length > 0 && method.acceptsSimilarityMethod">
-            <div class="form-group row">
-              <label :for="'sim_method_' + id" class="col-sm-3 col-form-label">
-                Apply similarity method
-              </label>
-
-              <div class="col-sm-3">
-                <select :id="'sim_method_' + id" class="form-control form-control-sm"
-                        v-bind:class="{'is-invalid': errors.includes('sim_method_name')}"
-                        v-model="condition.method_sim_name" @change="handleSimMethodChange">
-                  <option disabled selected value="">Select a similarity method</option>
-                  <option v-for="(method, methodName) in similarityMethods" :value="methodName">
-                    {{ method.description }}
-                  </option>
-                </select>
-              </div>
-            </div>
-
-            <condition-method v-if="simMethod.items.length > 0" :id="'sim_method_' + id"
-                              :method="simMethod" :condition="condition" config-key="method_sim_config"
-                              ref="methodSimConfig"/>
-
-            <div v-if="condition.method_sim_name" class="form-group row">
-              <div class="col">
-                <div class="form-check">
-                  <input class="form-check-input" type="checkbox"
-                         :id="'method_sim_normalized_' + id" v-model="condition.method_sim_normalized">
-                  <label class="form-check-label" :for="'method_sim_normalized_' + id">
-                    Apply similarity method on normalized value?
-                  </label>
-                </div>
-              </div>
-            </div>
-          </template>
-
-          <template v-if="applyListMatching">
-            <div class="form-group row">
-              <label :for="'list_threshold_' + id" class="col-sm-3 col-form-label">
-                Minimum matches
-              </label>
-
-              <div class="col-sm-1">
-                <input :id="'list_threshold_' + id" class="form-control form-control-sm"
-                       type="number" step="1"
-                       v-model.number="condition.list_matching.threshold"
-                       v-bind:class="{'is-invalid':
-                          errors.includes('list_threshold') || errors.includes('list_matching')}">
-              </div>
-
-              <div class="col-sm-1">
-                <div class="form-check">
-                  <input class="form-check-input" type="radio" :id="'list_threshold_items_' + id"
-                         v-model="condition.list_matching.is_percentage" :value="false">
-                  <label class="form-check-label" :for="'list_threshold_items_' + id">
-                    matches
-                  </label>
-                </div>
-              </div>
-
-              <div class="col-sm-1">
-                <div class="form-check">
-                  <input class="form-check-input" type="radio" :id="'list_threshold_percentage_' + id"
-                         v-model="condition.list_matching.is_percentage" :value="true">
-                  <label class="form-check-label" :for="'list_threshold_percentage_' + id">
-                    %
-                  </label>
-                </div>
-              </div>
-
-              <div class="col-auto" v-show="errors.includes('list_threshold')">
-                <div class="invalid-feedback inline-feedback"
-                     v-bind:class="{'is-invalid': errors.includes('list_threshold')}">
-                  Please specify a valid value
-                </div>
-              </div>
-            </div>
-
-            <div class="form-group row">
-              <label :for="'list_unique_threshold_' + id" class="col-sm-3 col-form-label">
-                Minimum unique values
-              </label>
-
-              <div class="col-sm-1">
-                <input :id="'list_unique_threshold_' + id" class="form-control form-control-sm"
-                       type="number" step="1"
-                       v-model.number="condition.list_matching.unique_threshold"
-                       v-bind:class="{'is-invalid':
-                          errors.includes('list_unique_threshold') || errors.includes('list_matching')}">
-              </div>
-
-              <div class="col-sm-1">
-                <div class="form-check">
-                  <input class="form-check-input" type="radio" :id="'list_threshold_items_' + id"
-                         v-model="condition.list_matching.unique_is_percentage" :value="false">
-                  <label class="form-check-label" :for="'list_threshold_items_' + id">
-                    values
-                  </label>
-                </div>
-              </div>
-
-              <div class="col-sm-1">
-                <div class="form-check">
-                  <input class="form-check-input" type="radio" :id="'list_threshold_percentage_' + id"
-                         v-model="condition.list_matching.unique_is_percentage" :value="true">
-                  <label class="form-check-label" :for="'list_threshold_percentage_' + id">
-                    %
-                  </label>
-                </div>
-              </div>
-
-              <div class="col-auto" v-show="errors.includes('list_unique_threshold')">
-                <div class="invalid-feedback inline-feedback"
-                     v-bind:class="{'is-invalid': errors.includes('list_unique_threshold')}">
-                  Please specify a valid value
-                </div>
-              </div>
-            </div>
-
-            <div class="invalid-feedback mb-2" v-bind:class="{'is-invalid': errors.includes('list_matching')}">
-              Please specify at least a minimum number of matches or a minimum number of unique values
-            </div>
-          </template>
-        </div>
-      </div>
-    </div>
+    <condition-configuration :id="id" :condition="condition" :method="method" :sim-method="simMethod"
+                             :use-fuzzy-logic="allowFuzzyLogic" :configure-matching="configureMatching"
+                             :configure-t-conorms="configureTConorms" :apply-sim-method="applySimMethod"
+                             :apply-list-matching="applyListMatching" @sim-method-change="handleSimMethodChange"
+                             ref="conditionConfiguration"/>
 
     <div v-for="key in ['sources', 'targets']" class="row pl-5">
       <div class="col">
         <div class="row">
-          <div class="h4 col-auto">{{ key | capitalize }} properties</div>
+          <div v-if="key === 'sources'" class="h4 col-auto">Source properties</div>
+          <div v-else class="h4 col-auto">Target properties</div>
+
           <div v-if="unusedEntityTypeSelections[key].length > 0" class="col-auto form-group">
-            <select-box @input="condition[key][$event].push({'property': [$event, '']})">
+            <select-box @input="addProperty(key, $event, -1)">
               <option value="" disabled selected>Add property for Entity-type selection:</option>
               <option v-for="entityTypeSelection in unusedEntityTypeSelections[key]" :value="entityTypeSelection">
                 {{ $root.getEntityTypeSelectionById(entityTypeSelection).label }}
@@ -221,13 +71,17 @@
           </div>
         </div>
 
-        <condition-property v-for="(conditionProperty, index) in condition[key]"
-                            :key="index" :condition-property="conditionProperty"
-                            :allow-delete="allowDeleteForIndex(index, conditionProperty, key)"
-                            :is-first="index === 0"
-                            @clone="cloneProperty(key, index, conditionProperty)"
-                            @delete="condition[key].splice(index, 1)"
-                            ref="conditionProperties"/>
+        <template v-for="(conditionProperties, etsId, etsIdx) in condition[key]">
+          <condition-property v-for="(conditionProperty, index) in conditionProperties"
+                              :key="etsIdx + '_' + index"
+                              :entity-type-selection="$root.getEntityTypeSelectionById(etsId)"
+                              :condition-property="conditionProperty"
+                              :allow-delete="index > 0"
+                              :is-first="etsIdx === 0 && index === 0"
+                              @clone="addProperty(key, etsId, index)"
+                              @delete="condition[key][etsId].splice(index, 1)"
+                              ref="conditionProperties"/>
+        </template>
 
         <div class="invalid-feedback mb-2" v-bind:class="{'is-invalid': errors.includes(key)}">
           Please specify at least one property
@@ -241,34 +95,32 @@
     import props from "@/utils/props";
     import ValidationMixin from "@/mixins/ValidationMixin";
 
-    import ConditionMethod from "./ConditionMethod";
+    import ConditionConfiguration from "./ConditionConfiguration";
     import ConditionProperty from "./ConditionProperty";
 
     export default {
         name: "Condition",
         components: {
-            ConditionMethod,
+            ConditionConfiguration,
             ConditionProperty,
         },
         mixins: [ValidationMixin],
         data() {
             return {
-                configureMatching: false,
+                configureMatching: true,
                 configureTConorms: false,
                 applySimMethod: false,
                 applyListMatching: false,
-                tConorms: props.tConorms,
                 transformers: props.transformers,
                 matchingMethods: props.matchingMethods,
-                similarityMethods: Object.keys(props.matchingMethods)
-                    .filter(key => props.matchingMethods[key].isSimilarityMethod)
-                    .reduce((obj, key) => ({
-                        ...obj,
-                        [key]: props.matchingMethods[key]
-                    }), {}),
             };
         },
-        props: ['condition', 'index', 'id', 'useFuzzyLogic'],
+        props: {
+            id: String,
+            index: Number,
+            condition: Object,
+            useFuzzyLogic: Boolean,
+        },
         computed: {
             method() {
                 if (this.condition.method_name && this.matchingMethods.hasOwnProperty(this.condition.method_name))
@@ -284,13 +136,17 @@
                 return {description: '', acceptSimilarityMethod: false, isSimilarityMethod: false, items: []};
             },
 
+            allowFuzzyLogic() {
+                return this.useFuzzyLogic && (this.method.isSimilarityMethod || this.simMethod.isSimilarityMethod);
+            },
+
             unusedEntityTypeSelections() {
                 const entityTypeSelectionKeys = ['sources', 'targets'];
                 const unusedEntityTypeSelections = {};
 
                 entityTypeSelectionKeys.forEach(key => {
-                    unusedEntityTypeSelections[key] = Object.keys(this.condition[key])
-                        .filter(id => this.condition[key][id].length < 1);
+                    unusedEntityTypeSelections[key] =
+                        Object.keys(this.condition[key]).filter(id => this.condition[key][id].length < 1);
                 });
 
                 return unusedEntityTypeSelections;
@@ -303,39 +159,18 @@
         methods: {
             validateCondition() {
                 const methodNameValid = this.validateField('method_name', this.condition.method_name);
-                const simMethodNameValid = this.validateField('sim_method_name',
-                    !this.applySimMethod || this.condition.method_sim_name);
+                const configValid = this.$refs.conditionConfiguration.validateConditionConfiguration();
 
-                const methodConfigValid = this.validateField('method_config',
-                    this.$refs.methodConfig ? this.$refs.methodConfig.validateConditionMethod() : true);
-                const methodSimConfigValid = this.validateField('method_sim_config',
-                    this.$refs.methodSimConfig ? this.$refs.methodSimConfig.validateConditionMethod() : true);
-
-                const listMatchingValid = this.validateField('list_matching',
-                    !this.applyListMatching ||
-                    this.condition.list_matching.threshold > 0 ||
-                    this.condition.list_matching.unique_threshold > 0);
-
-                const listThresholdValid = this.validateField('list_threshold',
-                    !this.applyListMatching || (this.condition.list_matching.threshold >= 0 &&
-                    (!this.condition.list_matching.is_percentage
-                        || this.condition.list_matching.threshold <= 100)));
-
-                const listUniqueThresholdValid = this.validateField('list_unique_threshold',
-                    !this.applyListMatching || (this.condition.list_matching.unique_threshold >= 0 &&
-                    (!this.condition.list_matching.unique_is_percentage
-                        || this.condition.list_matching.unique_threshold <= 100)));
-
-                const sourcesValid = this.validateField('sources', this.condition.sources.length > 0);
-                const targetsValid = this.validateField('targets', this.condition.targets.length > 0);
+                const sourcesValid = this.validateField('sources',
+                    Object.keys(this.condition.sources).length > 0);
+                const targetsValid = this.validateField('targets',
+                    Object.keys(this.condition.targets).length > 0);
 
                 const conditionPropertiesValid = !this.$refs.conditionProperties
                     .map(propertyComponent => propertyComponent.validateConditionProperty())
                     .includes(false);
 
-                return methodNameValid && simMethodNameValid && methodConfigValid && methodSimConfigValid
-                    && listMatchingValid && listThresholdValid && listUniqueThresholdValid
-                    && sourcesValid && targetsValid && conditionPropertiesValid;
+                return methodNameValid && configValid && sourcesValid && targetsValid && conditionPropertiesValid;
             },
 
             handleMethodChange() {
@@ -352,24 +187,8 @@
                     this.$set(this.condition.method_sim_config, item.key, item.defaultValue));
             },
 
-            getParametersForTransformer(transformer) {
-                if (this.transformers.hasOwnProperty(transformer))
-                    return this.transformers[transformer].items.reduce((acc, item) => {
-                        acc[item.key] = item.type;
-                        return acc;
-                    }, {});
-
-                return {};
-            },
-
-            allowDeleteForIndex(index, prop, key) {
-                return this.condition[key]
-                    .findIndex(p => p.entity_type_selection === prop.entity_type_selection) !== index;
-            },
-
-            cloneProperty(key, index, conditionProperty) {
-                this.condition[key].splice(index + 1, 0, {
-                    entity_type_selection: conditionProperty.entity_type_selection,
+            addProperty(key, etsId, index) {
+                this.condition[key][etsId].splice(index + 1, 0, {
                     property: [''],
                     transformers: [],
                     stopwords: {
@@ -381,8 +200,9 @@
         },
         mounted() {
             this.applySimMethod = !!this.condition.method_sim_name;
-            this.applyListMatching = this.condition.list_matching.threshold > 0
-                || this.condition.list_matching.unique_threshold > 0;
+            this.applyListMatching = this.condition.list_matching.links_threshold > 0
+                || this.condition.list_matching.source_threshold > 0
+                || this.condition.list_matching.target_threshold > 0;
         },
         watch: {
             applySimMethod() {
@@ -393,10 +213,12 @@
             },
             applyListMatching() {
                 if (!this.applyListMatching) {
-                    this.condition.list_matching.threshold = 0;
-                    this.condition.list_matching.is_percentage = false;
-                    this.condition.list_matching.unique_threshold = 0;
-                    this.condition.list_matching.unique_is_percentage = false;
+                    this.condition.list_matching.links_threshold = 0;
+                    this.condition.list_matching.links_is_percentage = false;
+                    this.condition.list_matching.source_threshold = 0;
+                    this.condition.list_matching.source_is_percentage = false;
+                    this.condition.list_matching.target_threshold = 0;
+                    this.condition.list_matching.target_is_percentage = false;
                 }
             },
         },

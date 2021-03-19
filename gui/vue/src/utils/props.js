@@ -20,14 +20,14 @@ export default {
                     key: 'intermediate_source',
                     label: 'Source',
                     type: 'property',
-                    defaultValue: [''],
+                    defaultValue: [['']],
                     entity_type_selection_key: 'entity_type_selection',
                 },
                 {
                     key: 'intermediate_target',
                     label: 'Target',
                     type: 'property',
-                    defaultValue: [''],
+                    defaultValue: [['']],
                     entity_type_selection_key: 'entity_type_selection',
                 }
             ],

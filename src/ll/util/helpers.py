@@ -57,7 +57,3 @@ def get_sql_empty(sql, add_new_line=True):
 
 def get_pagination_sql(limit=None, offset=0):
     return ('LIMIT ' + str(limit) + ' ' if limit else '') + ('OFFSET ' + str(offset) if offset > 0 else '')
-
-
-def get_association_files():
-    return []

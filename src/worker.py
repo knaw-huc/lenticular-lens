@@ -96,7 +96,7 @@ class Worker:
             watch_query = """
                 SELECT *
                 FROM clusterings cl
-                WHERE cl.status = 'waiting' AND (cl.association_file IS NULL OR cl.association_file = '')
+                WHERE cl.status = 'waiting'
                 ORDER BY cl.requested_at
                 LIMIT 1
             """
@@ -149,7 +149,6 @@ class Worker:
     def run_timbuctoo_job(self):
         self._job = TimbuctooJob(table_name=self._job_data['table_name'],
                                  graphql_endpoint=self._job_data['graphql_endpoint'],
-                                 hsid=self._job_data['hsid'],
                                  dataset_id=self._job_data['dataset_id'],
                                  collection_id=self._job_data['collection_id'],
                                  prefix_mappings=self._job_data['prefix_mappings'],
@@ -178,8 +177,7 @@ class Worker:
 
     def run_reconciliation_job(self):
         self._job = ReconciliationJob(job_id=self._job_data['job_id'], id=self._job_data['spec_id'],
-                                      type=self._job_data['spec_type'],
-                                      association_file=self._job_data['association_file'])
+                                      type=self._job_data['spec_type'])
         self._job.run()
         self.cleanup()
 

@@ -2,7 +2,6 @@ export interface Dataset {
     name: string,
     title: string,
     description: string | null,
-    published: boolean,
     collections: Collections,
 }
 
@@ -1090,7 +1089,6 @@ const dataset: Dataset = {
     },
     'description': 'Enriched version of the Index op ondertrouwregisters. Enrichment done by Golden Agents. (25-05-2020)',
     'name': 'index_op_ondertrouwregister_enriched_20200525',
-    'published': true,
     'title': 'Stadsarchief Amsterdam: Index op ondertrouwregisters'
 };
 

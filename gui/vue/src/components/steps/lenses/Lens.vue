@@ -26,30 +26,13 @@
         </button>
       </div>
 
-      <div v-if="lensStatus === 'done' && lens.distinct_links_count > 0" class="col-auto">
-        <button v-if="clustering && clustering !== 'running'" type="button" class="btn btn-secondary my-1"
-                @click="runClustering($event)" :disabled="association === ''"
-                :title="association === '' ? 'Choose an association first' : ''">
-          Reconcile
-          <template v-if="clusteringStatus === 'failed'">again</template>
-        </button>
-
-        <button v-else-if="!clustering" type="button" class="btn btn-secondary my-1" @click="runClustering($event)">
+      <div
+          v-if="lensStatus === 'done' && lens.distinct_links_count > 0 && (!clustering || clusteringStatus === 'failed')"
+          class="col-auto">
+        <button type="button" class="btn btn-secondary my-1" @click="runClustering($event)">
           Cluster
-          <template v-if="association !== ''"> &amp; Reconcile</template>
           <template v-if="clusteringStatus === 'failed'">again</template>
         </button>
-      </div>
-
-      <div v-if="lensStatus === 'done' && lens.distinct_links_count > 0 && $root.associationFiles"
-           class="col-auto">
-        <select class="col-auto form-control association-select my-1" v-model="association"
-                :id="'lens_' + lensSpec.id + '_association'">
-          <option value="">No association</option>
-          <option v-for="associationFileName in $root.associationFiles" :value="associationFileName">
-            {{ associationFileName }}
-          </option>
-        </select>
       </div>
 
       <div v-if="!isOpen" class="col-auto">
@@ -94,40 +77,25 @@
                    @add="addLensElement($event)" @remove="removeLensElement($event)"
                    ref="lensGroupComponent">
           <template v-slot:box-slot="boxElement">
-            <sub-card v-if="useFuzzyLogic && !isOnlyLeft(boxElement.element.type)"
-                      label="Fuzzy logic" :is-small-card="true">
-              <div class="form-group row mt-2">
-                <label :for="'t_conorm_' + boxElement.index" class="col-sm-3 col-form-label">
-                  T-conorm
-                </label>
+            <div v-if="useFuzzyLogic && !isOnlyLeft(boxElement.element.type)" class="col-auto">
+              <select :id="'t_conorm_' + boxElement.index" class="form-control form-control-sm"
+                      v-model="boxElement.element.t_conorm">
+                <option v-for="(description, key) in tConorms" :value="key">
+                  {{ description }}
+                </option>
+              </select>
+            </div>
 
-                <div class="col-sm-3">
-                  <select :id="'t_conorm_' + boxElement.index" class="form-control form-control-sm"
-                          v-model="boxElement.element.t_conorm">
-                    <option v-for="(description, key) in tConorms" :value="key">
-                      {{ description }}
-                    </option>
-                  </select>
-                </div>
-              </div>
-
-              <div class="form-group row">
-                <label :for="'threshold_' + boxElement.index" class="col-sm-3 col-form-label">
-                  Threshold
-                </label>
-
-                <div class="col-sm-2">
-                  <range :id="'threshold_' + boxElement.index"
-                         v-model.number="boxElement.element.threshold"/>
-                </div>
-              </div>
-            </sub-card>
+            <div v-if="useFuzzyLogic && !isOnlyLeft(boxElement.element.type)" class="col-auto">
+              <range :id="'threshold_' + boxElement.index" v-model.number="boxElement.element.threshold"
+                     label="Threshold" :allow-zero="false"/>
+            </div>
           </template>
 
           <template v-slot="curElement">
             <lens-element :type="curElement.type" :element="curElement.element" :index="curElement.index"
                           :disabled="!!lens" @add="curElement.add()" @remove="curElement.remove()"
-                          @update="updateProperties()"/>
+                          @update="updateView()"/>
           </template>
         </logic-box>
       </sub-card>
@@ -158,7 +126,6 @@
         },
         data() {
             return {
-                association: '',
                 isOpen: false,
                 useFuzzyLogic: false,
                 lensOptions: props.lensOptions,
@@ -168,6 +135,10 @@
             };
         },
         computed: {
+            view() {
+                return this.$root.getViewByIdAndType(this.lensSpec.id, 'lens');
+            },
+
             lens() {
                 return this.$root.lenses.find(lens => lens.spec_id === this.lensSpec.id);
             },
@@ -214,18 +185,6 @@
                 });
                 return [...new Set(linksets)];
             },
-
-            entityTypeSelectionsInLensElements() {
-                const entityTypeSelections = this.linksetsInLens
-                    .flatMap(linksetSpec => linksetSpec.properties)
-                    .flatMap(prop => prop.entity_type_selection);
-                return [...new Set(entityTypeSelections)];
-            },
-
-            entityTypeSelectionsInLensProperties() {
-                const entityTypeSelections = this.lensSpec.properties.flatMap(prop => prop.entity_type_selection);
-                return [...new Set(entityTypeSelections)];
-            },
         },
         methods: {
             validateLens() {
@@ -255,38 +214,68 @@
                 this.$set(group.elements, index, elementCopy);
             },
 
-            updateProperties() {
-                const entityTypeSelectionsToRemove = this.entityTypeSelectionsInLensProperties
-                    .filter(res => !this.entityTypeSelectionsInLensElements.includes(res));
+            updateView() {
+                const entityTypeSelections = new Set(this.linksetsInLens.flatMap(
+                    linksetSpec => [...linksetSpec.sources, ...linksetSpec.targets]
+                ));
 
-                if (entityTypeSelectionsToRemove.length > 0) {
-                    const propIdxToRemove = this.properties.reduce((indexes, prop, idx) => {
-                        if (entityTypeSelectionsToRemove.includes(prop.entity_type_selection))
-                            indexes.push(idx);
-                        return indexes;
-                    }, []);
-                    propIdxToRemove.reverse().forEach(idx => this.lensSpec.properties.splice(idx, 1));
+                if (this.view) {
+                    const propertiesToRemove = JSON.parse(JSON.stringify(this.view.properties));
+                    entityTypeSelections.forEach(etsId => {
+                        const ets = this.$root.getEntityTypeSelectionById(etsId);
+                        const propsIdx = propertiesToRemove.findIndex(prop =>
+                            prop.timbuctoo_graphql === ets.dataset.timbuctoo_graphql &&
+                            prop.dataset_id === ets.dataset.dataset_id &&
+                            prop.collection_id === ets.dataset.collection_id
+                        );
+
+                        if (propsIdx > -1)
+                            propertiesToRemove.splice(propsIdx, 1);
+                    });
+
+                    propertiesToRemove.forEach(toRemove => {
+                        const propsIdx = this.view.properties.findIndex(prop =>
+                            prop.timbuctoo_graphql === toRemove.timbuctoo_graphql &&
+                            prop.dataset_id === toRemove.dataset_id &&
+                            prop.collection_id === toRemove.collection_id
+                        );
+
+                        if (propsIdx > -1)
+                            this.view.properties.splice(propsIdx, 1);
+                    });
                 }
 
-                const entityTypeSelectionsToAdd = this.entityTypeSelectionsInLensElements
-                    .filter(res => !this.entityTypeSelectionsInLensProperties.includes(res));
+                if (!this.view)
+                    this.$root.addView(this.lensSpec.id, 'lens');
 
-                if (entityTypeSelectionsToAdd.length > 0) {
-                    this.linksetsInLens
-                        .flatMap(linksetSpec => linksetSpec.properties)
-                        .forEach(prop => {
-                            if (entityTypeSelectionsToAdd.includes(prop.entity_type_selection))
-                                this.lensSpec.properties.push(prop);
+                entityTypeSelections.forEach(etsId => {
+                    const ets = this.$root.getEntityTypeSelectionById(etsId);
+                    const propsIdx = this.view.properties.findIndex(prop =>
+                        prop.timbuctoo_graphql === ets.dataset.timbuctoo_graphql &&
+                        prop.dataset_id === ets.dataset.dataset_id &&
+                        prop.collection_id === ets.dataset.collection_id
+                    );
+
+                    if (propsIdx < 0)
+                        this.view.properties.push({
+                            timbuctoo_graphql: ets.dataset.timbuctoo_graphql,
+                            dataset_id: ets.dataset.dataset_id,
+                            collection_id: ets.dataset.collection_id,
+                            properties: [['']]
                         });
-                }
+                });
             },
 
             updateLogicBoxTypes(elements) {
                 if (elements.hasOwnProperty('type')) {
-                    if (this.useFuzzyLogic)
-                        elements.t_conorm = 'MAXIMUM_T_CONORM';
-                    else
-                        elements.t_conorm = '';
+                    if (this.useFuzzyLogic) {
+                        this.$set(elements, 't_conorm', 'MAXIMUM_T_CONORM');
+                        this.$set(elements, 'threshold', 0);
+                    }
+                    else {
+                        this.$set(elements, 't_conorm', '');
+                        this.$delete(elements, 'threshold');
+                    }
                 }
 
                 if (elements.hasOwnProperty('elements'))
@@ -304,8 +293,7 @@
             },
 
             async runClustering() {
-                const associationFile = this.association !== '' ? this.association : null;
-                await this.$root.runClustering('lens', this.lensSpec.id, associationFile);
+                await this.$root.runClustering('lens', this.lensSpec.id);
                 EventBus.$emit('refresh');
             },
 

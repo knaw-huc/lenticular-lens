@@ -2,8 +2,8 @@
   <div class="border border-dark p-3 mt-3">
     <div class="row align-items-center justify-content-between m-0 mb-2">
       <div class="col p-0">
-        <property :entity-type-selection="entityTypeSelection" :property="condition.property"
-                  :singular="true" :entity-type-selection-info="false" ref="propertyComponent"/>
+        <ets-property :entity-type-selection="entityTypeSelection" :property="condition.property"
+                      :singular="true" :entity-type-selection-info="false" ref="propertyComponent"/>
       </div>
 
       <div class="col-auto">

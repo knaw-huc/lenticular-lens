@@ -1,5 +1,5 @@
 <template>
-  <b-modal id="sample-view" ref="sampleView" size="xl" header-class="flex-column align-items-stretch"
+  <b-modal ref="sampleView" size="xl" header-class="flex-column align-items-stretch"
            body-class="bg-light" dialog-class="modal-full-height" scrollable hide-footer static>
     <template v-slot:modal-header="{close}">
       <div class="d-flex">
@@ -36,8 +36,18 @@
         <button type="button" aria-label="Close" class="close modal-header-close" @click="close()">×</button>
       </div>
 
-      <property-selection v-if="showPropertySelection" class="mt-2"
-                          :entity-type-selection="entityTypeSelection" :properties="entityTypeSelection.properties"/>
+      <div v-if="showPropertySelection" class="mt-2">
+        <ets-property
+            v-for="(prop, idx) in entityTypeSelection.properties"
+            :key="idx"
+            :entity-type-selection="entityTypeSelection"
+            :property="prop"
+            :singular="false"
+            :entity-type-selection-info="false"
+            :allow-delete="idx !== 0"
+            @clone="entityTypeSelection.properties.splice(idx + 1, 0, [''])"
+            @delete="$delete(entityTypeSelection.properties, idx)"/>
+      </div>
     </template>
 
     <sample v-for="(sample, idx) in samples" :key="idx" :index="idx" :sample="sample"/>
@@ -71,14 +81,12 @@
 
 <script>
     import InfiniteLoading from 'vue-infinite-loading';
-    import PropertySelection from "../../helpers/PropertySelection";
     import Sample from "./Sample";
 
     export default {
         name: "SampleView",
         components: {
             InfiniteLoading,
-            PropertySelection,
             Sample,
         },
         data() {
@@ -95,8 +103,7 @@
         },
         computed: {
             totalEntities() {
-                const datasets = this.$root.getDatasets(
-                    this.entityTypeSelection.dataset.timbuctoo_graphql, this.entityTypeSelection.dataset.timbuctoo_hsid);
+                const datasets = this.$root.getDatasets(this.entityTypeSelection.dataset.timbuctoo_graphql);
 
                 return datasets[this.entityTypeSelection.dataset.dataset_id]
                     .collections[this.entityTypeSelection.dataset.collection_id]

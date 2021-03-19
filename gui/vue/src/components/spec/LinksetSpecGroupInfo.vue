@@ -70,6 +70,10 @@
                 type: Boolean,
                 default: true,
             },
+            addRootMargin: {
+                type: Boolean,
+                default: true,
+            },
             isLinksetRoot: {
                 type: Boolean,
                 default: true,
@@ -90,7 +94,7 @@
             styleClass() {
                 const styleClass = [];
 
-                if (this.isRoot)
+                if (this.isRoot && this.addRootMargin)
                     styleClass.push('mt-3');
 
                 if (this.isRoot || this.$parent.$parent.styleClass.includes('bg-primary-light'))

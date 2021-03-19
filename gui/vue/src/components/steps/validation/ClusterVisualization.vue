@@ -1,5 +1,5 @@
 <template>
-  <b-modal id="visualization" ref="visualization" size="xl" dialog-class="modal-full-size" hide-footer static>
+  <b-modal ref="visualization" size="xl" dialog-class="modal-full-size" hide-footer static>
     <template v-slot:modal-header="{close}">
       <h5 class="modal-title">{{ label }}</h5>
 
@@ -17,11 +17,6 @@
                @click="drawShown('visualize-compact')">
           Compact
         </label>
-
-        <label v-if="association" class="btn btn-sm btn-secondary"
-               v-bind:class="{'active': show === 'visualize-reconciled'}" @click="drawShown('visualize-reconciled')">
-          Reconciled
-        </label>
       </div>
 
       <button type="button" aria-label="Close" class="close modal-header-close" @click="close()">×</button>
@@ -36,7 +31,7 @@
     import ClusterVisualizationCompactInfo from '../../info/ClusterVisualizationCompactInfo';
     import ClusterVisualizationReconciledInfo from '../../info/ClusterVisualizationReconciledInfo';
 
-    import {draw} from '../../../utils/visualization';
+    import {draw} from '@/utils/visualization';
 
     export default {
         name: "ClusterVisualization",
@@ -57,7 +52,6 @@
             type: String,
             specId: Number,
             cluster: Object,
-            association: String,
         },
         computed: {
             label() {
@@ -85,7 +79,7 @@
 
             async getGraphData(type) {
                 const data = await this.$root.getClusterGraphs(this.type, this.specId, this.cluster.id,
-                    type === 'cluster', this.cluster.extended === 'yes');
+                    type === 'cluster', this.cluster.extended);
 
                 this.clusterGraph = data.cluster_graph;
                 this.clusterGraphCompact = data.cluster_graph_compact;

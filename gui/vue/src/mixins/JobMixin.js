@@ -8,16 +8,15 @@ export default {
             entityTypeSelections: [],
             linksetSpecs: [],
             lensSpecs: [],
+            views: [],
             datasets: {},
             downloaded: [],
             downloading: [],
-            associationFiles: [],
         };
     },
     methods: {
-        getDatasets(graphqlEndpoint, hsid) {
-            const id = graphqlEndpoint && hsid ? graphqlEndpoint + ':' + hsid : graphqlEndpoint;
-            return this.datasets.hasOwnProperty(id) ? this.datasets[id] : {};
+        getDatasets(graphqlEndpoint) {
+            return this.datasets.hasOwnProperty(graphqlEndpoint) ? this.datasets[graphqlEndpoint] : {};
         },
 
         addEntityTypeSelection() {
@@ -27,9 +26,7 @@ export default {
                 dataset: {
                     dataset_id: '',
                     collection_id: '',
-                    published: true,
                     timbuctoo_graphql: 'https://repository.goldenagents.org/v5/graphql',
-                    timbuctoo_hsid: null,
                 },
                 filter: {
                     type: 'AND',
@@ -38,8 +35,6 @@ export default {
                 limit: -1,
                 random: false,
                 properties: [],
-                related: [],
-                related_array: false,
             });
         },
 
@@ -48,7 +43,6 @@ export default {
                 id: findId(this.linksetSpecs),
                 label: 'Linkset ' + (this.linksetSpecs.length + 1),
                 description: '',
-                is_association: false,
                 use_counter: true,
                 sources: [],
                 targets: [],
@@ -57,7 +51,6 @@ export default {
                     type: 'AND',
                     conditions: [],
                 },
-                properties: []
             });
         },
 
@@ -72,38 +65,61 @@ export default {
                     threshold: 0,
                     elements: [],
                 },
-                properties: []
+            });
+        },
+
+        addView(id, type) {
+            this.views.unshift({
+                id: id,
+                type: type,
+                properties: [],
+                filters: [],
             });
         },
 
         duplicateEntityTypeSelection(entityTypeSelection) {
             const index = this.entityTypeSelections.findIndex(res => res.id === entityTypeSelection.id);
-            const duplicate = copy(entityTypeSelection);
             this.entityTypeSelections.splice(index, 0, {
-                ...duplicate,
+                ...copy(entityTypeSelection),
                 id: findId(this.entityTypeSelections),
                 label: undefined,
             });
         },
 
         duplicateLinksetSpec(linksetSpec) {
-            const index = this.linksetSpecs.findIndex(m => m.id === linksetSpec.id);
-            const duplicate = copy(linksetSpec);
-            this.linksetSpecs.splice(index, 0, {
-                ...duplicate,
+            const linksetIdx = this.linksetSpecs.findIndex(m => m.id === linksetSpec.id);
+            const newLinksetSpec = {
+                ...copy(linksetSpec),
                 id: findId(this.linksetSpecs),
                 label: 'Linkset ' + (this.linksetSpecs.length + 1),
-            });
+            };
+
+            this.linksetSpecs.splice(linksetIdx, 0, newLinksetSpec);
+
+            const viewIdx = this.views.findIndex(view => view.id === linksetSpec.id && view.type === 'linkset');
+            if (viewIdx > -1)
+                this.views.splice(viewIdx, 0, {
+                    ...copy(this.views[viewIdx]),
+                    id: newLinksetSpec.id,
+                });
         },
 
         duplicateLensSpec(lensSpec) {
-            const index = this.lensSpecs.findIndex(m => m.id === lensSpec.id);
-            const duplicate = copy(lensSpec);
-            this.lensSpecs.splice(index, 0, {
-                ...duplicate,
+            const lensIdx = this.lensSpecs.findIndex(m => m.id === lensSpec.id);
+            const newLensSpec = {
+                ...copy(lensSpec),
                 id: findId(this.lensSpecs),
                 label: 'Lens ' + (this.lensSpecs.length + 1),
-            });
+            };
+
+            this.lensSpecs.splice(lensIdx, 0, newLensSpec);
+
+            const viewIdx = this.views.findIndex(view => view.id === lensSpec.id && view.type === 'lens');
+            if (viewIdx > -1)
+                this.views.splice(viewIdx, 0, {
+                    ...copy(this.views[viewIdx]),
+                    id: newLensSpec.id,
+                });
         },
 
         getEntityTypeSelectionById(id) {
@@ -116,6 +132,10 @@ export default {
 
         getLensSpecById(id) {
             return this.lensSpecs.find(lensSpec => lensSpec.id === parseInt(id));
+        },
+
+        getViewByIdAndType(id, type) {
+            return this.views.find(view => view.id === parseInt(id) && view.type === type);
         },
 
         exportCsv(type, id, params) {
@@ -148,6 +168,7 @@ export default {
                 entity_type_selections: this.entityTypeSelections,
                 linkset_specs: this.linksetSpecs,
                 lens_specs: this.lensSpecs,
+                views: this.views,
             });
         },
 
@@ -164,139 +185,185 @@ export default {
                 const entityTypeSelections = copy(this.job.entity_type_selections);
 
                 const graphQlEndpoints = entityTypeSelections
-                    .map(ets => ({endpoint: ets.dataset.timbuctoo_graphql, hsid: ets.dataset.timbuctoo_hsid}))
-                    .sort((dataA, dataB) => {
-                        if (dataA.hsid && !dataB.hsid) return -1;
-                        if (dataB.hsid && !dataA.hsid) return 1;
-                        return 0;
-                    })
-                    .filter((data, idx, res) => res.findIndex(data2 => data2.endpoint === data.endpoint) === idx);
-                await Promise.all(graphQlEndpoints.map(data => this.loadDatasets(data.endpoint, data.hsid)));
+                    .map(ets => ets.dataset.timbuctoo_graphql)
+                    .filter((data, idx, res) => res.findIndex(data2 => data2 === data) === idx);
+                await Promise.all(graphQlEndpoints.map(data => this.loadDatasets(data)));
+
+                entityTypeSelections.forEach(entityTypeSelection => {
+                    delete entityTypeSelection.dataset.published;
+                    delete entityTypeSelection.dataset.timbuctoo_hsid;
+                    delete entityTypeSelection.related;
+                    delete entityTypeSelection.related_array;
+                });
 
                 this.entityTypeSelections = entityTypeSelections;
             }
+
+            if (this.job.views)
+                this.views = copy(this.job.views);
 
             if (this.job.linkset_specs) {
                 const linksetSpecs = copy(this.job.linkset_specs);
 
                 linksetSpecs.forEach(linksetSpec => {
-                    if (!linksetSpec.hasOwnProperty('use_counter'))
-                        linksetSpec.use_counter = true;
+                    delete linksetSpec.is_association;
+                    delete linksetSpec.threshold;
 
                     this.getRecursiveElements(linksetSpec.methods, 'conditions').forEach(method => {
-                        if (method.hasOwnProperty('method_value')) {
-                            method.method_config = method.method_value;
-                            delete method.method_value;
+                        if (method.hasOwnProperty('list_matching')
+                            && method.list_matching.hasOwnProperty('threshold')) {
+                            method.list_matching.links_threshold = method.list_matching.threshold;
+                            method.list_matching.links_is_percentage = method.list_matching.is_percentage;
+                            method.list_matching.source_threshold = method.list_matching.unique_threshold;
+                            method.list_matching.source_is_percentage = method.list_matching.unique_is_percentage;
+                            method.list_matching.target_threshold = method.list_matching.unique_threshold;
+                            method.list_matching.target_is_percentage = method.list_matching.unique_is_percentage;
 
-                            method.method_sim_name = null;
-                            method.method_sim_config = {};
-                            method.method_sim_normalized = false;
-
-                            if (method.method_name === '=')
-                                method.method_name = 'EXACT';
-                            else if (method.method_name === 'TRIGRAM_DISTANCE')
-                                method.method_name = 'TRIGRAM';
-                            else if (method.method_name === 'DISTANCE_IS_BETWEEN')
-                                method.method_name = 'NUMBERS_DELTA';
-                            else if (method.method_name === 'TIME_DELTA')
-                                method.method_config.format = 'YYYY-MM-DD';
-                            else if (method.method_name === 'LEVENSHTEIN')
-                                method.method_name = 'LEVENSHTEIN_DISTANCE';
-                            else if (method.method_name === 'LEVENSHTEIN_APPROX')
-                                method.method_name = 'LEVENSHTEIN_NORMALIZED';
-                            else if (method.method_name === 'LL_SOUNDEX') {
-                                method.method_name = 'SOUNDEX';
-                                method.method_sim_name = 'LEVENSHTEIN_NORMALIZED';
-                                method.method_sim_config.threshold = method.method_config.threshold;
-                                delete method.method_config.threshold;
-                                method.method_config.size = 4;
-                            }
-                            else if (method.method_name === 'BLOOTHOOFT_REDUCT') {
-                                method.method_name = 'BLOOTHOOFT';
-                                method.method_sim_name = 'LEVENSHTEIN_NORMALIZED';
-                                method.method_sim_config.threshold = method.method_config.threshold;
-                                delete method.method_config.threshold;
-                            }
-                            else if (method.method_name === 'BLOOTHOOFT_REDUCT_APPROX') {
-                                method.method_name = 'BLOOTHOOFT';
-                                method.method_sim_name = 'LEVENSHTEIN_NORMALIZED';
-                                method.method_sim_config.threshold = method.method_config.threshold;
-                                delete method.method_config.threshold;
-                                method.method_sim_normalized = true;
-                            }
+                            delete method.list_matching.threshold;
+                            delete method.list_matching.is_percentage;
+                            delete method.list_matching.unique_threshold;
+                            delete method.list_matching.unique_is_percentage;
                         }
-
-                        method.sources.forEach(source => {
-                            source.transformers = source.transformers.filter(transformer =>
-                                transformer.name !== 'PARSE_DATE' && transformer.name !== 'PARSE_NUMERIC');
-
-                            source.transformers.forEach(transformer => {
-                                if (transformer.name === 'ECARTICO_FULL_NAME') {
-                                    transformer.name = 'TRANSFORM_LAST_NAME_FORMAT';
-                                    transformer.parameters = {infix: true};
-                                }
-                            });
-                        });
-
-                        method.targets.forEach(target => {
-                            target.transformers = target.transformers.filter(transformer =>
-                                transformer.name !== 'PARSE_DATE' && transformer.name !== 'PARSE_NUMERIC');
-
-                            target.transformers.forEach(transformer => {
-                                if (transformer.name === 'ECARTICO_FULL_NAME') {
-                                    transformer.name = 'TRANSFORM_LAST_NAME_FORMAT';
-                                    transformer.parameters = {infix: true};
-                                }
-                            });
-                        });
-
-                        if (method.hasOwnProperty('list_threshold')) {
+                        else if (method.hasOwnProperty('list_threshold')) {
                             method.list_matching = {
-                                threshold: method.list_threshold,
-                                is_percentage: method.list_threshold_unit === 'percentage',
-                                unique_threshold: 0,
-                                unique_is_percentage: false,
+                                links_threshold: method.list_threshold,
+                                links_is_percentage: method.list_threshold_unit === 'percentage',
+                                source_threshold: 0,
+                                source_is_percentage: false,
+                                target_threshold: 0,
+                                target_is_percentage: false,
                             };
+
                             delete method.list_threshold;
                             delete method.list_threshold_unit;
                         }
 
-                        method.sources.forEach(source => {
-                            if (!source.hasOwnProperty('stopwords')) {
-                                source.stopwords = {
-                                    dictionary: '',
-                                    additional: []
-                                };
-                            }
+                        if (!method.hasOwnProperty('list_matching')) {
+                            method.list_matching = {
+                                links_threshold: 0,
+                                links_is_percentage: false,
+                                source_threshold: 0,
+                                source_is_percentage: false,
+                                target_threshold: 0,
+                                target_is_percentage: false,
+                            };
+                        }
+
+                        if (method.method_name === 'TIME_DELTA'
+                            && method.method_config.hasOwnProperty('multiplier')) {
+                            method.method_config.type = '<>';
+                            method.method_config.years = 0;
+                            method.method_config.months = 0;
+
+                            delete method.method_config.multiplier;
+                        }
+
+                        if (method.method_name === 'INTERMEDIATE'
+                            && !Array.isArray(method.method_config.intermediate_source[0])) {
+                            method.method_config.intermediate_source = [method.method_config.intermediate_source];
+                            method.method_config.intermediate_target = [method.method_config.intermediate_target];
+                        }
+
+                        if (Array.isArray(method.sources)) {
+                            method.sources = method.sources.reduce((acc, source) => {
+                                if (!acc.hasOwnProperty(source.entity_type_selection))
+                                    acc[source.entity_type_selection] = [];
+
+                                acc[source.entity_type_selection].push({
+                                    property: source.property,
+                                    transformers: source.transformers,
+                                    stopwords: {
+                                        additional: source.stopwords ? source.stopwords.additional : [],
+                                        dictionary: source.stopwords ? source.stopwords.dictionary : ''
+                                    }
+                                });
+
+                                return acc;
+                            }, {});
+                        }
+
+                        if (Array.isArray(method.targets)) {
+                            method.targets = method.targets.reduce((acc, target) => {
+                                if (!acc.hasOwnProperty(target.entity_type_selection))
+                                    acc[target.entity_type_selection] = [];
+
+                                acc[target.entity_type_selection].push({
+                                    property: target.property,
+                                    transformers: target.transformers,
+                                    stopwords: {
+                                        additional: target.stopwords ? target.stopwords.additional : [],
+                                        dictionary: target.stopwords ? target.stopwords.dictionary : ''
+                                    }
+                                });
+
+                                return acc;
+                            }, {});
+                        }
+                    });
+
+                    if (linksetSpec.hasOwnProperty('properties')) {
+                        if (!this.getViewByIdAndType(linksetSpec.id, 'linkset'))
+                            this.addView(linksetSpec.id, 'linkset');
+
+                        const view = this.getViewByIdAndType(linksetSpec.id, 'linkset');
+                        linksetSpec.properties.forEach(prop => {
+                            const ets = this.$root.getEntityTypeSelectionById(prop.entity_type_selection);
+                            const propsIdx = view.properties.findIndex(viewProp =>
+                                viewProp.timbuctoo_graphql === ets.dataset.timbuctoo_graphql &&
+                                viewProp.dataset_id === ets.dataset.dataset_id &&
+                                viewProp.collection_id === ets.dataset.collection_id
+                            );
+
+                            if (propsIdx < 0)
+                                view.properties.push({
+                                    timbuctoo_graphql: ets.dataset.timbuctoo_graphql,
+                                    dataset_id: ets.dataset.dataset_id,
+                                    collection_id: ets.dataset.collection_id,
+                                    properties: [prop.property]
+                                });
+                            else
+                                view.properties[propsIdx].properties.push(prop.property);
                         });
 
-                        method.targets.forEach(target => {
-                            if (!target.hasOwnProperty('stopwords')) {
-                                target.stopwords = {
-                                    dictionary: '',
-                                    additional: []
-                                };
-                            }
-                        });
-                    });
+                        delete linksetSpec.properties;
+                    }
                 });
 
                 this.linksetSpecs = linksetSpecs;
             }
 
-            function updateLogicBoxTypes(elements) {
-                if (!elements.hasOwnProperty('t_conorm'))
-                    elements.t_conorm = '';
-                if (!elements.hasOwnProperty('threshold'))
-                    elements.threshold = 0;
-
-                if (elements.hasOwnProperty('elements'))
-                    elements.elements.forEach(element => updateLogicBoxTypes(element));
-            }
-
             if (this.job.lens_specs) {
                 const lensSpecs = copy(this.job.lens_specs);
-                lensSpecs.forEach(lensSpec => updateLogicBoxTypes(lensSpec.specs));
+
+                lensSpecs.forEach(lensSpec => {
+                    if (lensSpec.hasOwnProperty('properties')) {
+                        if (!this.getViewByIdAndType(lensSpec.id, 'lens'))
+                            this.addView(lensSpec.id, 'lens');
+
+                        const view = this.getViewByIdAndType(lensSpec.id, 'lens');
+                        lensSpec.properties.forEach(prop => {
+                            const ets = this.$root.getEntityTypeSelectionById(prop.entity_type_selection);
+                            const propsIdx = view.properties.findIndex(viewProp =>
+                                viewProp.timbuctoo_graphql === ets.dataset.timbuctoo_graphql &&
+                                viewProp.dataset_id === ets.dataset.dataset_id &&
+                                viewProp.collection_id === ets.dataset.collection_id
+                            );
+
+                            if (propsIdx < 0)
+                                view.properties.push({
+                                    timbuctoo_graphql: ets.dataset.timbuctoo_graphql,
+                                    dataset_id: ets.dataset.dataset_id,
+                                    collection_id: ets.dataset.collection_id,
+                                    properties: [prop.property]
+                                });
+                            else
+                                view.properties[propsIdx].properties.push(prop.property);
+                        });
+
+                        delete lensSpec.properties;
+                    }
+                });
+
                 this.lensSpecs = lensSpecs;
             }
 
@@ -352,9 +419,8 @@ export default {
             return callApi(`/job/${this.job.job_id}/run_lens/${id}`, {restart});
         },
 
-        async runClustering(type, id, associationFile) {
-            return callApi(`/job/${this.job.job_id}/run_clustering/${type}/${id}`,
-                {association_file: associationFile});
+        async runClustering(type, id) {
+            return callApi(`/job/${this.job.job_id}/run_clustering/${type}/${id}`);
         },
 
         async killLinkset(id) {
@@ -386,14 +452,17 @@ export default {
             return callApi(`/job/${this.job.job_id}/entity_type_selection/${id}?${params.join('&')}`);
         },
 
-        async getLinksTotals(type, id, clusterId = undefined) {
+        async getLinksTotals(type, id, min = undefined, max = undefined, clusterId = undefined) {
             const params = [];
             if (clusterId) params.push(`cluster_id=${clusterId}`);
+            if (min) params.push(`min=${min}`);
+            if (max) params.push(`max=${max}`);
 
             return callApi(`/job/${this.job.job_id}/links_totals/${type}/${id}?${params.join('&')}`);
         },
 
-        async getLinks(type, id, accepted, rejected, notSure, notValidated, mixed, clusterId = undefined,
+        async getLinks(type, id, accepted, rejected, notSure, notValidated, mixed,
+                       min = undefined, max = undefined, clusterId = undefined,
                        limit = undefined, offset = 0) {
             const params = [];
             if (accepted) params.push('valid=accepted');
@@ -401,16 +470,18 @@ export default {
             if (notSure) params.push('valid=not_sure');
             if (notValidated) params.push('valid=not_validated');
             if (mixed) params.push('valid=mixed');
+
             if (clusterId) params.push(`cluster_id=${clusterId}`);
+            if (min && min > 0) params.push(`min=${min}`);
+            if (max && max < 1) params.push(`max=${max}`);
             if (limit) params.push(`limit=${limit}`);
             if (offset) params.push(`offset=${offset}`);
 
             return callApi(`/job/${this.job.job_id}/links/${type}/${id}?${params.join('&')}`);
         },
 
-        async getClusters(type, id, association, limit = undefined, offset = 0) {
+        async getClusters(type, id, limit = undefined, offset = 0) {
             const params = [];
-            if (association) params.push(`association=${association}`);
             if (limit) params.push(`limit=${limit}`);
             if (offset) params.push(`offset=${offset}`);
 
@@ -445,33 +516,15 @@ export default {
             return callApi(`/job/${this.job.job_id}/validate/${type}/${id}`, body);
         },
 
-        async loadDatasets(graphqlEndpoint, hsid) {
-            const id = graphqlEndpoint && hsid ? graphqlEndpoint + ':' + hsid : graphqlEndpoint;
-            if (!id || this.datasets.hasOwnProperty(id))
+        async loadDatasets(graphqlEndpoint) {
+            if (this.datasets.hasOwnProperty(graphqlEndpoint))
                 return;
 
-            const params = [`endpoint=${graphqlEndpoint}`];
-            if (hsid) params.push(`hsid=${hsid}`);
-
-            this.datasets[id] = await callApi(`/datasets?${params.join('&')}`);
-
-            if (hsid) {
-                const datasetsPublished = {};
-
-                Object.keys(this.datasets[id]).forEach(datasetName => {
-                    const dataset = this.datasets[id][datasetName];
-                    if (dataset.published)
-                        datasetsPublished[datasetName] = dataset;
-                });
-
-                this.datasets[graphqlEndpoint] = datasetsPublished;
-            }
+            this.datasets[graphqlEndpoint] = await callApi(`/datasets?endpoint=${graphqlEndpoint}`);
         },
 
-        async startDownload(datasetId, collectionId, graphqlEndpoint, hsid) {
+        async startDownload(datasetId, collectionId, graphqlEndpoint) {
             const params = [`dataset_id=${datasetId}`, `collection_id=${collectionId}`, `endpoint=${graphqlEndpoint}`];
-            if (hsid) params.push(`hsid=${hsid}`);
-
             return callApi(`/download?${params.join('&')}`);
         },
 
@@ -479,10 +532,6 @@ export default {
             const downloads = await callApi('/downloads');
             this.downloaded = downloads.downloaded;
             this.downloading = downloads.downloading;
-        },
-
-        async loadAssociationFiles() {
-            this.associationFiles = await callApi('/association_files');
         },
     },
 };

@@ -1,9 +1,8 @@
 # Lenticular Lens
 
-Lenticular Lens is a tool which allows users to construct linksets between entities 
-from different Timbuctoo datasets (so called data-alignment or reconciliation). 
-Lenticular Lens tracks the configuration and the algorithms used in the alignment 
-and is also able to report on manual corrections and the amount of manual validation done.
+Lenticular Lens is a tool which allows users to construct linksets between entities from different Timbuctoo datasets (
+so called data-alignment or reconciliation). Lenticular Lens tracks the configuration and the algorithms used in the
+alignment and is also able to report on manual corrections and the amount of manual validation done.
 
 1. [Installation with Docker](#installation-with-docker)
 1. [Definition of terms](#definition-of-terms)
@@ -18,18 +17,10 @@ and is also able to report on manual corrections and the amount of manual valida
     1. [Entity-type selections](#entity-type-selections)
     1. [Linkset specs](#linkset-specs)
     1. [Lens specs](#lens-specs)
+    1. [Views](#views)
     1. [Logic boxes](#logic-boxes)
     1. [Property paths](#property-paths)
-1. [Matching methods](#matching-methods)
-    1. [Levenshtein distance](#levenshtein-distance)
-    1. [Soundex](#soundex)
-    1. [Bloothooft Reduction](#bloothooft-reduction)
-    1. [Trigram distance](#trigram-distance)
-    1. [Time Delta](#time-delta)
-    1. [Same Year/Month](#same-yearmonth)
-    1. [Distance is between](#distance-is-between)
-    1. [Normalized / Similarity](#normalized--similarity)
-    1. [Future matching methods](#future-matching-methods)
+    1. [Fuzzy logic](#fuzzy-logic)
 
 ## Installation with Docker
 
@@ -39,56 +30,82 @@ and is also able to report on manual corrections and the amount of manual valida
 1. Run `docker-compose up`
 1. Visit http://localhost:8000 in your browser
 
-_Note: This will create a folder `pgdata` with the database data. 
-To clean up the database and start from scratch, simply remove this folder._
+_Note: This will create a folder `pgdata` with the database data. To clean up the database and start from scratch,
+simply remove this folder._
+
+## Configuration
+
+Misc. configuration:
+
+- `APP_DOMAIN`: The application domain; defaults to `http://localhost`
+- `SECRET_KEY`: The secret key used for session signing
+- `LOG_LEVEL`: The logging level; defaults to `INFO`
+- `WORKER_TYPE`: For a worker instance, the type of the worker to run:
+    - `TIMBUCTOO`
+    - `LINKSET`
+    - `LENS`
+    - `CLUSTERING`
+    - `RECONCILIATION`
+
+Database configuration:
+
+- `DATABASE_HOST`: The database host; defaults to `localhost`
+- `DATABASE_PORT`: The database port; defaults to `5432`
+- `DATABASE_DB`: The database name; defaults to `postgres`
+- `DATABASE_USER`: The database user; defaults to `postgres`
+- `DATABASE_PASSWORD`: The database password; defaults to `postgres`
+
+OpenID Connect authentication configuration:
+
+- `OIDC_SERVER`: The OpenID Connect provider server; leave empty to disable authentication
+- `OIDC_CLIENT_ID`: The OpenID Connect client id
+- `OIDC_CLIENT_SECRET`: The OpenID Connect client secret
 
 ## Definition of terms
 
 ![](./docs/schema.png)
 
-*   **Job**
-    
-    A **job** encloses a research question, which highlights the scope/context 
-    in which _linksets_ and _lenses_ are created, analysed, validated and exported.
+* **Job**
 
-*   **Entity-type selection**
-    
-    An **entity-type selection** is a selection of entities (stemmed from a dataset) 
-    of a certain type based on zero or more filters. 
-    The set of _entity-type selections_ in a _job_ comprises the entities of interest for a research question.
-    
-*   **Linkset specification** 
-    
-    A **linkset specification** is the specification determining how entities from one or more _entity-type selections_
-    should be matched using one or more entity matching algorithms. 
-    Running a _linkset specification_ will result in a _linkset_.
+  A **job** encloses a research question, which highlights the scope/context in which _linksets_ and _lenses_ are
+  created, analysed, validated and exported.
 
-*   **Linkset**
-    
-    A **linkset** is a set of paired resources (URIs)
-    that matched according to a _linkset specification_.
-    
-*   **Lens specification**
-    
-    A **lens specification** is the specification that specifies one or more modifications 
-    (union, intersection, ...) over a number of _linksets_ or _lenses_. 
-    The _lens_ inherits the specifications of all _linksets_ and _lenses_ it originates from.
-    
-*   **Lens**
-    
-    A **lens** is a set of paired resources (URIs)
-    resulting from one or more modifications according to a _lens specification_.
+* **Entity-type selection**
 
-*   **Clustering**
-    
-    A **clustering** is the partitioning of the resources (URIs) in a _linkset_ or _lens_ 
-    into _clusters_ based on transitivity of the links in the _linkset_ or _lens_.
-    
-*   **Cluster**
-    
-    A **cluster** is a set of potentially similar resources (URIs). 
-    As a _cluster_ originates from the _clustering_ of a _linkset_ or a _lens_, 
-    the _cluster_ holds only with respect to their _linkset specifications_.
+  An **entity-type selection** is a selection of entities (stemmed from a dataset) of a certain type based on zero or
+  more filters. The set of _entity-type selections_ in a _job_ comprises the entities of interest for a research
+  question.
+
+* **Linkset specification**
+
+  A **linkset specification** is the specification determining how entities from one or more _entity-type selections_
+  should be matched using one or more entity matching algorithms. Running a _linkset specification_ will result in a _
+  linkset_.
+
+* **Linkset**
+
+  A **linkset** is a set of paired resources (URIs) that matched according to a _linkset specification_.
+
+* **Lens specification**
+
+  A **lens specification** is the specification that specifies one or more modifications (union, intersection, ...) over
+  a number of _linksets_ or _lenses_. The _lens_ inherits the specifications of all _ linksets_ and _lenses_ it
+  originates from.
+
+* **Lens**
+
+  A **lens** is a set of paired resources (URIs) resulting from one or more modifications according to a _lens
+  specification_.
+
+* **Clustering**
+
+  A **clustering** is the partitioning of the resources (URIs) in a _linkset_ or _lens_ into _clusters_ based on
+  transitivity of the links in the _linkset_ or _lens_.
+
+* **Cluster**
+
+  A **cluster** is a set of potentially similar resources (URIs). As a _cluster_ originates from the _clustering_ of a _
+  linkset_ or a _lens_, the _cluster_ holds only with respect to their _linkset specifications_.
 
 ## API
 
@@ -97,16 +114,15 @@ To clean up the database and start from scratch, simply remove this folder._
 **URL**: `/`\
 **Method**: `GET`
 
-Root page. Will return the GUI for the tool. 
+Root page. Will return the GUI for the tool.
 
 ---
 
 **URL**: `/datasets`\
 **Method**: `GET`\
-**Parameters**: `endpoint`, `hsid`
+**Parameters**: `endpoint`
 
-Returns all available datasets for a specific Timbuctoo GraphQL `endpoint`. 
-If logged in, specify the `hsid` to obtain the private datasets.
+Returns all available datasets for a specific Timbuctoo GraphQL `endpoint`.
 
 _Example: `/datasets?endpoint=https://repository.goldenagents.org/v5/graphql`_
 
@@ -121,21 +137,13 @@ Returns all currently running data downloads and finished data downloads from Ti
 
 **URL**: `/download`\
 **Method**: `GET`\
-**Parameters**: `endpoint`, `hsid`, `dataset_id`, `collection_id`
+**Parameters**: `endpoint`, `dataset_id`, `collection_id`
 
-Starts a data download from Timbuctoo from the given Timbuctoo GraphQL `endpoint`.
-If logged in, specify the `hsid` to obtain a private datasets.
-Use `dataset_id` to specify from which dataset to download 
-and `collection_id` to specify the collection from the dataset to download.
+Starts a data download from Timbuctoo from the given Timbuctoo GraphQL `endpoint`. Use `dataset_id` to specify from
+which dataset to download and `collection_id` to specify the collection from the dataset to download.
 
-_Example: `/download?endpoint=https://repository.goldenagents.org/v5/graphql&dataset_id=ufab7d657a250e3461361c982ce9b38f3816e0c4b__ecartico_20190805&collection_id=schema_Person`_
-
----
-
-**URL**: `/association_files`\
-**Method**: `GET`\
-
-Returns all available association_files.
+_
+Example: `/download?endpoint=https://repository.goldenagents.org/v5/graphql&dataset_id=ufab7d657a250e3461361c982ce9b38f3816e0c4b__ecartico_20190805&collection_id=schema_Person`_
 
 ### Job creation and updates
 
@@ -143,17 +151,17 @@ Returns all available association_files.
 **Method**: `POST`\
 **JSON**: `job_title`, `job_description`
 
-Creates a new job with the given `job_title` and `job_description`. 
-Returns the identifier of this new job.
+Creates a new job with the given `job_title` and `job_description`. Returns the identifier of this new job.
 
 ---
 
 **URL**: `/job/update`\
 **Method**: `POST`\
 **JSON**: `job_id`, `job_title`, `job_description`, `job_link`, `entity_type_selections`, `linkset_specs`, `lens_specs`
+, `views`
 
-Updates a job with the given `job_id`. 
-Updates the `job_title`, `job_description`, `job_link`, `entity_type_selections`, `linkset_specs` and `lens_specs`.
+Updates a job with the given `job_id`. Updates the `job_title`, `job_description`, `job_link`, `entity_type_selections`
+, `linkset_specs`, `lens_specs` and `views`.
 
 ---
 
@@ -197,8 +205,7 @@ _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/clusterings`_
 **Method**: `POST`\
 **JSON**: `restart`
 
-Start a linkset process for the given `linkset` of a specific `job_id`. 
-Specify `restart` to restart the process.
+Start a linkset process for the given `linkset` of a specific `job_id`. Specify `restart` to restart the process.
 
 _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/run_linkset/0`_
 
@@ -208,37 +215,35 @@ _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/run_linkset/0`_
 **Method**: `POST`\
 **JSON**: `restart`
 
-Start a lens process for the given `lens` of a specific `job_id`. 
-Specify `restart` to restart the process.
+Start a lens process for the given `lens` of a specific `job_id`. Specify `restart` to restart the process.
 
 _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/run_lens/0`_
 
 ---
 
 **URL**: `/job/<job_id>/run_clustering/<type>/<id>`\
-**Method**: `POST`\
-**JSON**: `association_file`, `clustering_type`
+**Method**: `POST`
 
-Start a clustering process of `type` (`linkset` or `lens`) 
-for the linkset/lens with the given `id` of a specific `job_id`. 
-Specify an `association_file` to reconcile a given cluster.
-Specify `clustering_type`, which is `default` by default.
+Start a clustering process of `type` (`linkset` or `lens`) for the linkset/lens with the given `id` of a
+specific `job_id`.
 
 _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/run_clustering/linkset/0`_
 
 ---
 
 **URL**: `/job/<job_id>/kill_linkset/<linkset>`\
-**Method**: `POST`\
-Stop a linkset process for the given `linkset` of a specific `job_id`. 
+**Method**: `POST`
+
+Stop a linkset process for the given `linkset` of a specific `job_id`.
 
 _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/kill_linkset/0`_
 
 ---
 
 **URL**: `/job/<job_id>/kill_lens/<lens>`\
-**Method**: `POST`\
-Stop a lens process for the given `lens` of a specific `job_id`. 
+**Method**: `POST`
+
+Stop a lens process for the given `lens` of a specific `job_id`.
 
 _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/kill_lens/0`_
 
@@ -247,7 +252,7 @@ _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/kill_lens/0`_
 **URL**: `/job/<job_id>/kill_clustering/<type>/<id>`\
 **Method**: `POST`
 
-Stop a clustering process of `type` (`linkset` or `lens`) 
+Stop a clustering process of `type` (`linkset` or `lens`)
 for the linkset/lens with the given `id` of a specific `job_id`.
 
 _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/kill_clustering/lens/0`_
@@ -277,8 +282,7 @@ _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/entity_type_selection_total/0`_
 **Parameters**: `cluster_id`, `limit`, `offset`
 
 Returns the total number of links of `type` (`linkset` or `lens`) for the linkset/lens with `id` of the given `job_id`.
-Use `limit` and `offset` for paging.
-Specify `cluster_id` to only return the links of a specific cluster.
+Use `limit` and `offset` for paging. Specify `cluster_id` to only return the links of a specific cluster.
 
 _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/links_totals/linkset/0`_
 
@@ -288,8 +292,8 @@ _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/links_totals/linkset/0`_
 **Method**: `GET`\
 **Parameters**: `limit`, `offset`
 
-Returns all data for an entity-type selection with the given `id` of the given `job_id`.
-Use `limit` and `offset` for paging.
+Returns all data for an entity-type selection with the given `id` of the given `job_id`. Use `limit` and `offset` for
+paging.
 
 _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/entity_type_selection/0`_
 
@@ -297,11 +301,11 @@ _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/entity_type_selection/0`_
 
 **URL**: `/job/<job_id>/links/<type>/<id>`\
 **Method**: `GET`\
-**Parameters**: `cluster_id`, `limit`, `offset`
+**Parameters**: `valid`, `cluster_id`, `limit`, `offset`
 
-Returns the links of `type` (`linkset` or `lens`) for the linkset/lens with `id` of the given `job_id`.
-Use `limit` and `offset` for paging.
-Specify `cluster_id` to only return the links of a specific cluster.
+Returns the links of `type` (`linkset` or `lens`) for the linkset/lens with `id` of the given `job_id`. Use `limit`
+and `offset` for paging. Specify `valid` with `accepted`, `declined`, `not_sure` and/or `not_validated` to only return
+from the specified validity types. Specify `cluster_id` to only return the links of a specific cluster.
 
 _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/links/linkset/0`_
 
@@ -309,11 +313,10 @@ _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/links/linkset/0`_
 
 **URL**: `/job/<job_id>/clusters/<type>/<id>`\
 **Method**: `GET`\
-**Parameters**: `association`, `limit`, `offset`
+**Parameters**: `limit`, `offset`
 
-Returns the clusters of `type` (`linkset` or `lens`) for the linkset/lens with `id` of the given `job_id`.
-Use `limit` and `offset` for paging.
-Specify `association` to include reconciliation results with the given association.
+Returns the clusters of `type` (`linkset` or `lens`) for the linkset/lens with `id` of the given `job_id`. Use `limit`
+and `offset` for paging.
 
 _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/clusters/0`_
 
@@ -321,73 +324,108 @@ _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/clusters/0`_
 
 **URL**: `/job/<job_id>/validate/<type>/<id>`\
 **Method**: `POST`\
-**JSON**: `source`, `target`, `valid`
+**JSON**: `source`, `target`, `cluster_id`, `validation`, `valid`
 
-Validate a link of `type` (`linkset` or `lens`) for the linkset/lens with `id` of the given `job_id`.
-Specify the uris of the `source` and `target` to identify the link to be validated.
+Validate a link of `type` (`linkset` or `lens`) for the linkset/lens with `id` of the given `job_id`. Specify the uris
+of the `source` and `target` to identify the link to be validated or filter the links by specifying the `cluster_id` or
+the current `validation` type.
 
-Provide `valid` with either `accepted` or `declined` to validate the link or use `not_validated` to reset.  
+Provide `valid` with either `accepted`, `declined` or `not_sure` to validate the link or use `not_validated` to reset.
 
 ---
 
 **URL**: `/job/<job_id>/cluster/<type>/<id>/<cluster_id>/graph`\
-**Method**: `GET`\
-**Parameters**: `get_cluster`, `get_cluster_compact`, `get_reconciliation`
+**Method**: `GET`
 
-Get the visualization information for a cluster with `cluster_id` of `type` (`linkset` or `lens`) 
+Get the visualization information for a cluster with `cluster_id` of `type` (`linkset` or `lens`)
 for the linkset/lens with `id` of the given `job_id`.
-Specify `get_cluster` to obtain the default visualization.
-Specify `get_cluster_compact` to obtain the compact visualization.
-Specify `get_reconciliation` to obtain the reconciled visualization.
 
 ### Export
 
-**URL**: `/job/<job_id>/export/<type>/<id>/csv`\
+**URL**: `/job/<job_id>/csv/<type>/<id>`\
 **Method**: `GET`\
 **Parameters**: `valid`
 
 Get a CSV export of `type` (`linkset` or `lens`) for the linkset/lens with `id` the given `job_id`.
 
-Specify `valid` with `accepted` to include the accepted links.
-Specify `valid` with `declined` to include the declined links.
-Specify `valid` with `not_validated` to include the links which were not yet validated.
-Specify `valid` with `mixed` to include the links which have mixed validations in the various linksets of the lens.
+Specify `valid` with `accepted`, `declined`, `not_sure` and/or `not_validated` to only export from the specified
+validity types.
+
+---
+
+**URL**: `/job/<job_id>/rdf/<type>/<id>`\
+**Method**: `GET`\
+**Parameters**: `valid`, `link_pred_namespace`, `link_pred_shortname`, `export_metadata`, `export_link_metadata`
+, `export_linkset`, `rdf_star`, `use_graphs`, `creator`, `publisher`
+
+Get a RDF export of `type` (`linkset` or `lens`) for the linkset/lens with `id` the given `job_id`.
+
+Specify `valid` with `accepted`, `declined`, `not_sure` and/or `not_validated` to only export from the specified
+validity types.
+
+Specify `link_pred_namespace` and `link_pred_shortname` to configure the predicate to use for the links.
+
+Specify `export_metadata`, `export_link_metadata`, `export_linkset` with boolean values to indicate what to include in
+the RDF export.
+
+Specify `rdf_star` and `use_graphs` to determine the RDF format to use.
+
+Optionally specify `creator` and/or `publisher` to include extra metadata.
 
 ## Job configuration with JSON
 
 ### Entity-type selections
 
-Entity-type selections is a list of JSON objects that contain the configuration 
-of the specific entity-type selections to use for a particular job.
+Entity-type selections is a list of JSON objects that contain the configuration of the specific entity-type selections
+to use for a particular job.
 
 ```json5
 {
-    "id": 1,                    // An integer as identifier  
-    "label": "My dataset",      // The label of the entity-type selection in the GUI
-    "description": "",          // A description of this entity-type selection by the user; optional field
-    "dataset": {                // The data to use from Timbuctoo
-        "dataset_id": "ufab7d657a250e3461361c982ce9b38f3816e0c4b__ecartico_20190805",   // The identifier of the dataset to use
-        "collection_id": "foaf_Person",                                                 // The identifier of the collection from this dataset to use
-        "published": true,                                                              // Whether the dataset is published on Timbuctoo or not; optional field, defaults to 'true'
-        "timbuctoo_graphql": "https://repository.goldenagents.org/v5/graphql",          // The GraphQL interface of the Timbuctoo instance
-        "timbuctoo_hsid": null                                                          // The hsid if the dataset is not published; optional field
-    },
-    "filter": {                 // The filter configuration to obtain only a subset of the data from Timbuctoo; optional field
-        "conditions": [{        // The filter is composed of a logic box
-            "property": ["foaf_name"],    // The property path to which this condition applies
-            "type": 'minimal_date',       // The type of filtering to apply; see table below for allowed values
-            "value": "1600",              // Depends on type of filtering selected; value to use for filtering
-            "format": "YYYY-MM-DD"        // Both the types `minimal_date` and `maximum_date` require a date format for parsing
-        }],
-        "type": "AND"           // Whether ALL conditions in this group should match ('AND') or AT LEAST ONE condition in this group has to match ('OR')
-    },
-    "limit": -1,                // Apply a limit on the number of entities to obtain or -1 for no limit; optional field, defaults to '-1'
-    "random": false,            // Randomize the entities to obtain or not; optional field, defaults to 'false'
-    "properties": [             // A list of property paths to use for obtaining sample data; optional field
-        ["foaf_name"]
-    ],
-    "related": [],              // Work in progress
-    "related_array": false      // Work in progress
+  // An integer as identifier  
+  "id": 1,
+  // The label of the entity-type selection
+  "label": "My dataset",
+  // A description of this entity-type selection by the user; optional field
+  "description": "",
+  // The data to use from Timbuctoo
+  "dataset": {
+    // The identifier of the dataset to use
+    "dataset_id": "ufab7d657a250e3461361c982ce9b38f3816e0c4b__ecartico_20190805",
+    // The identifier of the collection from this dataset to use
+    "collection_id": "foaf_Person",
+    // The GraphQL interface of the Timbuctoo instance
+    "timbuctoo_graphql": "https://repository.goldenagents.org/v5/graphql",
+  },
+  // The filter configuration to obtain only a subset of the data from Timbuctoo; optional field
+  "filter": {
+    // Whether ALL conditions in this group should match ('AND') or AT LEAST ONE condition in this group has to match ('OR')
+    "type": "AND",
+    // The filter is composed of a logic box
+    "conditions": [
+      {
+        // The property path to which this condition applies
+        "property": [
+          "foaf_name"
+        ],
+        // The type of filtering to apply; see table below for allowed values
+        "type": 'minimal_date',
+        // Depends on type of filtering selected; value to use for filtering
+        "value": "1600",
+        // Both the types `minimal_date` and `maximum_date` require a date format for parsing
+        "format": "YYYY-MM-DD"
+      }
+    ]
+  },
+  // Apply a limit on the number of entities to obtain or -1 for no limit; optional field, defaults to '-1'
+  "limit": -1,
+  // Randomize the entities to obtain or not; optional field, defaults to 'false'
+  "random": false,
+  // A list of property paths to use for obtaining sample data; optional field
+  "properties": [
+    [
+      "foaf_name"
+    ]
+  ]
 }
 ```        
 
@@ -408,112 +446,224 @@ of the specific entity-type selections to use for a particular job.
 
 ### Linkset specs
 
-Linkset specs is a list of JSON objects that contain the configuration 
-of the linksets to generate for a particular job.
+Linkset specs is a list of JSON objects that contain the configuration of the linksets to generate for a particular job.
 
 ```json5
 {
-    "id": 1,                    // An integer as identifier  
-    "label": "My linkset",      // The label of the linkset in the GUI
-    "description": "",          // A description of this linkset by the user; optional field
-    "is_association": false,    // Work in progress; optional field, defaults to 'false'
-    "sources": [1],             // The identifiers of entity-type selections to use as source
-    "targets": [1],             // The identifiers of entity-type selections to use as targets
-    "methods": {                // The matching configuration for finding links; requires at least one condition
-        "conditions": [{        // The matching configuration is composed of a logic box
-            "method_name": "=",               // The type of matching to apply; see table below for allowed values
-            "method_value": {},               // Some types of matching methods require extra configuration
-            "sources": [{                     // The source properties to use during matching
-                "entity_type_selection": 1,         // The identifier of the entity-type selection to use
-                "property": ["schema_birthDate"],   // The property path to which this condition applies
-                "transformers": [{                  // The transformers to apply to transform the value before matching; see table below for allowed values
-                    "name": "PARSE_DATE",
-                    "parameters": {
-                        "format": "YYYY-MM-DD"
-                    }
-                }]                  
-            }],
-            "targets": [{                     // The target properties to use during matching
-                "entity_type_selection": 1,
-                "property": ["schema_birthDate"],
-                "transformers": []
-            }]
-        }],
-        "type": "AND"           // Whether ALL conditions in this group should match ('AND') or AT LEAST ONE condition in this group has to match ('OR')
-    },
-    "properties": [{            // A list of property paths to use for obtaining data while reviewing the linkset; optional field
-        "entity_type_selection": 1,           // The identifier of the entity-type selection to use
-        "property": ["schema_birthDate"]      // The property path
-    }]
+  // An integer as identifier
+  "id": 1,
+  // The label of the linkset
+  "label": "My linkset",
+  // A description of this linkset by the user; optional field
+  "description": "",
+  // Whether we would like to track progress in the GUI at the cost that matching might run longer; optional field, defaults to 'true'
+  "use_counter": true,
+  // The identifiers of entity-type selections to use as sources
+  "sources": [
+    1
+  ],
+  // The identifiers of entity-type selections to use as targets
+  "targets": [
+    1
+  ],
+  // The matching configuration for finding links; requires at least one condition
+  "methods": {
+    // Whether ALL conditions in this group should match ('AND') or AT LEAST ONE condition in this group has to match ('OR'); T-norms and t-conorms are also allowed: see table below for allowed values
+    "type": "AND",
+    // The threshold to apply on the similarity score; optional field, defaults to '0' which means it does not apply
+    "threshold": 0.8,
+    // The matching configuration is composed of a logic box
+    "conditions": [
+      {
+        // The type of matching to apply; see table below for allowed values
+        "method_name": "SOUNDEX",
+        // Some types of matching methods require extra configuration
+        "method_config": {},
+        // The type of similarity matching to apply on top; see table below for allowed values; optional field
+        "method_sim_name": "LEVENSHTEIN",
+        // Some types of similarity matching methods require extra configuration; optional field
+        "method_sim_config": {},
+        // Whether to apply the similarity matching method on the normalized value; optional field, defaults to 'false'
+        "method_sim_normalized": false,
+        // The t-conorm to apply on the values of this condition; see table below for allowed values; optional field, defaults to 'MAXIMUM_T_CONORM'
+        "t_conorm": "MAXIMUM_T_CONORM",
+        // The threshold to apply on the similarity score; optional field, defaults to '0' which means it does not apply
+        "threshold": 0,
+        // Perform list matching; optional field
+        "list_matching": {
+          // The minimum number of links found; optional field, defaults to '0' which means it does not apply
+          "links_threshold": 8,
+          // Whether the threshold number should be interpreted as a percentage; ptional field, defaults to 'false'
+          "links_is_percentage": false,
+          // The minimum number of source values found; optional field, defaults to '0' which means it does not apply
+          "source_threshold": 2,
+          // Whether the threshold number should be interpreted as a percentage; optional field, defaults to 'false'
+          "source_is_percentage": false,
+          // The minimum number of target values found; optional field, defaults to '0' which means it does not apply
+          "target_threshold": 50,
+          // Whether the threshold number should be interpreted as a percentage; optional field, defaults to 'false'
+          "target_is_percentage": true,
+        },
+        // The source properties to use during matching per entity-type selection 
+        "sources": {
+          "1": {
+            // The property path to which this condition applies
+            "property": [
+              "schema_birthDate"
+            ],
+            // The transformers to apply to transform the value before matching; see table below for allowed values
+            "transformers": [
+              {
+                "name": "PARSE_DATE",
+                "parameters": {
+                  "format": "YYYY-MM-DD"
+                }
+              }
+            ],
+            // Remove stopwords before matching; optional field; see table below for allowed values
+            "stopwords": {
+              // The dictionary to apply
+              "dictionary": "dutch",
+              // Additional stop words; optional field
+              "additional": [
+                "and",
+                "or"
+              ]
+            }
+          }
+        },
+        // The target properties to use during matching per entity-type selection
+        "targets": {
+          "1": {
+            "property": [
+              "schema_birthDate"
+            ],
+            "transformers": [],
+            "stopwords": {
+              "dictionary": "",
+              "additional": []
+            }
+          }
+        }
+      }
+    ]
+  }
 }
 ```
 
-| Matching method                   | Key                           | Values                                                                                            |
-| :-------------------------------- | :---------------------------- | :------------------------------------------------------------------------------------------------ | 
-| Exact Match                       | `=`                           |                                                                                                   |
-| Levenshtein distance              | `LEVENSHTEIN`                 | `max_distance` (Maximum distance)                                                                 |
-| Approximated Levenshtein          | `LEVENSHTEIN_APPROX`          | `threshold` (Similarity threshold)                                                                |
-| Approximated Soundex              | `LL_SOUNDEX`                  | `threshold` (Similarity threshold)                                                                |
-| Approximated Bloothooft Reduction | `BLOOTHOOFT_REDUCT`           | `name_type` (First or last name: `first_name`, `family_name`), `threshold` (Similarity threshold) |
-| Similar Bloothooft Reduction      | `BLOOTHOOFT_REDUCT_APPROX`    | `name_type` (First or last name: `first_name`, `family_name`), `threshold` (Similarity threshold) |
-| Trigram distance                  | `TRIGRAM_DISTANCE`            | `threshold` (Similarity threshold)                                                                |
-| Time Delta                        | `TIME_DELTA`                  | `days` (Number of days), `multiplier` (Multiplier)                                                |
-| Same Year/Month                   | `SAME_YEAR_MONTH`             | `date_part` (Year, month, or both: `year`, `month`, `year_month`)                                 |
-| Distance is between               | `DISTANCE_IS_BETWEEN`         | `distance_start` (Start), `distance_end` (End)                                                    |
+| Matching method        | Key                      | Accepts a similarity method | Is a similarity method | Values                                                                                                     |
+| :--------------------- | :----------------------- | :-------------------------- | :--------------------- | :--------------------------------------------------------------------------------------------------------- | 
+| Exact match            | `EXACT`                  | No                          | No                     |                                                                                                            |
+| Intermediate dataset   | `INTERMEDIATE`           | No                          | No                     | `entity_type_selection`, `intermediate_source`, `intermediate_target` (Property paths)                     |
+| Levenshtein distance   | `LEVENSHTEIN_DISTANCE`   | No                          | Yes                    | `max_distance`                                                                                             |
+| Levenshtein normalized | `LEVENSHTEIN_NORMALIZED` | No                          | Yes                    | `threshold`                                                                                                |
+| Soundex                | `SOUNDEX`                | Yes                         | No                     | `size`                                                                                                     |
+| Gerrit Bloothooft      | `BLOOTHOOFT`             | Yes                         | No                     | `name_type` (First or last name: `first_name`, `family_name`)                                              |
+| Word Intersection      | `WORD_INTERSECTION`      | No                          | Yes                    | `ordered`, `approximate`, `stop_symbols`, `threshold`                                                      |
+| Metaphone              | `METAPHONE`              | Yes                         | No                     | `max`                                                                                                      |
+| Double Metaphone       | `DMETAPHONE`             | Yes                         | No                     |                                                                                                            |
+| Trigram                | `TRIGRAM`                | No                          | Yes                    | `threshold`                                                                                                |
+| Numbers Delta          | `NUMBERS_DELTA`          | No                          | No                     | `type` (Irrelevant, Source < Target, Target < Source: `<>`, `<`, `>`), `start`, `end`                      |
+| Time Delta             | `TIME_DELTA`             | No                          | No                     | `type` (Irrelevant, Source < Target, Target < Source: `<>`, `<`, `>`), `years`, `months`, `days`, `format` |
+| Same Year/Month        | `SAME_YEAR_MONTH`        | No                          | No                     | `date_part` (Year, month, or both: `year`, `month`, `year_month`)                                          |
+| Jaro                   | `JARO`                   | No                          | Yes                    | `threshold`                                                                                                |
+| Jaro-Winkler           | `JARO_WINKLER`           | No                          | Yes                    | `threshold`, `prefix_weight`                                                                               |
 
-_Note: See [Matching methods](#matching-methods) for a description and examples of these matching methods._
-
-| Transformer   | Key               | Values                    |
-| :------------ | :---------------- | :------------------------ | 
-| Parse date    | `PARSE_DATE`      | `format` (Date format)    |
-| Parse numeric | `PARSE_NUMERIC`   | 
-| Prefix        | `PREFIX`          | `prefix` (The prefix)     |
-| Suffix        | `SUFFIX`          | `suffix` (The suffix)     |
+| Transformer                        | Key                          | Values                            |
+| :--------------------------------- | :--------------------------- | :-------------------------------- | 
+| Transform 'last name first' format | `TRANSFORM_LAST_NAME_FORMAT` | `infix`                           |
+| Prefix                             | `PREFIX`                     | `prefix`                          |
+| Suffix                             | `SUFFIX`                     | `suffix`                          |
+| Replace                            | `REPLACE`                    | `from`, `to`                      |
+| Unaccent                           | `UNACCENT`                   |                                   |
+| Regular expression replace         | `REGEXP_REPLACE`             | `pattern`, `replacement`, `flags` |
 
 ### Lens specs
 
-Lens specs is a list of JSON objects that contain the configuration 
-of the lenses to apply on a combination of linksets.
+Lens specs is a list of JSON objects that contain the configuration of the lenses to apply on a combination of linksets.
 
 ```json5
 {
-    "id": 1,                    // An integer as identifier  
-    "label": "My lens",         // The label of the lens in the GUI
-    "description": "",          // A description of this lens by the user; optional field
-    "specs": {                  // The lens configuration; requires groups consisting of two elements
-        "elements": [{          // The lens configuration is composed of a logic box
-            "id": 0,            // The identifier of the linkset/lens to use
-            "type": "linkset"   // The type (linkset or lens)
-        }],
-        "type": "UNION"         // Lens type to apply; see table below for allowed values
-    },
-    "properties": [{            // A list of property paths to use for obtaining data while reviewing the lens; optional field
-        "entity_type_selection": 1,           // The identifier of the entity-type selection to use
-        "property": ["schema_birthDate"]      // The property path
-    }]
+  // An integer as identifier
+  "id": 1,
+  // The label of the lens
+  "label": "My lens",
+  // A description of this lens by the user; optional field
+  "description": "",
+  // The lens configuration; requires groups consisting of two elements
+  "specs": {
+    // Lens type to apply; see table below for allowed values
+    "type": "UNION",
+    // The t-conorm to apply on the values of this element; see table below for allowed values; optional field, defaults to 'MAXIMUM_T_CONORM'
+    "t_conorm": "",
+    // The threshold to apply on the similarity score; optional field, defaults to '0' which means it does not apply
+    "threshold": 0.8,
+    // The lens configuration is composed of a logic box
+    "elements": [
+      {
+        // The identifier of the linkset/lens to use
+        "id": 0,
+        // The type (linkset or lens)
+        "type": "linkset"
+      }
+    ]
+  }
 }
 ```
 
-| Lens type      | Description                          |
-| :------------- | :----------------------------------- |
-| UNION          | Union (A ∪ B)                        |
-| INTERSECTION   | Intersection (A ∩ B)                 |
-| DIFFERENCE     | Difference (A - B)                   |
-| SYM_DIFFERENCE | Symmetric difference (A ∆ B)         |
-| IN_SET_AND     | Source and target resources match    |
-| IN_SET_OR      | Source or target resources match     |
-| IN_SET_SOURCE  | Source resources match               |
-| IN_SET_TARGET  | Target resources match               |
+| Lens type      | Description                       |
+| :------------- | :-------------------------------- |
+| UNION          | Union (A ∪ B)                     |
+| INTERSECTION   | Intersection (A ∩ B)              |
+| DIFFERENCE     | Difference (A - B)                |
+| SYM_DIFFERENCE | Symmetric difference (A ∆ B)      |
+| IN_SET_AND     | Source and target resources match |
+| IN_SET_OR      | Source or target resources match  |
+| IN_SET_SOURCE  | Source resources match            |
+| IN_SET_TARGET  | Target resources match            |
+
+### Views
+
+Views is a list of JSON objects that contain the properties and filters to examine a linkset or lens for a particular
+job.
+
+```json5
+{
+  // The id of the specification (linkset or lens) to which the view applies
+  "id": 1,
+  // The type of the specification (linkset or lens) to which the view applies
+  "type": "linkset",
+  // The property paths to use for obtaining data; optional field
+  "properties": [
+    {
+      // The identifier of the dataset of the properties
+      "dataset_id": "ufab7d657a250e3461361c982ce9b38f3816e0c4b__ecartico_20190805",
+      // The identifier of the collection of the properties for this dataset
+      "collection_id": "foaf_Person",
+      // The GraphQL interface of the Timbuctoo instance
+      "timbuctoo_graphql": "https://repository.goldenagents.org/v5/graphql",
+      // A list of property paths to use for this dataset
+      "properties": [
+        [
+          "foaf_name"
+        ]
+      ]
+    }
+  ]
+}
+```
 
 ### Logic boxes
 
-The entity-type selections (using the filter), the linkset specs (using the matching methods) 
+The entity-type selections (using the filter), the linkset specs (using the matching methods)
 and the lens specs (using the elements) all apply a logic box to allow the user the express complex conditions.
 
 ```json5
 {
-    "elements": [],       // The list of elements; may contain other logic boxes (can have any JSON key)
-    "type": "AND"         // The type that combines these elements (usually AND/OR, but can be of any type)
+  // The type that combines these elements (usually AND/OR, but can be of any type)
+  "type": "AND",
+  // The list of elements; may contain other logic boxes (can have any JSON key)
+  "elements": []
 }
 ```
 
@@ -521,136 +671,100 @@ As logic boxes may contain other logic boxes, complex conditions can be expresse
 
 ```json5
 {
-    "conditions": [{
-        "conditions": [{}, {}, {}],
-        "type": "OR"
-    }, {
-        "conditions": [{
-            "conditions": [{}],
-            "type": "AND"
-        }, {}],
-        "type": "OR"
-    }], 
-    "type": "AND"
+  "type": "AND",
+  "conditions": [
+    {
+      "type": "OR",
+      "conditions": [
+        {},
+        {},
+        {}
+      ]
+    },
+    {
+      "type": "OR",
+      "conditions": [
+        {
+          "type": "AND",
+          "conditions": [
+            {}
+          ]
+        },
+        {}
+      ]
+    }
+  ]
 }
 ```
 
 ### Property paths
 
 A property path is a list of values that expresses the path in the linked data from the entity to a specific property.
-The list has at least one value: the property to select on the entity. 
-If the property is a reference to another entity, 
-you have to specify another value in the list with the id of the entity it points to.
-Then you can select the specific property on the referenced entity.
-If this is again a reference to another entity, the cycle repeats itself until you reach the required property.
-
-```json5
-["property", "entity", "property", "entity", "property"]
-```
-
-If you want the reference as a value, rather then selecting a property on the referenced entity, 
-there is a special value `__value__` that you can use.
+The list has at least one value: the property to select on the entity. If the property is a reference to another entity,
+you have to specify another value in the list with the id of the entity it points to. Then you can select the specific
+property on the referenced entity. If this is again a reference to another entity, the cycle repeats itself until you
+reach the required property.
 
 ```json5
 [
-     // Get the name of a person: select the property 'foaf_name'
-    ["foaf_name"],                                
-    // Get the name of a parent of a person: follow the property 'schema_parent' to the parent entity and select the property 'foaf_name' 
-    ["schema_parent", "foaf_Person", "foaf_name"],
-    // Get the name of a grandparent of a person: follow the property 'schema_parent' to the parent entity, then follow that property again and then select the property 'foaf_name'
-    ["schema_parent", "foaf_Person", "schema_parent", "foaf_Person", "foaf_name"],
-    // Get the reference of the parent of a person (the uri of this parent): follow the property 'schema_parent' and use the special value '__value__'
-    ["schema_parent", "__value__"]
+  "property",
+  "entity",
+  "property",
+  "entity",
+  "property"
 ]
 ```
 
-## Matching methods
+If you want the reference as a value, rather then selecting a property on the referenced entity, there is a special
+value `__value__` that you can use.
 
-### Exact Match
-
-Exact match is a string-based metric that allows for zero error 
-between a pair of sequence of characters (word or token). 
-It returns 0 in the event that there is at least one character mismatch or 1 for a perfect match.
-
-```
-Exact_Match(cat, chat) = 0
-Exact_Match(cat, cat) = 1
-```
-
-### Levenshtein distance
-
-Levenshtein distance is a string-based metric for computing the similarity between two sequences. 
-It translates to the number of character editing operations required to change one sequence into the other.
-
-**Character Edits:**
-- Insertion 
-- Deletion 
-- Substitution = (Deletion and insertion)
-    
-```
-Levenshtein(kitten, sitten) = 1
-Levenshtein(sitting, sittin) = 1
-Levenshtein(intention, execution) = 5
-```
-
-|**1**|**1**|**1**|**0**|**1**|**1**|**0**|**0**|**0**|**0**|
-|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-|  i  |  n  |  t  |  e  |     |  n  |  t  |  i  |  o  |  n  |
-|     |  e  |  x  |  e  |  c  |  u  |  t  |  i  |  o  |  n  | 
-
-### Soundex
-
-Soundex is a phonetic algorithm for indexing names by sound, as pronounced in English. 
-The goal is for homophones to be encoded to the same representation 
-so that they can be matched despite minor differences in spelling.
-
-```
-Soundex(Robert) = R163
-Soundex(Rupert) = R163
-Soundex(Rubin) = R150
+```json5
+[
+  // Get the name of a person: select the property 'foaf_name'
+  [
+    "foaf_name"
+  ],
+  // Get the name of a parent of a person: follow the property 'schema_parent' to the parent entity and select the property 'foaf_name' 
+  [
+    "schema_parent",
+    "foaf_Person",
+    "foaf_name"
+  ],
+  // Get the name of a grandparent of a person: follow the property 'schema_parent' to the parent entity, then follow that property again and then select the property 'foaf_name'
+  [
+    "schema_parent",
+    "foaf_Person",
+    "schema_parent",
+    "foaf_Person",
+    "foaf_name"
+  ],
+  // Get the reference of the parent of a person (the uri of this parent): follow the property 'schema_parent' and use the special value '__value__'
+  [
+    "schema_parent",
+    "__value__"
+  ]
+]
 ```
 
-### Bloothooft Reduction
+### Fuzzy logic
 
-_TO DO_
+The configuration mentions both t-norms (conjuction / AND) and t-conorms (disjunction / OR) that can be used to
+configure how the similarity score is computed:
 
-### Trigram distance
+| T-norm                    | Key                  |
+| :------------------------ | :------------------- |
+| Minimum t-norm (⊤min)     | `MINIMUM_T_NORM`     |
+| Product t-norm (⊤prod)    | `PRODUCT_T_NORM`     |
+| Łukasiewicz t-norm (⊤Luk) | `LUKASIEWICZ_T_NORM` |
+| Drastic t-norm (⊤D)       | `DRASTIC_T_NORM`     |
+| Nilpotent minimum (⊤nM)   | `NILPOTENT_MINIMUM`  |
+| Hamacher product (⊤H0)    | `HAMACHER_PRODUCT`   |
 
-_TO DO_
-
-### Time Delta
-
-_TO DO_
-
-### Same Year/Month
-
-_TO DO_
-
-### Distance is between
-
-_TO DO_
-
-### Normalized / Similarity
-
-Normalization is a function to bound the result of method between 0 and 1.
-Often meaning a score of 0 implies the dissimilarity between the pair of string while 1 implies a perfect match.
-
-```
-Levenshtein(intention, execution) = 5
-Length(intention) = 9
-Length(execution) = 9
-Relative_Similarity = 1 - (5 / 9) = 0.666
-```
-
-### Future matching methods
-
-Suggestions on other generic matching methods to add:
-- TF-IDF
-- N-Grams
-- Intermediate Dataset
-- Cosine Similarity
-- Jaro-Winkler
-- Needleman Wunsch
-- Smith-Waterman
-- Metaphone
-- ...
+| T-conorm                 | Key                 |
+| :----------------------- | :------------------ |
+| Maximum t-conorm (⊥max)  | `MAXIMUM_T_CONORM`  |
+| Probabilistic sum (⊥sum) | `PROBABILISTIC_SUM` |
+| Bounded sum (⊥Luk)       | `BOUNDED_SUM`       |
+| Drastic t-conorm (⊥D)    | `DRASTIC_T_CONORM`  |
+| Nilpotent maximum (⊥nM)  | `NILPOTENT_MAXIMUM` |
+| Einstein sum (⊥H2)       | `EINSTEIN_SUM`      |

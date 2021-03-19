@@ -23,31 +23,35 @@
     </div>
 
     <b-collapse v-model="visible" class="mt-1">
-      <div v-for="source in condition.sources" class="row align-items-center m-0">
-        <div class="col-auto p-0">
-          <property :entity-type-selection="$root.getEntityTypeSelectionById(source.entity_type_selection)"
-                    :property="source.property" :read-only="true" :small="true"/>
-        </div>
+      <template v-for="(conditionProperties, etsId) in condition.sources">
+        <div v-for="prop in conditionProperties" class="row align-items-center m-0">
+          <div class="col-auto p-0">
+            <ets-property :entity-type-selection="$root.getEntityTypeSelectionById(etsId)"
+                          :property="prop.property" :read-only="true" :small="true"/>
+          </div>
 
-        <div class="col-auto font-weight-bold" v-if="source.transformers && source.transformers.length > 0">
-          with transformer
-          <span v-html="transformersHumanReadable(source)"/>
+          <div class="col-auto font-weight-bold" v-if="prop.transformers && prop.transformers.length > 0">
+            with transformer
+            <span v-html="transformersHumanReadable(prop.transformers)"/>
+          </div>
         </div>
-      </div>
+      </template>
 
       <p class="font-weight-bold m-0">against</p>
 
-      <div v-for="target in condition.targets" class="row align-items-center m-0">
-        <div class="col-auto p-0">
-          <property :entity-type-selection="$root.getEntityTypeSelectionById(target.entity_type_selection)"
-                    :property="target.property" :read-only="true" :small="true"/>
-        </div>
+      <template v-for="(conditionProperties, etsId) in condition.targets">
+        <div v-for="prop in conditionProperties" class="row align-items-center m-0">
+          <div class="col-auto p-0">
+            <ets-property :entity-type-selection="$root.getEntityTypeSelectionById(etsId)"
+                          :property="prop.property" :read-only="true" :small="true"/>
+          </div>
 
-        <div class="col-auto font-weight-bold" v-if="target.transformers && target.transformers.length > 0">
-          with transformer
-          <span v-html="transformersHumanReadable(target)"/>
+          <div class="col-auto font-weight-bold" v-if="prop.transformers && prop.transformers.length > 0">
+            with transformer
+            <span v-html="transformersHumanReadable(prop.transformers)"/>
+          </div>
         </div>
-      </div>
+      </template>
 
       <p class="font-weight-bold m-0">
         using
@@ -114,20 +118,19 @@
             },
         },
         methods: {
-            transformersHumanReadable(entityTypeSelection) {
-                return entityTypeSelection.transformers
-                    .map(transformer => {
-                        const info = this.transformers[transformer.name];
-                        const params = info.items
-                            .map(item =>
-                                `<span class="text-secondary">${item.label} = ${transformer.parameters[item.key]}</span>`)
-                            .join(' and ');
+            transformersHumanReadable(transformers) {
+                return transformers.map(transformer => {
+                    const info = this.transformers[transformer.name];
+                    const params = info.items
+                        .map(item =>
+                            `<span class="text-secondary">${item.label} = ${transformer.parameters[item.key]}</span>`)
+                        .join(' and ');
 
-                        if (!info.items || info.items.length === 0)
-                            return `<span class="text-secondary">${info.label}</span>`;
+                    if (!info.items || info.items.length === 0)
+                        return `<span class="text-secondary">${info.label}</span>`;
 
-                        return `<span class="text-secondary">${info.label}</span> [ ${params} ]`;
-                    })
+                    return `<span class="text-secondary">${info.label}</span> [ ${params} ]`;
+                })
                     .join(' and ');
             },
         },

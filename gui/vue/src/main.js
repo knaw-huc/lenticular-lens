@@ -24,6 +24,7 @@ import Failed from './components/misc/Failed';
 import Handle from './components/misc/Handle';
 import Duration from './components/misc/Duration';
 import Property from './components/helpers/Property';
+import EtsProperty from './components/helpers/EtsProperty';
 import DownloadProgress from './components/helpers/DownloadProgress';
 import Card from './components/structural/Card';
 import SubCard from './components/structural/SubCard';
@@ -38,6 +39,7 @@ Vue.component('failed', Failed);
 Vue.component('handle', Handle);
 Vue.component('duration', Duration);
 Vue.component('property', Property);
+Vue.component('ets-property', EtsProperty);
 Vue.component('download-progress', DownloadProgress);
 Vue.component('card', Card);
 Vue.component('sub-card', SubCard);
@@ -52,12 +54,6 @@ import {
 library.add(faQuestionCircle, faCopy, faChevronDown, faArrowRight, faPlus, faTrashAlt, faPencilAlt, faFilter,
     faCheck, faTimes, faInfoCircle, faAlignJustify, faProjectDiagram, faList, faCog,
     faGripHorizontal, faFileExport, faSync, faQuestion, faCheckSquare);
-
-Vue.filter('capitalize', function (value) {
-    if (!value) return '';
-    value = value.toString();
-    return value.charAt(0).toUpperCase() + value.slice(1);
-});
 
 import App from './App.vue';
 import JobMixin from './mixins/JobMixin';

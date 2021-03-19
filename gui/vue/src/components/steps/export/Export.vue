@@ -1,5 +1,6 @@
 <template>
-  <card :id="'export_' + type + '_' + spec.id" type="export" :res-id="spec.id" :label="spec.label">
+  <card :id="'export_' + type + '_' + spec.id" type="export" :res-id="spec.id" :label="spec.label"
+        @show="onToggle(true)" @hide="onToggle(false)">
     <div class="row align-items-stretch justify-content-around">
       <sub-card label="Format" class="col-export">
         <div class="custom-control custom-switch mt-3">
@@ -196,7 +197,7 @@
 
     <div class="row justify-content-end align-items-center pt-3 mb-0">
       <div class="col-auto">
-        <button class="btn btn-secondary"@click="doExport" variant="secondary">Export</button>
+        <button class="btn btn-secondary" @click="doExport" variant="secondary">Export</button>
       </div>
     </div>
   </card>
@@ -231,6 +232,7 @@
         name: "Export",
         data() {
             return {
+                isOpen: false,
                 format: 'turtle',
                 exportLinkset: true,
                 exportLinksMd: false,
@@ -260,6 +262,11 @@
             },
         },
         methods: {
+            onToggle(isOpen) {
+                this.isOpen = isOpen;
+                isOpen ? this.$emit('show') : this.$emit('hide');
+            },
+
             updateState(type) {
                 switch (type) {
                     case 'export_links_md':

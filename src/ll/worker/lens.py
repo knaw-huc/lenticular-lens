@@ -1,4 +1,4 @@
-from psycopg2 import sql as psycopg2_sql
+from psycopg2 import sql
 
 from ll.job.job import Job
 from ll.job.lens_sql import LensSql
@@ -47,7 +47,7 @@ class LensJob(WorkerJob):
 
     def on_finish(self):
         with db_conn() as conn, conn.cursor() as cur:
-            cur.execute(psycopg2_sql.SQL('''
+            cur.execute(sql.SQL('''
                 SELECT  (SELECT count(*) FROM lenses.{lens_table}) AS links_count,
                         (SELECT count(DISTINCT uris.uri) FROM (
                             SELECT source_uri AS uri FROM lenses.{lens_table} 
@@ -63,7 +63,7 @@ class LensJob(WorkerJob):
                             SELECT source_uri AS uri FROM lenses.{lens_table} 
                             WHERE link_order = 'target_source' OR link_order = 'both'
                         ) AS uris) AS lens_targets_count
-            ''').format(lens_table=psycopg2_sql.Identifier(self._job.table_name(self._id))))
+            ''').format(lens_table=sql.Identifier(self._job.table_name(self._id))))
 
             result = cur.fetchone()
 
@@ -78,26 +78,21 @@ class LensJob(WorkerJob):
                         ('done', links, lens_sources_count, lens_targets_count, self._job_id, self._id))
 
             if links == 0:
-                cur.execute(psycopg2_sql.SQL('DROP TABLE lenses.{} CASCADE')
-                            .format(psycopg2_sql.Identifier(self._job.table_name(self._id))))
+                cur.execute(sql.SQL('DROP TABLE lenses.{} CASCADE')
+                            .format(sql.Identifier(self._job.table_name(self._id))))
             else:
                 cur.execute("SELECT * FROM clusterings WHERE job_id = %s AND spec_id = %s AND spec_type = 'lens'",
                             (self._job_id, self._id))
                 clustering = cur.fetchone()
 
-                if clustering:
-                    query = psycopg2_sql.SQL("""
-                        UPDATE clusterings 
-                        SET status = %s, kill = false, requested_at = now(), processing_at = null, finished_at = null
-                        WHERE job_id = %s AND spec_id = %s AND spec_type = 'lens'
-                    """)
+                query = """
+                    UPDATE clusterings 
+                    SET status = 'waiting', kill = false, requested_at = now(), processing_at = null, finished_at = null
+                    WHERE job_id = %s AND spec_id = %s AND spec_type = 'lens'
+                """ if clustering else """
+                    INSERT INTO clusterings 
+                    (job_id, spec_id, spec_type, clustering_type, status, kill, requested_at) 
+                    VALUES (%s, %s, 'lens', 'default', 'waiting', false, now())
+                """
 
-                    cur.execute(query, ('waiting', self._job_id, self._id))
-                else:
-                    query = psycopg2_sql.SQL("""
-                        INSERT INTO clusterings 
-                        (job_id, spec_id, spec_type, clustering_type, association_file, status, kill, requested_at) 
-                        VALUES (%s, %s, 'lens', %s, %s, %s, false, now())
-                    """)
-
-                    cur.execute(query, (self._job_id, self._id, 'default', None, 'waiting'))
+                cur.execute(query, (self._job_id, self._id))

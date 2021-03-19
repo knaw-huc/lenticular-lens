@@ -1,7 +1,5 @@
 from psycopg2 import sql
-from collections import defaultdict
 
-from ll.job.property_field import PropertyField
 from ll.elem.matching_method import MatchingMethod
 from ll.util.helpers import flatten, get_json_from_file
 
@@ -26,29 +24,12 @@ class Linkset:
         return self._data['description']
 
     @property
-    def threshold(self):
-        return self._data['threshold']
-
-    @property
-    def is_association(self):
-        return self._data.get('is_association', False)
-
-    @property
     def use_counter(self):
         return self._data.get('use_counter', True)
 
     @property
-    def properties(self):
-        props = defaultdict(set)
-        for prop in self._data['properties']:
-            ets_id = prop['entity_type_selection']
-            props[ets_id].add(PropertyField(prop['property'], self._job.get_entity_type_selection_by_id(ets_id)))
-
-        return props
-
-    @property
     def matching_methods(self):
-        return self.with_matching_methods_recursive(lambda c, operator, fuzzy: flatten(c))
+        return self.with_matching_methods_recursive(lambda c, operator, fuzzy, threshold: flatten(c))
 
     @property
     def entity_type_selections(self):
@@ -64,7 +45,11 @@ class Linkset:
 
     @property
     def intermediates(self):
-        return {self._job.get_entity_type_selection_by_id(ets_id) for ets_id in self._data['intermediates']}
+        return set(self.with_matching_methods_recursive(
+            lambda ets_ids, operator, fuzzy, threshold: flatten(ets_ids),
+            lambda matching_method: [self._job.get_entity_type_selection_by_id(ets_id)
+                                     for ets_id in matching_method.intermediates.keys()]
+        ))
 
     @property
     def similarity_fields(self):
@@ -72,25 +57,27 @@ class Linkset:
 
     @property
     def similarity_logic_ops_sql(self):
-        def logic_ops_for_condition(sqls, fuzzy):
-            similarity_sqls = [sim_sql for sim_sql in sqls if sim_sql]
-            if not similarity_sqls:
-                return sql.SQL('NULL')
-
-            sim_sql = similarity_sqls.pop()
-            while similarity_sqls:
-                sim_sql = sql.SQL('{function}({a}, {b})').format(
-                    function=sql.SQL(self._logic_ops[fuzzy]['sql']),
-                    a=sim_sql,
-                    b=similarity_sqls.pop()
-                )
-
-            return sim_sql
-
         return self.with_matching_methods_recursive(
-            lambda sqls, operator, fuzzy: logic_ops_for_condition(sqls, fuzzy),
+            lambda sqls, operator, fuzzy, threshold: self._logic_ops_for_condition(sqls, fuzzy, self._logic_ops),
             lambda matching_method: matching_method.similarity_logic_ops_sql
         )
+
+    @property
+    def similarity_logic_ops_sql_per_threshold(self):
+        def with_logic_ops(sqls, fuzzy, threshold):
+            logic_ops = self._logic_ops_for_condition(sqls, fuzzy, self._logic_ops)
+            if threshold:
+                per_threshold.append((threshold, logic_ops))
+
+            return logic_ops
+
+        per_threshold = []
+        self.with_matching_methods_recursive(
+            lambda sqls, operator, fuzzy, threshold: with_logic_ops(sqls, fuzzy, threshold),
+            lambda matching_method: matching_method.similarity_logic_ops_sql
+        )
+
+        return per_threshold
 
     def get_fields(self, keys=None):
         if not isinstance(keys, list):
@@ -101,12 +88,9 @@ class Linkset:
         for matching_method in self.matching_methods:
             for key in keys:
                 for ets_id, properties in getattr(matching_method, key).items():
-                    if key == 'sources' or key == 'targets':
-                        for property in properties:
-                            self._set_field(ets_id, property, matching_method, ets_properties)
-                    else:
-                        self._set_field(ets_id, properties['source'], matching_method, ets_properties)
-                        self._set_field(ets_id, properties['target'], matching_method, ets_properties)
+                    for property in (properties['source'] + properties['target']) \
+                            if key == 'intermediates' else properties:
+                        self._set_field(ets_id, property, matching_method, ets_properties)
 
         return ets_properties
 
@@ -122,10 +106,11 @@ class Linkset:
             fuzzy = type if type != 'AND' and type != 'OR' else \
                 'MINIMUM_T_NORM' if type == 'AND' else 'MAXIMUM_T_CONORM'
 
+            threshold = methods_obj['threshold']
             conditions = [self._r_matching_methods(condition, with_conditions, with_matching_method, id + str(idx))
                           for idx, condition in enumerate(methods_obj['conditions'])]
 
-            return with_conditions(conditions, operator, fuzzy) if with_conditions else conditions
+            return with_conditions(conditions, operator, fuzzy, threshold) if with_conditions else conditions
 
         matching_method = MatchingMethod(methods_obj, self._job, self.id, id)
         return with_matching_method(matching_method) if with_matching_method else matching_method
@@ -143,3 +128,19 @@ class Linkset:
 
         props = ets_properties[ets_id][matching_method.field_name]['properties']
         props.add(property)
+
+    @staticmethod
+    def _logic_ops_for_condition(sqls, fuzzy, logic_ops):
+        similarity_sqls = [sim_sql for sim_sql in sqls if sim_sql]
+        if not similarity_sqls:
+            return sql.SQL('NULL')
+
+        sim_sql = similarity_sqls.pop()
+        while similarity_sqls:
+            sim_sql = sql.SQL('{function}({a}, {b})').format(
+                function=sql.SQL(logic_ops[fuzzy]['sql']),
+                a=sim_sql,
+                b=similarity_sqls.pop()
+            )
+
+        return sim_sql

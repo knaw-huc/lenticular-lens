@@ -8,15 +8,15 @@ from psycopg2 import extras as psycopg2_extras, sql as psycopg2_sql
 
 
 class Collection:
-    def __init__(self, graphql_endpoint, hsid, dataset_id, collection_id, timbuctoo_data=None):
-        self._graphql_endpoint = graphql_endpoint
-        self._hsid = hsid
-        self._dataset_id = dataset_id
-        self._collection_id = collection_id
+    def __init__(self, graphql_endpoint, dataset_id, collection_id, timbuctoo_data=None):
+        self.graphql_endpoint = graphql_endpoint
+        self.dataset_id = dataset_id
+        self.collection_id = collection_id
+
         self._timbuctoo_data = timbuctoo_data
 
         self._dataset_table_data = None
-        self._timbuctoo = Timbuctoo(self._graphql_endpoint, self._hsid)
+        self._timbuctoo = Timbuctoo(self.graphql_endpoint)
 
     @property
     def dataset_table_data(self):
@@ -25,22 +25,22 @@ class Collection:
 
         with db_conn() as conn, conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) as cur:
             cur.execute('SELECT * FROM timbuctoo_tables WHERE graphql_endpoint = %s AND dataset_id = %s',
-                        (self._graphql_endpoint, self._dataset_id))
+                        (self.graphql_endpoint, self.dataset_id))
             self._dataset_table_data = {table_data['collection_id']: table_data for table_data in cur.fetchall()}
 
         return self._dataset_table_data
 
     @property
     def table_data(self):
-        if self._collection_id not in self.dataset_table_data:
+        if self.collection_id not in self.dataset_table_data:
             self.start_download()
             return self.table_data
 
-        return self.dataset_table_data[self._collection_id]
+        return self.dataset_table_data[self.collection_id]
 
     @property
     def table_name(self):
-        return table_name_hash(self._graphql_endpoint, self._dataset_id, self._collection_id)
+        return table_name_hash(self.graphql_endpoint, self.dataset_id, self.collection_id)
 
     @property
     def columns(self):
@@ -82,10 +82,10 @@ class Collection:
         collection = None
 
         for dataset_id, dataset_data in self.timbuctoo_data.items():
-            if dataset_id == self._dataset_id:
+            if dataset_id == self.dataset_id:
                 dataset = dataset_data
                 for collection_id, collection_data in dataset_data['collections'].items():
-                    if collection_id == self._collection_id:
+                    if collection_id == self.collection_id:
                         collection = collection_data
                         break
                 break
@@ -106,12 +106,12 @@ class Collection:
 
                 cur.execute('''
                     INSERT INTO timbuctoo_tables (
-                        "table_name", graphql_endpoint, hsid, dataset_id, collection_id, 
+                        "table_name", graphql_endpoint, dataset_id, collection_id, 
                         dataset_uri, dataset_name, title, description, 
                         collection_uri, collection_title, collection_shortened_uri, 
                         total, columns, prefix_mappings, create_time)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, now())
-                ''', (self.table_name, self._graphql_endpoint, self._hsid, self._dataset_id, self._collection_id,
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, now())
+                ''', (self.table_name, self.graphql_endpoint, self.dataset_id, self.collection_id,
                       dataset['uri'], dataset['name'], dataset['title'], dataset['description'],
                       collection['uri'], collection['title'], collection['shortenedUri'],
                       collection['total'], dumps(columns), dumps(dataset['prefixMappings'])))

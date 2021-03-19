@@ -18,7 +18,8 @@ class MatchingMethodProperty:
 
     @property
     def prop_original(self):
-        return PropertyField(self._data if self._property_only else self._data['property'], self._ets,
+        return PropertyField(self._data if self._property_only else self._data['property'],
+                             entity_type_selection=self._ets,
                              transformers=self._get_field_transformers(normalized=False))
 
     @property
@@ -26,7 +27,8 @@ class MatchingMethodProperty:
         if self._property_only or not self._norm_template:
             return None
 
-        return PropertyField(self._data['property'], self._ets,
+        return PropertyField(self._data['property'],
+                             entity_type_selection=self._ets,
                              transformers=self._get_field_transformers(normalized=True))
 
     @property

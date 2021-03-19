@@ -20,19 +20,22 @@
 
     <div class="row flex-nowrap border-top mt-2 pt-2">
       <div class="col">
-        <properties :properties="sample.properties"/>
+        <property-values v-for="(prop, idx) in sample.properties"
+                         :key="idx" v-if="prop.values.length > 0"
+                         :graphql-endpoint="prop.graphql_endpoint" :dataset-id="prop.dataset_id"
+                         :collection-id="prop.collection_id" :property="prop.property" :values="prop.values"/>
       </div>
     </div>
   </div>
 </template>
 
 <script>
-    import Properties from "../../helpers/Properties";
+    import PropertyValues from "../../helpers/PropertyValues";
 
     export default {
         name: "Sample",
         components: {
-            Properties
+            PropertyValues
         },
         props: {
             index: Number,

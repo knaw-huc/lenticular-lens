@@ -1,6 +1,6 @@
 <template>
   <div class="property">
-    <template v-if="entityTypeSelectionInfo">
+    <template v-if="showInfo">
       <div class="property-pill property-resource read-only" :title="dataset.uri" v-bind:class="{'sm': small}">
         {{ dataset.title }}
       </div>
@@ -12,8 +12,9 @@
       </div>
 
       <span v-if="!singular && !readOnly" class="property-part">
-        <button-add @click="$emit('clone')" size="sm" title="Add another property"/>
-        <button-delete v-if="allowDelete" class="ml-2" @click="$emit('delete')" size="sm" title="Remove this property"/>
+        <button-add size="sm" title="Add another property" @click="$emit('clone')"/>
+        <button-delete v-if="allowDelete" class="ml-2" size="sm" title="Remove this property"
+                       @click="$emit('delete')"/>
       </span>
     </template>
 
@@ -46,8 +47,7 @@
                 </div>
 
                 <div class="smaller pt-1">
-                  <download-progress :dataset-id="entityTypeSelection.dataset.dataset_id"
-                                     :collection-id="option.label"/>
+                  <download-progress :dataset-id="datasetId" :collection-id="option.label"/>
                 </div>
               </template>
             </div>
@@ -122,7 +122,7 @@
       Start downloading missing entities
     </button>
 
-    <template v-if="!entityTypeSelectionInfo && !singular && !readOnly">
+    <template v-if="!showInfo && !singular && !readOnly">
       <button-add @click="$emit('clone')" size="sm" title="Add another property"/>
       <button-delete v-if="allowDelete" class="ml-2" @click="$emit('delete')"
                      size="sm" title="Remove this property"/>
@@ -132,13 +132,16 @@
 
 <script>
     import {EventBus} from "@/eventbus";
-    import ValidationMixin from "../../mixins/ValidationMixin";
+    import ValidationMixin from "@/mixins/ValidationMixin";
+    import {getPropertyInfo, getPropertiesForCollection} from "@/utils/property";
 
     export default {
         name: "Property",
         mixins: [ValidationMixin],
         props: {
-            entityTypeSelection: Object,
+            graphqlEndpoint: String,
+            datasetId: String,
+            collectionId: String,
             property: Array,
             readOnly: {
                 type: Boolean,
@@ -156,23 +159,14 @@
                 type: Boolean,
                 default: true,
             },
-            entityTypeSelectionInfo: {
+            showInfo: {
                 type: Boolean,
                 default: true,
             }
         },
         computed: {
-            datasetId() {
-                return this.entityTypeSelection.dataset.dataset_id;
-            },
-
-            collectionId() {
-                return this.entityTypeSelection.dataset.collection_id;
-            },
-
             dataset() {
-                const datasets = this.$root.getDatasets(
-                    this.entityTypeSelection.dataset.timbuctoo_graphql, this.entityTypeSelection.dataset.timbuctoo_hsid);
+                const datasets = this.$root.getDatasets(this.graphqlEndpoint);
                 return datasets[this.datasetId];
             },
 
@@ -206,21 +200,7 @@
             },
 
             props() {
-                return new Array(Math.floor((this.property.length + 1) / 2))
-                    .fill(null)
-                    .map((_, idx) => {
-                        const collectionIdx = idx > 0 ? (idx * 2) - 1 : null;
-                        const propIdx = idx * 2;
-
-                        return {
-                            collectionIdx,
-                            collection: collectionIdx ? this.property[collectionIdx] : null,
-                            collections: this.getCollectionsForIndex(collectionIdx),
-                            propIdx,
-                            property: this.property[propIdx],
-                            properties: this.getPropertiesForIndex(propIdx),
-                        };
-                    });
+                return getPropertyInfo(this.property, this.collectionId, this.dataset.collections);
             },
         },
         methods: {
@@ -239,69 +219,8 @@
                 return property.shortenedUri ? (property.isInverse ? '← ' : '') + property.shortenedUri : propertyId;
             },
 
-            getPropertiesForIndex(index) {
-                const collectionId = index === 0 ? this.collectionId : this.property[index - 1];
-                return this.getPropertiesForCollection(collectionId);
-            },
-
             isSameShortenedAndLongUri(props) {
                 return props.uri && props.shortenedUri !== props.uri;
-            },
-
-            getPropertiesForCollection(collectionId) {
-                if (!this.dataset.collections.hasOwnProperty(collectionId))
-                    return null;
-
-                return {
-                    uri: {
-                        density: 100,
-                        isInverse: false,
-                        isLink: false,
-                        isList: false,
-                        isValueType: false,
-                        name: 'uri',
-                        referencedCollections: [],
-                        shortenedUri: 'uri',
-                        uri: 'uri'
-                    }, ...Object.fromEntries(
-                        Object
-                            .entries(this.dataset.collections[collectionId].properties)
-                            .sort(([idA, propA], [idB, propB]) => {
-                                if (propA.shortenedUri && propB.shortenedUri) {
-                                    if (propA.shortenedUri === propA.uri && propB.shortenedUri !== propB.uri)
-                                        return 1;
-
-                                    if (propB.shortenedUri === propB.uri && propA.shortenedUri !== propA.uri)
-                                        return -1;
-
-                                    if (propA.shortenedUri === propB.shortenedUri)
-                                        return propB.isInverse ? -1 : 1;
-
-                                    return propA.shortenedUri < propB.shortenedUri ? -1 : 1;
-                                }
-
-                                return idA < idB ? -1 : 1;
-                            })
-                    )
-                };
-            },
-
-            getCollectionsForIndex(index) {
-                if (index === null)
-                    return null;
-
-                const properties = this.getPropertiesForIndex(index - 1);
-                const property = properties[this.property[index - 1]];
-                return this.getReferencedCollections(property.referencedCollections);
-            },
-
-            getReferencedCollections(referencedCollections) {
-                return referencedCollections
-                    .filter(collectionId => this.dataset.collections.hasOwnProperty(collectionId))
-                    .reduce((acc, collectionId) => {
-                        acc[collectionId] = this.dataset.collections[collectionId];
-                        return acc;
-                    }, {});
             },
 
             resetProperty(index) {
@@ -319,7 +238,8 @@
                 if (newValue === '__value__')
                     this.property.splice(length - 1);
 
-                const properties = prop ? this.getPropertiesForCollection(collectionId)[prop] : null;
+                const properties = prop
+                    ? getPropertiesForCollection(collectionId, this.dataset.collections)[prop] : null;
                 if (properties && properties.referencedCollections.length > 0)
                     this.property.push('', '');
 
@@ -330,12 +250,8 @@
             },
 
             async startDownloading() {
-                const downloads = this.notDownloaded.map(async collection => this.$root.startDownload(
-                    this.entityTypeSelection.dataset.dataset_id,
-                    collection,
-                    this.entityTypeSelection.dataset.timbuctoo_graphql,
-                    this.entityTypeSelection.dataset.timbuctoo_hsid
-                ));
+                const downloads = this.notDownloaded.map(async collection =>
+                    this.$root.startDownload(this.datasetId, collection, this.graphqlEndpoint));
 
                 await Promise.all(downloads);
                 EventBus.$emit('refreshDownloadsInProgress');

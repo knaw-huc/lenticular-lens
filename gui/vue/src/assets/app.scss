@@ -12,10 +12,12 @@ $container-max-widths: (lg: 1500px);
 $vs-state-active-bg: $secondary-very-light !important;
 $vs-state-active-color: inherit;
 $vs-component-placeholder-color: lightgrey;
+$themeColor: $secondary;
 
 @import '~bootstrap/scss/bootstrap.scss';
 @import '~bootstrap-vue/src/index.scss';
 @import "~vue-select/src/scss/vue-select.scss";
+@import '~vue-slider-component/lib/theme/default.scss';
 @import '~vue-form-wizard/dist/vue-form-wizard.min.css';
 
 .container {
@@ -26,6 +28,14 @@ $vs-component-placeholder-color: lightgrey;
   .wizard-btn {
     color: $dark !important;
   }
+}
+
+.vue-slider-rail {
+  height: 4px;
+}
+
+.vue-slider-dot-tooltip-inner {
+  font-size: 0.8em;
 }
 
 .fa-chevron-down {
@@ -241,8 +251,13 @@ ul.inline-list li:not(:first-child):before {
   color: black;
 }
 
-.association-select {
-  width: 160px !important;
+.config-group {
+  padding: 0.25rem 0;
+  border-bottom: 1px solid $border-color;
+
+  &:last-child {
+    border-bottom: none;
+  }
 }
 
 .main-card {

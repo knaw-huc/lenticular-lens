@@ -80,11 +80,13 @@
         </div>
       </div>
 
-      <div v-else-if="item.type === 'property'" class="col-sm row align-items-center m-0 mb-1">
-        <property
-            :entity-type-selection="$root.getEntityTypeSelectionById(condition[configKey][item.entity_type_selection_key])"
-            :property="condition[configKey][item.key]"
-            :singular="true" :allow-delete="false" :entity-type-selection-info="false" :ref="item.key"/>
+      <div v-else-if="item.type === 'property'" class="col-sm align-items-center m-0 mb-1">
+        <div class="row m-0" v-for="(prop, idx) in condition[configKey][item.key]" :key="idx">
+          <ets-property :property="prop" :allow-delete="idx > 0" :show-info="false" :ref="item.key"
+                        :entity-type-selection="$root.getEntityTypeSelectionById(condition[configKey][item.entity_type_selection_key])"
+                        @clone="condition[configKey][item.key].push([''])"
+                        @delete="condition[configKey][item.key].splice(idx, 1)"/>
+        </div>
 
         <div class="invalid-feedback" v-show="errors.includes(`method_config_${item.key}`)">
           Please specify a property

@@ -9,6 +9,8 @@ class LinksFilter:
         self._uri = None
         self._source_uri = None
         self._target_uri = None
+        self._min = 0
+        self._max = 1
         self._cluster_id = None
         self._validation_filter = Validation.ALL
 
@@ -21,6 +23,10 @@ class LinksFilter:
     def filter_on_link(self, source_uri, target_uri):
         self._source_uri = source_uri
         self._target_uri = target_uri
+
+    def filter_on_min_max_strength(self, min=0, max=1):
+        self._min = min
+        self._max = max
 
     def filter_on_cluster(self, cluster_id):
         self._cluster_id = cluster_id
@@ -39,6 +45,8 @@ class LinksFilter:
             filters.append(self._cluster_sql)
         if self._validation_sql:
             filters.append(self._validation_sql)
+        if self._min_max_sql:
+            filters.append(self._min_max_sql)
 
         if filters and include_where:
             return sql.SQL('WHERE {}').format(sql.SQL(' AND ').join(filters))
@@ -71,6 +79,26 @@ class LinksFilter:
                 target_uri=sql.Literal(self._target_uri)
             )
 
+        return None
+
+    @property
+    def _min_max_sql(self):
+        min_sql = sql.SQL('{alias}computed_similarity > {min}').format(
+            alias=self._alias_sql,
+            min=sql.Literal(self._min),
+        ) if self._min is not None and self._min > 0 else None
+
+        max_sql = sql.SQL('{alias}computed_similarity < {max}').format(
+            alias=self._alias_sql,
+            max=sql.Literal(self._max),
+        ) if self._max is not None and self._max < 1 else None
+
+        if min_sql and max_sql:
+            return sql.Composed([min_sql, sql.SQL(' AND '), max_sql])
+        if min_sql:
+            return min_sql
+        if max_sql:
+            return max_sql
         return None
 
     @property

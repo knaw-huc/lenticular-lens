@@ -7,11 +7,11 @@ from psycopg2.pool import ThreadedConnectionPool
 conn_pool = ThreadedConnectionPool(
     minconn=2,
     maxconn=6,
-    host=os.environ['DATABASE_HOST'] if 'DATABASE_HOST' in os.environ else 'localhost',
-    port=os.environ['DATABASE_PORT'] if 'DATABASE_PORT' in os.environ else 5432,
-    database=os.environ['DATABASE_DB'] if 'DATABASE_DB' in os.environ else 'postgres',
-    user=os.environ['DATABASE_USER'] if 'DATABASE_USER' in os.environ else 'postgres',
-    password=os.environ['DATABASE_PASSWORD'] if 'DATABASE_PASSWORD' in os.environ else 'postgres',
+    host=os.environ.get('DATABASE_HOST', 'localhost'),
+    port=os.environ.get('DATABASE_PORT', 5432),
+    database=os.environ.get('DATABASE_DB', 'postgres'),
+    user=os.environ.get('DATABASE_USER', 'postgres'),
+    password=os.environ.get('DATABASE_PASSWORD', 'postgres'),
 )
 
 

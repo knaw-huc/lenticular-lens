@@ -10,13 +10,15 @@ from ll.job.validation import Validation
 from ll.job.links_filter import LinksFilter
 from ll.job.query_builder import QueryBuilder
 from ll.job.visualize import get_visualization
+from ll.job.linkset_builder import LinksetBuilder
 
+from ll.elem.view import View
 from ll.elem.lens import Lens
 from ll.elem.linkset import Linkset
 from ll.elem.entity_type_selection import EntityTypeSelection
 
-from ll.util.helpers import get_pagination_sql, get_sql_empty
-from ll.util.config_db import db_conn, fetch_one, fetch_many
+from ll.util.helpers import get_sql_empty
+from ll.util.config_db import db_conn, fetch_one
 
 
 class Job:
@@ -26,6 +28,7 @@ class Job:
         self._entity_type_selections = None
         self._linkset_specs = None
         self._lens_specs = None
+        self._views = None
 
     @property
     def data(self):
@@ -59,6 +62,13 @@ class Job:
         return self._lens_specs
 
     @property
+    def views(self):
+        if not self._views:
+            self._views = list(map(lambda view: View(view, self), self.data['views']))
+
+        return self._views
+
+    @property
     def linksets(self):
         with db_conn() as conn, conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
             cur.execute('SELECT * FROM linksets WHERE job_id = %s', (self.job_id,))
@@ -84,39 +94,55 @@ class Job:
         return fetch_one('SELECT * FROM lenses WHERE job_id = %s AND spec_id = %s',
                          (self.job_id, id), dict=True)
 
+    def spec(self, id, type):
+        return self.linkset(id) if type == 'linkset' else self.lens(id)
+
     def clustering(self, id, type):
         return fetch_one('SELECT * FROM clusterings WHERE job_id = %s AND spec_id = %s AND spec_type = %s',
                          (self.job_id, id, type), dict=True)
 
-    def update_data(self, data):
-        if 'entity_type_selections' in data and 'linkset_specs' in data and 'lens_specs' in data:
-            (entity_type_selections, linkset_specs, lens_specs) \
-                = transform(data['entity_type_selections'], data['linkset_specs'], data['lens_specs'])
+    def create_job(self, title, description, link):
+        with db_conn() as conn, conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO jobs (job_id, job_title, job_description, job_link) 
+                VALUES (%s, %s, %s, %s)
+            """, (self.job_id, title, description, link))
 
-            data['entity_type_selections_form_data'] = dumps(data['entity_type_selections'])
-            data['linkset_specs_form_data'] = dumps(data['linkset_specs'])
-            data['lens_specs_form_data'] = dumps(data['lens_specs'])
-            data['entity_type_selections'] = dumps(entity_type_selections)
-            data['linkset_specs'] = dumps(linkset_specs)
-            data['lens_specs'] = dumps(lens_specs)
-        else:
-            entity_type_selections = []
-            linkset_specs = []
-            lens_specs = []
+    def update_data(self, data):
+        data_updated = {
+            'job_title': data['job_title'].strip(),
+            'job_description': data['job_description'].strip(),
+            'job_link': data['job_link'].strip() \
+                if 'job_link' in data and data['job_link'] and data['job_link'].strip() != '' else None,
+            'entity_type_selections_form_data': dumps(data['entity_type_selections']) \
+                if 'entity_type_selections' in data else None,
+            'linkset_specs_form_data': dumps(data['linkset_specs']) \
+                if 'linkset_specs' in data else None,
+            'lens_specs_form_data': dumps(data['lens_specs']) \
+                if 'lens_specs' in data else None,
+            'views_form_data': dumps(data['views']) \
+                if 'views' in data else None
+        }
+
+        (entity_type_selections, linkset_specs, lens_specs, views, errors) \
+            = transform(data['entity_type_selections'] if 'entity_type_selections' in data else [],
+                        data['linkset_specs'] if 'linkset_specs' in data else [],
+                        data['lens_specs'] if 'lens_specs' in data else [],
+                        data['views'] if 'views' in data else [])
+
+        data_updated['entity_type_selections'] = dumps(entity_type_selections)
+        data_updated['linkset_specs'] = dumps(linkset_specs)
+        data_updated['lens_specs'] = dumps(lens_specs)
+        data_updated['views'] = dumps(views)
 
         with db_conn() as conn, conn.cursor() as cur:
-            cur.execute(sql.SQL("""
-                INSERT INTO jobs (job_id, %s) VALUES %s
-                ON CONFLICT (job_id) DO 
-                UPDATE SET (%s) = ROW %s, updated_at = NOW()
-            """), (
-                AsIs(', '.join(data.keys())),
-                tuple([self.job_id] + list(data.values())),
-                AsIs(', '.join(data.keys())),
-                tuple(data.values()),
+            cur.execute(sql.SQL('UPDATE jobs SET (%s) = ROW %s, updated_at = now() WHERE job_id = %s'), (
+                AsIs(', '.join(data_updated.keys())),
+                tuple(data_updated.values()),
+                self.job_id
             ))
 
-        return entity_type_selections, linkset_specs, lens_specs
+        return entity_type_selections, linkset_specs, lens_specs, views, errors
 
     def update_linkset(self, id, data):
         with db_conn() as conn, conn.cursor() as cur:
@@ -171,23 +197,21 @@ class Job:
             cur.execute(sql.SQL("INSERT INTO lenses (job_id, spec_id, status, kill, requested_at) "
                                 "VALUES (%s, %s, %s, false, now())"), (self.job_id, id, 'waiting'))
 
-    def run_clustering(self, id, type, association_file, clustering_type='default'):
+    def run_clustering(self, id, type, clustering_type='default'):
         clustering = self.clustering(id, type)
 
         with db_conn() as conn, conn.cursor() as cur:
             if clustering:
                 cur.execute(sql.SQL("""
                     UPDATE clusterings 
-                    SET association_file = %s, status = %s, 
-                        kill = false, requested_at = now(), processing_at = null, finished_at = null
+                    SET status = %s, kill = false, requested_at = now(), processing_at = null, finished_at = null
                     WHERE job_id = %s AND spec_id = %s AND spec_type = %s
-                """), (association_file, 'waiting', self.job_id, id, type))
+                """), ('waiting', self.job_id, id, type))
             else:
                 cur.execute(sql.SQL("""
-                    INSERT INTO clusterings (job_id, spec_id, spec_type, clustering_type, association_file, 
-                                             status, kill, requested_at) 
-                    VALUES (%s, %s, %s, %s, %s, %s, false, now())
-                """), (self.job_id, id, type, clustering_type, association_file, 'waiting'))
+                    INSERT INTO clusterings (job_id, spec_id, spec_type, clustering_type, status, kill, requested_at) 
+                    VALUES (%s, %s, %s, %s, %s, false, now())
+                """), (self.job_id, id, type, clustering_type, 'waiting'))
 
     def kill_linkset(self, id):
         with db_conn() as conn, conn.cursor() as cur:
@@ -331,35 +355,23 @@ class Job:
                 if (type == 'linkset' and id in lens_spec.linksets)
                 or (type == 'lens' and id in lens_spec.lenses)]
 
-    def linkset_has_queued_table_data(self, linkset_id=None):
+    def linkset_has_queued_table_data(self, linkset_id):
         linkset = self.get_linkset_spec_by_id(linkset_id)
-        for entity_type_selection in linkset.entity_type_selections:
-            for property in entity_type_selection.properties_for_matching(linkset):
-                if not property.is_downloaded:
-                    return True
-
-        return False
+        return any(not property.is_downloaded
+                   for entity_type_selection in linkset.entity_type_selections
+                   for property in entity_type_selection.properties_for_matching(linkset))
 
     def get_entity_type_selection_by_id(self, id):
-        for entity_type_selection in self.entity_type_selections:
-            if entity_type_selection.id == id or entity_type_selection.alias == id:
-                return entity_type_selection
-
-        return None
+        return next((ets for ets in self.entity_type_selections if ets.id == id or ets.alias == id), None)
 
     def get_linkset_spec_by_id(self, id):
-        for linkset_spec in self.linkset_specs:
-            if linkset_spec.id == id:
-                return linkset_spec
-
-        return None
+        return next((linkset_spec for linkset_spec in self.linkset_specs if linkset_spec.id == id), None)
 
     def get_lens_spec_by_id(self, id):
-        for lens_spec in self.lens_specs:
-            if lens_spec.id == id:
-                return lens_spec
+        return next((lens_spec for lens_spec in self.lens_specs if lens_spec.id == id), None)
 
-        return None
+    def get_view_by_id(self, id, type):
+        return next((view for view in self.views if view.id == id and view.type == type), None)
 
     def get_spec_by_id(self, id, type):
         return self.get_linkset_spec_by_id(id) if type == 'linkset' else self.get_lens_spec_by_id(id)
@@ -377,8 +389,9 @@ class Job:
 
         query_builder = QueryBuilder()
         query_builder.add_query(
-            entity_type_selection.dataset_id, entity_type_selection.collection_id, entity_type_selection.alias,
-            entity_type_selection.table_name, filter_properties, selection_properties,
+            entity_type_selection.graphql_endpoint, entity_type_selection.dataset_id,
+            entity_type_selection.collection_id, entity_type_selection.alias,
+            entity_type_selection.collection.table_name, filter_properties, selection_properties,
             condition=entity_type_selection.filters_sql, invert=invert, limit=limit, offset=offset)
 
         return query_builder.run_queries(dict=False)
@@ -406,148 +419,53 @@ class Job:
             {condition}
         ''').format(
             resource=sql.Identifier(entity_type_selection.alias),
-            table_name=sql.Identifier(entity_type_selection.table_name),
+            table_name=sql.Identifier(entity_type_selection.collection.table_name),
             joins=joins.sql,
             condition=get_sql_empty(where_sql)
         ), dict=True)
 
     def get_links(self, id, type, validation_filter=Validation.ALL, cluster_id=None, uri=None,
-                  limit=None, offset=0, include_props=False, single_value=False):
+                  min_strength=0, max_strength=1, limit=None, offset=0, with_properties='none'):
         schema = 'lenses' if type == 'lens' else 'linksets'
         spec = self.get_spec_by_id(id, type)
+        view = self.get_view_by_id(id, type)
 
         links_filter = LinksFilter()
         links_filter.filter_on_validation(validation_filter)
         links_filter.filter_on_cluster(cluster_id)
         links_filter.filter_on_uri(uri)
+        links_filter.filter_on_min_max_strength(min_strength, max_strength)
 
-        limit_offset_sql = get_pagination_sql(limit, offset)
-        where_sql = links_filter.sql()
+        linkset_builder = LinksetBuilder(schema, self.table_name(id), spec, view)
+        linkset_builder.apply_links_filter(links_filter)
+        linkset_builder.apply_paging(limit, offset)
 
-        sim_fields_sql = sql.SQL('')
-        if spec.similarity_fields:
-            sim_fields_sql = sql.SQL('CROSS JOIN LATERAL jsonb_to_record(similarity) \nAS sim({})') \
-                .format(sql.SQL(', ').join([sql.SQL('{} numeric[]').format(sql.Identifier(sim_field))
-                                            for sim_field in spec.similarity_fields]))
+        return linkset_builder.get_links_generator(with_properties)
 
-        values = None
-        if include_props:
-            query_builder = QueryBuilder()
+    def get_links_totals(self, id, type, cluster_id=None, uri=None, min_strength=0, max_strength=1):
+        schema = 'lenses' if type == 'lens' else 'linksets'
+        spec = self.get_spec_by_id(id, type)
+        view = self.get_view_by_id(id, type)
 
-            for ets in spec.entity_type_selections:
-                query_builder.add_linkset_query(
-                    schema, self.table_name(id), ets.dataset_id, ets.collection_id, ets.alias, ets.table_name,
-                    ets.filter_properties, ets.properties_for_spec_selection(spec),
-                    condition=where_sql, limit=limit, offset=offset, single_value=single_value)
-
-            values = query_builder.run_queries_single_value() if single_value else query_builder.run_queries()
-
-        with db_conn() as conn, conn.cursor(name=uuid4().hex) as cur:
-            cur.execute(sql.SQL(
-                'SELECT links.source_uri, links.source_collections, '
-                '       links.target_uri, links.target_collections, '
-                '       link_order, cluster_id, valid, '
-                '       coalesce({sim_logic_ops_sql}, 1) AS similarity '
-                'FROM {schema}.{view_name} AS links '
-                '{sim_fields_sql} '
-                '{where_sql} '
-                'ORDER BY sort_order ASC {limit_offset}'
-            ).format(
-                schema=sql.Identifier(schema),
-                view_name=sql.Identifier(self.table_name(id)),
-                sim_fields_sql=sim_fields_sql,
-                sim_logic_ops_sql=spec.similarity_logic_ops_sql,
-                where_sql=where_sql,
-                limit_offset=sql.SQL(limit_offset_sql)
-            ))
-
-            for link in fetch_many(cur):
-                yield {
-                    'source': link[0],
-                    'source_collections': link[1],
-                    'source_values': values[link[0]] if values and link[0] in values else None,
-                    'target': link[2],
-                    'target_collections': link[3],
-                    'target_values': values[link[2]] if values and link[2] in values else None,
-                    'link_order': link[4],
-                    'cluster_id': link[5],
-                    'valid': link[6],
-                    'similarity': link[7]
-                }
-
-    def get_links_totals(self, id, type, cluster_id=None, uri=None):
         links_filter = LinksFilter()
         links_filter.filter_on_cluster(cluster_id)
         links_filter.filter_on_uri(uri)
+        links_filter.filter_on_min_max_strength(min_strength, max_strength)
 
-        with db_conn() as conn, conn.cursor() as cur:
-            cur.execute(sql.SQL('SELECT valid, count(*) AS valid_count '
-                                'FROM {schema}.{view_name} AS links '
-                                '{where_sql} '
-                                'GROUP BY valid').format(
-                schema=sql.Identifier('lenses' if type == 'lens' else 'linksets'),
-                view_name=sql.Identifier(self.table_name(id)),
-                where_sql=links_filter.sql()
-            ))
+        linkset_builder = LinksetBuilder(schema, self.table_name(id), spec, view)
+        linkset_builder.apply_links_filter(links_filter)
 
-            return {row[0]: row[1] for row in cur.fetchall()}
+        return linkset_builder.get_total_links()
 
-    def get_clusters(self, id, type, limit=None, offset=0, include_props=False):
+    def get_clusters(self, id, type, limit=None, offset=0, with_properties='none'):
+        schema = 'lenses' if type == 'lens' else 'linksets'
         spec = self.get_spec_by_id(id, type)
-        limit_offset_sql = get_pagination_sql(limit, offset)
-        nodes_sql = ', array_agg(DISTINCT nodes.uri) AS nodes_arr' if include_props else ''
+        view = self.get_view_by_id(id, type)
 
-        values = None
-        if include_props:
-            query_builder = QueryBuilder()
+        linkset_builder = LinksetBuilder(schema, self.table_name(id), spec, view)
+        linkset_builder.apply_paging(limit, offset)
 
-            for ets in spec.entity_type_selections:
-                query_builder.add_cluster_query(
-                    self.table_name(id), ets.dataset_id, ets.collection_id, ets.alias, ets.table_name,
-                    ets.filter_properties, ets.properties_for_spec_selection(spec), limit=limit, offset=offset)
-
-            values = query_builder.run_queries()
-
-        with db_conn() as conn, conn.cursor(name=uuid4().hex) as cur:
-            cur.execute("""
-                 SELECT ls.cluster_id, count(DISTINCT nodes.uri) AS size, count(ls.*) / 2 AS links {}
-                 FROM {}."{}" AS ls
-                 CROSS JOIN LATERAL (VALUES (ls.source_uri), (ls.target_uri)) AS nodes(uri)
-                 GROUP BY ls.cluster_id
-                 ORDER BY size DESC, ls.cluster_id 
-                 {}
-             """.format(nodes_sql, ('lenses' if type == 'lens' else 'linksets'), self.table_name(id), limit_offset_sql))
-
-            for cluster in fetch_many(cur):
-                cluster_values = {}
-                if values:
-                    for uri, uri_values in values.items():
-                        if uri in cluster[3]:
-                            for prop_value in uri_values:
-                                key = prop_value['dataset'] + '_' + prop_value['entity'] \
-                                      + '_' + prop_value['property'][-1]
-
-                                if key not in cluster_values:
-                                    cluster_values[key] = {
-                                        'dataset': prop_value['dataset'],
-                                        'entity': prop_value['entity'],
-                                        'property': prop_value['property'],
-                                        'values': set()
-                                    }
-
-                                cluster_values[key]['values'].update(prop_value['values'])
-
-                yield {
-                    'id': cluster[0],
-                    'size': cluster[1],
-                    'links': cluster[2],
-                    'values': [{
-                        'dataset': cluster_value['dataset'],
-                        'entity': cluster_value['entity'],
-                        'property': cluster_value['property'],
-                        'values': list(cluster_value['values'])
-                    } for key, cluster_value in cluster_values.items()] if values else None
-                }
+        return linkset_builder.get_clusters_generator(with_properties)
 
     def visualize(self, id, type, cluster_id):
         return get_visualization(self, id, type, cluster_id, include_compact=True)

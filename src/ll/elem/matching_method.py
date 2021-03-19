@@ -33,38 +33,31 @@ class MatchingMethod:
         self._t_conorm = data['t_conorm']
         self._threshold = data['threshold']
 
-        self.is_list_match = data['list_matching']['threshold'] > 0 or data['list_matching']['unique_threshold'] > 0
-        self._list_threshold = data['list_matching']['threshold']
-        self._list_unique_threshold = data['list_matching']['unique_threshold']
-        self._list_is_percentage = data['list_matching']['is_percentage']
-        self._list_unique_is_percentage = data['list_matching']['unique_is_percentage']
+        self._list_links_threshold = data['list_matching']['links_threshold']
+        self._list_source_threshold = data['list_matching']['source_threshold']
+        self._list_target_threshold = data['list_matching']['target_threshold']
+        self._list_links_is_percentage = data['list_matching']['links_is_percentage']
+        self._list_source_is_percentage = data['list_matching']['source_is_percentage']
+        self._list_target_is_percentage = data['list_matching']['target_is_percentage']
 
         self._sources, self._targets, self._intermediates = None, None, None
 
     @property
+    def is_intermediate(self):
+        return self.method_name == 'INTERMEDIATE'
+
+    @property
+    def is_list_match(self):
+        return self._list_links_threshold > 0 or self._list_source_threshold > 0 or self._list_target_threshold > 0
+
+    @property
     def sql(self):
-        if 'field' in self._method_info and not self.method_sim_name:
-            template = '{source_norm} = {target_norm}'
-        else:
-            template = self._condition_template
-            if template:
-                if self._match_template:
-                    template = re.sub(r'{match}', self._match_template, template)
-                if self._similarity_template:
-                    template = re.sub(r'{similarity}', self._similarity_template, template)
-            else:
-                template = self._match_template
-
-        if self.method_sim_name and not self._method_sim_normalized:
-            template = '{source_norm} = {target_norm} AND ' + template
-
-        template = self._update_template_fields(template)
-
-        return self._sql(template, list_check=True) if template else None
+        return self._sql(self._full_matching_template, self._similarity_template, match_sql=True)
 
     @property
     def similarity_sql(self):
-        return self._sql(self._similarity_template, list_check=False) if self._similarity_template else None
+        return self._sql(self._full_matching_template, self._similarity_template, match_sql=False) \
+            if self._similarity_template else None
 
     @property
     def similarity_logic_ops_sql(self):
@@ -136,13 +129,13 @@ class MatchingMethod:
     def intermediates(self):
         if not self._intermediates:
             self._intermediates = {}
-            if self.method_name == 'INTERMEDIATE':
+            if self.is_intermediate:
                 ets_id = int(self._method_config['entity_type_selection'])
                 self._intermediates[ets_id] = {
-                    'source': self._get_property(self._method_config['intermediate_source'],
-                                                 ets_id, property_only=True),
-                    'target': self._get_property(self._method_config['intermediate_target'],
-                                                 ets_id, property_only=True)
+                    'source': [self._get_property(prop, ets_id, property_only=True)
+                               for prop in self._method_config['intermediate_source']],
+                    'target': [self._get_property(prop, ets_id, property_only=True)
+                               for prop in self._method_config['intermediate_target']]
                 }
 
         return self._intermediates
@@ -186,6 +179,25 @@ class MatchingMethod:
         return None
 
     @property
+    def _full_matching_template(self):
+        if 'field' in self._method_info and not self.method_sim_name:
+            template = '{source_norm} = {target_norm}'
+        else:
+            template = self._condition_template
+            if template:
+                if self._match_template:
+                    template = re.sub(r'{match}', self._match_template, template)
+                if self._similarity_template:
+                    template = re.sub(r'{similarity}', self._similarity_template, template)
+            else:
+                template = self._match_template
+
+        if self.method_sim_name and not self._method_sim_normalized:
+            template = '{source_norm} = {target_norm} AND ' + template
+
+        return self._update_template_fields(template)
+
+    @property
     def _sql_parameters(self):
         return {key: sql.Literal(value)
                 for (key, value) in {**self._method_config, **self._method_sim_config}.items()}
@@ -207,7 +219,10 @@ class MatchingMethod:
 
         return template
 
-    def _sql(self, template, list_check=True):
+    def _sql(self, match_template, similarity_template, match_sql=True):
+        new_match_template = match_template
+        new_similarity_template = similarity_template
+
         if self.is_list_match:
             from_sql = \
                 'FROM unnest(source.{field_name}, source.{field_name_norm}) ' \
@@ -220,34 +235,37 @@ class MatchingMethod:
                     if self._method_info.get('field') else \
                     'JOIN unnest(target.{field_name}) WITH ORDINALITY AS trg(trg_org, trg_idx)'
 
-            if list_check:
-                template = cleandoc(f'''	
-                    match_array_meets_size(ARRAY(
-                        SELECT ARRAY['src' || src_idx, 'trg' || trg_idx]
-                        {from_sql}
-                        {join_sql}
-                        ON {template}
-                    ), source.{{field_name}}, target.{{field_name}}, 
-                       {{list_threshold}}, {{list_threshold_is_perc}}, 
-                       {{list_unique_threshold}}, {{list_unique_threshold_is_perc}})
-                ''')
-            else:
-                template = cleandoc(f'''	
-                    ARRAY(
-                        SELECT {template}
-                        {from_sql}
-                        CROSS {join_sql}
-                    )
-                ''')
+            new_match_template = cleandoc(f'''	
+                match_array_meets_size(ARRAY(
+                    SELECT ARRAY['src' || src_idx, 'trg' || trg_idx]
+                    {from_sql}
+                    {join_sql}
+                    ON {match_template}
+                ), source.{{field_name}}, target.{{field_name}}, 
+                   {{list_links_threshold}}, {{list_links_threshold_is_perc}}, 
+                   {{list_source_threshold}}, {{list_source_threshold_is_perc}},
+                   {{list_target_threshold}}, {{list_target_threshold_is_perc}})
+            ''')
 
-        return sql.SQL(template).format(
+            new_similarity_template = cleandoc(f'''	
+                ARRAY(
+                    SELECT {similarity_template}
+                    {from_sql}
+                    {join_sql}
+                    ON {match_template}
+                )
+            ''')
+
+        return sql.SQL(new_match_template if match_sql else new_similarity_template).format(
             field_name=sql.Identifier(self.field_name),
             field_name_norm=sql.Identifier(self.field_name + '_norm'),
             field_name_intermediate=sql.Identifier(self.field_name + '_intermediate'),
-            list_threshold=sql.Literal(self._list_threshold),
-            list_threshold_is_perc=sql.Literal(self._list_is_percentage),
-            list_unique_threshold=sql.Literal(self._list_unique_threshold),
-            list_unique_threshold_is_perc=sql.Literal(self._list_unique_is_percentage),
+            list_links_threshold=sql.Literal(self._list_links_threshold),
+            list_links_threshold_is_perc=sql.Literal(self._list_links_is_percentage),
+            list_source_threshold=sql.Literal(self._list_source_threshold),
+            list_source_threshold_is_perc=sql.Literal(self._list_source_is_percentage),
+            list_target_threshold=sql.Literal(self._list_target_threshold),
+            list_target_threshold_is_perc=sql.Literal(self._list_target_is_percentage),
             **self._sql_parameters
         )
 
