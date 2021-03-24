@@ -322,8 +322,9 @@ class MatchingSql:
                 if not is_normalized:
                     if props_norm:
                         joins.append(
-                            sql.SQL('CROSS JOIN unnest(ARRAY[{fields_org}], ARRAY[{fields_norm}]) \n'
-                                    'AS {join_name}({field_name_org}, {field_name_norm})').format(
+                            sql.SQL('LEFT JOIN unnest(ARRAY[{fields_org}], ARRAY[{fields_norm}]) \n'
+                                    'AS {join_name}({field_name_org}, {field_name_norm}) \n'
+                                    'ON {join_name}.{field_name_org} IS NOT NULL').format(
                                 fields_org=sql.SQL(', ').join(
                                     [sql.SQL('target.{}').format(sql.Identifier(prop.hash)) for prop in props_org]
                                 ),
@@ -337,8 +338,9 @@ class MatchingSql:
                         )
                     else:
                         joins.append(
-                            sql.SQL('CROSS JOIN unnest(ARRAY[{fields_org}]) \n'
-                                    'AS {field_name_org}').format(
+                            sql.SQL('LEFT JOIN unnest(ARRAY[{fields_org}]) \n'
+                                    'AS {field_name_org} \n'
+                                    'ON {field_name_org} IS NOT NULL').format(
                                 fields_org=sql.SQL(', ').join(
                                     [sql.SQL('target.{}').format(sql.Identifier(prop.hash)) for prop in props_org]
                                 ),
