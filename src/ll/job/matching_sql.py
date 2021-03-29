@@ -82,7 +82,7 @@ class MatchingSql:
                 CREATE MATERIALIZED VIEW source AS 
                 {};
                 
-                CREATE INDEX ON source (uri);
+                CREATE INDEX ON source USING hash (uri);
                 ANALYZE source;
             """
         ) + '\n').format(
@@ -94,7 +94,7 @@ class MatchingSql:
                 CREATE MATERIALIZED VIEW target AS 
                 {};
                 
-                CREATE INDEX ON target (uri);
+                CREATE INDEX ON target USING hash (uri);
                 ANALYZE target;
             """
         ) + '\n').format(
@@ -261,14 +261,14 @@ class MatchingSql:
                                                   is_source, joins, matching_fields, ets_index)
 
             sqls.append(
-                sql.SQL(cleandoc(
-                    """ SELECT DISTINCT {collection} AS collection, target.uri, 
-                                        {matching_fields}
-                        FROM {res} AS target {joins}
-                   """
-                )).format(
+                sql.SQL(cleandoc(""" 
+                    SELECT {collection} AS collection, target.uri, 
+                           {matching_fields}
+                    FROM (SELECT DISTINCT uri FROM {res}) AS target 
+                    {joins}
+               """)).format(
                     collection=sql.Literal(int(ets_id)),
-                    matching_fields=sql.SQL(',\n                ').join(matching_fields),
+                    matching_fields=sql.SQL(',\n       ').join(matching_fields),
                     res=sql.Identifier(hash_string_min(ets_id)),
                     joins=get_sql_empty(sql.SQL('\n').join(joins)),
                 )
@@ -278,129 +278,128 @@ class MatchingSql:
 
     @staticmethod
     def _matching_methods_sql(ets_id, matching_method, properties, is_source, joins, matching_fields, ets_index):
+        target = 'target' + str(ets_index)
+
         field_name_org = matching_method.field_name
         field_name_norm = field_name_org + '_norm'
 
         props_org = [prop.prop_original for prop in properties]
         props_norm = [prop.prop_normalized for prop in properties if prop.prop_normalized]
 
-        for is_normalized in (False, True):
-            field_name = field_name_norm if is_normalized else field_name_org
-            props = props_norm if is_normalized else props_org
-
-            if not props:
-                break
-
-            # In case of list matching, combine all values into a field
-            if matching_method.is_list_match:
-                target_field = sql.SQL('{}.field_values') \
-                    .format(sql.Identifier(field_name + '_extended'))
-
-                joins.append(sql.SQL(cleandoc('''
-                    LEFT JOIN (
-                        SELECT uri, ARRAY(
-                            SELECT DISTINCT x
-                            FROM unnest({fields}) AS x
-                            WHERE x IS NOT NULL
-                        ) AS field_values
-                        FROM {res}
-                        GROUP BY uri
-                    ) AS {field_name}
-                    ON {field_name}.uri = target.uri                    
+        # In case of list matching, combine all values into a field
+        if matching_method.is_list_match:
+            field_norm = sql.SQL('')
+            if props_norm:
+                field_norm = sql.SQL(cleandoc('''
+                     , ARRAY(
+                        SELECT {field_name_norm}
+                        FROM unnest({fields_org}, {fields_norm}) AS x ({field_name_org}, {field_name_norm})
+                        WHERE {field_name_org} IS NOT NULL
+                        GROUP BY {field_name_org}, {field_name_norm}
+                    ) AS {field_name_norm}
                 ''')).format(
-                    res=sql.Identifier(hash_string_min(ets_id)),
-                    fields=sql.SQL(' || ').join(
-                        [sql.SQL('array_agg({})').format(sql.Identifier(prop.hash))
-                         for prop in props]
-                    ),
-                    field_name=sql.Identifier(field_name + '_extended')
-                ))
-            # In case of multiple props, combine all values into a new field to use as a join
-            elif len(props) > 1:
-                target_field = sql.Identifier(field_name)
-
-                if not is_normalized:
-                    if props_norm:
-                        joins.append(
-                            sql.SQL('LEFT JOIN unnest(ARRAY[{fields_org}], ARRAY[{fields_norm}]) \n'
-                                    'AS {join_name}({field_name_org}, {field_name_norm}) \n'
-                                    'ON {join_name}.{field_name_org} IS NOT NULL').format(
-                                fields_org=sql.SQL(', ').join(
-                                    [sql.SQL('target.{}').format(sql.Identifier(prop.hash)) for prop in props_org]
-                                ),
-                                fields_norm=sql.SQL(', ').join(
-                                    [sql.SQL('target.{}').format(sql.Identifier(prop.hash)) for prop in props_norm]
-                                ),
-                                join_name=sql.Identifier('join_' + field_name_org),
-                                field_name_org=sql.Identifier(field_name_org),
-                                field_name_norm=sql.Identifier(field_name_norm)
-                            )
-                        )
-                    else:
-                        joins.append(
-                            sql.SQL('LEFT JOIN unnest(ARRAY[{fields_org}]) \n'
-                                    'AS {field_name_org} \n'
-                                    'ON {field_name_org} IS NOT NULL').format(
-                                fields_org=sql.SQL(', ').join(
-                                    [sql.SQL('target.{}').format(sql.Identifier(prop.hash)) for prop in props_org]
-                                ),
-                                field_name_org=sql.Identifier(field_name_org),
-                            )
-                        )
-            else:
-                target = 'target' + str(ets_index)
-
-                if not is_normalized:
-                    joins.append(
-                        sql.SQL('LEFT JOIN {res} AS {join_name} \n'
-                                'ON target.uri = {join_name}.uri \n'
-                                'AND {join_name}.{property_field} IS NOT NULL').format(
-                            res=sql.Identifier(hash_string_min(ets_id)),
-                            join_name=sql.Identifier(target),
-                            property_field=sql.Identifier(props[0].hash)
-                        )
-                    )
-
-                target_field = sql.SQL('{target}.{property_field}').format(
-                    target=sql.Identifier(target),
-                    property_field=sql.Identifier(props[0].hash)
+                    field_name_org=sql.Identifier(field_name_org),
+                    field_name_norm=sql.Identifier(field_name_norm),
+                    fields_org=sql.SQL(' || ').join([
+                        sql.SQL('array_agg({})').format(sql.Identifier(prop.hash)) for prop in props_org]),
+                    fields_norm=sql.SQL(' || ').join([
+                        sql.SQL('array_agg({})').format(sql.Identifier(prop.hash)) for prop in props_norm]),
                 )
 
-            if target_field:
-                # Now that we have determined the target field, add it to the list of matching fields
-                matching_fields.append(sql.SQL('{target_field} AS {field_name}').format(
-                    target_field=target_field,
-                    field_name=sql.Identifier(field_name)
+            joins.append(sql.SQL(cleandoc('''
+                LEFT JOIN (
+                    SELECT uri, ARRAY(
+                        SELECT {field_name_org}
+                        FROM unnest({fields_org}) AS {field_name_org}
+                        WHERE {field_name_org} IS NOT NULL
+                        GROUP BY {field_name_org}
+                    ) AS {field_name_org} {field_norm}
+                    FROM {res}
+                    GROUP BY uri
+                ) AS {target}
+                ON target.uri = {target}.uri
+            ''')).format(
+                fields_org=sql.SQL(' || ').join([
+                    sql.SQL('array_agg({})').format(sql.Identifier(prop.hash)) for prop in props_org]),
+                field_name_org=sql.Identifier(field_name_org),
+                field_norm=field_norm,
+                res=sql.Identifier(hash_string_min(ets_id)),
+                target=sql.Identifier(target)
+            ))
+        # Otherwise combine all values into a new field to use as a join
+        else:
+            if len(props_org) == 1:
+                field_template = '{field_org} AS {field_name_org}'
+                if props_norm:
+                    field_template += ', {field_norm} AS {field_name_norm}'
+
+                fields_sql = sql.SQL(field_template).format(
+                    field_org=sql.Identifier(props_org[0].hash),
+                    field_name_org=sql.Identifier(field_name_org),
+                    field_norm=sql.Identifier(props_norm[0].hash) if props_norm else sql.SQL(''),
+                    field_name_norm=sql.Identifier(field_name_norm) if props_norm else sql.SQL(''),
+                )
+            else:
+                field_template = 'unnest(ARRAY[{fields_org}]) AS {field_name_org}' if not props_norm else \
+                    'unnest(ARRAY[{fields_org}], ARRAY[{fields_norm}]) AS x ({field_name_org}, {field_name_norm})'
+
+                fields_sql = sql.SQL(field_template).format(
+                    fields_org=sql.SQL(', ').join([sql.Identifier(prop.hash) for prop in props_org]),
+                    field_name_org=sql.Identifier(field_name_org),
+                    fields_norm=sql.SQL(', ').join(
+                        [sql.Identifier(prop.hash) for prop in props_norm]) if props_norm else sql.SQL(''),
+                    field_name_norm=sql.Identifier(field_name_norm) if props_norm else sql.SQL(''),
+                )
+
+            joins.append(sql.SQL(cleandoc('''
+                LEFT JOIN (
+                    SELECT DISTINCT uri, {fields}
+                    FROM {res}
+                ) AS {target}
+                ON target.uri = {target}.uri AND {target}.{field_name_org} IS NOT NULL
+            ''')).format(
+                fields=fields_sql,
+                res=sql.Identifier(hash_string_min(ets_id)),
+                target=sql.Identifier(target),
+                field_name_org=sql.Identifier(field_name_org),
+            ))
+
+        # Now that we have determined the target fields, add them to the list of matching fields
+        matching_fields.append(sql.SQL('{target}.{field} AS {field}').format(
+            target=sql.Identifier(target), field=sql.Identifier(field_name_org)))
+        if props_norm:
+            matching_fields.append(sql.SQL('{target}.{field} AS {field}').format(
+                target=sql.Identifier(target), field=sql.Identifier(field_name_norm)))
+
+        # Add properties to do the intermediate dataset matching
+        if matching_method.is_intermediate:
+            for intermediate_ets, intermediate_ets_props in matching_method.intermediates.items():
+                intermediate_res = hash_string_min(intermediate_ets)
+                intermediate_target = 'intermediate' + str(ets_index)
+                intermediate_fields = intermediate_ets_props['source' if is_source else 'target']
+
+                intermediate_match_sqls = [
+                    sql.SQL('{target}.{field_name} = {intermediate_target}.{intermediate_field}').format(
+                        target=sql.Identifier(target),
+                        field_name=sql.Identifier(field_name_org),
+                        intermediate_target=sql.Identifier(intermediate_target),
+                        intermediate_field=sql.Identifier(intermediate_field.prop_original.hash)
+                    )
+                    for intermediate_field in intermediate_fields
+                ]
+
+                joins.append(
+                    sql.SQL(cleandoc('''
+                        LEFT JOIN {intermediate_res} AS {intermediate_target}
+                        ON {match_sqls}
+                    ''')).format(
+                        intermediate_res=sql.Identifier(intermediate_res),
+                        intermediate_target=sql.Identifier(intermediate_target),
+                        match_sqls=sql.SQL(' OR ').join(intermediate_match_sqls)
+                    )
+                )
+
+                matching_fields.append(sql.SQL('{join_name}.uri AS {field_name}').format(
+                    join_name=sql.Identifier(intermediate_target),
+                    field_name=sql.Identifier(field_name_org + '_intermediate')
                 ))
-
-                # Add properties to do the intermediate dataset matching
-                if matching_method.is_intermediate:
-                    for intermediate_ets, intermediate_ets_props in matching_method.intermediates.items():
-                        intermediate_res = hash_string_min(intermediate_ets)
-                        intermediate_target = 'intermediate' + str(ets_index)
-                        intermediate_fields = intermediate_ets_props['source' if is_source else 'target']
-
-                        intermediate_match_sqls = [
-                            sql.SQL('{target_field} = {intermediate_target}.{intermediate_field}').format(
-                                target_field=target_field,
-                                intermediate_target=sql.Identifier(intermediate_target),
-                                intermediate_field=sql.Identifier(intermediate_field.prop_original.hash)
-                            )
-                            for intermediate_field in intermediate_fields
-                        ]
-
-                        joins.append(
-                            sql.SQL(cleandoc('''
-                                LEFT JOIN {intermediate_res} AS {intermediate_target}
-                                ON {match_sqls}
-                            ''')).format(
-                                intermediate_res=sql.Identifier(intermediate_res),
-                                intermediate_target=sql.Identifier(intermediate_target),
-                                match_sqls=sql.SQL(' OR ').join(intermediate_match_sqls)
-                            )
-                        )
-
-                        matching_fields.append(sql.SQL('{join_name}.uri AS {field_name}').format(
-                            join_name=sql.Identifier(intermediate_target),
-                            field_name=sql.Identifier(field_name + '_intermediate')
-                        ))
