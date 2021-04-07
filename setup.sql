@@ -131,38 +131,28 @@ ON left_set.key = right_set.key;
 $$ LANGUAGE sql STRICT IMMUTABLE PARALLEL SAFE;
 
 CREATE OR REPLACE FUNCTION match_array_meets_size(arr anyarray, source anyarray, target anyarray,
-                                                  min_count numeric, min_count_percentage boolean,
-                                                  min_source_count numeric, min_source_count_percentage boolean,
-                                                  min_target_count numeric, min_target_count_percentage boolean)
+                                                  min_count numeric, min_count_percentage boolean)
     RETURNS boolean AS $$
 DECLARE
     unique_source_size numeric;
     unique_target_size numeric;
 BEGIN
     IF min_count > 0 THEN
-        IF min_count_percentage AND
-           array_length(arr, 1) < (greatest(cardinality(source), cardinality(target)) * (min_count / 100.0)) THEN
-            RETURN FALSE;
-        ELSIF NOT min_count_percentage AND array_length(arr, 1) < min_count THEN
-            RETURN FALSE;
-        END IF;
-    END IF;
-
-    IF min_source_count > 0 THEN
         unique_source_size = cardinality(ARRAY(SELECT DISTINCT unnest(arr[:][1:1])));
-        IF min_source_count_percentage AND unique_source_size < (cardinality(source) * (min_source_count / 100.0)) THEN
-            RETURN FALSE;
-        ELSIF NOT min_source_count_percentage AND unique_source_size < min_source_count THEN
-            RETURN FALSE;
-        END IF;
-    END IF;
-
-    IF min_target_count > 0 THEN
         unique_target_size = cardinality(ARRAY(SELECT DISTINCT unnest(arr[:][2:2])));
-        IF min_target_count_percentage AND unique_target_size < (cardinality(target) * (min_target_count / 100.0)) THEN
-            RETURN FALSE;
-        ELSIF NOT min_target_count_percentage AND unique_target_size < min_target_count THEN
-            RETURN FALSE;
+
+        IF min_count_percentage THEN
+            IF array_length(arr, 1) < (greatest(cardinality(source), cardinality(target)) * (min_count / 100.0)) OR
+               unique_source_size < (cardinality(source) * (min_count / 100.0)) OR
+               unique_target_size < (cardinality(target) * (min_count / 100.0)) THEN
+                RETURN FALSE;
+            END IF;
+        ELSE
+            IF array_length(arr, 1) < min_count OR
+               unique_source_size < min_count OR
+               unique_target_size < min_count THEN
+                RETURN FALSE;
+            END IF;
         END IF;
     END IF;
 

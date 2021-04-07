@@ -6,11 +6,16 @@
             :read-only="readOnly"
             :small="small"
             :singular="singular"
+            :has-additional-buttons="hasAdditionalButtons"
             :allow-delete="allowDelete"
             :show-info="showInfo"
             @clone="$emit('clone')"
             @delete="$emit('delete')"
-            ref="property"/>
+            ref="property">
+    <template v-slot:default>
+      <slot name="default"/>
+    </template>
+  </property>
 </template>
 
 <script>
@@ -31,6 +36,10 @@
                 type: Boolean,
                 default: false,
             },
+            hasAdditionalButtons: {
+                type: Boolean,
+                default: false,
+            },
             allowDelete: {
                 type: Boolean,
                 default: true,
@@ -38,7 +47,7 @@
             showInfo: {
                 type: Boolean,
                 default: true,
-            }
+            },
         },
         methods: {
             validateProperty() {

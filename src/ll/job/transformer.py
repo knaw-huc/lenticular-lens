@@ -105,53 +105,57 @@ def get_linkset_spec_schema(ets_ids):
         'sources': [EntityTypeSelection(ets_ids)],
         'targets': [EntityTypeSelection(ets_ids)],
         'methods': And(LogicBox(Schema({
-            'method_name': And(str, Use(str.upper), lambda m: m in matching_methods.keys()),
-            'method_config': And(dict, MatchingMethodConfig(ets_ids)),
-            Optional('method_sim_name', default=None):
-                Or(None, And(str, Use(str.upper), lambda m: m in matching_methods.keys())),
-            Optional('method_sim_config', default={}): And(dict, MatchingMethodConfig(ets_ids)),
-            Optional('method_sim_normalized', default=False): bool,
-            Optional('t_conorm', default='MAXIMUM_T_CONORM'):
-                lambda s: s in ('MAXIMUM_T_CONORM', 'PROBABILISTIC_SUM', 'BOUNDED_SUM',
-                                'DRASTIC_T_CONORM', 'NILPOTENT_MAXIMUM', 'EINSTEIN_SUM'),
-            Optional('threshold', default=0): Or(float, Use(lambda t: 0)),
-            Optional('list_matching', default={
-                'links_threshold': 0, 'links_is_percentage': False,
-                'source_threshold': 0, 'source_is_percentage': False,
-                'target_threshold': 0, 'target_is_percentage': False
-            }): {
-                Optional('links_threshold', default=0): int,
-                Optional('links_is_percentage', default=False): bool,
-                Optional('source_threshold', default=0): int,
-                Optional('source_is_percentage', default=False): bool,
-                Optional('target_threshold', default=0): int,
-                Optional('target_is_percentage', default=False): bool,
+            'method': {
+                'name': And(str, Use(str.upper), lambda m: m in matching_methods.keys()),
+                'config': And(dict, MatchingMethodConfig(ets_ids)),
+            },
+            Optional('sim_method', default={'name': None, 'config': {}, 'normalized': False}): {
+                Optional('name', default=None):
+                    Or(None, And(str, Use(str.upper), lambda m: m in matching_methods.keys())),
+                Optional('config', default={}): And(dict, MatchingMethodConfig(ets_ids)),
+                Optional('normalized', default=False): bool,
+            },
+            Optional('fuzzy', default={'t_conorm': 'MAXIMUM_T_CONORM', 'threshold': 0}): {
+                Optional('t_conorm', default='MAXIMUM_T_CONORM'):
+                    lambda s: s in ('MAXIMUM_T_CONORM', 'PROBABILISTIC_SUM', 'BOUNDED_SUM',
+                                    'DRASTIC_T_CONORM', 'NILPOTENT_MAXIMUM', 'EINSTEIN_SUM'),
+                Optional('threshold', default=0): Or(float, Use(lambda t: 0)),
+            },
+            Optional('list_matching', default={'threshold': 0, 'is_percentage': False}): {
+                Optional('threshold', default=0): int,
+                Optional('is_percentage', default=False): bool,
             },
             'sources': {
-                EntityTypeSelection(ets_ids): [{
-                    'property': And(Use(filter_property), len),
-                    Optional('transformers', default=list): [{
-                        'name': And(str, Use(str.upper), lambda n: n in transformers.keys()),
-                        'parameters': dict
-                    }],
-                    Optional('stopwords', default={'dictionary': '', 'additional': []}): {
-                        'dictionary': str,
-                        'additional': [And(str)]
-                    }
-                }]
+                'properties': {
+                    EntityTypeSelection(ets_ids): [{
+                        'property': And(Use(filter_property), len),
+                        Optional('property_transformer_first', default=False): bool,
+                        Optional('transformers', default=list): [{
+                            'name': And(str, Use(str.upper), lambda n: n in transformers.keys()),
+                            'parameters': dict
+                        }],
+                    }]
+                },
+                Optional('transformers', default=list): [{
+                    'name': And(str, Use(str.upper), lambda n: n in transformers.keys()),
+                    'parameters': dict
+                }],
             },
             'targets': {
-                EntityTypeSelection(ets_ids): [{
-                    'property': And(Use(filter_property), len),
-                    Optional('transformers', default=list): [{
-                        'name': And(str, Use(str.upper), lambda n: n in transformers.keys()),
-                        'parameters': dict
-                    }],
-                    Optional('stopwords', default={'dictionary': '', 'additional': []}): {
-                        'dictionary': str,
-                        'additional': [And(str)]
-                    }
-                }]
+                'properties': {
+                    EntityTypeSelection(ets_ids): [{
+                        'property': And(Use(filter_property), len),
+                        Optional('property_transformer_first', default=False): bool,
+                        Optional('transformers', default=list): [{
+                            'name': And(str, Use(str.upper), lambda n: n in transformers.keys()),
+                            'parameters': dict
+                        }],
+                    }]
+                },
+                Optional('transformers', default=list): [{
+                    'name': And(str, Use(str.upper), lambda n: n in transformers.keys()),
+                    'parameters': dict
+                }],
             }
         }, ignore_extra_keys=True), name='conditions', types=(
             'and', 'or', 'minimum_t_norm', 'product_t_norm', 'lukasiewicz_t_norm', 'drastic_t_norm',

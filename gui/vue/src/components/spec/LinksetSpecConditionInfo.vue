@@ -23,7 +23,7 @@
     </div>
 
     <b-collapse v-model="visible" class="mt-1">
-      <template v-for="(conditionProperties, etsId) in condition.sources">
+      <template v-for="(conditionProperties, etsId) in condition.sources.properties">
         <div v-for="prop in conditionProperties" class="row align-items-center m-0">
           <div class="col-auto p-0">
             <ets-property :entity-type-selection="$root.getEntityTypeSelectionById(etsId)"
@@ -39,7 +39,7 @@
 
       <p class="font-weight-bold m-0">against</p>
 
-      <template v-for="(conditionProperties, etsId) in condition.targets">
+      <template v-for="(conditionProperties, etsId) in condition.targets.properties">
         <div v-for="prop in conditionProperties" class="row align-items-center m-0">
           <div class="col-auto p-0">
             <ets-property :entity-type-selection="$root.getEntityTypeSelectionById(etsId)"

@@ -24,12 +24,12 @@
         <select-box :auto-height="false" v-model="condition.type" @input="onTypeSelection"
                     v-bind:class="{'is-invalid': errors.includes('condition')}">
           <option value="" disabled selected>Choose a filter type</option>
-          <option value="=">Equal to</option>
-          <option value="!=">Not equal to</option>
-          <option value="is_null">Has no value</option>
-          <option value="not_null">Has a value</option>
-          <option value="ilike">Contains</option>
-          <option value="not_ilike">Does not contain</option>
+          <option value="equals">Equal to</option>
+          <option value="not_equals">Not equal to</option>
+          <option value="empty">Has no value</option>
+          <option value="not_empty">Has a value</option>
+          <option value="contains">Contains</option>
+          <option value="not_contains">Does not contain</option>
           <option value="minimal">Has minimal value</option>
           <option value="maximum">Has maximum value</option>
           <option value="minimal_date">Has minimal date</option>

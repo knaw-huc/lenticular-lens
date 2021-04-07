@@ -1,7 +1,7 @@
 <template>
   <div v-if="isLogicBox" class="position-relative shadow border p-3 mt-3"
        v-bind:class="[{'is-invalid': errors.length > 0}, ...styleClass]">
-    <handle v-if="!isRoot"/>
+    <handle v-if="!isRoot" class="absolute-handle"/>
 
     <div class="row align-items-center">
       <div class="col-auto">
@@ -45,7 +45,7 @@
 
     <b-collapse visible :id="uid" :ref="uid" v-model="isOpen">
       <sub-card v-if="optionDescriptions.hasOwnProperty(element.type) && logicBoxElements.length > 0"
-                class="max-overflow small" label="Description" :is-small-card="true">
+                class="max-overflow small" label="Description" size="xs">
         <p class="mt-2">{{ optionDescriptions[element.type] }}</p>
       </sub-card>
 
@@ -87,7 +87,7 @@
   </div>
 
   <div v-else class="position-relative" v-bind:class="styleClass">
-    <handle/>
+    <handle class="absolute-handle"/>
 
     <slot v-bind:type="parentType" v-bind:index="index" v-bind:element="element"
           v-bind:add="() => $emit('promote', index)" v-bind:remove="() => $emit('remove', index)"/>

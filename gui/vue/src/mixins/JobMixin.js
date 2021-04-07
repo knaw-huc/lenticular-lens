@@ -194,6 +194,31 @@ export default {
                     delete entityTypeSelection.dataset.timbuctoo_hsid;
                     delete entityTypeSelection.related;
                     delete entityTypeSelection.related_array;
+
+                    if (entityTypeSelection.filter)
+                        this.getRecursiveElements(entityTypeSelection.filter, 'conditions')
+                            .forEach(filter => {
+                                switch (filter.type) {
+                                    case '=':
+                                        filter.type = 'equals';
+                                        break;
+                                    case '!=':
+                                        filter.type = 'not_equals';
+                                        break;
+                                    case 'is_null':
+                                        filter.type = 'empty';
+                                        break;
+                                    case 'not_null':
+                                        filter.type = 'not_empty';
+                                        break;
+                                    case 'ilike':
+                                        filter.type = 'contains';
+                                        break;
+                                    case 'not_ilike':
+                                        filter.type = 'not_contains';
+                                        break;
+                                }
+                            });
                 });
 
                 this.entityTypeSelections = entityTypeSelections;
@@ -211,27 +236,23 @@ export default {
 
                     this.getRecursiveElements(linksetSpec.methods, 'conditions').forEach(method => {
                         if (method.hasOwnProperty('list_matching')
-                            && method.list_matching.hasOwnProperty('threshold')) {
-                            method.list_matching.links_threshold = method.list_matching.threshold;
-                            method.list_matching.links_is_percentage = method.list_matching.is_percentage;
-                            method.list_matching.source_threshold = method.list_matching.unique_threshold;
-                            method.list_matching.source_is_percentage = method.list_matching.unique_is_percentage;
-                            method.list_matching.target_threshold = method.list_matching.unique_threshold;
-                            method.list_matching.target_is_percentage = method.list_matching.unique_is_percentage;
+                            && method.list_matching.hasOwnProperty('links_threshold')) {
+                            method.list_matching.threshold = method.list_matching.links_threshold;
+                            method.list_matching.is_percentage = method.list_matching.links_is_percentage;
 
-                            delete method.list_matching.threshold;
-                            delete method.list_matching.is_percentage;
+                            delete method.list_matching.links_threshold;
+                            delete method.list_matching.links_is_percentage;
                             delete method.list_matching.unique_threshold;
                             delete method.list_matching.unique_is_percentage;
+                            delete method.list_matching.source_threshold;
+                            delete method.list_matching.source_is_percentage;
+                            delete method.list_matching.target_threshold;
+                            delete method.list_matching.target_is_percentage;
                         }
                         else if (method.hasOwnProperty('list_threshold')) {
                             method.list_matching = {
-                                links_threshold: method.list_threshold,
-                                links_is_percentage: method.list_threshold_unit === 'percentage',
-                                source_threshold: 0,
-                                source_is_percentage: false,
-                                target_threshold: 0,
-                                target_is_percentage: false,
+                                threshold: method.list_threshold,
+                                is_percentage: method.list_threshold_unit === 'percentage'
                             };
 
                             delete method.list_threshold;
@@ -240,12 +261,8 @@ export default {
 
                         if (!method.hasOwnProperty('list_matching')) {
                             method.list_matching = {
-                                links_threshold: 0,
-                                links_is_percentage: false,
-                                source_threshold: 0,
-                                source_is_percentage: false,
-                                target_threshold: 0,
-                                target_is_percentage: false,
+                                threshold: 0,
+                                is_percentage: false,
                             };
                         }
 
@@ -272,10 +289,6 @@ export default {
                                 acc[source.entity_type_selection].push({
                                     property: source.property,
                                     transformers: source.transformers,
-                                    stopwords: {
-                                        additional: source.stopwords ? source.stopwords.additional : [],
-                                        dictionary: source.stopwords ? source.stopwords.dictionary : ''
-                                    }
                                 });
 
                                 return acc;
@@ -290,14 +303,80 @@ export default {
                                 acc[target.entity_type_selection].push({
                                     property: target.property,
                                     transformers: target.transformers,
-                                    stopwords: {
-                                        additional: target.stopwords ? target.stopwords.additional : [],
-                                        dictionary: target.stopwords ? target.stopwords.dictionary : ''
-                                    }
                                 });
 
                                 return acc;
                             }, {});
+                        }
+
+                        if (!method.sources.hasOwnProperty('transformers')) {
+                            method.sources = {
+                                properties: method.sources,
+                                transformers: []
+                            };
+                        }
+
+                        if (!method.targets.hasOwnProperty('transformers')) {
+                            method.targets = {
+                                properties: method.targets,
+                                transformers: []
+                            };
+                        }
+
+                        delete method.transformers;
+
+                        Object.values(method.sources.properties).forEach(properties => {
+                            properties.forEach(prop => {
+                                prop.property_transformer_first = false;
+                                if (prop.hasOwnProperty('stopwords')) {
+                                    if (prop.stopwords.dictionary !== '')
+                                        prop.transformers.push({name: 'STOPWORDS', parameters: prop.stopwords});
+                                    delete prop.stopwords;
+                                }
+                            });
+                        });
+
+                        Object.values(method.targets.properties).forEach(properties => {
+                            properties.forEach(prop => {
+                                prop.property_transformer_first = false;
+                                if (prop.hasOwnProperty('stopwords')) {
+                                    if (prop.stopwords.dictionary !== '')
+                                        prop.transformers.push({name: 'STOPWORDS', parameters: prop.stopwords});
+                                    delete prop.stopwords;
+                                }
+                            });
+                        });
+
+                        if (method.hasOwnProperty('method_name')) {
+                            method.method = {
+                                name: method.method_name,
+                                config: method.method_config,
+                            };
+
+                            delete method.method_name;
+                            delete method.method_config;
+                        }
+
+                        if (method.hasOwnProperty('method_sim_name')) {
+                            method.sim_method = {
+                                name: method.method_sim_name,
+                                config: method.method_sim_config,
+                                normalized: method.method_sim_normalized,
+                            };
+
+                            delete method.method_sim_name;
+                            delete method.method_sim_config;
+                            delete method.method_sim_normalized;
+                        }
+
+                        if (method.hasOwnProperty('t_conorm')) {
+                            method.fuzzy = {
+                                t_conorm: method.t_conorm,
+                                threshold: method.threshold,
+                            };
+
+                            delete method.t_conorm;
+                            delete method.threshold;
                         }
                     });
 

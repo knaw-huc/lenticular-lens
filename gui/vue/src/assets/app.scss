@@ -46,6 +46,12 @@ $themeColor: $secondary;
   }
 }
 
+.absolute-handle {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+}
+
 div#app::before {
   position: absolute;
   content: '';
@@ -101,6 +107,22 @@ div#app::before {
 
 .w-number {
   min-width: 30px;
+}
+
+.w-text {
+  width: 200px !important;
+}
+
+.w-small-text {
+  width: 50px !important;
+}
+
+.w-large-text {
+  width: 250px !important;
+}
+
+.tags-size {
+  width: 400px !important;
 }
 
 .vs__dropdown-menu {

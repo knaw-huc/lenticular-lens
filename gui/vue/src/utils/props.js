@@ -43,7 +43,7 @@ export default {
                     type: 'number',
                     defaultValue: 1,
                     step: 1,
-                    minValue: 0,
+                    minExclValue: 0,
                 }
             ],
         },
@@ -58,8 +58,8 @@ export default {
                     type: 'range',
                     defaultValue: 0.7,
                     step: 0.05,
-                    minValue: 0,
-                    maxValue: 1,
+                    minExclValue: 0,
+                    maxExclValue: 1,
                 }
             ]
         },
@@ -124,8 +124,8 @@ export default {
                     type: 'range',
                     defaultValue: 0.7,
                     step: 0.05,
-                    minValue: 0,
-                    maxValue: 1,
+                    minExclValue: 0,
+                    maxExclValue: 1,
                 }
             ]
         },
@@ -162,8 +162,8 @@ export default {
                     type: 'range',
                     defaultValue: 0.3,
                     step: 0.05,
-                    minValue: 0,
-                    maxValue: 1,
+                    minExclValue: 0,
+                    maxExclValue: 1,
                 }
             ]
         },
@@ -271,8 +271,8 @@ export default {
                     type: 'range',
                     defaultValue: 0.7,
                     step: 0.05,
-                    minValue: 0,
-                    maxValue: 1,
+                    minExclValue: 0,
+                    maxExclValue: 1,
                 }
             ]
         },
@@ -287,8 +287,8 @@ export default {
                     type: 'range',
                     defaultValue: 0.7,
                     step: 0.05,
-                    minValue: 0,
-                    maxValue: 1,
+                    minExclValue: 0,
+                    maxExclValue: 1,
                 },
                 {
                     key: 'prefix_weight',
@@ -317,6 +317,8 @@ export default {
             items: [{
                 key: 'prefix',
                 label: 'Prefix with',
+                type: 'string',
+                size: 'large',
                 defaultValue: '',
                 allowEmptyValue: false
             }]
@@ -326,6 +328,8 @@ export default {
             items: [{
                 key: 'suffix',
                 label: 'Suffix with',
+                type: 'string',
+                size: 'large',
                 defaultValue: '',
                 allowEmptyValue: false
             }]
@@ -335,11 +339,15 @@ export default {
             items: [{
                 key: 'from',
                 label: 'From',
+                type: 'string',
+                size: 'large',
                 defaultValue: '',
                 allowEmptyValue: false
             }, {
                 key: 'to',
                 label: 'To',
+                type: 'string',
+                size: 'large',
                 defaultValue: '',
                 allowEmptyValue: true
             }]
@@ -353,17 +361,62 @@ export default {
             items: [{
                 key: 'pattern',
                 label: 'Pattern',
+                type: 'string',
                 defaultValue: '',
                 allowEmptyValue: false
             }, {
                 key: 'replacement',
                 label: 'Replacement',
+                type: 'string',
                 defaultValue: '',
                 allowEmptyValue: false
             }, {
                 key: 'flags',
                 label: 'Flags',
-                defaultValue: '',
+                type: 'string',
+                size: 'small',
+                defaultValue: 'ig',
+                allowEmptyValue: true
+            }]
+        },
+        'STOPWORDS': {
+            label: 'Stopwords',
+            items: [{
+                key: 'dictionary',
+                label: 'Dictionary',
+                type: 'choices',
+                choices: {
+                    arabic: 'Arabic',
+                    azerbaijani: 'Azerbaijani',
+                    danish: 'Danish',
+                    dutch: 'Dutch',
+                    dutch_names: 'Dutch names',
+                    english: 'English',
+                    finnish: 'Finnish',
+                    french: 'French',
+                    german: 'German',
+                    greek: 'Greek',
+                    hungarian: 'Hungarian',
+                    indonesian: 'Indonesian',
+                    italian: 'Italian',
+                    kazakh: 'Kazakh',
+                    nepali: 'Nepali',
+                    norwegian: 'Norwegian',
+                    portuguese: 'Portuguese',
+                    romanian: 'Romanian',
+                    russian: 'Russian',
+                    slovene: 'Slovene',
+                    spanish: 'Spanish',
+                    swedish: 'Swedish',
+                    tajik: 'Tajik',
+                    turkish: 'Turkish',
+                },
+                allowEmptyValue: false
+            }, {
+                key: 'additional',
+                label: 'Specify additional stop words',
+                type: 'tags',
+                defaultValue: [],
                 allowEmptyValue: true
             }]
         },

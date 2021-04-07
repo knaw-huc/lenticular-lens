@@ -431,12 +431,12 @@ to use for a particular job.
 
 | Filtering             | Key                   | Value                         |
 | :-------------------- | :-------------------- | :---------------------------- | 
-| Equal to              | `=`                   | Yes                           |
-| Not equal to          | `!=`                  | Yes                           |
-| Has no value          | `is_null`             | No                            |
-| Has a value           | `not_null`            | No                            |
-| Contains              | `ilike`               | Yes _(Use % as a wildcard)_   |
-| Does not contain      | `not_ilike`           | Yes _(Use % as a wildcard)_   |
+| Equal to              | `equals`              | Yes                           |
+| Not equal to          | `not_equals`          | Yes                           |
+| Has no value          | `empty`               | No                            |
+| Has a value           | `not_empty`           | No                            |
+| Contains              | `contains`            | Yes _(Use % as a wildcard)_   |
+| Does not contain      | `not_contains`        | Yes _(Use % as a wildcard)_   |
 | Minimal               | `minimal`             | Yes _(An integer)_            |
 | Maximum               | `maximum`             | Yes _(An integer)_            |
 | Minimal date          | `minimal_date`        | Yes _(Use YYYY-MM-DD)_        |
@@ -475,75 +475,79 @@ Linkset specs is a list of JSON objects that contain the configuration of the li
     // The matching configuration is composed of a logic box
     "conditions": [
       {
-        // The type of matching to apply; see table below for allowed values
-        "method_name": "SOUNDEX",
-        // Some types of matching methods require extra configuration
-        "method_config": {},
-        // The type of similarity matching to apply on top; see table below for allowed values; optional field
-        "method_sim_name": "LEVENSHTEIN",
-        // Some types of similarity matching methods require extra configuration; optional field
-        "method_sim_config": {},
-        // Whether to apply the similarity matching method on the normalized value; optional field, defaults to 'false'
-        "method_sim_normalized": false,
-        // The t-conorm to apply on the values of this condition; see table below for allowed values; optional field, defaults to 'MAXIMUM_T_CONORM'
-        "t_conorm": "MAXIMUM_T_CONORM",
-        // The threshold to apply on the similarity score; optional field, defaults to '0' which means it does not apply
-        "threshold": 0,
+        // The main matching method to apply
+        "method": {
+          // The type of matching to apply; see table below for allowed values
+          "name": "SOUNDEX",
+          // Some types of matching methods require extra configuration
+          "config": {}
+        },
+        // The similarity matching to apply; see table below for allowed values; optional field
+        "sim_method": {
+          // The type of similarity matching to apply; see table below for allowed values
+          "name": "SOUNDEX",
+          // Some types of similarity matching methods require extra configuration
+          "config": {},
+          // Whether to apply the similarity matching method on the normalized value; optional field, defaults to 'false'
+          "normalized": false,
+        },
+        // Fuzzy matching configuration; optional field
+        "fuzzy": {
+          // The t-conorm to apply on the values of this condition; see table below for allowed values; optional field, defaults to 'MAXIMUM_T_CONORM'
+          "t_conorm": "MAXIMUM_T_CONORM",
+          // The threshold to apply on the similarity score; optional field, defaults to '0' which means it does not apply
+          "threshold": 0
+        },
         // Perform list matching; optional field
         "list_matching": {
-          // The minimum number of links found; optional field, defaults to '0' which means it does not apply
-          "links_threshold": 8,
-          // Whether the threshold number should be interpreted as a percentage; ptional field, defaults to 'false'
-          "links_is_percentage": false,
-          // The minimum number of source values found; optional field, defaults to '0' which means it does not apply
-          "source_threshold": 2,
+          // The minimum number of intersections; optional field, defaults to '0' which means it does not apply
+          "threshold": 8,
           // Whether the threshold number should be interpreted as a percentage; optional field, defaults to 'false'
-          "source_is_percentage": false,
-          // The minimum number of target values found; optional field, defaults to '0' which means it does not apply
-          "target_threshold": 50,
-          // Whether the threshold number should be interpreted as a percentage; optional field, defaults to 'false'
-          "target_is_percentage": true,
+          "is_percentage": false
         },
-        // The source properties to use during matching per entity-type selection 
+        // Sources configuration
         "sources": {
-          "1": {
-            // The property path to which this condition applies
-            "property": [
-              "schema_birthDate"
-            ],
-            // The transformers to apply to transform the value before matching; see table below for allowed values
-            "transformers": [
+          // The source properties to use during matching per entity-type selection 
+          "properties": {
+            "1": [
               {
-                "name": "PARSE_DATE",
-                "parameters": {
-                  "format": "YYYY-MM-DD"
-                }
+                // The property path to which this condition applies
+                "property": [
+                  "schema_birthDate"
+                ],
+                // Whether the transformers of this property should be applied before the source transformers; optional field, defaults to 'false'
+                "property_transformer_first": false,
+                // The transformers to apply to transform the value before matching; see table below for allowed values
+                "transformers": [
+                  {
+                    "name": "PARSE_DATE",
+                    "parameters": {
+                      "format": "YYYY-MM-DD"
+                    }
+                  }
+                ]
               }
             ],
-            // Remove stopwords before matching; optional field; see table below for allowed values
-            "stopwords": {
-              // The dictionary to apply
-              "dictionary": "dutch",
-              // Additional stop words; optional field
-              "additional": [
-                "and",
-                "or"
-              ]
-            }
-          }
+          },
+          // The transformers to apply to transform the source value before matching; see table below for allowed values
+          "transformers": []
         },
-        // The target properties to use during matching per entity-type selection
+        // Targets configuration
         "targets": {
-          "1": {
-            "property": [
-              "schema_birthDate"
+          // The target properties to use during matching per entity-type selection 
+          "properties": {
+            "1": [
+              {
+                "property": [
+                  "schema_birthDate"
+                ],
+                "property_transformer_first": false,
+                "transformers": []
+              }
             ],
-            "transformers": [],
-            "stopwords": {
-              "dictionary": "",
-              "additional": []
-            }
-          }
+          },
+          // The transformers to apply to transform the target value before matching; see table below for allowed values
+          "transformers": []
         }
       }
     ]

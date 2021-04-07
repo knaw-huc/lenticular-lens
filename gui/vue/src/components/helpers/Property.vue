@@ -11,10 +11,14 @@
         <download-progress :dataset-id="datasetId" :collection-id="collectionId" :small="true" class="pl-2"/>
       </div>
 
-      <span v-if="!singular && !readOnly" class="property-part">
-        <button-add size="sm" title="Add another property" @click="$emit('clone')"/>
-        <button-delete v-if="allowDelete" class="ml-2" size="sm" title="Remove this property"
-                       @click="$emit('delete')"/>
+      <span v-if="(!singular && !readOnly) || hasAdditionalButtons" class="property-part">
+        <template v-if="!singular && !readOnly">
+          <button-add size="sm" title="Add another property" @click="$emit('clone')"/>
+          <button-delete v-if="allowDelete" class="ml-2" size="sm" title="Remove this property"
+                         @click="$emit('delete')"/>
+        </template>
+
+        <slot v-if="hasAdditionalButtons"/>
       </span>
     </template>
 
@@ -123,10 +127,12 @@
     </button>
 
     <template v-if="!showInfo && !singular && !readOnly">
-      <button-add @click="$emit('clone')" size="sm" title="Add another property"/>
-      <button-delete v-if="allowDelete" class="ml-2" @click="$emit('delete')"
-                     size="sm" title="Remove this property"/>
+      <button-add size="sm" title="Add another property" @click="$emit('clone')"/>
+      <button-delete v-if="allowDelete" class="ml-2" size="sm" title="Remove this property"
+                     @click="$emit('delete')"/>
     </template>
+
+    <slot v-if="!showInfo && hasAdditionalButtons"/>
   </div>
 </template>
 
@@ -155,6 +161,10 @@
                 type: Boolean,
                 default: false,
             },
+            hasAdditionalButtons: {
+                type: Boolean,
+                default: false,
+            },
             allowDelete: {
                 type: Boolean,
                 default: true,
@@ -162,7 +172,7 @@
             showInfo: {
                 type: Boolean,
                 default: true,
-            }
+            },
         },
         computed: {
             dataset() {

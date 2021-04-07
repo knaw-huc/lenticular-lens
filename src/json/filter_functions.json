@@ -1,20 +1,20 @@
 {
-  "=": {
+  "equals": {
     "sql_template": "{property} = {value}"
   },
-  "!=": {
+  "not_equals": {
     "sql_template": "{property} != {value}"
   },
-  "is_null": {
+  "empty": {
     "sql_template": "{property} IS NULL"
   },
-  "not_null": {
+  "not_empty": {
     "sql_template": "{property} IS NOT NULL"
   },
-  "ilike": {
+  "contains": {
     "sql_template": "{property} ILIKE {value}"
   },
-  "not_ilike": {
+  "not_contains": {
     "sql_template": "{property} NOT ILIKE {value}"
   },
   "minimal": {

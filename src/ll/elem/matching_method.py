@@ -17,28 +17,24 @@ class MatchingMethod:
 
         self.field_name = 'm' + str(linkset_id) + '_' + id
 
-        self.method_name = data['method_name']
-        self._method_config = data['method_config']
+        self.method_name = data['method']['name']
+        self._method_config = data['method']['config']
         if self.method_name in self._matching_methods:
             self._method_info = self._matching_methods[self.method_name]
         else:
             raise NameError('Matching method %s is not defined' % self.method_name)
 
-        self.method_sim_name = data['method_sim_name']
-        self._method_sim_config = data['method_sim_config']
-        self._method_sim_normalized = data['method_sim_normalized']
+        self.method_sim_name = data['sim_method']['name']
+        self._method_sim_config = data['sim_method']['config']
+        self._method_sim_normalized = data['sim_method']['normalized']
         self._method_sim_info = self._matching_methods[self.method_sim_name] \
             if self.method_sim_name in self._matching_methods else {}
 
-        self._t_conorm = data['t_conorm']
-        self._threshold = data['threshold']
+        self._t_conorm = data['fuzzy']['t_conorm']
+        self._threshold = data['fuzzy']['threshold']
 
-        self._list_links_threshold = data['list_matching']['links_threshold']
-        self._list_source_threshold = data['list_matching']['source_threshold']
-        self._list_target_threshold = data['list_matching']['target_threshold']
-        self._list_links_is_percentage = data['list_matching']['links_is_percentage']
-        self._list_source_is_percentage = data['list_matching']['source_is_percentage']
-        self._list_target_is_percentage = data['list_matching']['target_is_percentage']
+        self._list_threshold = data['list_matching']['threshold']
+        self._list_is_percentage = data['list_matching']['is_percentage']
 
         self._sources, self._targets, self._intermediates = None, None, None
 
@@ -48,7 +44,7 @@ class MatchingMethod:
 
     @property
     def is_list_match(self):
-        return self._list_links_threshold > 0 or self._list_source_threshold > 0 or self._list_target_threshold > 0
+        return self._list_threshold > 0
 
     @property
     def sql(self):
@@ -241,10 +237,7 @@ class MatchingMethod:
                     {from_sql}
                     {join_sql}
                     ON {match_template}
-                ), source.{{field_name}}, target.{{field_name}}, 
-                   {{list_links_threshold}}, {{list_links_threshold_is_perc}}, 
-                   {{list_source_threshold}}, {{list_source_threshold_is_perc}},
-                   {{list_target_threshold}}, {{list_target_threshold_is_perc}})
+                ), source.{{field_name}}, target.{{field_name}}, {{list_threshold}}, {{list_threshold_is_perc}})
             ''')
 
             new_similarity_template = cleandoc(f'''	
@@ -260,26 +253,31 @@ class MatchingMethod:
             field_name=sql.Identifier(self.field_name),
             field_name_norm=sql.Identifier(self.field_name + '_norm'),
             field_name_intermediate=sql.Identifier(self.field_name + '_intermediate'),
-            list_links_threshold=sql.Literal(self._list_links_threshold),
-            list_links_threshold_is_perc=sql.Literal(self._list_links_is_percentage),
-            list_source_threshold=sql.Literal(self._list_source_threshold),
-            list_source_threshold_is_perc=sql.Literal(self._list_source_is_percentage),
-            list_target_threshold=sql.Literal(self._list_target_threshold),
-            list_target_threshold_is_perc=sql.Literal(self._list_target_is_percentage),
+            list_threshold=sql.Literal(self._list_threshold),
+            list_threshold_is_perc=sql.Literal(self._list_is_percentage),
             **self._sql_parameters
         )
 
     def _get_properties(self, key):
-        return {int(ets_id): [self._get_property(field, int(ets_id)) for field in fields]
-                for ets_id, fields in self._data[key].items()}
+        return {int(ets_id): [self._get_property(field, int(ets_id), key=key) for field in fields]
+                for ets_id, fields in self._data[key]['properties'].items()}
 
-    def _get_property(self, field, ets_id, property_only=False):
+    def _get_property(self, field, ets_id, key=None, property_only=False):
         field_type = self._method_info.get('field_type')
         field_type_info = {
             'type': field_type,
             'parameters': {'format': self._method_config['format'] if field_type == 'date' else {}}
         }
 
-        return MatchingMethodProperty(field, ets_id, self._job, field_type_info,
-                                      self._method_info.get('field'), self._method_config,
-                                      property_only=property_only)
+        property = field if property_only else field['property']
+
+        transformers = []
+        if key and not property_only:
+            transformers = self._data[key].get('transformers', []).copy()
+            if field['property_transformer_first']:
+                transformers = field.get('transformers', []).copy() + transformers
+            else:
+                transformers = transformers + field.get('transformers', []).copy()
+
+        return MatchingMethodProperty(property, transformers, ets_id, self._job, field_type_info,
+                                      self._method_info.get('field'), self._method_config)

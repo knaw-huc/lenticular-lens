@@ -1,6 +1,6 @@
 <template>
   <div class="main-card" v-bind:class="{'is-invalid': hasError}" ref="cardElem">
-    <handle v-if="hasHandle && !visible"/>
+    <handle v-if="hasHandle && !visible" class="absolute-handle"/>
 
     <div class="bg-light py-2" v-bind:class="{'sticky-top': visible}">
       <div class="row flex-nowrap align-items-center justify-content-start">

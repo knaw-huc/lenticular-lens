@@ -117,7 +117,7 @@
         </div>
       </sub-card>
 
-      <sub-card label="Matching Methods" :has-columns="true" :hasError="errors.includes('matching-methods')">
+      <sub-card label="Matching Methods" :has-columns="true" :hasError="errors.includes('matching_methods')">
         <template v-slot:columns>
           <div class="col-auto">
             <div class="custom-control custom-switch">
@@ -144,10 +144,8 @@
           </template>
 
           <template v-slot="curCondition">
-            <condition
-                :condition="curCondition.element" :index="curCondition.index"
-                :id="linksetSpec.id + '_' + curCondition.index" :useFuzzyLogic="useFuzzyLogic"
-                @add="curCondition.add()" @remove="curCondition.remove()"/>
+            <condition :condition="curCondition.element" :id="linksetSpec.id + '_' + curCondition.index"
+                       :use-fuzzy-logic="useFuzzyLogic" @add="curCondition.add()" @remove="curCondition.remove()"/>
           </template>
         </logic-box>
       </sub-card>
@@ -165,8 +163,8 @@
     import MatchingMethodsInfo from '../../info/MatchingMethodsInfo';
 
     import Status from "./Status";
-    import EntityTypeSelection from "./EntityTypeSelection";
     import Condition from "./Condition";
+    import EntityTypeSelection from "./EntityTypeSelection";
 
     import LogicBox from "../../helpers/LogicBox";
 
@@ -237,7 +235,7 @@
                 let matchingMethodGroupValid = true;
                 if (this.$refs.matchingMethodGroupComponent)
                     matchingMethodGroupValid = this.$refs.matchingMethodGroupComponent.validateLogicBox();
-                matchingMethodGroupValid = this.validateField('matching-methods', matchingMethodGroupValid);
+                matchingMethodGroupValid = this.validateField('matching_methods', matchingMethodGroupValid);
 
                 return sourcesValid && targetsValid
                     && sourcesSelectValid && targetsSelectValid && matchingMethodGroupValid;
@@ -250,47 +248,47 @@
 
             addCondition(group) {
                 group.conditions.push({
-                    method_name: '',
-                    method_config: {},
-                    method_sim_name: null,
-                    method_sim_config: {},
-                    method_sim_normalized: false,
-                    t_conorm: 'MAXIMUM_T_CONORM',
-                    threshold: 0,
-                    list_matching: {
-                        links_threshold: 0,
-                        links_is_percentage: false,
-                        source_threshold: 0,
-                        source_is_percentage: false,
-                        target_threshold: 0,
-                        target_is_percentage: false,
+                    method: {
+                        name: '',
+                        config: {},
                     },
-                    sources: this.linksetSpec.sources
-                        .filter(entityTypeSelection => entityTypeSelection !== '')
-                        .reduce((acc, entityTypeSelection) => ({
-                            ...acc,
-                            [entityTypeSelection]: [{
-                                property: [''],
-                                transformers: [],
-                                stopwords: {
-                                    additional: [],
-                                    dictionary: ''
-                                }
-                            }]
-                        }), {}),
-                    targets: this.linksetSpec.targets
-                        .filter(entityTypeSelection => entityTypeSelection !== '')
-                        .reduce((acc, entityTypeSelection) => ({
-                            ...acc,
-                            [entityTypeSelection]: [{
-                                property: [''],
-                                transformers: [],
-                                stopwords: {
-                                    additional: [],
-                                    dictionary: ''
-                                }
-                            }]
-                        }), {}),
+                    sim_method: {
+                        name: null,
+                        config: {},
+                        normalized: false,
+                    },
+                    fuzzy: {
+                        t_conorm: 'MAXIMUM_T_CONORM',
+                        threshold: 0,
+                    },
+                    list_matching: {
+                        threshold: 0,
+                        is_percentage: false,
+                    },
+                    sources: {
+                        properties: this.linksetSpec.sources
+                            .filter(entityTypeSelection => entityTypeSelection !== '')
+                            .reduce((acc, entityTypeSelection) => ({
+                                ...acc,
+                                [entityTypeSelection]: [{
+                                    property: [''],
+                                    transformers: []
+                                }]
+                            }), {}),
+                        transformers: [],
+                    },
+                    targets: {
+                        properties: this.linksetSpec.targets
+                            .filter(entityTypeSelection => entityTypeSelection !== '')
+                            .reduce((acc, entityTypeSelection) => ({
+                                ...acc,
+                                [entityTypeSelection]: [{
+                                    property: [''],
+                                    transformers: []
+                                }]
+                            }), {}),
+                        transformers: [],
+                    },
                 });
             },
 
@@ -308,20 +306,16 @@
 
                 if (!this.linksetSpec[key].find(etsId => etsId === oldId))
                     this.$root.getRecursiveElements(this.linksetSpec.methods, 'conditions').forEach(condition => {
-                        if (condition[key].hasOwnProperty(oldId))
-                            this.$delete(condition[key], oldId);
+                        if (condition[key].properties.hasOwnProperty(oldId))
+                            this.$delete(condition[key].properties, oldId);
                     });
 
                 if (id !== undefined)
                     this.$root.getRecursiveElements(this.linksetSpec.methods, 'conditions').forEach(condition => {
-                        if (!condition[key].hasOwnProperty(id))
-                            this.$set(condition[key], id, [{
+                        if (!condition[key].properties.hasOwnProperty(id))
+                            this.$set(condition[key].properties, id, [{
                                 property: [''],
                                 transformers: [],
-                                stopwords: {
-                                    additional: [],
-                                    dictionary: ''
-                                }
                             }]);
                     });
 

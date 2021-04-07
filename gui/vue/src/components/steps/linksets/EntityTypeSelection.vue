@@ -1,11 +1,9 @@
 <template>
   <div class="row align-items-center">
-    <div v-if="!entityTypeSelection" class="col-auto pr-0" @mouseenter="hovering = true" @mouseleave="hovering = false">
-      <select-box
-          :id="'linkset_' + linksetSpec.id + '_entity_type_selection_label_' + id"
-          :value="entityTypeSelection"
-          v-bind:class="{'is-invalid': errors.includes('entityTypeSelection')}"
-          @input="selectEntityTypeSelection">
+    <div v-if="!entityTypeSelection" class="col-auto pr-0">
+      <select-box :id="'linkset_' + linksetSpec.id + '_entity_type_selection_label_' + id" :value="entityTypeSelection"
+                  v-bind:class="{'is-invalid': errors.includes('entityTypeSelection')}"
+                  @input="$emit('input', parseInt($event))">
         <option disabled selected value="">Choose an entity-type selection</option>
         <option v-for="ets in entityTypeSelections" :value.number="ets.id">
           {{ ets.label }}
@@ -17,27 +15,22 @@
       </div>
     </div>
 
-    <div v-else @mouseenter="hovering = true" @mouseleave="hovering = false" class="ml-3">
+    <div v-else class="ml-3">
       {{ entityTypeSelection.label }}
     </div>
 
-    <div class="col-auto pl-0 ml-3" @mouseenter="hovering = true" @mouseleave="hovering = false">
-      <button-delete size="sm" class="btn-sm" v-bind:class="{'invisible': !hovering}" @click="$emit('remove')"/>
+    <div class="col-auto pl-0 ml-3">
+      <button-delete size="sm" class="btn-sm" @click="$emit('remove')"/>
     </div>
   </div>
 </template>
 
 <script>
-    import ValidationMixin from "../../../mixins/ValidationMixin";
+    import ValidationMixin from "@/mixins/ValidationMixin";
 
     export default {
         name: "EntityTypeSelection",
         mixins: [ValidationMixin],
-        data() {
-            return {
-                hovering: false,
-            };
-        },
         props: {
             linksetSpec: Object,
             entityTypeSelection: Object,
@@ -55,11 +48,6 @@
             validateEntityTypeSelection() {
                 return this.validateField('entityTypeSelection',
                     this.entityTypeSelection && this.entityTypeSelection !== '');
-            },
-
-            selectEntityTypeSelection(id) {
-                this.hovering = false;
-                this.$emit('input', parseInt(id));
             },
         },
     };

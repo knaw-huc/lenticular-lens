@@ -8,7 +8,8 @@
 
       <div v-if="label" class="col-auto pr-0" v-b-toggle="hasCollapse ? id : {}"
            v-bind:class="{'mr-auto': !hasInfo && !addButton && !hasMarginAuto}">
-        <h5 v-if="isSmallCard">{{ label }}</h5>
+        <h5 v-if="this.size === 'xs'">{{ label }}</h5>
+        <h4 v-if="this.size === 'sm'">{{ label }}</h4>
         <h3 v-else>{{ label }}</h3>
       </div>
 
@@ -72,9 +73,9 @@
                 type: Boolean,
                 default: false
             },
-            isSmallCard: {
-                type: Boolean,
-                default: false,
+            size: {
+                type: String,
+                default: '',
             },
             isFirst: {
                 type: Boolean,
@@ -84,10 +85,10 @@
         computed: {
             classes() {
                 return {
-                    'mt-4': !this.isSmallCard && !this.isFirst,
-                    'mt-3': this.isSmallCard && !this.isFirst,
+                    'mt-4': this.size === '' && !this.isFirst,
+                    'mt-3': (this.size === 'xs' || this.size === 'sm') && !this.isFirst,
                     'is-invalid': this.hasError,
-                    'small-card': this.isSmallCard
+                    'small-card': this.size !== ''
                 };
             },
         },

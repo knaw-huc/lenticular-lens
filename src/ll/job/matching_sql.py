@@ -264,8 +264,7 @@ class MatchingSql:
                 sql.SQL(cleandoc(""" 
                     SELECT {collection} AS collection, target.uri, 
                            {matching_fields}
-                    FROM (SELECT DISTINCT uri FROM {res}) AS target 
-                    {joins}
+                    FROM (SELECT DISTINCT uri FROM {res}) AS target {joins}
                """)).format(
                     collection=sql.Literal(int(ets_id)),
                     matching_fields=sql.SQL(',\n       ').join(matching_fields),
