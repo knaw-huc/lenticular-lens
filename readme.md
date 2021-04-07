@@ -145,6 +145,13 @@ which dataset to download and `collection_id` to specify the collection from the
 _
 Example: `/download?endpoint=https://repository.goldenagents.org/v5/graphql&dataset_id=ufab7d657a250e3461361c982ce9b38f3816e0c4b__ecartico_20190805&collection_id=schema_Person`_
 
+---
+
+**URL**: `/stopwords/<dictionary>`\
+**Method**: `GET`
+
+Returns the stopwords for the given `dictionary`.
+
 ### Job creation and updates
 
 **URL**: `/job/create`\

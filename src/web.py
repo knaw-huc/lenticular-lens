@@ -16,6 +16,7 @@ from werkzeug.routing import BaseConverter, ValidationError
 
 from ll.job.export import Export
 from ll.job.job import Job, Validation
+from ll.util.config_db import fetch_one
 
 from ll.util.hasher import hash_string
 from ll.util.logging import config_logger
@@ -105,6 +106,17 @@ def start_download():
     collection.start_download()
 
     return jsonify({'result': 'ok'})
+
+
+@authenticated
+@app.route('/stopwords/<dictionary>')
+def stopwords(dictionary):
+    if dictionary in ['arabic', 'azerbaijani', 'danish', 'dutch', 'dutch_names', 'english', 'finnish', 'french',
+                      'german', 'greek', 'hungarian', 'indonesian', 'italian', 'kazakh', 'nepali', 'norwegian',
+                      'portuguese', 'romanian', 'russian', 'slovene', 'spanish', 'swedish', 'tajik', 'turkish']:
+        return jsonify(fetch_one('SELECT get_stopwords(%s)', (dictionary,))[0])
+
+    return abort(400)
 
 
 @authenticated
