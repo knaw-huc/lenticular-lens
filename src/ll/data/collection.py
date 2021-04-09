@@ -1,10 +1,9 @@
 from json import dumps
+from psycopg2 import sql, extras
 
 from ll.data.timbuctoo import Timbuctoo
 from ll.util.config_db import db_conn
-from ll.util.hasher import table_name_hash, column_name_hash
-
-from psycopg2 import extras as psycopg2_extras, sql as psycopg2_sql
+from ll.util.hasher import table_name_hash, column_name_hash, hash_string_min
 
 
 class Collection:
@@ -23,7 +22,7 @@ class Collection:
         if self._dataset_table_data:
             return self._dataset_table_data
 
-        with db_conn() as conn, conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) as cur:
+        with db_conn() as conn, conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
             cur.execute('SELECT * FROM timbuctoo_tables WHERE graphql_endpoint = %s AND dataset_id = %s',
                         (self.graphql_endpoint, self.dataset_id))
             self._dataset_table_data = {table_data['collection_id']: table_data for table_data in cur.fetchall()}
@@ -41,6 +40,10 @@ class Collection:
     @property
     def table_name(self):
         return table_name_hash(self.graphql_endpoint, self.dataset_id, self.collection_id)
+
+    @property
+    def alias(self):
+        return hash_string_min(self.table_name)
 
     @property
     def columns(self):
@@ -99,8 +102,8 @@ class Collection:
                        for col_name, col_info in collection['properties'].items()}
 
             with db_conn() as conn, conn.cursor() as cur:
-                cur.execute(psycopg2_sql.SQL('CREATE TABLE timbuctoo.{} ({})').format(
-                    psycopg2_sql.Identifier(self.table_name),
+                cur.execute(sql.SQL('CREATE TABLE timbuctoo.{} ({})').format(
+                    sql.Identifier(self.table_name),
                     self.columns_sql(columns),
                 ))
 
@@ -135,9 +138,9 @@ class Collection:
     @staticmethod
     def columns_sql(columns):
         def column_sql(column_name, column_type):
-            return psycopg2_sql.SQL('{col_name} {col_type}').format(
-                col_name=psycopg2_sql.Identifier(column_name),
-                col_type=psycopg2_sql.SQL(column_type),
+            return sql.SQL('{col_name} {col_type}').format(
+                col_name=sql.Identifier(column_name),
+                col_type=sql.SQL(column_type),
             )
 
         columns_sqls = [column_sql('uri', 'text primary key')]
@@ -147,13 +150,13 @@ class Collection:
                 column_type = 'text[]' if info['isList'] else 'text'
                 columns_sqls.append(column_sql(column_name, column_type))
 
-        return psycopg2_sql.SQL(',\n').join(columns_sqls)
+        return sql.SQL(',\n').join(columns_sqls)
 
     @staticmethod
     def download_status():
         collections = {'downloaded': [], 'downloading': []}
 
-        with db_conn() as conn, conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) as cur:
+        with db_conn() as conn, conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
             cur.execute('SELECT dataset_id, collection_id, total, rows_count FROM timbuctoo_tables')
 
             for table in cur:
@@ -170,3 +173,9 @@ class Collection:
                     collections['downloading'].append(data_info)
 
         return collections
+
+    def __eq__(self, other):
+        return isinstance(other, Collection) and hash(self) == hash(other)
+
+    def __hash__(self):
+        return hash(self.graphql_endpoint) ^ hash(self.dataset_id) ^ hash(self.collection_id)

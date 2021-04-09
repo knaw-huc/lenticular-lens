@@ -9,7 +9,7 @@
       <div v-if="label" class="col-auto pr-0" v-b-toggle="hasCollapse ? id : {}"
            v-bind:class="{'mr-auto': !hasInfo && !addButton && !hasMarginAuto}">
         <h5 v-if="this.size === 'xs'">{{ label }}</h5>
-        <h4 v-if="this.size === 'sm'">{{ label }}</h4>
+        <h4 v-else-if="this.size === 'sm'">{{ label }}</h4>
         <h3 v-else>{{ label }}</h3>
       </div>
 

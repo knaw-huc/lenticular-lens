@@ -338,11 +338,20 @@ class MatchingSql:
                     field_norm=sql.Identifier(props_norm[0].hash) if props_norm else sql.SQL(''),
                     field_name_norm=sql.Identifier(field_name_norm) if props_norm else sql.SQL(''),
                 )
+
+                lateral_sql = sql.SQL('')
             else:
-                field_template = 'unnest(ARRAY[{fields_org}]) AS {field_name_org}' if not props_norm else \
-                    'unnest(ARRAY[{fields_org}], ARRAY[{fields_norm}]) AS x ({field_name_org}, {field_name_norm})'
+                field_template = '{field_name_org}' if not props_norm else '{field_name_org}, {field_name_norm}'
 
                 fields_sql = sql.SQL(field_template).format(
+                    field_name_org=sql.Identifier(field_name_org),
+                    field_name_norm=sql.Identifier(field_name_norm) if props_norm else sql.SQL(''),
+                )
+
+                join_template = ', LATERAL unnest(ARRAY[{fields_org}]) AS {field_name_org}' if not props_norm else \
+                    ', LATERAL unnest(ARRAY[{fields_org}], ARRAY[{fields_norm}]) AS x ({field_name_org}, {field_name_norm})'
+
+                lateral_sql = sql.SQL(join_template).format(
                     fields_org=sql.SQL(', ').join([sql.Identifier(prop.hash) for prop in props_org]),
                     field_name_org=sql.Identifier(field_name_org),
                     fields_norm=sql.SQL(', ').join(
@@ -353,12 +362,13 @@ class MatchingSql:
             joins.append(sql.SQL(cleandoc('''
                 LEFT JOIN (
                     SELECT DISTINCT uri, {fields}
-                    FROM {res}
+                    FROM {res}{lateral}
                 ) AS {target}
                 ON target.uri = {target}.uri AND {target}.{field_name_org} IS NOT NULL
             ''')).format(
                 fields=fields_sql,
                 res=sql.Identifier(hash_string_min(ets_id)),
+                lateral=lateral_sql,
                 target=sql.Identifier(target),
                 field_name_org=sql.Identifier(field_name_org),
             ))

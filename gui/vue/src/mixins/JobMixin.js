@@ -499,7 +499,7 @@ export default {
         },
 
         async runClustering(type, id) {
-            return callApi(`/job/${this.job.job_id}/run_clustering/${type}/${id}`);
+            return callApi(`/job/${this.job.job_id}/run_clustering/${type}/${id}`, {});
         },
 
         async killLinkset(id) {

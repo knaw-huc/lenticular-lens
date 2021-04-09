@@ -94,7 +94,7 @@
 </template>
 
 <script>
-    import ValidationMixin from "../../../mixins/ValidationMixin";
+    import ValidationMixin from "@/mixins/ValidationMixin";
 
     export default {
         name: "FilterCondition",
@@ -106,7 +106,9 @@
         },
         computed: {
             requiresStringValue() {
-                return ['=', '!=', 'minimal_date', 'maximum_date', 'ilike', 'not_ilike'].includes(this.condition.type);
+                return [
+                    'equals', 'not_equals', 'minimal_date', 'maximum_date', 'contains', 'not_contains'
+                ].includes(this.condition.type);
             },
 
             requiresIntegerValue() {

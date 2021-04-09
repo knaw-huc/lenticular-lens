@@ -235,7 +235,7 @@ def run_lens(job, id):
 @app.route('/job/<job:job>/run_clustering/<type:type>/<int:id>', methods=['POST'])
 def run_clustering(job, type, id):
     try:
-        job.run_clustering(id, type, None)
+        job.run_clustering(id, type)
         return jsonify({'result': 'ok'})
     except psycopg2.errors.UniqueViolation:
         return jsonify({'result': 'exists'}), 400
@@ -327,17 +327,13 @@ def links(job, type, id):
 @authenticated
 @app.route('/job/<job:job>/clusters/<type:type>/<int:id>')
 def clusters(job, type, id):
-    extended_data = []
-    cycles_data = []
-
     clusters = [{
         'id': cluster['id'],
         'size': cluster['size'],
         'links': cluster['links'],
         'values': cluster['values'],
-        'reconciled': bool(cycles_data and cluster['id'] in cycles_data),
-        'extended': bool(cycles_data and extended_data and
-                         cluster['id'] in cycles_data and cluster['id'] in extended_data)
+        'reconciled': False,
+        'extended': False,
     } for cluster in job.get_clusters(id, type,
                                       with_properties='multiple',
                                       limit=request.args.get('limit', type=int),

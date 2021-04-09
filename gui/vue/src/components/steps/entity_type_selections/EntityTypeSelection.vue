@@ -163,19 +163,20 @@
 </template>
 
 <script>
-    import LogicBox from "../../helpers/LogicBox";
-    import ValidationMixin from "../../../mixins/ValidationMixin";
+    import LogicBox from "@/components/helpers/LogicBox";
+    import FilterCondition from "@/components/helpers/FilterCondition";
+
+    import ValidationMixin from "@/mixins/ValidationMixin";
 
     import SampleView from "./SampleView";
-    import FilterCondition from "./FilterCondition";
 
     export default {
         name: "EntityTypeSelection",
         mixins: [ValidationMixin],
         components: {
             LogicBox,
-            SampleView,
             FilterCondition,
+            SampleView,
         },
         data() {
             return {

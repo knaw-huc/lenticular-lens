@@ -43,7 +43,7 @@
             :entity-type-selection="entityTypeSelection"
             :property="prop"
             :singular="false"
-            :entity-type-selection-info="false"
+            :show-info="false"
             :allow-delete="idx !== 0"
             @clone="entityTypeSelection.properties.splice(idx + 1, 0, [''])"
             @delete="$delete(entityTypeSelection.properties, idx)"/>

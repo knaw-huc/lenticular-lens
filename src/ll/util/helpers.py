@@ -2,7 +2,7 @@ import re
 import datetime
 import jstyleson
 
-from psycopg2 import sql as psycopg2_sql
+from psycopg2 import sql
 from os.path import join, dirname, realpath
 
 from ll.util.config_db import db_conn
@@ -48,11 +48,19 @@ def get_id_of_uri(uri):
     return uri
 
 
-def get_sql_empty(sql, add_new_line=True):
-    if not sql or sql == psycopg2_sql.SQL('') or sql == psycopg2_sql.Composed([]):
-        return psycopg2_sql.SQL('')
+def get_sql_empty(sql_insert, flag=True, prefix=None, suffix=None, add_new_line=True):
+    if not flag or not sql_insert or sql_insert == sql.SQL('') or sql_insert == sql.Composed([]):
+        return sql.SQL('')
 
-    return psycopg2_sql.Composed([psycopg2_sql.SQL('\n'), sql]) if add_new_line else sql
+    sql_composed = [sql_insert]
+    if prefix:
+        sql_composed.insert(0, prefix)
+    if suffix:
+        sql_composed.append(suffix)
+    if add_new_line:
+        sql_composed.insert(0, sql.SQL('\n'))
+
+    return sql.Composed(sql_composed) if len(sql_composed) > 1 else sql_insert
 
 
 def get_pagination_sql(limit=None, offset=0):
