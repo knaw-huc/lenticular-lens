@@ -52,10 +52,6 @@ class Linkset:
         ))
 
     @property
-    def similarity_fields(self):
-        return {match_method.field_name for match_method in self.matching_methods if match_method.similarity_sql}
-
-    @property
     def similarity_logic_ops_sql(self):
         return self.with_matching_methods_recursive(
             lambda sqls, operator, fuzzy, threshold: self._logic_ops_for_condition(sqls, fuzzy, self._logic_ops),

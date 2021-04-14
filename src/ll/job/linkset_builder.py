@@ -1,6 +1,8 @@
 from uuid import uuid4
 from psycopg2 import sql
 
+from ll.elem.matching_method import MatchingMethod
+
 from ll.job.links_filter import LinksFilter
 from ll.job.query_builder import QueryBuilder
 
@@ -29,6 +31,7 @@ class LinksetBuilder:
 
     def get_links_generator(self, with_properties='none'):
         values = self._linkset_values(with_properties == 'single') if self._view and with_properties != 'none' else None
+        sim_fields_sql = sql.SQL('\n').join(MatchingMethod.get_similarity_fields_sqls(self._spec.matching_methods))
 
         with db_conn() as conn, conn.cursor(name=uuid4().hex) as cur:
             cur.execute(sql.SQL(
@@ -43,7 +46,7 @@ class LinksetBuilder:
             ).format(
                 schema=sql.Identifier(self._schema),
                 view_name=sql.Identifier(self._table_name),
-                sim_fields_sql=self._sim_fields_sql,
+                sim_fields_sql=sim_fields_sql,
                 sim_logic_ops_sql=self._spec.similarity_logic_ops_sql,
                 where_sql=self._links_filter.sql(),
                 limit_offset=sql.SQL(get_pagination_sql(self._limit, self._offset))
@@ -129,15 +132,6 @@ class LinksetBuilder:
                         'values': list(cluster_value['values'])
                     } for key, cluster_value in cluster_values.items()] if values else None
                 }
-
-    @property
-    def _sim_fields_sql(self):
-        if self._spec.similarity_fields:
-            return sql.SQL('CROSS JOIN LATERAL jsonb_to_record(similarity) AS sim({})') \
-                .format(sql.SQL(', ').join([sql.SQL('{} numeric[]').format(sql.Identifier(sim_field))
-                                            for sim_field in self._spec.similarity_fields]))
-
-        return sql.SQL('')
 
     def _linkset_values(self, single_value=False):
         query_builder = QueryBuilder()

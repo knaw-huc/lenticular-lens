@@ -129,8 +129,8 @@
         </template>
 
         <logic-box :element="linksetSpec.methods" elements-name="conditions" :is-root="true"
-                   :should-have-elements="true" group="linkset-filters"
-                   :uid="'linkset_' + linksetSpec.id  + '_group_0'"
+                   :should-have-elements="true" :group="'linkset-filters' + linksetSpec.id"
+                   :uid="'linkset_' + linksetSpec.id  + '_0'"
                    :options="useFuzzyLogic ? fuzzyLogicOptions : undefined"
                    :option-groups="useFuzzyLogic ? fuzzyLogicOptionGroups : undefined"
                    validate-method-name="validateCondition" empty-elements-text="No conditions"
@@ -144,7 +144,7 @@
           </template>
 
           <template v-slot="curCondition">
-            <condition :condition="curCondition.element" :id="linksetSpec.id + '_' + curCondition.index"
+            <condition :condition="curCondition.element" :id="curCondition.uid"
                        :use-fuzzy-logic="useFuzzyLogic" @add="curCondition.add()" @remove="curCondition.remove()"/>
           </template>
         </logic-box>
@@ -258,6 +258,7 @@
                         normalized: false,
                     },
                     fuzzy: {
+                        t_norm: 'MINIMUM_T_NORM',
                         t_conorm: 'MAXIMUM_T_CONORM',
                         threshold: 0,
                     },

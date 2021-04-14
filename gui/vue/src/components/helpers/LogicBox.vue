@@ -89,7 +89,7 @@
   <div v-else class="position-relative" v-bind:class="styleClass">
     <handle class="absolute-handle"/>
 
-    <slot v-bind:type="parentType" v-bind:index="index" v-bind:element="element"
+    <slot v-bind:type="parentType" v-bind:uid="uid" v-bind:index="index" v-bind:element="element"
           v-bind:add="() => $emit('promote', index)" v-bind:remove="() => $emit('remove', index)"/>
   </div>
 </template>
@@ -203,6 +203,8 @@
             },
 
             onMove(event) {
+                console.log('onMove', event, this.isRoot, this.logicBoxElements);
+
                 if (event.hasOwnProperty('removed') && !this.isRoot && this.logicBoxElements.length === 1)
                     this.$emit('demote', this.index);
             },
@@ -247,6 +249,8 @@
             },
 
             demoteElement(index) {
+                console.log('demoteElement', index, this.element[this.elementsName][index][this.elementsName][0], this.element[this.elementsName]);
+
                 const element = this.element[this.elementsName][index][this.elementsName][0];
                 const elementCopy = JSON.parse(JSON.stringify(element));
 

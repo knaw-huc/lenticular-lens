@@ -13,7 +13,7 @@ def get_visualization(job, id, type, cluster_id, associations=None, include_comp
         return hash_string_min((id1, id2) if id1 < id2 else (id2, id1))
 
     def create_node(id, group, label=None, dataset=None, entity=None, local_id=None, size=8, group_size=None,
-                    investigated=True, strength=None, satellite=None, missing_links=None, org_node=None):
+                    investigated=True, strength=None, satellite=False, missing_links=None, org_node=None):
         new_node = {k: v for k, v in {
             'id': id,
             'dataset': dataset,
@@ -97,12 +97,13 @@ def get_visualization(job, id, type, cluster_id, associations=None, include_comp
                 if complex:
                     biggest_list = []
                     for arc in vis['links']:
-                        id = arc['target'] if arc['source'] == child else arc['source']
+                        if child == arc['source'] or child == arc['target']:
+                            id = arc['target'] if arc['source'] == child else arc['source']
 
-                        if len(biggest_list) == 0 or biggest_list[0][1] < arc['strength']:
-                            biggest_list = [(id, arc['strength'])]
-                        elif biggest_list[0][1] == arc['strength']:
-                            biggest_list += [(id, arc['strength'])]
+                            if len(biggest_list) == 0 or biggest_list[0][1] < arc['strength']:
+                                biggest_list = [(id, arc['strength'])]
+                            elif biggest_list[0][1] == arc['strength']:
+                                biggest_list += [(id, arc['strength'])]
 
                     biggest_parent = None
                     for cid, strength in biggest_list:
@@ -115,12 +116,11 @@ def get_visualization(job, id, type, cluster_id, associations=None, include_comp
                         return
 
                     parent = biggest_parent
+                    nodes[parent]['satellite'] = True
 
                 if parent not in visited_parent:
                     visited_parent.add(parent)
                     nodes[parent]['child'] = {'nodes': [deepcopy(nodes[parent])], 'links': []}
-
-                if complex or parent not in visited_parent:
                     nodes[parent]['satellite'] = True
 
                 pairs = nodes[parent]['nodes'] * (nodes[parent]['nodes'] - 1) / 2

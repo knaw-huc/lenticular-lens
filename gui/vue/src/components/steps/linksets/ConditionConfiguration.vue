@@ -3,7 +3,21 @@
     <condition-method v-if="configureMatching && method.items.length > 0" class="config-group"
                       :id="'method_' + id" :method="method" :config="condition.method.config" ref="methodConfig"/>
 
-    <div v-if="useFuzzyLogic && configureTConorms" class="config-group">
+    <div v-if="useFuzzyLogic && configureFuzzyLogic" class="config-group">
+      <div v-if="applyListMatching" class="form-group row">
+        <label :for="'t_conorm_' + id" class="col-sm-3 col-form-label">
+          T-norm
+        </label>
+
+        <div class="col-sm-3">
+          <select :id="'t_norm_' + id" class="form-control form-control-sm" v-model="condition.fuzzy.t_norm">
+            <option v-for="(description, key) in tNorms" :value="key">
+              {{ description }}
+            </option>
+          </select>
+        </div>
+      </div>
+
       <div class="form-group row">
         <label :for="'t_conorm_' + id" class="col-sm-3 col-form-label">
           T-conorm
@@ -125,6 +139,7 @@
         mixins: [ValidationMixin],
         data() {
             return {
+                tNorms: props.tNorms,
                 tConorms: props.tConorms,
                 similarityMethods: Object.keys(props.matchingMethods)
                     .filter(key => props.matchingMethods[key].isSimilarityMethod)
@@ -141,7 +156,7 @@
             simMethod: Object,
             useFuzzyLogic: Boolean,
             configureMatching: Boolean,
-            configureTConorms: Boolean,
+            configureFuzzyLogic: Boolean,
             applySimMethod: Boolean,
             applyListMatching: Boolean,
         },

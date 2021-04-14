@@ -118,8 +118,8 @@
       <sub-card v-if="entityTypeSelection.dataset.collection_id !== ''" label="Filter"
                 :has-error="errors.includes('filters')">
         <logic-box :element="entityTypeSelection.filter" elements-name="conditions" :is-root="true"
-                   group="entity-type-selection-filters"
-                   :uid="'entity-type-selection_' + entityTypeSelection.id + '_filter_group_0'"
+                   :group="'entity-type-selection-filters' + entityTypeSelection.id"
+                   :uid="'entity-type-selection_' + entityTypeSelection.id + '_0'"
                    validate-method-name="validateFilterCondition" empty-elements-text="No conditions"
                    validation-failed-text="Please provide at least one condition" v-slot="curCondition"
                    @add="addFilterCondition($event)" ref="filterGroupComponent">

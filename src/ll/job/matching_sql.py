@@ -4,6 +4,8 @@ from psycopg2 import sql
 from inspect import cleandoc
 
 from ll.job.joins import Joins
+from ll.elem.matching_method import MatchingMethod
+
 from ll.util.hasher import hash_string_min
 from ll.util.helpers import get_string_from_sql, get_sql_empty
 
@@ -120,9 +122,8 @@ class MatchingSql:
         for matching_method in self._linkset.matching_methods:
             field_name = matching_method.field_name
             if matching_method.similarity_sql:
-                similarities_sqls \
-                    .append(sql.SQL('{}, array_agg(DISTINCT {})')
-                            .format(sql.Literal(field_name), matching_method.similarity_sql))
+                similarities_sqls.append(sql.SQL('{}, {}')
+                                         .format(sql.Literal(field_name), matching_method.similarity_sql))
 
             if matching_method.is_intermediate:
                 source_intermediates_sqls \
@@ -176,8 +177,8 @@ class MatchingSql:
         ) for (threshold, similarity) in self._linkset.similarity_logic_ops_sql_per_threshold]
 
         if self._linkset.similarity_fields and (sim_matching_methods_conditions_sqls or sim_grouping_conditions_sqls):
-            sim_fields_sqls = [sql.SQL('{} numeric[]').format(sql.Identifier(sim_field))
-                               for sim_field in self._linkset.similarity_fields]
+            sim_fields_sql = sql.SQL('\n').join(
+                MatchingMethod.get_similarity_fields_sqls(self._linkset.matching_methods))
 
             return sql.SQL(cleandoc(
                 """ DROP TABLE IF EXISTS linksets.{linkset} CASCADE;
@@ -193,7 +194,7 @@ class MatchingSql:
             ) + '\n').format(
                 linkset=sql.Identifier(self._job.table_name(self._linkset.id)),
                 linkset_sql=linkset_sql,
-                sim_fields_sql=sql.SQL(', ').join(sim_fields_sqls),
+                sim_fields_sql=sim_fields_sql,
                 sim_conditions=sql.SQL(' AND ').join(
                     sim_matching_methods_conditions_sqls + sim_grouping_conditions_sqls)
             )

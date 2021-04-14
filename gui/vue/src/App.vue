@@ -503,8 +503,10 @@
 
                 if (confirm(`Are you sure you want to delete this ${type}?`)) {
                     if (type === 'linkset') {
-                        if (this.$root.linksets.find(linkset => linkset.spec_id === id))
-                            if (!(await this.$root.deleteResult(type, id))) return;
+                        if (this.$root.linksets.find(linkset => linkset.spec_id === id)) {
+                            const response = await this.$root.deleteResult(type, id);
+                            if (response.result === 'fail') return;
+                        }
 
                         const index = this.$root.linksetSpecs.findIndex(linkset => linkset.id === id);
                         this.$root.linksetSpecs.splice(index, 1);
@@ -516,8 +518,10 @@
                         await this.submit();
                     }
                     else if (type === 'lens') {
-                        if (this.$root.lenses.find(lens => lens.spec_id === id))
-                            if (!(await this.$root.deleteResult(type, id))) return;
+                        if (this.$root.lenses.find(lens => lens.spec_id === id)) {
+                            const response = await this.$root.deleteResult(type, id);
+                            if (response.result === 'fail') return;
+                        }
 
                         const index = this.$root.lensSpecs.findIndex(lens => lens.id === id);
                         this.$root.lensSpecs.splice(index, 1);

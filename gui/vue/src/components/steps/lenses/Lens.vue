@@ -68,8 +68,8 @@
         </template>
 
         <logic-box :element="lensSpec.specs" elements-name="elements" :is-root="true"
-                   :should-have-elements="true" :controlled-elements="true" group="lens-elements"
-                   :uid="'lens_' + lensSpec.id  + '_group_0'" validate-method-name="validateLensElement"
+                   :should-have-elements="true" :controlled-elements="true" :group="'lens' + lensSpec.id"
+                   :uid="'lens_' + lensSpec.id  + '_0'" validate-method-name="validateLensElement"
                    empty-elements-text="No lens elements"
                    validation-failed-text="Please provide at least one lens element"
                    :options="lensOptions" :option-groups="lensOptionGroups"

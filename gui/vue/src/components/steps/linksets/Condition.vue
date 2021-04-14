@@ -23,7 +23,7 @@
               </label>
 
               <label v-if="allowFuzzyLogic" class="btn btn-secondary btn-sm"
-                     v-bind:class="{'active': configureTConorms}" @click="configureTConorms = !configureTConorms">
+                     v-bind:class="{'active': configureFuzzyLogic}" @click="configureFuzzyLogic = !configureFuzzyLogic">
                 Configure fuzzy logic
               </label>
 
@@ -54,7 +54,7 @@
     <condition-configuration
         v-if="showConfiguration" :id="id" :condition="condition" :method="method" :sim-method="simMethod"
         :use-fuzzy-logic="allowFuzzyLogic" :configure-matching="configureMatching"
-        :configure-t-conorms="configureTConorms" :apply-sim-method="applySimMethod"
+        :configure-fuzzy-logic="configureFuzzyLogic" :apply-sim-method="applySimMethod"
         :apply-list-matching="applyListMatching"
         @sim-method-change="handleSimMethodChange" ref="conditionConfiguration"/>
 
@@ -145,7 +145,7 @@
             return {
                 visible: true,
                 configureMatching: true,
-                configureTConorms: false,
+                configureFuzzyLogic: false,
                 applySimMethod: false,
                 applyListMatching: false,
                 matchingMethods: props.matchingMethods,
@@ -189,7 +189,7 @@
 
             showConfiguration() {
                 return (this.configureMatching && this.method.items.length > 0) ||
-                    (this.allowFuzzyLogic && this.configureTConorms) ||
+                    (this.allowFuzzyLogic && this.configureFuzzyLogic) ||
                     (this.applySimMethod && this.method.items.length > 0 && this.method.acceptsSimilarityMethod) ||
                     this.applyListMatching;
             },

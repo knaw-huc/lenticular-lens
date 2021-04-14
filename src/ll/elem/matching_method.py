@@ -30,6 +30,7 @@ class MatchingMethod:
         self._method_sim_info = self._matching_methods[self.method_sim_name] \
             if self.method_sim_name in self._matching_methods else {}
 
+        self._t_norm = data['fuzzy']['t_norm']
         self._t_conorm = data['fuzzy']['t_conorm']
         self._threshold = data['fuzzy']['threshold']
 
@@ -58,8 +59,16 @@ class MatchingMethod:
     @property
     def similarity_logic_ops_sql(self):
         if self.similarity_sql:
-            return sql.SQL('(SELECT {function}(x) FROM unnest(sim.{field}) AS x)').format(
-                function=sql.SQL(self._logic_ops[self._t_conorm]['sql_agg']),
+            sub_template = 'unnest({target}.{field}) AS x'
+            if self.is_list_match:
+                sub_template = '(SELECT {t_norm_func}(x) ' \
+                               'FROM combinations({target}.scores, {target}.size) AS c, unnest(c) AS x ' \
+                               'GROUP BY c) AS scores(x)'
+
+            return sql.SQL(f'(SELECT {{t_conorm_func}}(x) FROM {sub_template})').format(
+                t_norm_func=sql.SQL(self._logic_ops[self._t_norm]['sql_agg']),
+                t_conorm_func=sql.SQL(self._logic_ops[self._t_conorm]['sql_agg']),
+                target=sql.Identifier(('sim_' + self.field_name) if self.is_list_match else 'sim'),
                 field=sql.Identifier(self.field_name)
             )
 
@@ -220,34 +229,41 @@ class MatchingMethod:
         new_similarity_template = similarity_template
 
         if self.is_list_match:
-            from_sql = \
-                'FROM unnest(source.{field_name}, source.{field_name_norm}) ' \
-                'WITH ORDINALITY AS src(src_org, src_norm, src_idx)' \
-                    if self._method_info.get('field') else \
-                    'FROM unnest(source.{field_name}) WITH ORDINALITY AS src(src_org, src_idx)'
-            join_sql = \
-                'JOIN unnest(target.{field_name}, target.{field_name_norm}) ' \
-                'WITH ORDINALITY AS trg(trg_org, trg_norm, trg_idx)' \
-                    if self._method_info.get('field') else \
-                    'JOIN unnest(target.{field_name}) WITH ORDINALITY AS trg(trg_org, trg_idx)'
+            source_fields_sqls = ['source.{field_name}']
+            source_alias_sqls = ['src_org']
+            if self._method_info.get('field'):
+                source_fields_sqls.append('source.{field_name_norm}')
+                source_alias_sqls.append('src_norm')
+
+            target_fields_sqls = ['target.{field_name}']
+            target_alias_sqls = ['trg_org']
+            if self._method_info.get('field'):
+                target_fields_sqls.append('target.{field_name_norm}')
+                target_alias_sqls.append('trg_norm')
+
+            list_threshold_template = '{list_threshold}'
+            if self._list_is_percentage:
+                list_threshold_template = 'array_perc_size(source.{field_name}, target.{field_name}, {list_threshold})'
 
             new_match_template = cleandoc(f'''	
                 match_array_meets_size(ARRAY(
                     SELECT ARRAY['src' || src_idx, 'trg' || trg_idx]
-                    {from_sql}
-                    {join_sql}
+                    FROM unnest({','.join(source_fields_sqls)}) WITH ORDINALITY AS src({','.join(source_alias_sqls)}, src_idx)
+                    JOIN unnest({','.join(target_fields_sqls)}) WITH ORDINALITY AS trg({','.join(target_alias_sqls)}, trg_idx)
                     ON {match_template}
-                ), source.{{field_name}}, target.{{field_name}}, {{list_threshold}}, {{list_threshold_is_perc}})
+                ), {list_threshold_template})
             ''')
 
             new_similarity_template = cleandoc(f'''	
-                ARRAY(
-                    SELECT {similarity_template}
-                    {from_sql}
-                    {join_sql}
+                jsonb_build_object('scores', ARRAY(
+                    SELECT DISTINCT {similarity_template}
+                    FROM unnest({','.join([f'array_agg({field_sql})' for field_sql in source_fields_sqls])}) AS src({','.join(source_alias_sqls)})
+                    JOIN unnest({','.join([f'array_agg({field_sql})' for field_sql in target_fields_sqls])}) AS trg({','.join(target_alias_sqls)})
                     ON {match_template}
-                )
+                ), 'size', {list_threshold_template})
             ''')
+        else:
+            new_similarity_template = f'array_agg(DISTINCT {new_similarity_template})'
 
         return sql.SQL(new_match_template if match_sql else new_similarity_template).format(
             field_name=sql.Identifier(self.field_name),
@@ -281,3 +297,29 @@ class MatchingMethod:
 
         return MatchingMethodProperty(property, transformers, ets_id, self._job, field_type_info,
                                       self._method_info.get('field'), self._method_config)
+
+    @staticmethod
+    def get_similarity_fields_sqls(matching_methods):
+        lateral_joins_sqls = []
+        similarity_fields_sqls = []
+
+        for match_method in matching_methods:
+            if match_method.similarity_sql:
+                similarity_fields_sqls.append(sql.Composed([
+                    sql.Identifier(match_method.field_name),
+                    sql.SQL(' jsonb') if match_method.is_list_match else sql.SQL(' numeric[]')
+                ]))
+
+                if match_method.is_list_match:
+                    lateral_joins_sqls.append(sql.SQL('CROSS JOIN LATERAL jsonb_to_record(sim.{}) AS {}'
+                                                      '(scores numeric[], size integer)').format(
+                        sql.Identifier(match_method.field_name),
+                        sql.Identifier('sim_' + match_method.field_name),
+                    ))
+
+        if similarity_fields_sqls:
+            lateral_joins_sqls.insert(0, sql.SQL('CROSS JOIN LATERAL jsonb_to_record(similarity) AS sim({})').format(
+                sql.SQL(', ').join(similarity_fields_sqls)
+            ))
+
+        return lateral_joins_sqls

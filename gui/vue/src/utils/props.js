@@ -160,7 +160,7 @@ export default {
                     key: 'threshold',
                     label: 'Similarity threshold',
                     type: 'range',
-                    defaultValue: 0.3,
+                    defaultValue: 0.7,
                     step: 0.05,
                     minExclValue: 0,
                     maxExclValue: 1,

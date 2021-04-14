@@ -648,7 +648,7 @@ async function callApi(path, body, isDelete = false) {
             response = await fetch(path);
         }
 
-        if (!response.ok)
+        if (!response.ok && response.status !== 400)
             return null;
 
         return response.json();

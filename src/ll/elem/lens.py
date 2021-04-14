@@ -41,10 +41,6 @@ class Lens:
         return {ets for linkset in self.linksets for ets in linkset.entity_type_selections}
 
     @property
-    def similarity_fields(self):
-        return {field_name for linkset in self.linksets for field_name in linkset.similarity_fields}
-
-    @property
     def similarity_logic_ops_sql(self):
         return self.with_lenses_recursive(
             lambda left, right, type, t_conorm, threshold, only_left: self._logic_ops_for_condition(

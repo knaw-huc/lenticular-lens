@@ -4,6 +4,7 @@ from psycopg2 import sql
 from inspect import cleandoc
 
 from ll.util.helpers import get_string_from_sql
+from ll.elem.matching_method import MatchingMethod
 
 locale.setlocale(locale.LC_ALL, '')
 
@@ -44,8 +45,7 @@ class LensSql:
                                for (threshold, similarity) in self._lens.similarity_logic_ops_sql_per_threshold]
 
         if self._lens.similarity_fields and sim_conditions_sqls:
-            sim_fields_sqls = [sql.SQL('{} numeric[]').format(sql.Identifier(sim_field))
-                               for sim_field in self._lens.similarity_fields]
+            sim_fields_sql = sql.SQL('\n').join(MatchingMethod.get_similarity_fields_sqls(self._lens.matching_methods))
 
             return sql.SQL(cleandoc(
                 """ DROP TABLE IF EXISTS lenses.{lens} CASCADE;
@@ -61,7 +61,7 @@ class LensSql:
             ) + '\n').format(
                 lens=sql.Identifier(self._job.table_name(self._lens.id)),
                 lens_sql=lens_sql,
-                sim_fields_sql=sql.SQL(', ').join(sim_fields_sqls),
+                sim_fields_sql=sim_fields_sql,
                 sim_conditions=sql.SQL(' AND ').join(sim_conditions_sqls)
             )
 
