@@ -109,26 +109,30 @@ class Job:
             """, (self.job_id, title, description, link))
 
     def update_data(self, data):
+        entity_type_selections_form_data = \
+            data['entity_type_selections'] if 'entity_type_selections' in data \
+                else self.data['entity_type_selections_form_data']
+        linkset_specs_form_data = \
+            data['linkset_specs'] if 'linkset_specs' in data else self.data['linkset_specs_form_data']
+        lens_specs_form_data = data['lens_specs'] if 'lens_specs' in data else self.data['lens_specs_form_data']
+        views_form_data = data['views'] if 'views' in data else self.data['views_form_data']
+
         data_updated = {
-            'job_title': data['job_title'].strip(),
-            'job_description': data['job_description'].strip(),
+            'job_title': data['job_title'].strip() \
+                if 'job_title' in data else self.data['job_title'],
+            'job_description': data['job_description'].strip() \
+                if 'job_description' in data else self.data['job_description'],
             'job_link': data['job_link'].strip() \
-                if 'job_link' in data and data['job_link'] and data['job_link'].strip() != '' else None,
-            'entity_type_selections_form_data': dumps(data['entity_type_selections']) \
-                if 'entity_type_selections' in data else None,
-            'linkset_specs_form_data': dumps(data['linkset_specs']) \
-                if 'linkset_specs' in data else None,
-            'lens_specs_form_data': dumps(data['lens_specs']) \
-                if 'lens_specs' in data else None,
-            'views_form_data': dumps(data['views']) \
-                if 'views' in data else None
+                if 'job_link' in data and data['job_link']
+                   and data['job_link'].strip() != '' else self.data['job_link'],
+            'entity_type_selections_form_data': dumps(entity_type_selections_form_data),
+            'linkset_specs_form_data': dumps(linkset_specs_form_data),
+            'lens_specs_form_data': dumps(lens_specs_form_data),
+            'views_form_data': dumps(views_form_data)
         }
 
-        (entity_type_selections, linkset_specs, lens_specs, views, errors) \
-            = transform(data['entity_type_selections'] if 'entity_type_selections' in data else [],
-                        data['linkset_specs'] if 'linkset_specs' in data else [],
-                        data['lens_specs'] if 'lens_specs' in data else [],
-                        data['views'] if 'views' in data else [])
+        (entity_type_selections, linkset_specs, lens_specs, views, errors) = \
+            transform(entity_type_selections_form_data, linkset_specs_form_data, lens_specs_form_data, views_form_data)
 
         data_updated['entity_type_selections'] = dumps(entity_type_selections)
         data_updated['linkset_specs'] = dumps(linkset_specs)
