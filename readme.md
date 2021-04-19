@@ -208,23 +208,14 @@ _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/clusterings`_
 
 ---
 
-**URL**: `/job/<job_id>/run_linkset/<linkset>`\
+**URL**: `/job/<job_id>/run/<type>/<linkset>`\
 **Method**: `POST`\
 **JSON**: `restart`
 
-Start a linkset process for the given `linkset` of a specific `job_id`. Specify `restart` to restart the process.
+Start a process for the given spec of `type` (`linkset` or `lens`) of a specific `job_id`. Specify `restart` to restart
+the process.
 
-_Example: `/job/d697ea3869422ce3c7cc1889264d03c7/run_linkset/0`_
-
----
-
-**URL**: `/job/<job_id>/run_lens/<lens>`\
-**Method**: `POST`\
-**JSON**: `restart`
-
-Start a lens process for the given `lens` of a specific `job_id`. Specify `restart` to restart the process.
-
-_Example: `/job/d697ea3869422ce3c7cc1889264d03c7/run_lens/0`_
+_Example: `/job/d697ea3869422ce3c7cc1889264d03c7/run/linkset/0`_
 
 ---
 
@@ -238,21 +229,12 @@ _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/run_clustering/linkset/0`_
 
 ---
 
-**URL**: `/job/<job_id>/kill_linkset/<linkset>`\
+**URL**: `/job/<job_id>/kill/<type>/<linkset>`\
 **Method**: `POST`
 
-Stop a linkset process for the given `linkset` of a specific `job_id`.
+Stop a process for the given spec of `type` (`linkset` or `lens`) of a specific `job_id`.
 
-_Example: `/job/d697ea3869422ce3c7cc1889264d03c7/kill_linkset/0`_
-
----
-
-**URL**: `/job/<job_id>/kill_lens/<lens>`\
-**Method**: `POST`
-
-Stop a lens process for the given `lens` of a specific `job_id`.
-
-_Example: `/job/d697ea3869422ce3c7cc1889264d03c7/kill_lens/0`_
+_Example: `/job/d697ea3869422ce3c7cc1889264d03c7/kill/linkset/0`_
 
 ---
 

@@ -490,12 +490,12 @@ export default {
 
         async runLinkset(id, restart) {
             await this.submit();
-            return callApi(`/job/${this.job.job_id}/run_linkset/${id}`, {restart});
+            return callApi(`/job/${this.job.job_id}/run/linkset/${id}`, {restart});
         },
 
         async runLens(id, restart) {
             await this.submit();
-            return callApi(`/job/${this.job.job_id}/run_lens/${id}`, {restart});
+            return callApi(`/job/${this.job.job_id}/run/lens/${id}`, {restart});
         },
 
         async runClustering(type, id) {
@@ -503,11 +503,11 @@ export default {
         },
 
         async killLinkset(id) {
-            return callApi(`/job/${this.job.job_id}/kill_linkset/${id}`, {});
+            return callApi(`/job/${this.job.job_id}/kill/linkset/${id}`, {});
         },
 
         async killLens(id) {
-            return callApi(`/job/${this.job.job_id}/kill_lens/${id}`, {});
+            return callApi(`/job/${this.job.job_id}/kill/lens/${id}`, {});
         },
 
         async killClustering(type, id) {

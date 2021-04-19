@@ -3,8 +3,9 @@ import uuid
 import decimal
 import datetime
 import psycopg2
+import functools
 
-from flask import Flask, jsonify, request, abort, Response
+from flask import Flask, jsonify, request, Response
 from flask_cors import CORS
 from flask.json import JSONEncoder
 from flask_compress import Compress
@@ -74,33 +75,90 @@ def authenticated(func):
     return auth.oidc_auth('default').oidc_decorator(func) if auth else func
 
 
+def with_job(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        if 'job' in kwargs:
+            job = kwargs['job']
+        elif request.json and 'job_id' in request.json:
+            job = Job(request.json['job_id'])
+        else:
+            return jsonify({'result': 'error', 'error': 'Please specify a job id'}), 400
+
+        kwargs['job'] = job
+        if not job.data:
+            return jsonify({'result': 'error', 'error': f"Job with id '{job.job_id}' not found"}), 404
+
+        return func(*args, **kwargs)
+
+    return wrapper
+
+
+def with_spec(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        spec = kwargs['job'].get_spec_by_id(kwargs['id'], kwargs['type'])
+        if not spec:
+            return jsonify({'result': 'error',
+                            'error': f"Spec with type '{kwargs['type']}' and id '{kwargs['id']}' not found"}), 404
+
+        return func(*args, **kwargs)
+
+    return wrapper
+
+
+def with_entity_type_selection(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        if not kwargs['job'].get_entity_type_selection_by_id(kwargs['id']):
+            return jsonify({'result': 'error',
+                            'error': f"Entity-type selection with id '{kwargs['id']}' not found"}), 404
+
+        return func(*args, **kwargs)
+
+    return wrapper
+
+
 @app.route('/')
 def index():
     return app.send_static_file('index.html')
 
 
-@authenticated
 @app.route('/datasets')
+@authenticated
 def datasets():
+    if not request.args.get('endpoint'):
+        return jsonify({'result': 'error', 'error': 'Please apply the GraphQL endpoint'}), 400
+
     return jsonify(TimbuctooDatasets(request.args.get('endpoint')).datasets)
 
 
-@authenticated
 @app.route('/datasets/update', methods=['POST'])
+@authenticated
 def datasets_update():
+    if not request.form.get('endpoint'):
+        return jsonify({'result': 'error', 'error': 'Please apply the GraphQL endpoint'}), 400
+
     TimbuctooDatasets(request.form.get('endpoint')).update()
     return jsonify({'result': 'updated'})
 
 
-@authenticated
 @app.route('/downloads')
+@authenticated
 def downloads():
     return jsonify(Collection.download_status())
 
 
-@authenticated
 @app.route('/download')
+@authenticated
 def start_download():
+    if not request.args.get('endpoint'):
+        return jsonify({'result': 'error', 'error': 'Please apply the GraphQL endpoint'}), 400
+    if not request.args.get('dataset_id'):
+        return jsonify({'result': 'error', 'error': 'Please apply the Timbuctoo dataset id'}), 400
+    if not request.args.get('collection_id'):
+        return jsonify({'result': 'error', 'error': 'Please apply the Timbuctoo collection id'}), 400
+
     collection = Collection(request.args.get('endpoint'),
                             request.args.get('dataset_id'), request.args.get('collection_id'))
     collection.start_download()
@@ -108,20 +166,25 @@ def start_download():
     return jsonify({'result': 'ok'})
 
 
-@authenticated
 @app.route('/stopwords/<dictionary>')
-def stopwords(dictionary):
-    if dictionary in ['arabic', 'azerbaijani', 'danish', 'dutch', 'dutch_names', 'english', 'finnish', 'french',
-                      'german', 'greek', 'hungarian', 'indonesian', 'italian', 'kazakh', 'nepali', 'norwegian',
-                      'portuguese', 'romanian', 'russian', 'slovene', 'spanish', 'swedish', 'tajik', 'turkish']:
-        return jsonify(fetch_one('SELECT get_stopwords(%s)', (dictionary,))[0])
-
-    return abort(400)
-
-
 @authenticated
+def stopwords(dictionary):
+    if dictionary not in ['arabic', 'azerbaijani', 'danish', 'dutch', 'dutch_names', 'english', 'finnish', 'french',
+                          'german', 'greek', 'hungarian', 'indonesian', 'italian', 'kazakh', 'nepali', 'norwegian',
+                          'portuguese', 'romanian', 'russian', 'slovene', 'spanish', 'swedish', 'tajik', 'turkish']:
+        return jsonify({'result': 'error', 'error': 'Please specify a valid dictionary key'}), 400
+
+    return jsonify(fetch_one('SELECT get_stopwords(%s)', (dictionary,))[0])
+
+
 @app.route('/job/create', methods=['POST'])
+@authenticated
 def job_create():
+    if not request.json.get('job_title'):
+        return jsonify({'result': 'error', 'error': 'Please specify a title for this new job'}), 400
+    if not request.json.get('job_description'):
+        return jsonify({'result': 'error', 'error': 'Please specify a description for this new job'}), 400
+
     job_id = hash_string(request.json['job_title'] + request.json['job_description'])
     job = Job(job_id)
 
@@ -139,18 +202,16 @@ def job_create():
     return jsonify({'result': 'created', 'job_id': job_id})
 
 
-@authenticated
 @app.route('/job/update', methods=['POST'])
-def job_update():
-    job_id = request.json['job_id']
-    job = Job(job_id)
-
+@authenticated
+@with_job
+def job_update(job):
     entity_type_selections, linkset_specs, lens_specs, views, errors = job.update_data(request.json)
 
     if len(errors) > 0:
         return jsonify({
             'result': 'error',
-            'job_id': job_id,
+            'job_id': job.job_id,
             'errors': [str(error) for error in errors],
             'entity_type_selections': [entity_type_selection['id'] for entity_type_selection in entity_type_selections],
             'linkset_specs': [linkset_spec['id'] for linkset_spec in linkset_specs],
@@ -160,7 +221,7 @@ def job_update():
 
     return jsonify({
         'result': 'updated',
-        'job_id': job_id,
+        'job_id': job.job_id,
         'entity_type_selections': [entity_type_selection['id'] for entity_type_selection in entity_type_selections],
         'linkset_specs': [linkset_spec['id'] for linkset_spec in linkset_specs],
         'lens_specs': [lens_spec['id'] for lens_spec in lens_specs],
@@ -168,71 +229,62 @@ def job_update():
     })
 
 
-@authenticated
 @app.route('/job/<job:job>')
+@authenticated
+@with_job
 def job_data(job):
-    if job.data:
-        return jsonify({
-            'job_id': job.data['job_id'],
-            'job_title': job.data['job_title'],
-            'job_description': job.data['job_description'],
-            'job_link': job.data['job_link'],
-            'entity_type_selections': job.data['entity_type_selections_form_data'],
-            'linkset_specs': job.data['linkset_specs_form_data'],
-            'lens_specs': job.data['lens_specs_form_data'],
-            'views': job.data['views_form_data'],
-            'created_at': job.data['created_at'],
-            'updated_at': job.data['updated_at']
-        })
-
-    return abort(404)
+    return jsonify({
+        'job_id': job.data['job_id'],
+        'job_title': job.data['job_title'],
+        'job_description': job.data['job_description'],
+        'job_link': job.data['job_link'],
+        'entity_type_selections': job.data['entity_type_selections_form_data'],
+        'linkset_specs': job.data['linkset_specs_form_data'],
+        'lens_specs': job.data['lens_specs_form_data'],
+        'views': job.data['views_form_data'],
+        'created_at': job.data['created_at'],
+        'updated_at': job.data['updated_at']
+    })
 
 
-@authenticated
 @app.route('/job/<job:job>/linksets')
+@authenticated
+@with_job
 def job_linksets(job):
-    job_linksets = job.linksets
-    return jsonify(job_linksets if job_linksets else [])
+    return jsonify(job.linksets)
 
 
-@authenticated
 @app.route('/job/<job:job>/lenses')
+@authenticated
+@with_job
 def job_lenses(job):
-    job_lenses = job.lenses
-    return jsonify(job_lenses if job_lenses else [])
+    return jsonify(job.lenses)
 
 
-@authenticated
 @app.route('/job/<job:job>/clusterings')
+@authenticated
+@with_job
 def job_clusterings(job):
-    job_clusterings = job.clusterings
-    return jsonify(job_clusterings if job_clusterings else [])
+    return jsonify(job.clusterings)
 
 
+@app.route('/job/<job:job>/run/<type:type>/<int:id>', methods=['POST'])
 @authenticated
-@app.route('/job/<job:job>/run_linkset/<int:id>', methods=['POST'])
-def run_linkset(job, id):
+@with_job
+@with_spec
+def run_spec(job, type, id):
     try:
         restart = 'restart' in request.json and request.json['restart'] is True
-        job.run_linkset(id, restart)
+        job.run_linkset(id, restart) if type == 'linkset' else job.run_lens(id, restart)
         return jsonify({'result': 'ok'})
     except psycopg2.errors.UniqueViolation:
         return jsonify({'result': 'exists'}), 400
 
 
-@authenticated
-@app.route('/job/<job:job>/run_lens/<int:id>', methods=['POST'])
-def run_lens(job, id):
-    try:
-        restart = 'restart' in request.json and request.json['restart'] is True
-        job.run_lens(id, restart)
-        return jsonify({'result': 'ok'})
-    except psycopg2.errors.UniqueViolation:
-        return jsonify({'result': 'exists'}), 400
-
-
-@authenticated
 @app.route('/job/<job:job>/run_clustering/<type:type>/<int:id>', methods=['POST'])
+@authenticated
+@with_job
+@with_spec
 def run_clustering(job, type, id):
     try:
         job.run_clustering(id, type)
@@ -241,8 +293,10 @@ def run_clustering(job, type, id):
         return jsonify({'result': 'exists'}), 400
 
 
-@authenticated
 @app.route('/job/<job:job>/sql/<type:type>/<int:id>')
+@authenticated
+@with_job
+@with_spec
 def sql(job, type, id):
     from flask import Response
     from ll.job.matching_sql import MatchingSql
@@ -252,48 +306,49 @@ def sql(job, type, id):
     return Response(job_sql.sql_string, mimetype='text/plain')
 
 
+@app.route('/job/<job:job>/kill/<type:type>/<int:id>', methods=['POST'])
 @authenticated
-@app.route('/job/<job:job>/kill_linkset/<int:id>', methods=['POST'])
-def kill_linkset(job, id):
-    job.kill_linkset(id)
+@with_job
+@with_spec
+def kill_spec(job, type, id):
+    job.kill_linkset(id) if type == 'linkset' else job.kill_lens(id)
     return jsonify({'result': 'ok'})
 
 
-@authenticated
-@app.route('/job/<job:job>/kill_lens/<int:id>', methods=['POST'])
-def kill_lens(job, id):
-    job.kill_lens(id)
-    return jsonify({'result': 'ok'})
-
-
-@authenticated
 @app.route('/job/<job:job>/kill_clustering/<type:type>/<int:id>', methods=['POST'])
+@authenticated
+@with_job
+@with_spec
 def kill_clustering(job, type, id):
     job.kill_clustering(id, type)
     return jsonify({'result': 'ok'})
 
 
-@authenticated
 @app.route('/job/<job:job>/<type:type>/<int:id>', methods=['DELETE'])
+@authenticated
+@with_job
+@with_spec
 def delete(job, type, id):
     lens_uses = job.spec_lens_uses(id, type)
     if len(lens_uses) > 0:
-        response = jsonify({'result': 'fail', 'lens_uses': lens_uses})
-        response.status_code = 400
-        return response
+        return jsonify({'result': 'error', 'lens_uses': lens_uses}), 400
 
     job.delete(id, type)
     return jsonify({'result': 'ok'})
 
 
-@authenticated
 @app.route('/job/<job:job>/entity_type_selection_total/<int:id>')
+@authenticated
+@with_job
+@with_entity_type_selection
 def entity_type_selection_total(job, id):
     return jsonify(job.get_entity_type_selection_sample_total(id))
 
 
-@authenticated
 @app.route('/job/<job:job>/links_totals/<type:type>/<int:id>')
+@authenticated
+@with_job
+@with_spec
 def links_totals(job, type, id):
     return jsonify(job.get_links_totals(id, type,
                                         cluster_id=request.args.get('cluster_id'),
@@ -301,8 +356,10 @@ def links_totals(job, type, id):
                                         max_strength=request.args.get('max', type=float)))
 
 
-@authenticated
 @app.route('/job/<job:job>/entity_type_selection/<int:id>')
+@authenticated
+@with_job
+@with_entity_type_selection
 def entity_type_selection_sample(job, id):
     return jsonify(job.get_entity_type_selection_sample(id,
                                                         invert=request.args.get('invert', default=False) == 'true',
@@ -310,8 +367,10 @@ def entity_type_selection_sample(job, id):
                                                         offset=request.args.get('offset', 0, type=int)))
 
 
-@authenticated
 @app.route('/job/<job:job>/links/<type:type>/<int:id>')
+@authenticated
+@with_job
+@with_spec
 def links(job, type, id):
     links = [link for link in job.get_links(id, type,
                                             with_properties='multiple',
@@ -324,8 +383,10 @@ def links(job, type, id):
     return jsonify(links)
 
 
-@authenticated
 @app.route('/job/<job:job>/clusters/<type:type>/<int:id>')
+@authenticated
+@with_job
+@with_spec
 def clusters(job, type, id):
     clusters = [{
         'id': cluster['id'],
@@ -342,8 +403,10 @@ def clusters(job, type, id):
     return jsonify(clusters)
 
 
-@authenticated
 @app.route('/job/<job:job>/validate/<type:type>/<int:id>', methods=['POST'])
+@authenticated
+@with_job
+@with_spec
 def validate_link(job, type, id):
     source = request.json.get('source')
     target = request.json.get('target')
@@ -355,14 +418,18 @@ def validate_link(job, type, id):
     return jsonify({'result': 'ok'})
 
 
-@authenticated
 @app.route('/job/<job:job>/cluster/<type:type>/<int:id>/<cluster_id>/graph')
+@authenticated
+@with_job
+@with_spec
 def get_cluster_graph_data(job, type, id, cluster_id):
     return jsonify(job.visualize(id, type, cluster_id))
 
 
-@authenticated
 @app.route('/job/<job:job>/csv/<type:type>/<int:id>')
+@authenticated
+@with_job
+@with_spec
 def export_to_csv(job, type, id):
     export = Export(job, type, id)
 
@@ -373,8 +440,10 @@ def export_to_csv(job, type, id):
                     headers={'Content-Disposition': 'attachment; filename=' + type + '_' + str(id) + '.csv'})
 
 
-@authenticated
 @app.route('/job/<job:job>/rdf/<type:type>/<int:id>')
+@authenticated
+@with_job
+@with_spec
 def export_to_rdf(job, type, id):
     export = Export(job, type, id)
 
