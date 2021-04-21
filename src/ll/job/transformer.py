@@ -115,7 +115,7 @@ def get_linkset_spec_schema(ets_ids):
                 Optional('config', default={}): And(dict, MatchingMethodConfig(ets_ids)),
                 Optional('normalized', default=False): bool,
             },
-            Optional('fuzzy', default={'t_conorm': 'MAXIMUM_T_CONORM', 'threshold': 0}): {
+            Optional('fuzzy', default={'t_norm': 'MINIMUM_T_NORM', 't_conorm': 'MAXIMUM_T_CONORM', 'threshold': 0}): {
                 Optional('t_norm', default='MINIMUM_T_NORM'):
                     lambda s: s in ('MINIMUM_T_NORM', 'PRODUCT_T_NORM', 'LUKASIEWICZ_T_NORM',
                                     'DRASTIC_T_NORM', 'NILPOTENT_MINIMUM', 'HAMACHER_PRODUCT'),
