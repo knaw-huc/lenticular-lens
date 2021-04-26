@@ -34,28 +34,19 @@
       <sub-card label="Data" class="col-export">
         <div class="custom-control custom-switch mt-3">
           <input type="checkbox" class="custom-control-input" autocomplete="off"
-                 :id="'export_linkset_' + type + '_' + spec.id"
+                 :id="'export_metadata_' + type + '_' + spec.id" :disabled="format === 'csv'"
+                 v-model="exportMetadata" @change="updateState('export_metadata')"/>
+          <label class="custom-control-label" :for="'export_metadata_' + type + '_' + spec.id">
+            Metadata
+          </label>
+        </div>
+
+        <div class="custom-control custom-switch">
+          <input type="checkbox" class="custom-control-input" autocomplete="off"
+                 :id="'export_linkset_' + type + '_' + spec.id" :disabled="format === 'csv'"
                  v-model="exportLinkset" @change="updateState('export_linkset')"/>
           <label class="custom-control-label" :for="'export_linkset_' + type + '_' + spec.id">
             Linkset
-          </label>
-        </div>
-
-        <div class="custom-control custom-switch">
-          <input type="checkbox" class="custom-control-input" autocomplete="off"
-                 :id="'export_links_md_' + type + '_' + spec.id" :disabled="format === 'csv'"
-                 v-model="exportLinksMd" @change="updateState('export_links_md')"/>
-          <label class="custom-control-label" :for="'export_links_md_' + type + '_' + spec.id">
-            Links metadata
-          </label>
-        </div>
-
-        <div class="custom-control custom-switch">
-          <input type="checkbox" class="custom-control-input" autocomplete="off"
-                 :id="'export_generic_md_' + type + '_' + spec.id" :disabled="format === 'csv'"
-                 v-model="exportGenericMd" @change="updateState('export_generic_md')"/>
-          <label class="custom-control-label" :for="'export_generic_md_' + type + '_' + spec.id">
-            Generic metadata
           </label>
         </div>
       </sub-card>
@@ -105,10 +96,28 @@
             Rejected links
           </label>
         </div>
+
+        <div class="custom-control custom-switch">
+          <input type="checkbox" class="custom-control-input" autocomplete="off"
+                 :id="'export_unsure_links_' + type + '_' + spec.id"
+                 v-model="exportUnsureLinks" @change="updateState('export_unsure_links')"/>
+          <label class="custom-control-label" :for="'export_unsure_links_' + type + '_' + spec.id">
+            Unsure links
+          </label>
+        </div>
       </sub-card>
 
       <sub-card label="RDF reification" class="col-export">
         <div class="custom-control custom-switch mt-3">
+          <input type="radio" class="custom-control-input" autocomplete="off"
+                 :id="'export_none_reif_' + type + '_' + spec.id" value="none" :disabled="format === 'csv'"
+                 v-model="reification" @change="updateState('export_none_reif')"/>
+          <label class="custom-control-label" :for="'export_none_reif_' + type + '_' + spec.id">
+            No links metadata
+          </label>
+        </div>
+
+        <div class="custom-control custom-switch">
           <input type="radio" class="custom-control-input" autocomplete="off"
                  :id="'export_standard_reif_' + type + '_' + spec.id" value="standard" :disabled="format === 'csv'"
                  v-model="reification" @change="updateState('export_standard_reif')"/>
@@ -119,7 +128,7 @@
 
         <div class="custom-control custom-switch">
           <input type="radio" class="custom-control-input" autocomplete="off"
-                 :id="'export_rdf_star_reif_' + type + '_' + spec.id" value="star" :disabled="format === 'csv'"
+                 :id="'export_rdf_star_reif_' + type + '_' + spec.id" value="rdf_star" :disabled="format === 'csv'"
                  v-model="reification" @change="updateState('export_rdf_star_reif')"/>
           <label class="custom-control-label" :for="'export_rdf_star_reif_' + type + '_' + spec.id">
             RDF*
@@ -128,8 +137,7 @@
 
         <div class="custom-control custom-switch">
           <input type="radio" class="custom-control-input" autocomplete="off"
-                 :id="'export_singleton_reif_' + type + '_' + spec.id" value="singleton"
-                 :disabled="true && format === 'csv'"
+                 :id="'export_singleton_reif_' + type + '_' + spec.id" value="singleton" :disabled="format === 'csv'"
                  v-model="reification" @change="updateState('export_singleton_reif')"/>
           <label class="custom-control-label" :for="'export_singleton_reif_' + type + '_' + spec.id">
             Singleton
@@ -235,14 +243,14 @@
                 isOpen: false,
                 format: 'turtle',
                 exportLinkset: true,
-                exportLinksMd: false,
-                exportGenericMd: false,
+                exportMetadata: false,
                 exportAllLinks: true,
                 exportValidatedLinks: true,
                 exportNotValidatedLinks: true,
                 exportAcceptedLinks: true,
                 exportRejectedLinks: true,
-                reification: 'standard',
+                exportUnsureLinks: true,
+                reification: 'none',
                 linkPredicatesList: linkPredicates,
                 selectedLinkPredicate: linkPredicates[0],
                 prefix: linkPredicates[0].prefix,
@@ -269,8 +277,14 @@
 
             updateState(type) {
                 switch (type) {
-                    case 'export_links_md':
-                        if (this.exportLinksMd)
+                    case 'export_linkset':
+                        if (!this.exportLinkset)
+                            this.reification = 'none'
+                        if (!this.exportLinkset && !this.exportMetadata)
+                            this.exportMetadata = true;
+                        break;
+                    case 'export_metadata':
+                        if (!this.exportLinkset && !this.exportMetadata)
                             this.exportLinkset = true;
                         break;
                     case 'export_all_links':
@@ -278,23 +292,35 @@
                         this.exportNotValidatedLinks = this.exportAllLinks;
                         this.exportAcceptedLinks = this.exportAllLinks;
                         this.exportRejectedLinks = this.exportAllLinks;
+                        this.exportUnsureLinks = this.exportAllLinks;
+                        if (!this.exportAllLinks)
+                            this.exportAcceptedLinks = true;
                         break;
                     case 'export_validated_links':
                         this.exportAcceptedLinks = this.exportValidatedLinks;
                         this.exportRejectedLinks = this.exportValidatedLinks;
+                        this.exportUnsureLinks = this.exportValidatedLinks;
                         this.exportAllLinks = this.exportValidatedLinks && this.exportNotValidatedLinks;
+                        if (!this.exportAllLinks)
+                            this.exportNotValidatedLinks = true;
                         break;
                     case 'export_not_validated_links':
                         this.exportAllLinks = this.exportValidatedLinks && this.exportNotValidatedLinks;
+                        if (!this.exportAllLinks)
+                            this.exportValidatedLinks = true;
                         break;
                     case 'export_accepted_links':
                     case 'export_rejected_links':
-                        this.exportValidatedLinks = this.exportAcceptedLinks && this.exportRejectedLinks;
+                    case 'export_unsure_links':
+                        this.exportValidatedLinks = this.exportAcceptedLinks
+                            && this.exportRejectedLinks && this.exportUnsureLinks;
+                        if (!this.exportAllLinks)
+                            this.exportNotValidatedLinks = true;
                         break;
                     case 'export_csv':
-                        this.exportLinksMd = false;
-                        this.exportGenericMd = false;
-                        this.reification = 'standard';
+                        this.exportMetadata = false;
+                        this.exportLinkset = true;
+                        this.reification = 'none';
                         break;
                 }
             },
@@ -327,16 +353,16 @@
             doRdfExport() {
                 const params = [];
 
-                params.push(`export_metadata=${this.exportGenericMd}`);
-                params.push(`export_link_metadata=${this.exportLinksMd}`);
+                params.push(`export_metadata=${this.exportMetadata}`);
                 params.push(`export_linkset=${this.exportLinkset}`);
 
                 if (this.exportAcceptedLinks) params.push('valid=accepted');
                 if (this.exportRejectedLinks) params.push('valid=rejected');
+                if (this.exportUnsureLinks) params.push('valid=not_sure');
                 if (this.exportNotValidatedLinks) params.push('valid=not_validated');
                 if (this.exportAcceptedLinks && this.exportRejectedLinks) params.push('valid=mixed');
 
-                params.push(`rdf_star=${this.reification === 'star'}`);
+                params.push(`reification=${this.reification}`);
                 params.push(`use_graphs=${this.format === 'trig'}`);
 
                 params.push(`link_pred_namespace=${encodeURIComponent(this.uri)}`);

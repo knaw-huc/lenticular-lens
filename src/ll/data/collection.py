@@ -7,14 +7,14 @@ from ll.util.hasher import table_name_hash, column_name_hash, hash_string_min
 
 
 class Collection:
-    def __init__(self, graphql_endpoint, dataset_id, collection_id, timbuctoo_data=None):
+    def __init__(self, graphql_endpoint, dataset_id, collection_id, timbuctoo_data=None, dataset_table_data=None):
         self.graphql_endpoint = graphql_endpoint
         self.dataset_id = dataset_id
         self.collection_id = collection_id
 
         self._timbuctoo_data = timbuctoo_data
+        self._dataset_table_data = dataset_table_data
 
-        self._dataset_table_data = None
         self._timbuctoo = Timbuctoo(self.graphql_endpoint)
 
     @property
@@ -63,6 +63,14 @@ class Collection:
             if prefix and prefix in self.table_data['prefix_mappings'] else None
 
         return prefix, prefix_uri
+
+    @property
+    def is_downloaded(self):
+        if self.collection_id not in self.dataset_table_data:
+            return False
+
+        return self.table_data['update_finish_time'] \
+               and self.table_data['update_finish_time'] >= self.table_data['update_start_time']
 
     @property
     def rows_downloaded(self):
@@ -134,6 +142,10 @@ class Collection:
                 ''', (dataset['uri'], dataset['name'], dataset['title'], dataset['description'],
                       collection['uri'], collection['title'], collection['shortenedUri'],
                       collection['total'], dumps(columns), dumps(dataset['prefixMappings']), self.table_name))
+
+    def get_collection_by_id(self, collection_id):
+        return Collection(self.graphql_endpoint, self.dataset_id, collection_id,
+                          self._timbuctoo_data, self._dataset_table_data)
 
     @staticmethod
     def columns_sql(columns):

@@ -1,4 +1,6 @@
 from psycopg2 import sql
+
+from ll.util.hasher import hash_string_min
 from ll.util.helpers import get_json_from_file
 
 
@@ -36,3 +38,13 @@ class FilterFunction:
         parameters['property'] = self.property_field.sql
 
         return sql.SQL(template).format(**parameters)
+
+    @property
+    def hash(self):
+        return hash_string_min((self.property_field.hash, self.function_name, self.parameters))
+
+    def __eq__(self, other):
+        return isinstance(other, FilterFunction) and self.hash == other.hash
+
+    def __hash__(self):
+        return hash(self.hash)

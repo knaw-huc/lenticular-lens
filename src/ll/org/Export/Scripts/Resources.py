@@ -61,13 +61,18 @@ class Resource:
     @staticmethod
     def ga_resource_ttl(local_name: str):
 
+        if local_name.__contains__("\n"):
+            return local_name
+
         # IF THE LOCAL NAME IS IN A turtle or n3 FORMAT, RETURN THE LOCAL NAME
-        if isNtFormat(local_name) or (local_name.__contains__(":") and local_name.__contains__("://") is False):
+        elif isNtFormat(local_name) or (local_name.__contains__(":") and local_name.__contains__("://") is False):
             return local_name
 
         # IF LOCAL NAME IS AN IRI, RETURN IN IN AN n3 FORMAT
         elif local_name.__contains__("://"):
             return F"<{local_name}>"
+
+
 
         # IF IS IS JUST A LOCAL NAME, RETURN IT AS A GA RESOURCE IN AN n3 FORMAT.
         return F"resource:{local_name}"

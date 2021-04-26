@@ -2,13 +2,13 @@
   "EXACT": {
     "label": "Exact match",
     "description": "Aligns source and target’s IRIs whenever their respective user selected property values are identical.",
-    "threshold_range": "1",
+    "threshold_range": "{0, 1}",
     "match": "{source} = {target}"
   },
   "INTERMEDIATE": {
     "label": "Intermediate dataset",
     "description": "The method aligns the source and the target’s IRIs via an intermediate database by using properties that potentially present different descriptions of the same entity, such as country name and country code. This is possible by providing an intermediate dataset that binds the two alternative descriptions to the very same identifier.",
-    "threshold_range": "1",
+    "threshold_range": "{0, 1}",
     "match": "{source_intermediate} = {target_intermediate}"
   },
   "NUMBERS_DELTA": {
@@ -31,7 +31,12 @@
     "threshold_range": "ℕ",
     "match": "levenshtein({source}, {target}, {max_distance})",
     "similarity": "similarity({source}, {target}, levenshtein({source}, {target}, {max_distance}))",
-    "condition": "{match} <= {max_distance}"
+    "condition": "{match} <= {max_distance}",
+    "extra_properties": {
+      "max_distance": {
+        "predicate": "http://lenticularlens.org/void+/maxDistance"
+      }
+    }
   },
   "LEVENSHTEIN_NORMALIZED": {
     "label": "Levenshtein normalized",
@@ -42,15 +47,24 @@
   },
   "JARO": {
     "label": "Jaro",
+    "description": "Jaro description",
     "threshold_range": "]0, 1]",
     "similarity": "jaro({source}, {target})",
     "condition": "{similarity} >= {threshold}"
   },
   "JARO_WINKLER": {
     "label": "Jaro-Winkler",
+    "description": "Jaro-Winkler description",
     "threshold_range": "]0, 1]",
     "similarity": "jaro_winkler({source}, {target}, {prefix_weight})",
-    "condition": "{similarity} >= {threshold}"
+    "condition": "{similarity} >= {threshold}",
+    "accepts_similarity_method": false,
+    "is_similarity_method": true,
+    "extra_properties": {
+      "prefix_weight": {
+        "predicate": "http://lenticularlens.org/void+/jaroWinklerPrefixWeight"
+      }
+    }
   },
   "WORD_INTERSECTION": {
     "label": "Word Intersection",
@@ -61,6 +75,7 @@
   },
   "TRIGRAM": {
     "label": "Trigram",
+    "description": "Trigram description",
     "threshold_range": "]0, 1]",
     "match": "{source} % {target}",
     "similarity": "similarity({source}, {target})",
@@ -70,28 +85,51 @@
   "SAME_YEAR_MONTH": {
     "label": "Same Year/Month",
     "description": "An exact match of the year and/or month from the dates inputs.",
-    "threshold_range": "1",
-    "field": "get_date_part({date_part}, {property})"
+    "threshold_range": "{0, 1}",
+    "field": "get_date_part({date_part}, {property})",
+    "extra_properties": {
+      "date_part": {
+        "predicate": "http://www.w3.org/2006/time#unitType",
+        "values": {
+          "month": "http://www.w3.org/2006/time#unitMonth",
+          "year": "http://www.w3.org/2006/time#unitYear",
+          "year_month": ["http://www.w3.org/2006/time#unitYear", "http://www.w3.org/2006/time#unitMonth"]
+        }
+      }
+    }
   },
   "SOUNDEX": {
     "label": "Soundex",
     "description": "Soundex is a phonetic algorithm for indexing names by sound, as pronounced in English. The goal is for homophones to be encoded to the same representation so that they can be matched despite minor differences in spelling. The algorithm mainly encodes consonants; a vowel will not be encoded unless it is the first letter.",
-    "threshold_range": "1",
-    "field": "soundex({property}, {size})"
+    "threshold_range": "{0, 1}",
+    "field": "soundex({property}, {size})",
+    "extra_properties": {
+      "size": {
+        "predicate": "http://lenticularlens.org/void+/soundexSize"
+      }
+    }
   },
   "BLOOTHOOFT": {
     "label": "Gerrit Bloothooft",
-    "threshold_range": "1",
-    "field": "bloothooft({property}, {name_type})"
+    "description": "Gerrit Bloothooft description",
+    "threshold_range": "{0, 1}",
+    "field": "bloothooft({property}, {name_type})",
+    "extra_properties": {
+      "name_type": {
+        "predicate": "http://lenticularlens.org/void+/BloothooftNameType"
+      }
+    }
   },
   "METAPHONE": {
     "label": "Metaphone",
-    "threshold_range": "1",
+    "description": "Metaphone description",
+    "threshold_range": "{0, 1}",
     "field": "metaphone({property}, {max})"
   },
   "DMETAPHONE": {
     "label": "Double Metaphone",
-    "threshold_range": "1",
+    "description": "Double Metaphone description",
+    "threshold_range": "{0, 1}",
     "field": "dmetaphone({property})"
   }
 }

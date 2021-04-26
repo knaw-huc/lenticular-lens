@@ -1,5 +1,6 @@
 from rdflib import namespace as ns
 from ll.org.Export.Scripts.Variables import PREF_SIZE
+from ll.org.Export.Scripts.CountryCode import iso_639_1
 
 # SCRIPT OVERVIEW ######################################################################################################--
 #                                                                                                                      #
@@ -53,6 +54,9 @@ class Namespaces:
         sequence = F"{rdfs}Sequence"
         sequence_ttl = F"rdfs:Sequence"
 
+        comment = F"{rdfs}comment"
+        comment_ttl = F"rdfs:comment"
+
     class XSD:
 
         # xsd = 'http://www.w3.org/2001/XMLSchema#'
@@ -73,10 +77,10 @@ class Namespaces:
         # https://www.w3.org/ns/formats/
 
         formats = "http://www.w3.org/ns/formats/"
-        prefix = F"@prefix {'format':>{PREF_SIZE}}: <{formats}> ."
+        prefix = F"@prefix {'formats':>{PREF_SIZE}}: <{formats}> ."
 
         turtle = F"{formats}Turtle"
-        turtle_ttl = F"format:Turtle"
+        turtle_ttl = F"formats:Turtle"
 
         json_ld = F"{formats}JSON-LD"
         json_ld_ttl = "formats:JSON-LD"
@@ -222,6 +226,14 @@ class Namespaces:
         lens = F"{bdb}Lens"
         lens_ttl = "bdb:Lens"
 
+    class DC:
+
+        dc = ns.DC
+        prefix = F"@prefix {'dc':>{PREF_SIZE}}: <{dc}> ."
+
+        language = F"{dc}language"
+        language_ttl = F"dc:language"
+
     class DCterms:
 
         # dcterms = "http://purl.org/dc/terms"
@@ -248,6 +260,9 @@ class Namespaces:
 
         publisher = F"{dcterms}publisher"
         publisher_ttl = F"dcterms:publisher"
+
+        identifier = F"{dcterms}identifier"
+        identifier_ttl = F"dcterms:identifier"
 
         identifier = F"{dcterms}identifier"
         identifier_ttl = F"dcterms:identifier"
@@ -375,11 +390,15 @@ class Namespaces:
     class Time:
 
         # https://www.w3.org/TR/owl-time/#time:unitType
+
         time = "http://www.w3.org/2006/time#"
         prefix = F"@prefix {'time':>{PREF_SIZE}}: <{time}> ."
 
+        unitType = F"{time}unitType"
+        unitType_ttl = "time:unitType"
+
         day = F"{time}unitDay"
-        day_ttl = "{time}unitDay"
+        day_ttl = "time:unitDay"
 
         hour = F"{time}unitHour"
         hour_ttl = "time:unitHour"
@@ -466,3 +485,15 @@ class Namespaces:
         @staticmethod
         def get_uri_ttl(time_unit):
             return converter_ttl[time_unit.lower()]
+
+    class ISO:
+
+        prefix_code = "iso_369_1"
+        iso3166_1 = "https://id.loc.gov/vocabulary/iso639-1/"
+        prefix = F"@prefix {prefix_code:>{PREF_SIZE}}: <{iso3166_1}> ."
+
+        def get_iso369_1_uri(self, iso_369_1_code):
+            return F"{self.iso3166_1}{iso_369_1_code}" if len(iso_369_1_code) == 2 else None
+
+        def get_iso369_1_ttl_uri(self, iso_369_1_code):
+            return F"{self.prefix_code}:{iso_369_1_code}" if len(iso_369_1_code) == 2 else None

@@ -4,13 +4,13 @@
 #                                                                                                         #
 # #########################################################################################################
 
-
+from os.path import join
 import ll.org.Export.Scripts.Variables as Vars
 from collections import defaultdict
 import ll.org.Export.Scripts.General as Grl
 from csv import reader as csv_reader
 from ll.org.Export.Scripts.Specs2Metadata import uri2ttl, reconstructTurtle, preVal, unboxingLinksetSpecs, linksetNamespaces
-from ll.org.Export.Scripts.Namespaces import Namespaces as LLns
+from ll.org.Export.Scripts.VoidPlus import VoidPlus
 from rdflib import URIRef, Literal
 from ll.org.Export.Scripts.Resources import Resource as Rsc
 from datetime import timedelta
@@ -18,9 +18,9 @@ from time import time
 from os import remove as remove_file
 
 CSV_HEADERS = {
-    "Valid": LLns.link_validation_tt,
-    "Max Strength": LLns.strength_ttl,
-    "Cluster ID": LLns.cluster_ID_ttl
+    "Valid": VoidPlus.link_validation_tt,
+    "Strength": VoidPlus.strength_ttl,
+    "Cluster ID": VoidPlus.cluster_ID_ttl
 }
 
 
@@ -39,7 +39,8 @@ def csv2RDFStarLinkset(csv_linkset_file: str, link_type: str, auto_prefixes: dic
         with open(csv_linkset_file, "r") as csv_file:
 
             # Dissect the link-type for prefix - namespace - name and turtle
-            predicate_data = uri2ttl(reconstructTurtle(link_type, auto_prefixes=auto_prefixes), auto_prefixes=auto_prefixes)
+            predicate_data = uri2ttl(
+                reconstructTurtle(link_type, auto_prefixes=auto_prefixes), auto_prefixes=auto_prefixes)
 
             for count, row in enumerate(csv_reader(csv_file)):
 
@@ -49,7 +50,8 @@ def csv2RDFStarLinkset(csv_linkset_file: str, link_type: str, auto_prefixes: dic
                     if count > 0:
 
                         # GET THE SOURCE AND TARGET URIS
-                        src_data, trg_data = uri2ttl(uri=row[0], auto_prefixes=auto_prefixes), uri2ttl(row[1], auto_prefixes)
+                        src_data, trg_data = uri2ttl(
+                            uri=row[0], auto_prefixes=auto_prefixes), uri2ttl(row[1], auto_prefixes)
 
                         # GENERATION OF THE LINK
                         if src_data and trg_data and src_data[3] is not None and trg_data[3] is not None:
@@ -134,6 +136,7 @@ def csv2Linkset(csv_linkset_file: str, link_type: str, auto_prefixes: dict):
                                 writer.write(F"\t\t{predicate:{Vars.PRED_SIZE}}"
                                              F" {Literal(row[index]).n3() if not Grl.isDecimalLike(row[index]) else round(float(row[index]), 5)} {end}\n")
 
+                    # THE MAPPING OF GHE CSV HEADERS TO VOIDPLUS RDF PREDICATES
                     else:
 
                         # THE CSV HEADER
@@ -161,6 +164,7 @@ def linkset(specs: dict, save_in: str, csv_linkset_file: str, rdfStarReification
     :param save_in            : The folder in which tio save turtle file.
     :param rdfStarReification : Annotation follows the SDFStat protocol if set to YES otherwise it follows the original
                                 standard
+    :param prefixes           : A disctionary of namespaces followed by the prefix
 
     :param specs              :
 
@@ -231,8 +235,12 @@ def linkset(specs: dict, save_in: str, csv_linkset_file: str, rdfStarReification
     """
 
     linkset_specs = specs[Vars.linksetSpecs]
+    job_id = linkset_specs[Vars.job_id]
     link_type = linkset_specs[Vars.linkType]
+    name = Grl.prep4Iri(linkset_specs[Vars.id])
     auto_prefixes = defaultdict(str) if prefixes is None else prefixes
+    start, resource, length = time(), Rsc(), 50
+    my_ttl = join(save_in, F"DocumentedLinks-job_{job_id}-id_{name}.trig")
 
     # Shared prefixes to remove from the set of automated prefixes
     shared = [
@@ -248,12 +256,6 @@ def linkset(specs: dict, save_in: str, csv_linkset_file: str, rdfStarReification
             del auto_prefixes[key]
 
     print(F"\nLINKSET AT POSITION [{specs['linksetSpecs']['id']}] CREATION {Grl.fileSize(csv_linkset_file)}\n{'-' * 70}")
-    start = time()
-    resource = Rsc()
-    length = 50
-    algorithms = set()
-    # The linkset's name
-    name = Grl.prep4Iri(linkset_specs[Vars.id])
     print(F"\t{F'1. Creating Linkset {name}':{length}} {str(timedelta(seconds=time() - start))}")
     print(F"\t\tDescription : {linkset_specs['label']}")
 
@@ -265,15 +267,13 @@ def linkset(specs: dict, save_in: str, csv_linkset_file: str, rdfStarReification
     methods = unboxingLinksetSpecs(specs=specs, triples=True)
 
     # Create the linkset
-    my_ttl = F"{save_in}-{name}.ttl"
     with open(my_ttl, "w") as writer:
 
         print(F"\t{'2. Generating the temporarily csv conversion':{length}} {str(timedelta(seconds=time() - start))}")
-        # temp = csv2Linkset(csv_linkset_file, link_type, auto_prefixes=auto_prefixes)
-        if rdfStarReification:
-            temp = csv2RDFStarLinkset(csv_linkset_file, link_type, auto_prefixes=auto_prefixes)
-        else:
-            temp = csv2Linkset(csv_linkset_file, link_type, auto_prefixes=auto_prefixes)
+
+        temp = csv2RDFStarLinkset(csv_linkset_file, link_type, auto_prefixes=auto_prefixes) \
+            if rdfStarReification else csv2Linkset(csv_linkset_file, link_type, auto_prefixes=auto_prefixes)
+
         writer.write(linksetNamespaces(auto_prefixes))
         writer.write(methods)
         writer.write(linkset_header)

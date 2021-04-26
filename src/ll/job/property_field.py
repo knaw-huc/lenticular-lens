@@ -1,8 +1,10 @@
 from psycopg2 import sql as psycopg2_sql
+from rdflib import URIRef
 
 from ll.util.hasher import hash_string_min, column_name_hash
 from ll.util.helpers import get_string_from_sql, n3_pred_val
 
+from ll.namespaces.void_plus import VoidPlus
 from ll.namespaces.shared_ontologies import Namespaces as NS
 
 
@@ -70,41 +72,57 @@ class PropertyField:
     def prefix_mappings(self):
         property_prefix_mappings = {}
         for prop_in_path in self._intermediate_property_path:
-            if prop_in_path['prefix'] not in property_prefix_mappings:
-                property_prefix_mappings[prop_in_path['prefix']] = prop_in_path['prefix_uri']
+            prop = prop_in_path['property']
 
-            if prop_in_path['columns']['prefix'] not in property_prefix_mappings:
-                property_prefix_mappings[prop_in_path['columns']['prefix']] = prop_in_path['columns']['prefixUri']
+            prefix = prop_in_path['from_collection'].columns[prop]['prefix']
+            if prefix and prefix not in property_prefix_mappings:
+                property_prefix_mappings[prefix] = prop_in_path['from_collection'].columns[prop]['prefixUri']
 
-        collection_prefix_info = self._collection.prefix_info
-        if collection_prefix_info[0] not in property_prefix_mappings:
-            property_prefix_mappings[collection_prefix_info[0]] = collection_prefix_info[1]
+            prefix, prefix_uri = prop_in_path['to_collection'].prefix_info
+            if prefix and prefix not in property_prefix_mappings:
+                property_prefix_mappings[prefix] = prefix_uri
 
-        if self._collection.columns[self.prop_label]['prefix'] not in property_prefix_mappings:
-            property_prefix_mappings[self._collection.columns[self.prop_label]['prefix']] \
-                = self._collection.columns[self.prop_label]['prefixUri']
+        prefix = self._property_collection.columns[self.prop_label]['prefix'] if self.prop_label != 'uri' else None
+        if prefix and prefix not in property_prefix_mappings:
+            property_prefix_mappings[prefix] = self._property_collection.columns[self.prop_label]['prefixUri']
+
+        prefix, prefix_uri = self._property_collection.prefix_info
+        if prefix and prefix not in property_prefix_mappings:
+            property_prefix_mappings[prefix] = prefix_uri
 
         return property_prefix_mappings
 
-    def n3(self, end=False):
+    def n3(self, ns_manager, end=False, line=True):
         if len(self._data) == 1:
-            return n3_pred_val(NS.VoID.property_ttl, self._collection.columns[self.prop_label]['shortenedUri'], end)
+            property = self._collection.columns[self.prop_label]['uri'] \
+                if self.prop_label != 'uri' else f'{VoidPlus.resource}uri'
+            return n3_pred_val(NS.VoID.property_ttl, URIRef(property).n3(ns_manager), end=end, line=line)
 
-        seq = f"\t\t{n3_pred_val('a', NS.RDFS.sequence_ttl)}"
-        for item in self._intermediate_property_path:
-            seq += f"\t\t\trdf:_li{40} {item['columns']['shortenedUri']}\n"
-            seq += f"\t\t\trdf:_li{40} {item['collection_shortened_uri']}\n"
-        seq += f"\t\t\trdf:_li{40} {self._collection.columns[self.prop_label]['shortenedUri']} ;\n"
+        tab = '    '
+        new_line = '\n' if line else ''
 
-        return f"\t{NS.VoID.property_ttl}\n\t\t[\n{seq}\t\t]"
+        urirefs = []
+        for prop_in_path in self._intermediate_property_path:
+            urirefs.append(URIRef(prop_in_path['from_collection']
+                                  .columns[prop_in_path['property']]['uri']
+                                  if prop_in_path['property'] != 'uri' else f'{VoidPlus.resource}uri').n3(ns_manager))
+            urirefs.append(URIRef(prop_in_path['to_collection'].table_data['collection_uri']).n3(ns_manager))
+
+        urirefs.append(URIRef(self._property_collection.columns[self.prop_label]['uri']
+                              if self.prop_label != 'uri' else f'{VoidPlus.resource}uri').n3(ns_manager))
+
+        seq = f"{n3_pred_val('a', NS.RDFS.sequence_ttl, tabs=3)}"
+        for idx, uriref in enumerate(urirefs):
+            seq += f"{tab * 3}{f'rdf:_{idx + 1}':{47}} {uriref} {';' if idx + 1 < len(urirefs) else ''}\n"
+
+        return f"{tab}{NS.VoID.property_ttl}\n{tab * 2}[\n{seq}{tab * 2}] {'.' if end else ';'}{new_line}"
 
     def add_joins(self, joins):
         cur_resource = self._alias
-        cur_columns = self._collection.columns
         for prop_in_path in self._intermediate_property_path:
-            next_table_name = prop_in_path['table_name']
+            next_table_name = prop_in_path['to_collection'].table_name
             next_resource = prop_in_path['alias']
-            is_list = cur_columns[prop_in_path['property']]['isList']
+            is_list = prop_in_path['from_collection'].columns[prop_in_path['property']]['isList']
 
             if is_list:
                 extended_prop_alias = self.get_extended_property_alias(cur_resource, prop_in_path['property'])
@@ -127,7 +145,6 @@ class PropertyField:
             ), next_resource)
 
             cur_resource = next_resource
-            cur_columns = prop_in_path['columns']
 
         if self.is_list:
             joins.add_join(psycopg2_sql.SQL(
@@ -141,15 +158,15 @@ class PropertyField:
 
     @property
     def collections_required(self):
-        return set([prop_in_path['table_info']['collection_id'] for prop_in_path in self._prop_path])
+        return set([prop_in_path['to_collection'].collection_id for prop_in_path in self._prop_path])
 
     @property
     def is_downloaded(self):
-        if self._collection.rows_downloaded > -1:
+        if not self._collection.is_downloaded:
             return False
 
         for prop_in_path in self._intermediate_property_path:
-            if not prop_in_path['downloaded']:
+            if not prop_in_path['to_collection'].is_downloaded:
                 return False
 
         return True
@@ -161,41 +178,31 @@ class PropertyField:
         return self._hash
 
     @property
+    def _property_collection(self):
+        if not self._intermediate_property_path:
+            return self._collection
+
+        return self._intermediate_property_path[-1]['to_collection']
+
+    @property
     def _intermediate_property_path(self):
         if not self._prop_path:
             self._prop_path = []
             path = ''
 
+            prev_collection = self._collection
             for (prop, collection_id) in [(self._data[i], self._data[i + 1]) for i in range(0, len(self._data) - 2, 2)]:
-                table_data = None
-                downloaded = False
-                if collection_id in self._collection.dataset_table_data:
-                    table_data = self._collection.dataset_table_data[collection_id]
-                    downloaded = table_data['update_finish_time'] \
-                                 and table_data['update_finish_time'] >= table_data['update_start_time']
-                    path += table_data['table_name']
-
-                uri = table_data['collection_uri'] if table_data else None
-                short_uri = table_data['collection_shortened_uri'] if table_data else None
-
-                prefix = short_uri[:short_uri.index(':')] \
-                    if uri and short_uri and uri != short_uri and ':' in short_uri else None
-                prefix_uri = table_data['prefix_mappings'][prefix] \
-                    if prefix and prefix in table_data['prefix_mappings'] else None
-
-                property = column_name_hash(prop)
+                collection = prev_collection.get_collection_by_id(collection_id)
+                path += collection.table_name
 
                 self._prop_path.append({
-                    'table_name': table_data['table_name'] if table_data else None,
-                    'collection_uri': uri,
-                    'collection_shortened_uri': short_uri,
-                    'prefix': prefix,
-                    'prefix_uri': prefix_uri,
-                    'columns': table_data['columns'] if table_data else None,
+                    'from_collection': prev_collection,
+                    'to_collection': collection,
                     'alias': hash_string_min(path),
-                    'property': property,
-                    'downloaded': downloaded
+                    'property': column_name_hash(prop)
                 })
+
+                prev_collection = collection
 
         return self._prop_path
 

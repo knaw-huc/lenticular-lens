@@ -11,15 +11,19 @@ from anytree import Node, RenderTree, DoubleStyle, PostOrderIter
 
 from ll.job.validation import Validation
 
-from ll.namespaces.ll_namespace import LLNamespace as LL
+from ll.namespaces.void_plus import VoidPlus
 from ll.namespaces.shared_ontologies import Namespaces as NS
 
 from ll.util.hasher import hash_string_min
-from ll.util.helpers import n3_pred_val, get_json_from_file, get_id_of_uri
+from ll.util.stopwords import get_stopwords, get_iso_639_1_code
+from ll.util.helpers import n3_pred_val, get_json_from_file, flatten
 
 
 class Export:
+    _logic_ops_info = get_json_from_file('logic_ops.json')
     _matching_methods_info = get_json_from_file('matching_methods.json')
+    _validation_states_info = get_json_from_file('validation_states.json')
+
     _predefined_metadata_prefix_mappings = {
         NS.RDF.prefix: str(NS.RDF.rdf),
         NS.RDFS.prefix: str(NS.RDFS.rdfs),
@@ -28,9 +32,13 @@ class Export:
         NS.Formats.prefix: str(NS.Formats.formats),
         NS.CC.prefix: str(NS.CC.cc),
         NS.XSD.prefix: str(NS.XSD.xsd),
+        VoidPlus.ontology_prefix: VoidPlus.ontology,
+        VoidPlus.resource_prefix: VoidPlus.resource,
+        VoidPlus.linkset_prefix: VoidPlus.linkset
     }
     _predefined_export_only_prefix_mappings = {
-        NS.RDF.prefix: str(NS.RDF.rdf)
+        NS.RDF.prefix: str(NS.RDF.rdf),
+        VoidPlus.ontology_prefix_ttl: VoidPlus.ontology
     }
 
     def __init__(self, job, type, id):
@@ -50,16 +58,34 @@ class Export:
             [matching_method for linkset in self._linksets for matching_method in linkset.matching_methods]
 
         self._filter_props = {property for ets in self._entity_type_selections for property in ets.filter_properties}
-        self._matching_methods_source_props = {prop.prop_original
+        self._matching_methods_source_props = {(ets, prop)
                                                for matching_method in self._matching_methods
                                                for ets, props_ets in matching_method.sources.items()
                                                for prop in props_ets}
-        self._matching_methods_target_props = {prop.prop_original
+        self._matching_methods_target_props = {(ets, prop)
                                                for matching_method in self._matching_methods
                                                for ets, props_ets in matching_method.targets.items()
                                                for prop in props_ets}
-        self._matching_methods_props = self._matching_methods_source_props.union(self._matching_methods_target_props)
-        self._all_props = self._filter_props.union(self._matching_methods_props)
+        self._matching_methods_intermediate_source_props = \
+            {(ets, prop)
+             for matching_method in self._matching_methods
+             for ets, props_ets in matching_method.intermediates.items()
+             for prop in props_ets['source']
+             if matching_method.is_intermediate}
+        self._matching_methods_intermediate_target_props = \
+            {(ets, prop)
+             for matching_method in self._matching_methods
+             for ets, props_ets in matching_method.intermediates.items()
+             for prop in props_ets['target']
+             if matching_method.is_intermediate}
+        self._matching_methods_props = self._matching_methods_source_props \
+            .union(self._matching_methods_target_props) \
+            .union(self._matching_methods_intermediate_source_props) \
+            .union(self._matching_methods_intermediate_target_props)
+        self._all_props = self._filter_props.union({prop.prop_original for ets, prop in self._matching_methods_props})
+        self._all_transformers = flatten(
+            [mm.transformers('sources') + mm.transformers('targets') for mm in self._matching_methods] +
+            [prop.property_transformers for ets_id, prop in self._matching_methods_props])
 
     def csv_export_generator(self, validation_filter=Validation.ALL):
         buffer = io.StringIO()
@@ -85,8 +111,8 @@ class Export:
         yield buffer.getvalue()
 
     def rdf_export_generator(self, link_pred_namespace, link_pred_shortname,
-                             export_metadata=True, export_link_metadata=True, export_linkset=True,
-                             rdf_star=False, use_graphs=True, creator=None, publisher=None,
+                             export_metadata=True, export_linkset=True,
+                             reification='none', use_graphs=True, creator=None, publisher=None,
                              validation_filter=Validation.ALL):
         def rdf_namespaces_export():
             buffer = io.StringIO()
@@ -102,14 +128,14 @@ class Export:
                         {NS.CC.prefix_ttl}
                         {NS.XSD.prefix_ttl}
 
-                        {LL.ontology_prefix}
-                        {LL.resource_prefix}
-                        {LL.linkset_prefix}
+                        {VoidPlus.ontology_prefix_ttl}
+                        {VoidPlus.resource_prefix_ttl}
+                        {VoidPlus.linkset_prefix_ttl}
                 """) + '\n\n')
             else:
                 buffer.write(cleandoc(F"""
                         {NS.RDF.prefix_ttl}
-                        {LL.ontology_prefix}
+                        {VoidPlus.ontology_prefix_ttl}
                 """) + '\n\n')
 
             for prefix, uri in prefix_mappings.items():
@@ -127,14 +153,14 @@ class Export:
         link_pred = link_pred_shortname.split(':')
         predefined_prefix_mappings = self._get_predefined_prefix_mappings(export_metadata)
         prefix_mappings = self._determine_prefix_mappings(link_pred[0], link_pred_namespace,
-                                                          export_metadata, export_link_metadata, export_linkset)
+                                                          export_metadata, export_linkset)
 
         if export_linkset:
             links_iter = self._job.get_links(self._id, self._type, validation_filter=validation_filter)
             return itertools.chain(
                 namespaces_metadata_generator(),
-                self._rdf_linkset_export_generator(links_iter, link_pred_shortname, prefix_mappings,
-                                                   export_link_metadata, rdf_star, use_graphs))
+                self._rdf_linkset_export_generator(links_iter, link_pred_namespace + link_pred[1], prefix_mappings,
+                                                   reification, use_graphs))
 
         return namespaces_metadata_generator()
 
@@ -142,19 +168,31 @@ class Export:
         return self._predefined_metadata_prefix_mappings.copy() \
             if export_metadata else self._predefined_export_only_prefix_mappings.copy()
 
-    def _determine_prefix_mappings(self, link_pred_prefix, link_pred_uri,
-                                   export_metadata, export_link_metadata, export_linkset):
+    def _determine_prefix_mappings(self, link_pred_prefix, link_pred_uri, export_metadata, export_linkset):
         predefined_prefix_mappings = self._get_predefined_prefix_mappings(export_metadata)
 
         if export_metadata:
             for property in self._all_props:
                 predefined_prefix_mappings = {**predefined_prefix_mappings, **property.prefix_mappings}
 
-        if export_link_metadata:
+            # TODO: Better handling of matching method property value namespaces
+            for method_info in flatten([[mm.method_info, mm.method_sim_info] for mm in self._matching_methods]):
+                for prop_key in method_info.get('extra_properties', {}).keys():
+                    predicate = method_info['extra_properties'][prop_key]['predicate']
+                    if 'http://www.w3.org/2006/time#' in predicate and 'time' not in predefined_prefix_mappings:
+                        predefined_prefix_mappings['time'] = 'http://www.w3.org/2006/time#'
+
+            for transformer in self._all_transformers:
+                if transformer['name'] == 'STOPWORDS':
+                    if NS.DC.prefix not in predefined_prefix_mappings:
+                        predefined_prefix_mappings[NS.DC.prefix] = NS.DC.dc
+                    if NS.ISO.prefix not in predefined_prefix_mappings:
+                        predefined_prefix_mappings[NS.ISO.prefix] = NS.ISO.iso
+
+        if export_linkset:
             if link_pred_prefix not in predefined_prefix_mappings:
                 predefined_prefix_mappings[link_pred_prefix] = link_pred_uri
 
-        if export_linkset:
             for ets in self._entity_type_selections:
                 predefined_prefix_mappings = {**predefined_prefix_mappings, **ets.collection.uri_prefix_mappings}
 
@@ -165,38 +203,42 @@ class Export:
             liner = "\n"
             return F"{liner * 2}{'#' * 80:^110}\n{' ' * 15}#{x:^78}#\n{'#' * 80:^110}{liner * 3}"
 
-        def expression_generator(post_order):
-            def r_expression_generator(post_order):
-                temporary = []
-                new = []
-
+        def expression(root):
+            def expression_generator(post_order):
+                temporary, new = [], []
                 for item in post_order:
-                    if item.lower() not in ['and', 'or']:
+                    if item.strip() \
+                            and not item.strip().lower().startswith("and") \
+                            and not item.strip().lower().startswith("or"):
                         temporary.append(item)
                     elif len(temporary) > 1:
-                        new.append(F'( {F" {item.upper()} ".join(temporary)} )')
+                        new.append(F'({F" {item} ".join(temporary)})')
                         temporary.clear()
                     elif len(temporary) == 1:
-                        new = [F'( {F" {item.upper()} ".join(new + temporary)} )']
+                        new = [F'({F" {item} ".join(new + temporary)})']
                         temporary.clear()
                     else:
                         new.append(item)
 
                 if len(new) > 1:
-                    new = r_expression_generator(new)
+                    new = expression_generator(new)
 
-                return new
+                return new if new else post_order
 
-            return r_expression_generator(post_order)[0]
+            return expression_generator([node.name for node in PostOrderIter(root)])[0]
+
+        def tree(root):
+            return F'\n    '.join([F"    %s%s" % (pre, node.name)
+                                   for i, (pre, fill, node) in enumerate(RenderTree(root, style=DoubleStyle))])
 
         def generic_metadata():
             buffer.write(header('GENERIC METADATA'))
 
-            for linkset in self._linksets:
-                buffer.write(F"linkset:{linkset.id}\n")
-                buffer.write(n3_pred_val('a', LL.Linkset_ttl))
+            for idx, linkset in enumerate(self._linksets):
+                buffer.write(F"linkset:{self._job.job_id}-{linkset.id}\n")
+                buffer.write(n3_pred_val('a', VoidPlus.Linkset_ttl))
 
-                buffer.write(n3_pred_val(NS.VoID.feature_ttl, NS.Formats.turtle_ttl))
+                buffer.write(n3_pred_val(NS.VoID.feature_ttl, F"{NS.Formats.turtle_ttl}, {NS.Formats.triG_ttl}"))
                 buffer.write(n3_pred_val(NS.CC.attributionName_ttl, Literal('Lenticular Lens', 'en').n3(ns_manager)))
                 buffer.write(n3_pred_val(NS.CC.license_ttl,
                                          URIRef('http://purl.org/NET/rdflicense/W3C1.0').n3(ns_manager)))
@@ -227,223 +269,459 @@ class Export:
                                              self._stats[linkset.id]['distinct_linkset_targets_count']))
 
                 if self._clusterings[linkset.id].get('clusters_count', -1) > -1:
-                    buffer.write(n3_pred_val(LL.cluster_ttl, self._clusterings[linkset.id]['clusters_count']))
+                    buffer.write(n3_pred_val(VoidPlus.cluster_ttl, self._clusterings[linkset.id]['clusters_count']))
 
                 validations = self._totals[linkset.id].get('accepted', 0) + self._totals[linkset.id].get('rejected', 0)
-                buffer.write(n3_pred_val(LL.validations_tt, validations))
+                buffer.write(n3_pred_val(VoidPlus.validations_tt, validations))
 
                 remains = self._totals[linkset.id].get('not_validated', 0)
-                buffer.write(n3_pred_val(LL.remains_ttl, remains))
+                buffer.write(n3_pred_val(VoidPlus.remains_ttl, remains))
 
                 contradictions = self._totals[linkset.id].get('mixed', 0)
-                buffer.write(n3_pred_val(LL.contradictions_tt, contradictions))
+                buffer.write(n3_pred_val(VoidPlus.contradictions_tt, contradictions))
 
                 buffer.write("\n")
-                buffer.write("".join(n3_pred_val(LL.subTarget_ttl, F"resource:ResourceSelection-{selection.id}")
+                buffer.write("".join(n3_pred_val(VoidPlus.subTarget_ttl,
+                                                 F"resource:ResourceSelection-{self._job.job_id}-{selection.id}")
                                      for selection in linkset.sources))
-                buffer.write("".join(n3_pred_val(LL.subTarget_ttl, F"resource:ResourceSelection-{selection.id}")
+                buffer.write("".join(n3_pred_val(VoidPlus.objTarget_ttl,
+                                                 F"resource:ResourceSelection-{self._job.job_id}-{selection.id}")
                                      for selection in linkset.targets))
 
                 buffer.write("\n")
-                buffer.write(n3_pred_val(LL.formulation_ttl, F"resource:LogicFormulation-{linkset.id}", end=True))
+                buffer.write(n3_pred_val(VoidPlus.formulation_ttl,
+                                         F"resource:LinksetFormulation-{self._job.job_id}-{linkset.id}", end=True))
+
+                if idx + 1 < len(self._linksets):
+                    buffer.write("\n")
+
+        def linkset_logic():
+            def write_node(children_nodes, operator, fuzzy, threshold):
+                logic_ops_info = self._logic_ops_info[fuzzy]
+                fuzzy_txt = F"{logic_ops_info['label']} ({logic_ops_info['short']})"
+
+                threshold_txt = (F"[with sim ≥ {threshold}]" if threshold < 1 else F"[with sim = 1]") \
+                    if threshold > 0 else ''
+
+                return Node(F"{operator} [{fuzzy_txt}] {threshold_txt}".strip(), children=children_nodes)
+
+            buffer.write(header("LINKSET LOGIC EXPRESSION"))
+
+            for idx, linkset in enumerate(self._linksets):
+                root = linkset.with_matching_methods_recursive(
+                    write_node,
+                    lambda matching_method: Node(F"resource:{matching_method.method_name}-{matching_method.field_name}")
+                )
+
+                buffer.write(F"resource:LinksetFormulation-{self._job.job_id}-{linkset.id}\n")
+                buffer.write(n3_pred_val('a', VoidPlus.LogicFormulation_ttl))
+
+                for matching_method in linkset.matching_methods:
+                    buffer.write(n3_pred_val(VoidPlus.part_ttl,
+                                             F"resource:{matching_method.method_name}-{matching_method.field_name}"))
+                buffer.write("\n")
+
+                buffer.write(n3_pred_val(VoidPlus.formulaDescription_ttl, Literal(expression(root)).n3(ns_manager)))
+                buffer.write("\n")
+
+                buffer.write(n3_pred_val(VoidPlus.formulaTree_ttl,
+                                         Literal(F"\n\t{tree(root)}\n\t").n3(ns_manager), end=True))
+
+                if idx + 1 < len(self._linksets):
+                    buffer.write("\n")
 
         def resource_selections():
             buffer.write(F"{header('RESOURCE SELECTIONS')}")
 
-            for selection in self._entity_type_selections:
+            for idx, selection in enumerate(sorted(self._entity_type_selections, key=lambda ets: ets.id)):
                 root = selection.with_filters_recursive(
                     lambda children_nodes, type: Node(type, children=children_nodes),
-                    lambda filter_func: Node(F"resource:PropertyPartition-{filter_func.property_field.hash}")
+                    lambda filter_func: Node(F"resource:PropertyPartition-{filter_func.hash}")
                 )
 
-                buffer.write(F"resource:{selection.id}\n")
-                buffer.write(n3_pred_val('a', F"{NS.VoID.dataset_ttl}, {LL.EntitySelection_ttl}"))
+                buffer.write(F"resource:ResourceSelection-{self._job.job_id}-{selection.id}\n")
+                buffer.write(n3_pred_val('a', F"{NS.VoID.dataset_ttl}, {VoidPlus.EntitySelection_ttl}"))
 
                 buffer.write(n3_pred_val(NS.RDFS.label_ttl, Literal(selection.label).n3(ns_manager)))
-                if len(selection.description) > 0:
+                if selection.description:
                     buffer.write(n3_pred_val(NS.DCterms.description_ttl, Literal(selection.description).n3(ns_manager)))
 
-                buffer.write(n3_pred_val(LL.subset_of_ttl, F"resource:{selection.dataset_id}"))
-                buffer.write(n3_pred_val(NS.DCterms.identifier_ttl, selection.collection.table_data['dataset_name']))
-                buffer.write(
-                    n3_pred_val(LL.hasFormulation_ttl, F"resource:PartitionFormulation-{selection.id}", end=True))
+                buffer.write(n3_pred_val(VoidPlus.subset_of_ttl, F"resource:{selection.dataset_id}"))
+                buffer.write(n3_pred_val(NS.DCterms.identifier_ttl,
+                                         Literal(selection.collection.table_data['dataset_name']).n3(ns_manager)))
+                buffer.write(n3_pred_val(VoidPlus.hasFormulation_ttl,
+                                         F"resource:SelectionFormulation-{self._job.job_id}-{selection.id}", end=True))
 
-                buffer.write(F"\nresource:ClassPartition-{selection.id}\n")
-                buffer.write(n3_pred_val('a', F"{LL.ClassPartition_ttl}"))
+                buffer.write(F"\nresource:ClassPartition-{self._job.job_id}-{selection.id}\n")
+                buffer.write(n3_pred_val('a', F"{VoidPlus.ClassPartition_ttl}"))
                 buffer.write(n3_pred_val(NS.VoID.voidClass_ttl,
-                                         selection.collection.table_data['collection_shortened_uri'], end=True))
+                                         URIRef(selection.collection.table_data['collection_uri']).n3(ns_manager),
+                                         end=True))
 
-                buffer.write(F"\nresource:PartitionFormulation-{selection.id}\n")
-                buffer.write(n3_pred_val('a', F"{LL.PartitionFormulation_ttl}"))
-                buffer.write(n3_pred_val(LL.hasItem_ttl, F"resource:ClassPartition-{selection.id}",
+                buffer.write(F"\nresource:SelectionFormulation-{self._job.job_id}-{selection.id}\n")
+                buffer.write(n3_pred_val('a', F"{VoidPlus.PartitionFormulation_ttl}"))
+                buffer.write(n3_pred_val(VoidPlus.hasItem_ttl,
+                                         F"resource:ClassPartition-{self._job.job_id}-{selection.id}",
                                          end=(not selection.filter_properties)))
 
+                if not selection.filter_properties:
+                    buffer.write("\n")
+
                 for filter in selection.filters:
-                    buffer.write(
-                        n3_pred_val(LL.hasItem_ttl, F"resource:PropertyPartition-{filter.property_field.hash}"))
+                    buffer.write(n3_pred_val(VoidPlus.hasItem_ttl, F"resource:PropertyPartition-{filter.hash}"))
 
                 if root:
-                    expression = expression_generator(node.name for node in PostOrderIter(root))
-
-                    buffer.write("\n")
-                    buffer.write(n3_pred_val(LL.formulaDescription_ttl,
-                                             Literal(F"resource:ClassPartition-{selection.id} AND {expression}").n3(
-                                                 ns_manager)))
-
                     root.parent = Node("AND")
                     Node(F"resource:ClassPartition-{selection.id}", parent=root.parent)
 
-                    f_tree = '\n\t'.join("%s%s" % (pre, node.name)
-                                         for pre, fill, node in RenderTree(root.parent, style=DoubleStyle))
+                    buffer.write("\n")
+                    buffer.write(n3_pred_val(VoidPlus.formulaDescription_ttl,
+                                             Literal(expression(root.parent)).n3(ns_manager)))
 
                     buffer.write("\n")
-                    buffer.write(n3_pred_val(LL.formulaTree_ttl, Literal(F"\n\t{f_tree}").n3(ns_manager), end=True))
+                    buffer.write(n3_pred_val(VoidPlus.formulaTree_ttl,
+                                             Literal(F"\n\t{tree(root.parent)}\n\t").n3(ns_manager), end=True))
 
                 for filter in selection.filters:
-                    buffer.write(F"resource:PropertyPartition-{filter.property_field.hash}\n\n")
-                    buffer.write(n3_pred_val('a', F"{LL.PropertyPartition_ttl}"))
-                    buffer.write(filter.property_field.n3)
+                    buffer.write(F"\nresource:PropertyPartition-{filter.hash}\n")
+                    buffer.write(n3_pred_val('a', F"{VoidPlus.PropertyPartition_ttl}"))
+                    buffer.write(filter.property_field.n3(ns_manager))
 
-                    buffer.write(n3_pred_val(LL.filterFunction_ttl, Literal(filter.function_name).n3(ns_manager)))
+                    buffer.write(n3_pred_val(VoidPlus.filterFunction_ttl, Literal(filter.function_name).n3(ns_manager),
+                                             end=(not filter.value)))
                     if filter.value:
                         buffer.write(n3_pred_val(
-                            LL.filterValue_ttl, Literal(filter.value).n3(ns_manager)
-                            if type(filter.value) == 'str' else filter.value))
+                            VoidPlus.filterValue_ttl, Literal(filter.value).n3(ns_manager),
+                            end=('format' not in filter.parameters)))
+                    if 'format' in filter.parameters:
+                        buffer.write(n3_pred_val(VoidPlus.filterFormat_ttl,
+                                                 Literal(filter.parameters['format']).n3(ns_manager), end=True))
 
-        def linkset_logic():
-            buffer.write(header("LINKSET LOGIC EXPRESSIONS"))
-
-            for linkset in self._linksets:
-                root = linkset.with_matching_methods_recursive(
-                    lambda children_nodes, operator, fuzzy, threshold: Node(operator, children=children_nodes),
-                    lambda matching_method: Node(F"resource:MatchingMethod-{matching_method.field_name}")
-                )
-
-                buffer.write(F"resource:LogicFormulation-{linkset.id}\n")
-                buffer.write(n3_pred_val('a', LL.LogicFormulation_ttl))
-
-                for matching_method in linkset.matching_methods:
-                    buffer.write(n3_pred_val(LL.part_ttl, F"resource:MatchingMethod-{matching_method.field_name}"))
-
-                buffer.write("\n")
-                expression = expression_generator(node.name for node in PostOrderIter(root))
-                buffer.write(n3_pred_val(LL.formulaDescription_ttl, Literal(expression).n3(ns_manager)))
-                buffer.write("\n")
-
-                f_tree = '\n\t'.join("%s%s" % (pre, node.name)
-                                     for pre, fill, node in RenderTree(root, style=DoubleStyle))
-                buffer.write(n3_pred_val(LL.formulaTree_ttl, Literal(F"\n\t{f_tree}").n3(ns_manager), end=True))
+                if idx + 1 < len(self._entity_type_selections):
+                    buffer.write("\n")
 
         def methods_signatures():
+            def write_algorithm(method_config, method_info, tabs=1):
+                if method_info['threshold_range'] == ']0, 1]':
+                    buffer.write(n3_pred_val(VoidPlus.simThreshold_ttl,
+                                             Literal(method_config['threshold']).n3(ns_manager), tabs=tabs))
+                buffer.write(n3_pred_val(VoidPlus.thresholdRange_ttl,
+                                         Literal(method_info['threshold_range']).n3(ns_manager), tabs=tabs))
+
+                for prop_key in method_info.get('extra_properties', {}).keys():
+                    predicate = method_info['extra_properties'][prop_key]['predicate']
+
+                    value = method_config[prop_key]
+                    if 'values' in method_info['extra_properties'][prop_key]:
+                        value = method_info['extra_properties'][prop_key]['values'][value]
+
+                    # TODO: Better uri and namespace handling
+                    if isinstance(value, list):
+                        is_uri = isinstance(value[0], str) and value[0].startswith('http')
+                        buffer.write(n3_pred_val(
+                            URIRef(predicate).n3(ns_manager),
+                            ', '.join([URIRef(v).n3(ns_manager)
+                                       if is_uri else Literal(v).n3(ns_manager) for v in value]),
+                            tabs=tabs))
+                    else:
+                        is_uri = isinstance(value, str) and value.startswith('http')
+                        buffer.write(n3_pred_val(
+                            URIRef(predicate).n3(ns_manager),
+                            URIRef(value).n3(ns_manager) if is_uri else Literal(value).n3(ns_manager),
+                            tabs=tabs))
+
             buffer.write(header('METHOD SIGNATURES'))
 
-            for matching_method in self._matching_methods:
-                buffer.write(F"resource:MatchingMethod-{matching_method.field_name}\n")
-                buffer.write(n3_pred_val('a', LL.MatchingMethod_ttl))
+            has_list_matching_absolute, has_list_matching_relative = False, False
+            for idx, matching_method in enumerate(self._matching_methods):
+                buffer.write(F"resource:{matching_method.method_name}-{matching_method.field_name}\n")
+                buffer.write(n3_pred_val('a', VoidPlus.MatchingMethod_ttl))
 
-                buffer.write(n3_pred_val(LL.method_ttl,
-                                         F"resource:MatchingAlgorithm-{matching_method.method_name.lower()}"))
                 if matching_method.method_sim_name:
-                    buffer.write(n3_pred_val(LL.method_ttl,
-                                             F"resource:MatchingAlgorithm-{matching_method.method_sim_name.lower()}"))
+                    buffer.write(n3_pred_val(VoidPlus.methodSequence_ttl,
+                                             F"resource:AlgorithmSequence-{matching_method.field_name}"))
+                else:
+                    buffer.write(n3_pred_val(VoidPlus.method_ttl, F"resource:{matching_method.method_name}"))
+
+                if matching_method.threshold:
+                    buffer.write(n3_pred_val(VoidPlus.combiThreshold_ttl,
+                                             Literal(matching_method.threshold).n3(ns_manager)))
+                    buffer.write(n3_pred_val(VoidPlus.combiThresholdRange_ttl, Literal("]0, 1]").n3(ns_manager)))
+
+                if not matching_method.method_sim_name:
+                    write_algorithm(matching_method.method_config, matching_method.method_info)
+
                 buffer.write("\n")
+                if matching_method.is_list_match:
+                    if matching_method.list_is_percentage:
+                        has_list_matching_relative = True
+                    else:
+                        has_list_matching_absolute = True
 
+                    buffer.write(F"    voidPlus:hasListConfiguration\n        [\n")
+                    buffer.write(n3_pred_val(
+                        F"        voidPlus:listThreshold", Literal(matching_method.list_threshold).n3(ns_manager)))
+                    buffer.write(n3_pred_val(
+                        F"        voidPlus:appreciation", "resource:" + (
+                            "RelativeCount" if matching_method.list_is_percentage else "AbsoluteCount")))
+                    buffer.write(F"        ] ;\n")
+
+                sources = flatten(list(matching_method.sources.values()))
+                targets = flatten(list(matching_method.targets.values()))
+
+                transformers_sources = matching_method.transformers('sources')
+                transformers_targets = matching_method.transformers('targets')
+
+                sources_ref = F"resource:ResourcePartition-Sources-{matching_method.field_name}" \
+                    if len(sources) > 1 or transformers_sources else \
+                    F"resource:ResourcePartition-{sources[0].prop_original.hash}"
+                targets_ref = F"resource:ResourcePartition-Targets-{matching_method.field_name}" \
+                    if len(targets) > 1 or transformers_targets else \
+                    F"resource:ResourcePartition-{targets[0].prop_original.hash}"
+
+                buffer.write(n3_pred_val(VoidPlus.entitySelectionSubj_ttl, sources_ref))
+                buffer.write(n3_pred_val(VoidPlus.entitySelectionObj_ttl, targets_ref,
+                                         end=(not matching_method.is_intermediate)))
+
+                if matching_method.is_intermediate:
+                    props_source = {prop.prop_original for ets, props_ets in matching_method.intermediates.items()
+                                    for prop in props_ets['source']}
+                    props_target = {prop.prop_original for ets, props_ets in matching_method.intermediates.items()
+                                    for prop in props_ets['target']}
+
+                    props = props_source.union(props_target)
+                    for idx, property in enumerate(props):
+                        buffer.write(n3_pred_val(VoidPlus.intermediateEntitySelection_ttl,
+                                                 F"resource:ResourcePartition-{property.hash}",
+                                                 end=(idx + 1 == len(props))))
+
+                if matching_method.method_sim_name:
+                    buffer.write(F"\nresource:AlgorithmSequence-{matching_method.field_name}\n")
+                    buffer.write(n3_pred_val('a', NS.RDFS.sequence_ttl))
+
+                    buffer.write("\n    rdf:_1\n        [\n")
+                    buffer.write(n3_pred_val(VoidPlus.method_ttl,
+                                             F"resource:{matching_method.method_name}", tabs=3))
+                    write_algorithm(matching_method.method_config, matching_method.method_info, tabs=3)
+                    buffer.write("        ] ;\n")
+
+                    buffer.write("\n    rdf:_2\n        [\n")
+                    buffer.write(n3_pred_val(VoidPlus.method_ttl,
+                                             F"resource:{matching_method.method_sim_name}", tabs=3))
+                    buffer.write(n3_pred_val(VoidPlus.normalized_ttl,
+                                             Literal(matching_method.method_sim_normalized).n3(ns_manager), tabs=3))
+                    write_algorithm(matching_method.method_sim_config, matching_method.method_sim_info, tabs=3)
+                    buffer.write("        ] .\n")
+
+                if idx + 1 < len(self._matching_methods):
+                    buffer.write("\n")
+
+            if has_list_matching_absolute:
+                buffer.write("\nresource:AbsoluteCount\n")
+                buffer.write(n3_pred_val(
+                    NS.DCterms.description_ttl,
+                    Literal("Establishes a link between the source and target when the absolute threshold is reached.",
+                            lang='en').n3(ns_manager), end=True))
+
+            if has_list_matching_relative:
+                buffer.write("\nresource:RelativeCount\n")
+                buffer.write(n3_pred_val(
+                    NS.DCterms.description_ttl,
+                    Literal("Establishes a link when the percentage threshold is reached.", lang='en').n3(ns_manager),
+                    end=True))
+
+        def methods_predicate_selections():
+            stopwords_selected = dict()
+
+            def write_transformer(transformer, tabs=1):
+                if transformer['name'] == 'STOPWORDS':
+                    dictionary = transformer['parameters']['dictionary']
+                    additional = transformer['parameters']['additional']
+
+                    stopwords = get_stopwords(dictionary)
+                    hash = hash_string_min(stopwords)
+                    language = dictionary.split('_')[0]
+
+                    uri = F"resource:{language[0].upper()}{language[1:]}-StopwordsList-{hash}"
+                    buffer.write(n3_pred_val(VoidPlus.stopWords_ttl, uri, tabs=tabs))
+                    stopwords_selected[uri] = (stopwords, get_iso_639_1_code(language))
+
+                    if additional:
+                        uri = F"resource:StopwordsList-{hash_string_min(additional)}"
+                        buffer.write(n3_pred_val(VoidPlus.stopWords_ttl, uri, tabs=tabs))
+                        stopwords_selected[uri] = (additional, None)
+                else:
+                    buffer.write(n3_pred_val(VoidPlus.tranformationFunction_ttl,
+                                             Literal(transformer['name']).n3(ns_manager), tabs=tabs))
+
+            buffer.write(header("METHODS'S PREDICATE SELECTIONS"))
+
+            for matching_method in self._matching_methods:
                 for is_source in (True, False):
-                    predicate_type = LL.entitySelectionSubj_ttl if is_source else LL.entitySelectionObj_ttl
-                    match_props = matching_method.sources if is_source else matching_method.targets
+                    matching_method_props = matching_method.sources if is_source else matching_method.targets
+                    transformers = matching_method.transformers('sources' if is_source else 'targets')
 
-                    props = {prop.prop_original for ets, props_ets in match_props.items() for prop in props_ets}
-                    for (idx, property) in enumerate(props):
-                        buffer.write(n3_pred_val(predicate_type, F"resource:ResourceSelection-{property.hash}",
-                                                 end=(not is_source and idx == len(props) - 1)))
+                    has_multiple_props = len(flatten(list(matching_method_props.values()))) > 1
+                    if transformers or has_multiple_props:
+                        id = F"{'Sources' if is_source else 'Targets'}-{matching_method.field_name}"
+
+                        logic_ops_info = self._logic_ops_info[matching_method.t_conorm]
+                        fuzzy_txt = F"{logic_ops_info['label']} ({logic_ops_info['short']})"
+
+                        threshold_txt = (F"[with sim ≥ {matching_method.threshold}]"
+                                         if matching_method.threshold < 1 else F"[with sim = 1]") \
+                            if matching_method.threshold > 0 else ''
+
+                        root = Node(F"OR [{fuzzy_txt}] {threshold_txt}".strip())
+
+                        buffer.write(F"resource:ResourcePartition-{id}\n")
+                        buffer.write(n3_pred_val('a', VoidPlus.EntitySelection_ttl))
+                        buffer.write(n3_pred_val(VoidPlus.hasFormulation_ttl,
+                                                 F"resource:PartitionFormulation-{id}", end=True))
+
+                        buffer.write(F"\nresource:PartitionFormulation-{id}\n")
+                        buffer.write(n3_pred_val('a', VoidPlus.PartitionFormulation_ttl))
+
+                        for transformer in transformers:
+                            write_transformer(transformer)
+
+                        for (idx, matching_method_prop) in enumerate(flatten(list(matching_method_props.values()))):
+                            property = matching_method_prop.prop_original
+                            buffer.write(n3_pred_val(VoidPlus.part_ttl, F"resource:PropertyPartition-{property.hash}",
+                                                     end=(not has_multiple_props)))
+                            Node(F"resource:PropertyPartition-{property.hash}", parent=root)
+
+                        if has_multiple_props:
+                            buffer.write(n3_pred_val(VoidPlus.formulaDescription_ttl,
+                                                     Literal(expression(root)).n3(ns_manager)))
+                            buffer.write(n3_pred_val(VoidPlus.formulaTree_ttl,
+                                                     Literal(F"\n\t{tree(root)}\n\t").n3(ns_manager), end=True))
+
+                        buffer.write("\n")
+
+            for idx, (ets, matching_method_prop) in enumerate(self._matching_methods_props):
+                property = matching_method_prop.prop_original
+
+                buffer.write(F"resource:PropertyPartition-{property.hash}\n")
+                buffer.write(n3_pred_val('a', VoidPlus.PropertyPartition_ttl))
+                buffer.write(n3_pred_val(VoidPlus.subset_of_ttl, F"resource:ResourceSelection-{ets}"))
+
+                for transformer in matching_method_prop.property_transformers:
+                    write_transformer(transformer)
+
+                buffer.write(property.n3(ns_manager, end=True))
+
+                if len(stopwords_selected) or idx + 1 < len(self._matching_methods_props):
+                    buffer.write("\n")
+
+            for idx, (uri, (stopwords, language_code)) in enumerate(list(stopwords_selected.items())):
+                buffer.write(F"{uri}\n")
+                if language_code:
+                    buffer.write(n3_pred_val(NS.DC.language_ttl, F"{NS.ISO.prefix}:{language_code}"))
+
+                new = '\n        '
+                buffer.write(n3_pred_val(VoidPlus.stopWordsList_ttl,
+                                         F", ".join(F"{new if i % 10 == 0 else ''}{Literal(word).n3(ns_manager)}"
+                                                    for i, word in enumerate(stopwords)), end=True))
+
+                if idx + 1 < len(stopwords_selected):
+                    buffer.write("\n")
 
         def methods_descriptions():
             buffer.write(header("METHODS'S DESCRIPTION"))
 
             method_infos = {matching_method.method_name for matching_method in self._matching_methods}
-            for method_name in method_infos:
+            for idx, method_name in enumerate(method_infos):
                 method_info = self._matching_methods_info[method_name]
 
-                buffer.write(F"resource:MatchingAlgorithm-{method_name.lower()}\n")
-                buffer.write(n3_pred_val('a', LL.MatchingAlgorithm_ttl))
+                buffer.write(F"resource:MatchingAlgorithm-{method_name}\n")
+                buffer.write(n3_pred_val('a', VoidPlus.MatchingAlgorithm_ttl))
                 buffer.write(n3_pred_val(NS.RDFS.label_ttl, Literal(method_info['label'], lang='en').n3(ns_manager)))
                 buffer.write(n3_pred_val(NS.DCterms.description_ttl,
-                                         Literal(method_info['description'], lang='en').n3(ns_manager)))
-                buffer.write(n3_pred_val(LL.thresholdRange_ttl, method_info['threshold_range'], end=True))
+                                         Literal(method_info['description'], lang='en').n3(ns_manager), end=True))
 
-        def methods_predicate_selections():
-            buffer.write(header("METHODS'S PREDICATE SELECTIONS"))
+                if idx + 1 < len(method_infos):
+                    buffer.write("\n")
 
-            for property in self._matching_methods_props:
-                buffer.write(F'resource:ResourceSelection-{property.hash}\n')
-                buffer.write(n3_pred_val('a', LL.EntitySelection_ttl))
-                buffer.write(n3_pred_val(LL.subset_of_ttl, F"resource:ResourceSelection-{property.ets.id}"))
-                buffer.write(
-                    n3_pred_val(LL.hasFormulation_ttl, F"resource:PartitionFormulation-{property.hash}", end=True))
+        def validation_terminology():
+            buffer.write(header("VALIDATION TERMINOLOGY"))
 
-                buffer.write(F"\nresource:PartitionFormulation-{property.hash}\n")
-                buffer.write(n3_pred_val('a', F"{LL.PartitionFormulation_ttl}"))
-                buffer.write(n3_pred_val(LL.hasItem_ttl, F"resource:PropertyPartition-{property.hash}", end=True))
+            for idx, validation_state_info in enumerate(list(self._validation_states_info.values())):
+                buffer.write(F"{validation_state_info['predicate']}\n")
+                buffer.write(n3_pred_val(NS.RDFS.label_ttl,
+                                         Literal(validation_state_info['label'], lang='en').n3(ns_manager)))
+                buffer.write(n3_pred_val(NS.DCterms.description_ttl,
+                                         Literal(validation_state_info['description'], lang='en').n3(ns_manager),
+                                         end=True))
 
-                buffer.write(F"\nresource:PropertyPartition-{property.hash}\n")
-                buffer.write(n3_pred_val('a', F"{LL.PropertyPartition_ttl}"))
-                buffer.write(property.n3(end=True))
+                if idx + 1 < len(self._validation_states_info.values()):
+                    buffer.write("\n")
 
         buffer = io.StringIO()
         ns_manager = self._get_namespace_manager(namespaces)
 
         generic_metadata()
-        resource_selections()
         linkset_logic()
+        resource_selections()
         methods_signatures()
-        methods_descriptions()
         methods_predicate_selections()
+        methods_descriptions()
+        validation_terminology()
 
         return buffer.getvalue()
 
-    def _rdf_linkset_export_generator(self, links_iter, link_pred_shortname, namespaces,
-                                      export_link_metadata=True, rdf_star=False, use_graphs=True):
+    def _rdf_linkset_export_generator(self, links_iter, link_predicate, namespaces,
+                                      reification='none', use_graphs=True):
         buffer = io.StringIO()
+        ns_manager = self._get_namespace_manager(namespaces)
 
         buffer.write(F"\n\n{'#' * 110}\n#{'ANNOTATED LINKSET':^108}#\n{'#' * 110}\n\n\n")
         if use_graphs:
-            buffer.write(F"linkset:{self._id}\n{{\n")
+            buffer.write(F"linkset:{self._job.job_id}-{self._id}\n{{\n")
 
         i = 0
+        tabs = 2 if use_graphs else 1
+        rdf_predicate = URIRef(link_predicate).n3(ns_manager)
+
         for link in links_iter:
-            source_uri = link['source'] if link['link_order'] != 'target_source' else link['target']
-            target_uri = link['target'] if link['link_order'] != 'target_source' else link['source']
+            hash = hash_string_min((link['source'], link['target'])
+                                   if link['link_order'] != 'target_source' else
+                                   (link['target'], link['source'])) \
+                if reification != 'none' and reification != 'rdf_star' else None
 
-            shortened_source_uri = source_uri
-            shortened_target_uri = target_uri
-            for prefix, uri in namespaces.items():
-                if source_uri.startswith(uri):
-                    shortened_source_uri = F"{prefix}:{source_uri.replace(uri, '')}"
-                if target_uri.startswith(uri):
-                    shortened_target_uri = F"{prefix}:{target_uri.replace(uri, '')}"
+            source_uri = URIRef(link['source'] if link['link_order'] != 'target_source'
+                                else link['target']).n3(ns_manager)
+            target_uri = URIRef(link['target'] if link['link_order'] != 'target_source'
+                                else link['source']).n3(ns_manager)
+            predicate = F'resource:Singleton-{hash}' if reification == 'singleton' else rdf_predicate
 
-            if export_link_metadata and rdf_star:
-                buffer.write(F"\t<<{shortened_source_uri}    {link_pred_shortname}    {shortened_target_uri}>>\n")
+            link_rdf = F"{source_uri}    {predicate}    {target_uri}"
+            if reification == 'rdf_star':
+                buffer.write(F"{'    ' if use_graphs else ''}<<{link_rdf}>>\n")
             else:
-                end = ';' if not export_link_metadata and rdf_star else '.'
-                buffer.write(F"\t{shortened_source_uri}    {link_pred_shortname}    {shortened_target_uri} {end}\n")
+                buffer.write(F"{'    ' if use_graphs else ''}{link_rdf} .\n")
 
-                if not rdf_star:
-                    buffer.write(
-                        F"\n\tresource:Reification-{hash_string_min((shortened_source_uri, shortened_target_uri))}\n")
-                    buffer.write(F"\t{n3_pred_val('a', 'rdf:Statement')}")
-                    buffer.write(F"\t{n3_pred_val('rdf:predicate', link_pred_shortname)}")
-                    buffer.write(F"\t{n3_pred_val('rdf:subject', shortened_source_uri)}")
-                    buffer.write(F"\t{n3_pred_val('rdf:object', shortened_target_uri, end=(not export_link_metadata))}")
+            if reification != 'none':
+                if reification == 'standard':
+                    buffer.write(F"\n{'    ' if use_graphs else ''}resource:Reification-{hash}\n")
+                    buffer.write(n3_pred_val('a', 'rdf:Statement', tabs=tabs))
+                    buffer.write(n3_pred_val('rdf:predicate', predicate, tabs=tabs))
+                    buffer.write(n3_pred_val('rdf:subject', source_uri, tabs=tabs))
+                    buffer.write(n3_pred_val('rdf:object', target_uri, tabs=tabs))
+                elif reification == 'singleton':
+                    buffer.write(F"\n{'    ' if use_graphs else ''}{predicate}\n")
+                    buffer.write(n3_pred_val('rdf:singletonPropertyOf', rdf_predicate, tabs=tabs))
 
-            if export_link_metadata:
                 strength = round(link['similarity'], 5) if link['similarity'] else 1
-                buffer.write(F"\t{n3_pred_val(LL.strength_ttl, strength)}")
+                buffer.write(n3_pred_val(VoidPlus.strength_ttl, strength, tabs=tabs))
+
+                validation_info = self._validation_states_info[link['valid']]
+                buffer.write(n3_pred_val(VoidPlus.link_validation_tt, validation_info['predicate'],
+                                         tabs=tabs, end=(not link['cluster_id'])))
 
                 if link['cluster_id']:
-                    buffer.write(F"\t{n3_pred_val(LL.cluster_ID_ttl, link['cluster_id'])}")
-
-                buffer.write(F"\t{n3_pred_val(LL.link_validation_tt, link['valid'], end=True)}")
+                    buffer.write(n3_pred_val(VoidPlus.cluster_ID_ttl, Literal(link['cluster_id']).n3(ns_manager),
+                                             tabs=tabs, end=True))
 
             buffer.write("\n")
 

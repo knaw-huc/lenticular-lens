@@ -1,49 +1,73 @@
 {
   "MINIMUM_T_NORM": {
+    "label": "Minimum t-norm",
+    "short": "⊤min",
     "sql": "t_min",
     "sql_agg": "t_min_agg"
   },
   "PRODUCT_T_NORM": {
+    "label": "Product t-norm",
+    "short": "⊤prod",
     "sql": "t_prod",
     "sql_agg": "t_prod_agg"
   },
   "LUKASIEWICZ_T_NORM": {
+    "label": "Łukasiewicz t-norm",
+    "short": "⊤Luk",
     "sql": "t_luk",
     "sql_agg": "t_luk_agg"
   },
   "DRASTIC_T_NORM": {
+    "label": "Drastic t-norm",
+    "short": "⊤D",
     "sql": "t_d",
     "sql_agg": "t_d_agg"
   },
   "NILPOTENT_MINIMUM": {
+    "label": "Nilpotent t-norm",
+    "short": "⊤nM",
     "sql": "t_nm",
     "sql_agg": "t_nm_agg"
   },
   "HAMACHER_PRODUCT": {
+    "label": "Hamacher t-norm",
+    "short": "⊤H0",
     "sql": "t_h0",
     "sql_agg": "t_h0_agg"
   },
   "MAXIMUM_T_CONORM": {
+    "label": "Maximum t-conorm",
+    "short": "⊥max",
     "sql": "tc_max",
     "sql_agg": "tc_max_agg"
   },
   "PROBABILISTIC_SUM": {
+    "label": "Probabilistic t-conorm",
+    "short": "⊥sum",
     "sql": "tc_sum",
     "sql_agg": "tc_sum_agg"
   },
   "BOUNDED_SUM": {
+    "label": "Bounded t-conorm",
+    "short": "⊥Luk",
     "sql": "tc_luk",
     "sql_agg": "tc_luk_agg"
   },
   "DRASTIC_T_CONORM": {
+    "label": "Drastic t-conorm",
+    "short": "⊥D",
     "sql": "tc_d",
     "sql_agg": "tc_d_agg"
   },
   "NILPOTENT_MAXIMUM": {
+    "label": "Nilpotent t-conorm",
+    "short": "⊥nM",
     "sql": "tc_nm",
     "sql_agg": "tc_nm_agg"
   },
   "EINSTEIN_SUM": {
+    "label": "Einstein t-conorm",
+    "short": "⊥H2",
     "sql": "tc_h2",
     "sql_agg": "tc_h2_agg"
   }

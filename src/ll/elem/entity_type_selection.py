@@ -29,7 +29,7 @@ class EntityTypeSelection:
 
     @property
     def description(self):
-        return self._data['description'].strip()
+        return self._data['description'].strip() if 'description' in self._data and self._data['description'] else None
 
     @property
     def alias(self):

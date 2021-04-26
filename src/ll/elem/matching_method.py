@@ -18,24 +18,24 @@ class MatchingMethod:
         self.field_name = 'm' + str(linkset_id) + '_' + id
 
         self.method_name = data['method']['name']
-        self._method_config = data['method']['config']
+        self.method_config = data['method']['config']
         if self.method_name in self._matching_methods:
-            self._method_info = self._matching_methods[self.method_name]
+            self.method_info = self._matching_methods[self.method_name]
         else:
             raise NameError('Matching method %s is not defined' % self.method_name)
 
         self.method_sim_name = data['sim_method']['name']
-        self._method_sim_config = data['sim_method']['config']
-        self._method_sim_normalized = data['sim_method']['normalized']
-        self._method_sim_info = self._matching_methods[self.method_sim_name] \
+        self.method_sim_config = data['sim_method']['config']
+        self.method_sim_normalized = data['sim_method']['normalized']
+        self.method_sim_info = self._matching_methods[self.method_sim_name] \
             if self.method_sim_name in self._matching_methods else {}
 
-        self._t_norm = data['fuzzy']['t_norm']
-        self._t_conorm = data['fuzzy']['t_conorm']
-        self._threshold = data['fuzzy']['threshold']
+        self.t_norm = data['fuzzy']['t_norm']
+        self.t_conorm = data['fuzzy']['t_conorm']
+        self.threshold = data['fuzzy']['threshold']
 
-        self._list_threshold = data['list_matching']['threshold']
-        self._list_is_percentage = data['list_matching']['is_percentage']
+        self.list_threshold = data['list_matching']['threshold']
+        self.list_is_percentage = data['list_matching']['is_percentage']
 
         self._sources, self._targets, self._intermediates = None, None, None
 
@@ -45,7 +45,7 @@ class MatchingMethod:
 
     @property
     def is_list_match(self):
-        return self._list_threshold > 0
+        return self.list_threshold > 0
 
     @property
     def sql(self):
@@ -66,8 +66,8 @@ class MatchingMethod:
                                'GROUP BY c) AS scores(x)'
 
             return sql.SQL(f'(SELECT {{t_conorm_func}}(x) FROM {sub_template})').format(
-                t_norm_func=sql.SQL(self._logic_ops[self._t_norm]['sql_agg']),
-                t_conorm_func=sql.SQL(self._logic_ops[self._t_conorm]['sql_agg']),
+                t_norm_func=sql.SQL(self._logic_ops[self.t_norm]['sql_agg']),
+                t_conorm_func=sql.SQL(self._logic_ops[self.t_conorm]['sql_agg']),
                 target=sql.Identifier(('sim_' + self.field_name) if self.is_list_match else 'sim'),
                 field=sql.Identifier(self.field_name)
             )
@@ -76,10 +76,10 @@ class MatchingMethod:
 
     @property
     def similarity_threshold_sql(self):
-        if self.similarity_logic_ops_sql and self._threshold:
+        if self.similarity_logic_ops_sql and self.threshold:
             return sql.SQL('{similarity} >= {threshold}').format(
                 similarity=self.similarity_logic_ops_sql,
-                threshold=sql.Literal(self._threshold)
+                threshold=sql.Literal(self.threshold)
             )
 
         return None
@@ -92,11 +92,11 @@ class MatchingMethod:
         index_sqls = [sql.SQL('CREATE INDEX ON target USING btree ({});')
                           .format(sql.Identifier(self.field_name))]
 
-        if self._method_info.get('field'):
+        if self.method_info.get('field'):
             index_sqls.append(sql.SQL('CREATE INDEX ON target USING btree ({});')
                               .format(sql.Identifier(self.field_name + '_norm')))
 
-        for before_index in [method_info['before_index'] for method_info in [self._method_info, self._method_sim_info]
+        for before_index in [method_info['before_index'] for method_info in [self.method_info, self.method_sim_info]
                              if 'before_index' in method_info]:
             index_sqls.append(sql.SQL(before_index).format(
                 target=sql.Identifier(self.field_name),
@@ -104,7 +104,7 @@ class MatchingMethod:
                 **self._sql_parameters
             ))
 
-        for index in [method_info['index'] for method_info in [self._method_info, self._method_sim_info]
+        for index in [method_info['index'] for method_info in [self.method_info, self.method_sim_info]
                       if 'index' in method_info]:
             index_sqls.append(sql.SQL('CREATE INDEX ON target USING {};').format(
                 sql.SQL(index).format(
@@ -135,23 +135,23 @@ class MatchingMethod:
         if not self._intermediates:
             self._intermediates = {}
             if self.is_intermediate:
-                ets_id = int(self._method_config['entity_type_selection'])
+                ets_id = int(self.method_config['entity_type_selection'])
                 self._intermediates[ets_id] = {
                     'source': [self._get_property(prop, ets_id, property_only=True)
-                               for prop in self._method_config['intermediate_source']],
+                               for prop in self.method_config['intermediate_source']],
                     'target': [self._get_property(prop, ets_id, property_only=True)
-                               for prop in self._method_config['intermediate_target']]
+                               for prop in self.method_config['intermediate_target']]
                 }
 
         return self._intermediates
 
     @property
     def _match_template(self):
-        if 'match' in self._method_info:
-            template = self._method_info['match']
-        elif 'field' in self._method_info and 'match' in self._method_sim_info:
-            template = self._method_sim_info['match']
-            if self._method_sim_normalized:
+        if 'match' in self.method_info:
+            template = self.method_info['match']
+        elif 'field' in self.method_info and 'match' in self.method_sim_info:
+            template = self.method_sim_info['match']
+            if self.method_sim_normalized:
                 template = re.sub(r'{source}', '{source_norm}', template)
                 template = re.sub(r'{target}', '{target_norm}', template)
         else:
@@ -161,11 +161,11 @@ class MatchingMethod:
 
     @property
     def _similarity_template(self):
-        if 'similarity' in self._method_info:
-            template = self._method_info['similarity']
-        elif 'field' in self._method_info and 'similarity' in self._method_sim_info:
-            template = self._method_sim_info['similarity']
-            if self._method_sim_normalized:
+        if 'similarity' in self.method_info:
+            template = self.method_info['similarity']
+        elif 'field' in self.method_info and 'similarity' in self.method_sim_info:
+            template = self.method_sim_info['similarity']
+            if self.method_sim_normalized:
                 template = re.sub(r'{source}', '{source_norm}', template)
                 template = re.sub(r'{target}', '{target_norm}', template)
         else:
@@ -175,17 +175,17 @@ class MatchingMethod:
 
     @property
     def _condition_template(self):
-        if 'condition' in self._method_info:
-            return self._method_info['condition']
+        if 'condition' in self.method_info:
+            return self.method_info['condition']
 
-        if 'condition' in self._method_sim_info:
-            return self._method_sim_info['condition']
+        if 'condition' in self.method_sim_info:
+            return self.method_sim_info['condition']
 
         return None
 
     @property
     def _full_matching_template(self):
-        if 'field' in self._method_info and not self.method_sim_name:
+        if 'field' in self.method_info and not self.method_sim_name:
             template = '{source_norm} = {target_norm}'
         else:
             template = self._condition_template
@@ -197,7 +197,7 @@ class MatchingMethod:
             else:
                 template = self._match_template
 
-        if self.method_sim_name and not self._method_sim_normalized:
+        if self.method_sim_name and not self.method_sim_normalized:
             template = '{source_norm} = {target_norm} AND ' + template
 
         return self._update_template_fields(template)
@@ -205,7 +205,10 @@ class MatchingMethod:
     @property
     def _sql_parameters(self):
         return {key: sql.Literal(value)
-                for (key, value) in {**self._method_config, **self._method_sim_config}.items()}
+                for (key, value) in {**self.method_config, **self.method_sim_config}.items()}
+
+    def transformers(self, key):
+        return self._data[key].get('transformers', [])
 
     def _update_template_fields(self, template):
         if self.is_list_match:
@@ -231,18 +234,18 @@ class MatchingMethod:
         if self.is_list_match:
             source_fields_sqls = ['source.{field_name}']
             source_alias_sqls = ['src_org']
-            if self._method_info.get('field'):
+            if self.method_info.get('field'):
                 source_fields_sqls.append('source.{field_name_norm}')
                 source_alias_sqls.append('src_norm')
 
             target_fields_sqls = ['target.{field_name}']
             target_alias_sqls = ['trg_org']
-            if self._method_info.get('field'):
+            if self.method_info.get('field'):
                 target_fields_sqls.append('target.{field_name_norm}')
                 target_alias_sqls.append('trg_norm')
 
             list_threshold_template = '{list_threshold}'
-            if self._list_is_percentage:
+            if self.list_is_percentage:
                 list_threshold_template = 'array_perc_size(source.{field_name}, target.{field_name}, {list_threshold})'
 
             new_match_template = cleandoc(f'''	
@@ -269,8 +272,8 @@ class MatchingMethod:
             field_name=sql.Identifier(self.field_name),
             field_name_norm=sql.Identifier(self.field_name + '_norm'),
             field_name_intermediate=sql.Identifier(self.field_name + '_intermediate'),
-            list_threshold=sql.Literal(self._list_threshold),
-            list_threshold_is_perc=sql.Literal(self._list_is_percentage),
+            list_threshold=sql.Literal(self.list_threshold),
+            list_threshold_is_perc=sql.Literal(self.list_is_percentage),
             **self._sql_parameters
         )
 
@@ -279,24 +282,21 @@ class MatchingMethod:
                 for ets_id, fields in self._data[key]['properties'].items()}
 
     def _get_property(self, field, ets_id, key=None, property_only=False):
-        field_type = self._method_info.get('field_type')
+        field_type = self.method_info.get('field_type')
         field_type_info = {
             'type': field_type,
-            'parameters': {'format': self._method_config['format'] if field_type == 'date' else {}}
+            'parameters': {'format': self.method_config['format'] if field_type == 'date' else {}}
         }
 
         property = field if property_only else field['property']
+        apply_transformers = bool(key and not property_only)
+        method_transformers = self.transformers(key) if apply_transformers else []
+        property_transformers = field.get('transformers', []) if apply_transformers else []
+        property_transformer_first = field.get('property_transformer_first', False) if apply_transformers else False
 
-        transformers = []
-        if key and not property_only:
-            transformers = self._data[key].get('transformers', []).copy()
-            if field['property_transformer_first']:
-                transformers = field.get('transformers', []).copy() + transformers
-            else:
-                transformers = transformers + field.get('transformers', []).copy()
-
-        return MatchingMethodProperty(property, transformers, ets_id, self._job, field_type_info,
-                                      self._method_info.get('field'), self._method_config)
+        return MatchingMethodProperty(property, ets_id, self._job, apply_transformers,
+                                      method_transformers, property_transformers, property_transformer_first,
+                                      field_type_info, self.method_info.get('field'), self.method_config)
 
     @staticmethod
     def get_similarity_fields_sqls(matching_methods):

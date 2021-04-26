@@ -24,29 +24,35 @@ ll = 'http://lenticularlens.org/'
 pref_size = 20
 
 
-class LLNamespace:
+class VoidPlus:
     genericPrefix = "voidPlus"
 
     # ###############################################################################
     #                                     PREFIXES                                  #
     # ###############################################################################
     ontology = F'{ll}void+/'
-    ontology_prefix = F"@prefix {F'{genericPrefix}':>{pref_size}}: <{ontology}> ."
+    ontology_prefix = genericPrefix
+    ontology_prefix_ttl = F"@prefix {ontology_prefix:>{pref_size}}: <{ontology}> ."
 
     algorithm = F"{ontology}matchingMethod/"
-    algorithm_prefix = F"@prefix {'ll_algo':>{pref_size}}: <{algorithm}> ."
+    algorithm_prefix = 'll_algo'
+    algorithm_prefix_ttl = F"@prefix {algorithm_prefix:>{pref_size}}: <{algorithm}> ."
 
     validation = F"{ontology}validation/"
-    validation_prefix = F"@prefix {'ll_val':>{pref_size}}: <{validation}> ."
+    validation_prefix = 'll_val'
+    validation_prefix_ttl = F"@prefix {validation_prefix:>{pref_size}}: <{validation}> ."
 
     resource = F"{ll}resource/"
-    resource_prefix = F"@prefix {'resource':>{pref_size}}: <{resource}> ."
+    resource_prefix = 'resource'
+    resource_prefix_ttl = F"@prefix {resource_prefix:>{pref_size}}: <{resource}> ."
 
     linkset = F"{resource}linkset/"
-    linkset_prefix = F"@prefix {'linkset':>{pref_size}}: <{resource}linkset/> ."
+    linkset_prefix = 'linkset'
+    linkset_prefix_ttl = F"@prefix {linkset_prefix:>{pref_size}}: <{resource}linkset/> ."
 
     lens = F"{resource}lens/"
-    lens_prefix = F"@prefix {'lens':>{pref_size}}: <{resource}lens> ."
+    lens_prefix = 'lens'
+    lens_prefix_ttl = F"@prefix {lens_prefix:>{pref_size}}: <{resource}lens> ."
 
     # TYPES
     Project = F'{ontology}Project'
@@ -75,6 +81,9 @@ class LLNamespace:
 
     PropertyPartition = F'{ll}ontology/PropertyPartition'
     PropertyPartition_ttl = F'{genericPrefix}:PropertyPartition'
+
+    algoSequence = F'{ll}ontology/AlgorithmSequence'
+    algoSequence_ttl = F'{genericPrefix}:AlgorithmSequence'
 
     ClassPartition = F'{ll}ontology/ClassPartition'
     ClassPartition_ttl = F'{genericPrefix}:ClassPartition'
@@ -170,13 +179,25 @@ class LLNamespace:
     method_prefix = F"@prefix {F'{genericPrefix}':>{pref_size}}: <{ontology}> ."
     method_ttl = F'{genericPrefix}:hasAlgorithm'
 
-    threshold = F"{ontology}hasThreshold"
-    threshold_prefix = F"@prefix {F'{genericPrefix}':>{pref_size}}: <{ontology}> ."
-    threshold_ttl = F'{genericPrefix}:hasThreshold'
+    methodSequence = F"{ontology}hasAlgorithmSequence"
+    methodSequence_prefix = F"@prefix {F'{genericPrefix}':>{pref_size}}: <{ontology}> ."
+    methodSequence_ttl = F'{genericPrefix}:hasAlgorithmSequence'
 
-    thresholdRange = F"{ontology}hasThresholdRange"
+    simThreshold = F"{ontology}hasSimilarityThreshold"
+    simThreshold_prefix = F"@prefix {F'{genericPrefix}':>{pref_size}}: <{ontology}> ."
+    simThreshold_ttl = F'{genericPrefix}:hasSimilarityThreshold'
+
+    combiThreshold = F"{ontology}hasCombinationThreshold"
+    combiThreshold_prefix = F"@prefix {F'{genericPrefix}':>{pref_size}}: <{ontology}> ."
+    combiThreshold_ttl = F'{genericPrefix}:hasCombinationThreshold'
+
+    thresholdRange = F"{ontology}hasSimilarityThresholdRange"
     thresholdRange_prefix = F"@prefix {F'{genericPrefix}':>{pref_size}}: <{ontology}> ."
-    thresholdRange_ttl = F'{genericPrefix}:hasThresholdRange'
+    thresholdRange_ttl = F'{genericPrefix}:hasSimilarityThresholdRange'
+
+    combiThresholdRange = F"{ontology}hasCombinationThresholdRange"
+    combiThresholdRange_prefix = F"@prefix {F'{genericPrefix}':>{pref_size}}: <{ontology}> ."
+    combiThresholdRange_ttl = F'{genericPrefix}:hasCombinationThresholdRange'
 
     simOperator = F"{ontology}hasThresholdAcceptanceOperator"
     simOperator_prefix = F"@prefix {F'{genericPrefix}':>{pref_size}}: <{ontology}> ."
@@ -185,6 +206,10 @@ class LLNamespace:
     strength = F"{ontology}hasMatchingStrength"
     strength_prefix = F"@prefix {F'{genericPrefix}':>{pref_size}}: <{ontology}> ."
     strength_ttl = F'{genericPrefix}:hasMatchingStrength'
+
+    normalized = F"{ontology}isAppliedOnEncodedValues"
+    normalized_prefix = F"@prefix {F'{genericPrefix}':>{pref_size}}: <{ontology}> ."
+    normalized_ttl = F'{genericPrefix}:isAppliedOnEncodedValues'
 
     # A RESOURCE DESCRIBING THE SELECTED DATASET AND DATATYPE FOR A SELECTED PREDICATE AT THE SOURCE POSITION
     entitySelectionSubj = F"{ontology}hasSubjResourceSelection"
@@ -196,10 +221,27 @@ class LLNamespace:
     entitySelectionObj_prefix = F"@prefix {F'{genericPrefix}':>{pref_size}}: <{ontology}> ."
     entitySelectionObj_ttl = F'{genericPrefix}:hasObjResourceSelection'
 
+    # THE INTERMEDIATE DATASET
+    intermediateEntitySelection = F"{ontology}hasInterResourceSelection"
+    intermediateEntitySelection_prefix = F"@prefix {F'{genericPrefix}':>{pref_size}}: <{ontology}> ."
+    intermediateEntitySelection_ttl = F'{genericPrefix}:hasInterResourceSelection'
+
     # THE URI OF GHE SELECTED ALGORITHM
     method_hash = F"{ontology}hasMatchingMethodHash"
     method_hash_prefix = F"@prefix {F'{genericPrefix}':>{pref_size}}: <{ontology}> ."
     method_hash_ttl = F'{genericPrefix}:hasMatchingMethodHash'
+
+    tranformationFunction = F"{ontology}hasTransformationFunction"
+    tranformationFunction_prefix = F"@prefix {F'{genericPrefix}':>{pref_size}}: <{ontology}> ."
+    tranformationFunction_ttl = F'{genericPrefix}:hasTransformationFunction'
+
+    stopWords = F"{ontology}stopWords"
+    stopWords_prefix = F"@prefix {F'{genericPrefix}':>{pref_size}}: <{ontology}> ."
+    stopWords_ttl = F'{genericPrefix}:stopWords'
+
+    stopWordsList = F"{ontology}stopWordsList"
+    stopWordsList_prefix = F"@prefix {F'{genericPrefix}':>{pref_size}}: <{ontology}> ."
+    stopWordsList_ttl = F'{genericPrefix}:stopWordsList'
 
     sub_predicate_selected = F"{ontology}hasSubjPredicateSelection"
     sub_predicate_selected_prefix = F"@prefix {F'{genericPrefix}':>{pref_size}}: <{ontology}> ."
@@ -314,6 +356,10 @@ class LLNamespace:
     cluster_ID = F"{ontology}hasClustersID"
     cluster_ID_prefix = F"@prefix {F'{genericPrefix}':>{pref_size}}: <{ontology}> ."
     cluster_ID_ttl = F"{genericPrefix}:hasClustersID"
+
+    cluster_size = F"{ontology}hasClusterSize"
+    cluster_size_prefix = F"@prefix {F'{genericPrefix}':>{pref_size}}: <{ontology}> ."
+    cluster_size_ttl = F"{genericPrefix}:hasClusterSize"
 
     clusterConstraint = F"{ontology}hasClusterConstrain"
     clusterConstraint_prefix = F"@prefix {F'{genericPrefix}':>{pref_size}}: <{ontology}> ."

@@ -17,10 +17,10 @@ from werkzeug.routing import BaseConverter, ValidationError
 
 from ll.job.export import Export
 from ll.job.job import Job, Validation
-from ll.util.config_db import fetch_one
 
 from ll.util.hasher import hash_string
 from ll.util.logging import config_logger
+from ll.util.stopwords import get_stopwords
 
 from ll.data.collection import Collection
 from ll.data.timbuctoo_datasets import TimbuctooDatasets
@@ -169,12 +169,10 @@ def start_download():
 @app.route('/stopwords/<dictionary>')
 @authenticated
 def stopwords(dictionary):
-    if dictionary not in ['arabic', 'azerbaijani', 'danish', 'dutch', 'dutch_names', 'english', 'finnish', 'french',
-                          'german', 'greek', 'hungarian', 'indonesian', 'italian', 'kazakh', 'nepali', 'norwegian',
-                          'portuguese', 'romanian', 'russian', 'slovene', 'spanish', 'swedish', 'tajik', 'turkish']:
+    try:
+        return jsonify(get_stopwords(dictionary))
+    except:
         return jsonify({'result': 'error', 'error': 'Please specify a valid dictionary key'}), 400
-
-    return jsonify(fetch_one('SELECT get_stopwords(%s)', (dictionary,))[0])
 
 
 @app.route('/job/create', methods=['POST'])
@@ -450,17 +448,16 @@ def export_to_rdf(job, type, id):
     link_pred_namespace = request.args.get('link_pred_namespace')
     link_pred_shortname = request.args.get('link_pred_shortname')
     export_metadata = request.args.get('export_metadata', default=True) == 'true'
-    export_link_metadata = request.args.get('export_link_metadata', default=True) == 'true'
     export_linkset = request.args.get('export_linkset', default=True) == 'true'
-    rdf_star = request.args.get('rdf_star', default=False) == 'true'
+    reification = request.args.get('reification', default='none')
     use_graphs = request.args.get('use_graphs', default=True) == 'true'
     creator = request.args.get('creator')
     publisher = request.args.get('publisher')
     validation_filter = Validation.get(request.args.getlist('valid'))
 
     export_generator = export.rdf_export_generator(
-        link_pred_namespace, link_pred_shortname, export_metadata, export_link_metadata,
-        export_linkset, rdf_star, use_graphs, creator, publisher, validation_filter)
+        link_pred_namespace, link_pred_shortname, export_metadata, export_linkset,
+        reification, use_graphs, creator, publisher, validation_filter)
 
     mimetype = 'application/trig' if use_graphs else 'text/turtle'
     extension = '.trig' if use_graphs else '.ttl'

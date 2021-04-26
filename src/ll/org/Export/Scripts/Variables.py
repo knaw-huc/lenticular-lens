@@ -8,6 +8,7 @@
 #                                                                                                         #
 # #########################################################################################################
 
+job_id = "job_id"
 
 # ##################################
 #        LINKSET STATISTICS        #
@@ -51,7 +52,7 @@ properties = 'properties'
 selectionFilter = "filter"
 filterConditions = "conditions"
 filterProperty = "property"
-filterTtlProperty = "short_properties"
+short_properties = "short_properties"
 filterType = "type"
 filterValue = "value"
 filterFormat = "format"
@@ -63,10 +64,12 @@ operator = "type"
 # methods = "methods"
 # operator = "type"
 conditions = "conditions"
-methodName = "method_name"
+methodName = "name"
 methodValue = "method_value"
 # sources = 'sources'
 entityTypeSelection = "entity_type_selection"
+sim_config = 'sim_config'
+normalized = 'normalized'
 
 property = "property"
 transformers = "transformers"
@@ -76,12 +79,16 @@ format = "format"
 # targets = 'targets'
 
 
-uri_properties = 'uri_properties'
+long_properties = 'long_properties'
 source_predicates = "source_predicates"
 target_predicates = "target_predicates"
 algorithm = "algorithm"
 threshold = "threshold"
 threshold_operator = "threshold_operator"
+prefix_weight = "prefix_weight"
+max_distance = "max_distance"
+soundex_size = "size"
+Bloothooft_name_type = "name_type"
 
 UNIT = "unit"
 
@@ -108,7 +115,7 @@ drastic = 'drastic'
 
 
 # Predicate length in the turtle file format
-PRED_SIZE = 40
+PRED_SIZE = 55
 
 # Prefix length in the turtle file format
 PREF_SIZE = 20

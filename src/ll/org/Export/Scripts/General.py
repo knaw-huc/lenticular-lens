@@ -6,7 +6,7 @@ from kitchen.text.converters import to_bytes
 from os import remove, stat
 from os.path import isfile
 from rdflib import Dataset
-from rdflib import XSD, Literal
+from rdflib import XSD, Literal, Graph
 from re import findall, sub
 from SPARQLWrapper import SPARQLWrapper, JSON
 from ll.org.Export.Scripts.Variables import LOV
@@ -21,6 +21,12 @@ from unidecode import unidecode
 #   Generic functions uses in several scripts.                                                            #
 #                                                                                                         #
 # #########################################################################################################
+
+# CLEARS THE StringIO GIVEN OBJECT
+def clearBuffer(buffer):
+
+    buffer.seek(0)
+    buffer.truncate(0)
 
 
 def printTime(padding=100, message=None, fill: chr = '.', fill_type: chr = ">"):
@@ -40,7 +46,7 @@ def getTimestamp():
 def getXSDTimestamp():
 
     # print(Literal(Literal(datetime.utcnow(), datatype=XSD.dateTime)).n3())
-    return Literal(Literal(datetime.utcnow(), datatype=XSD.dateTime)).n3()
+    return Literal(Literal(datetime.utcnow(), datatype=XSD.dateTime)).n3(Graph().namespace_manager)
 
 
 def getDate():
@@ -59,7 +65,7 @@ def hasher(obj, size=15):
 
 
 # OFFERS TO CHOICE TO RANDOMIZE IT OR NOT
-def hasherBlake2b(msg, digest_size=10, randomize=False, seed=0):
+def hasherBlake2b(msg, digest_size=8, randomize=False, seed=0):
 
     h = blake2b(digest_size=digest_size, salt=bytes(seed.__str__(), encoding='utf-8')) \
         if randomize is True else blake2b(digest_size=digest_size)
@@ -144,7 +150,7 @@ def isNumber(text: str):
 
 def isDecimalLike(text: str):
 
-    result = findall(pattern="^\d*[.]?\d+$", string=text)
+    result = findall(pattern="^\\d*[.]?\\d+$", string=str(text))
     return True if result else False
 
 
@@ -281,8 +287,11 @@ def validate_RDFStar_(file):
 
 def validateRDFStar(file, removeIt=True):
 
-    print(F"\nVALIDATING RDFStar FILE {fileSize(file)}\n{'-' * 70}")
-    temp = file.replace('.ttl', '_rdf_check.ttl')
+    print(F"\n{'-' * 70}\n\tVALIDATING RDFStar FILE {fileSize(file)}\n{'-' * 70}")
+    if 'trig' in file:
+        temp = file.replace('.trig', '_rdf_check.trig')
+    elif 'ttl' in file:
+        temp = file.replace('.ttl', '_rdf_check.ttl')
     start = time()
     from pathlib import Path
     size = Path(file).stat().st_size
@@ -309,17 +318,17 @@ def validateRDFStar(file, removeIt=True):
         print("\n\n\t2. Checking the converted file.")
         start = time()
         Dataset().parse(temp, format="trig")
-        print(F"\n\t\t>>> [✅] The converted file \n\t\t[{temp}] \n\t\tis in a valid RDFStar format! "
+        print(F"\n\t\t>>> ✅ The converted file \n\t\t[{temp}] \n\t\tis in a valid RDFStar format! "
               F"\n\n\t\t>>> We therefore can highly ascertain that the original file "
               F"\n\t\t[{file}]\n\t\tis in a valid RDFStar format")
         print("" if start is None else F"""\n\t{'3. Parsing time':.<50} {str(timedelta(seconds=time() - start))}""")
 
     except Exception as err:
-        print("\t\t>>> [❌] Invalid RDFStar")
+        print("\t\t>>> ❌ Invalid RDFStar")
         print(F"\t\t>>> [DETAIL ERROR FROM validate_RDFStar] {err}")
 
     finally:
-        print(F"\n\t3. Removing the converted file from disc..")
+        print(F"\n\t3. Removing the converted file from disc..\n\t{temp}")
         if isfile(temp) and removeIt is True:
             remove(temp)
         print(F"\n\t{'4. Done in':.<50} {str(timedelta(seconds=time() - start))}")
@@ -327,7 +336,7 @@ def validateRDFStar(file, removeIt=True):
 
 def validateRDF(file):
 
-    print(F"\nVALIDATING RDFStar FILE {fileSize(file)}\n{'-' * 70}")
+    print(F"\n{'-' * 70}\n\tVALIDATING RDFStar FILE {fileSize(file)}\n{'-' * 70}")
 
     start = time()
     from pathlib import Path
@@ -338,13 +347,13 @@ def validateRDF(file):
         print("\n\t1. Checking the RDF file.")
         start = time()
         Dataset().parse(file, format="trig")
-        print(F"\n\t\t>>> [✅] The converted file \n\t\t[{file}] \n\t\tis in a valid RDFStar format! "
+        print(F"\n\t\t>>> ✅ The converted file \n\t\t[{file}] \n\t\tis in a valid RDFStar format! "
               F"\n\n\t\t>>> We therefore can highly ascertain that the original file "
               F"\n\t\t[{file}]\n\t\tis in a valid RDF format.")
         print("" if start is None else F"""\n\t2. {'Parsing time':.<50} {str(timedelta(seconds=time() - start))}""")
 
     except Exception as err:
-        print("\t\t\t>>> [❌] Invalid RDF")
+        print("\t\t\t>>> ❌ Invalid RDF")
         print(F"\t\t\t>>> [DETAIL ERROR FROM validate_RDF] {err}")
 
     finally:

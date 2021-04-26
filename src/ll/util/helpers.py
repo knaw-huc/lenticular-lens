@@ -30,10 +30,11 @@ def get_string_from_sql(sql):
         return sql.as_string(conn)
 
 
-def n3_pred_val(predicate, value, end=False, line=True):
-    new_line = '\n' if line is True else ''
-    tab = '\t' if line is True else ''
-    return f"{tab}{predicate:{40}} {value} {'.' if end is True else ';'}{new_line}"
+def n3_pred_val(predicate, value, end=False, line=True, tabs=1):
+    new_line = '\n' if line else ''
+    tab = ('    ' * tabs) if line else ''
+    pred_size = 55 - (4 * (tabs-1))
+    return f"{tab}{predicate:{pred_size}} {value} {'.' if end else ';'}{new_line}"
 
 
 def get_id_of_uri(uri):

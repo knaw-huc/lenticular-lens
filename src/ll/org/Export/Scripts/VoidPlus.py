@@ -23,7 +23,7 @@ from ll.org.Export.Scripts.Variables import PREF_SIZE, LL
 # ######################################################################################################################
 
 
-class Namespaces:
+class VoidPlus:
 
     genericPrefix = "voidPlus"
 
@@ -67,6 +67,9 @@ class Namespaces:
 
     PropertyPartition = F'{LL}ontology/PropertyPartition'
     PropertyPartition_ttl = F'{genericPrefix}:PropertyPartition'
+
+    algoSequence = F'{LL}ontology/AlgorithmSequence'
+    algoSequence_ttl = F'{genericPrefix}:AlgorithmSequence'
 
     ClassPartition = F'{LL}ontology/ClassPartition'
     ClassPartition_ttl = F'{genericPrefix}:ClassPartition'
@@ -165,13 +168,25 @@ class Namespaces:
     method_prefix = F"@prefix {F'{genericPrefix}':>{PREF_SIZE}}: <{ontology}> ."
     method_ttl = F'{genericPrefix}:hasAlgorithm'
 
-    threshold = F"{ontology}hasThreshold"
-    threshold_prefix = F"@prefix {F'{genericPrefix}':>{PREF_SIZE}}: <{ontology}> ."
-    threshold_ttl = F'{genericPrefix}:hasThreshold'
+    methodSequence = F"{ontology}hasAlgorithmSequence"
+    methodSequence_prefix = F"@prefix {F'{genericPrefix}':>{PREF_SIZE}}: <{ontology}> ."
+    methodSequence_ttl = F'{genericPrefix}:hasAlgorithmSequence'
 
-    thresholdRange = F"{ontology}hasThresholdRange"
+    simThreshold = F"{ontology}hasSimilarityThreshold"
+    simThreshold_prefix = F"@prefix {F'{genericPrefix}':>{PREF_SIZE}}: <{ontology}> ."
+    simThreshold_ttl = F'{genericPrefix}:hasSimilarityThreshold'
+
+    combiThreshold = F"{ontology}hasCombinationThreshold"
+    combiThreshold_prefix = F"@prefix {F'{genericPrefix}':>{PREF_SIZE}}: <{ontology}> ."
+    combiThreshold_ttl = F'{genericPrefix}:hasCombinationThreshold'
+
+    thresholdRange = F"{ontology}hasSimilarityThresholdRange"
     thresholdRange_prefix = F"@prefix {F'{genericPrefix}':>{PREF_SIZE}}: <{ontology}> ."
-    thresholdRange_ttl = F'{genericPrefix}:hasThresholdRange'
+    thresholdRange_ttl = F'{genericPrefix}:hasSimilarityThresholdRange'
+
+    combiThresholdRange = F"{ontology}hasCombinationThresholdRange"
+    combiThresholdRange_prefix = F"@prefix {F'{genericPrefix}':>{PREF_SIZE}}: <{ontology}> ."
+    combiThresholdRange_ttl = F'{genericPrefix}:hasCombinationThresholdRange'
 
     simOperator = F"{ontology}hasThresholdAcceptanceOperator"
     simOperator_prefix = F"@prefix {F'{genericPrefix}':>{PREF_SIZE}}: <{ontology}> ."
@@ -190,6 +205,11 @@ class Namespaces:
     entitySelectionObj = F"{ontology}hasObjResourceSelection"
     entitySelectionObj_prefix = F"@prefix {F'{genericPrefix}':>{PREF_SIZE}}: <{ontology}> ."
     entitySelectionObj_ttl = F'{genericPrefix}:hasObjResourceSelection'
+
+    # THE INTERMEIDATE DATASET
+    intermediateEntitySelection = F"{ontology}hasInterResourceSelection"
+    intermediateEntitySelectionPrefix = F"@prefix {F'{genericPrefix}':>{PREF_SIZE}}: <{ontology}> ."
+    intermediateEntitySelection_ttl = F'{genericPrefix}:hasInterResourceSelection'
 
     # THE URI OF GHE SELECTED ALGORITHM
     method_hash = F"{ontology}hasMatchingMethodHash"
@@ -311,6 +331,10 @@ class Namespaces:
     cluster_ID = F"{ontology}hasClustersID"
     cluster_ID_prefix = F"@prefix {F'{genericPrefix}':>{PREF_SIZE}}: <{ontology}> ."
     cluster_ID_ttl = F"{genericPrefix}:hasClustersID"
+
+    cluster_size = F"{ontology}hasClusterSize"
+    cluster_size_prefix = F"@prefix {F'{genericPrefix}':>{PREF_SIZE}}: <{ontology}> ."
+    cluster_size_ttl = F"{genericPrefix}:hasClusterSize"
 
     clusterConstraint = F"{ontology}hasClusterConstrain"
     clusterConstraint_prefix = F"@prefix {F'{genericPrefix}':>{PREF_SIZE}}: <{ontology}> ."

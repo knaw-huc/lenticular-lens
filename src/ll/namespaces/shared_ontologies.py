@@ -31,6 +31,9 @@ class Namespaces:
         sequence = F"{rdfs}Sequence"
         sequence_ttl = F"{prefix}:Sequence"
 
+        comment = F"{rdfs}comment"
+        comment_ttl = F"rdfs:comment"
+
     class XSD:
         # xsd = "http://www.w3.org/2001/XMLSchema#"
         xsd = ns.XSD
@@ -77,7 +80,7 @@ class Namespaces:
         owl_XML_ttl = F"{prefix}:OWL_XML"
 
         triG = F"{formats}TriG"
-        triG_ttl = "F{prefix}:TriG"
+        triG_ttl = F"{prefix}:TriG"
 
         rdfa = F"{formats}RDFa"
         rdfa_ttl = F"{prefix}:RDFa"
@@ -195,6 +198,15 @@ class Namespaces:
 
         lens = F"{bdb}Lens"
         lens_ttl = F"{prefix}:Lens"
+
+    class DC:
+        # dc = "http://purl.org/dc/elements/1.1/"
+        dc = ns.DC
+        prefix = 'dc'
+        prefix_ttl = F"@prefix {prefix:>{pref_size}}: <{dc}> ."
+
+        language = F"{dc}language"
+        language_ttl = F"{prefix}:language"
 
     class DCterms:
         # dcterms = "http://purl.org/dc/terms"
@@ -349,6 +361,12 @@ class Namespaces:
         # The URL the creator of a Work would like used when attributing re-use.
         attributionURL = F"{cc}attributionURL"
         attributionURL_ttl = F"{prefix}:attributionURL"
+
+    class ISO:
+        # iso = "https://id.loc.gov/vocabulary/iso639-1/"
+        iso = "https://id.loc.gov/vocabulary/iso639-1/"
+        prefix = "iso_369_1"
+        prefix_ttl = F"@prefix {prefix:>{pref_size}}: <{iso}> ."
 
     class Time:
         # time = "http://www.w3.org/2006/time#"

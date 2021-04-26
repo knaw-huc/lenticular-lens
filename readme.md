@@ -344,8 +344,8 @@ validity types.
 
 **URL**: `/job/<job_id>/rdf/<type>/<id>`\
 **Method**: `GET`\
-**Parameters**: `valid`, `link_pred_namespace`, `link_pred_shortname`, `export_metadata`, `export_link_metadata`
-, `export_linkset`, `rdf_star`, `use_graphs`, `creator`, `publisher`
+**Parameters**: `valid`, `link_pred_namespace`, `link_pred_shortname`, `export_metadata`,
+`export_linkset`, `reification`, `use_graphs`, `creator`, `publisher`
 
 Get a RDF export of `type` (`linkset` or `lens`) for the linkset/lens with `id` the given `job_id`.
 
@@ -354,10 +354,12 @@ validity types.
 
 Specify `link_pred_namespace` and `link_pred_shortname` to configure the predicate to use for the links.
 
-Specify `export_metadata`, `export_link_metadata`, `export_linkset` with boolean values to indicate what to include in
-the RDF export.
+Specify `export_metadata`, `export_linkset` with boolean values to indicate what to include in the RDF export.
 
-Specify `rdf_star` and `use_graphs` to determine the RDF format to use.
+Specify `reification` with either `none`, `standard`, `singleton` or `rdf_star` to indicate how the link metadata has to
+be included in the RDF export.
+
+Specify `use_graphs` to determine the RDF format to use.
 
 Optionally specify `creator` and/or `publisher` to include extra metadata.
 

@@ -16,45 +16,70 @@ from math import factorial, ceil
 
 class LogicOperations:
 
-    norms_format = {
+    translation = {1: 'AND [Minimum t-norm (⊤min)]',
+                   2: 'AND [Hamacher Product (⊤H0)]',
+                   3: 'AND [Product t-norm (⊤prod)]',
+                   4: 'AND [Nilpotent Minimum (⊤nM)]',
+                   5: 'AND [Łukasiewicz t-norm (⊤Luk)]',
+                   6: 'AND [Drastic t-norm (⊤D)]',
 
-        'min': '⊤min',
-        'minimum': '⊤min',
+                   7: 'OR [Maximum s-norm (⊥max)]',
+                   8: 'OR [Probabilistic Sum (⊥sum)]',
+                   9: 'OR [Bounded Sum (⊥Luk)]',
+                   10: 'OR [Drastic s-norm (⊥D)]',
+                   11: 'OR [Nilpotent Maximum (⊥nM)]',
+                   12: 'OR [Einstein Sum (⊥D)]'}
 
-        'hamacher': '⊤H0',
+    operator_format = {
 
-        'prod': '⊤prod',
-        'product': '⊤prod',
+        'and': translation[1],
+        'min': translation[1],
+        'minimum': translation[1],
+        'minimum_t_norm': translation[1],
 
-        'nil': '⊤nM',
-        'nilpotent': '⊤nM',
+        'hamacher': translation[2],
+        'hamacher_product': translation[2],
 
-        'luk': '⊤Luk',
+        'prod': translation[3],
+        'product': translation[3],
+        'product_t_norm': translation[3],
 
-        'drastic': '⊤D'
-    }
+        'nil min': translation[4],
+        'nilpotent minimum': translation[4],
+        'nilpotent_minimum': translation[4],
 
-    conorms_format = {
+        'luk': translation[5],
+        'lukasiewicz_t_norm': translation[5],
 
-        'max': '⊥max',
-        'maximum': '⊥max',
+        'drastic t norm': translation[6],
+        'drastic_t_norm': translation[6],
 
-        'prob': '⊥sum',
-        "probabilistic": "⊥sum",
-        "probabilistic sum": "⊥sum",
+        # -------------------------------------------------------- #
 
-        'bounded': '⊥Luk',
-        'bounded sum ': '⊥Luk',
+        'or': translation[7],
+        'max': translation[7],
+        'maximum': translation[7],
+        'maximum_t_conorm': translation[7],
 
-        'drastic': '⊥D',
+        'prob': translation[8],
+        "probabilistic": translation[8],
+        "probabilistic_sum": translation[8],
 
-        'nil': '⊤nM',
-        'nilpotent': '⊥nM',
-        'nil max': '⊥nM',
-        'nilpotent maximum': '⊥nM',
+        'bounded': translation[9],
+        'bounded sum': translation[9],
+        'bounded_sum': translation[9],
 
-        'einstein': '⊥D',
-        'einstein sum': '⊥D'
+        'drastic t conorm': translation[10],
+        'drastic_t_conorm': translation[10],
+
+        'nilpotent max': 'Nilpotent Maximum (⊥nM)',
+        'nil max': translation[11],
+        'nilpotent maximum': translation[11],
+        'nilpotent_maximum': translation[11],
+
+        'einstein': translation[12],
+        'einstein sum': translation[12],
+        'einstein_sum': translation[12],
     }
 
     norms = {
@@ -128,20 +153,20 @@ class LogicOperations:
         return round(reduce(LogicOperations.conorms.get(conorm.lower(), lambda x, y: max(x, y)), truths), 5)
 
     @staticmethod
-    def listIntersectionStrength(strengths: List[float], minimum: float, norm: str = "min", conorm: str = 'max'):
+    def listIntersectionStrength(strengths: List[float], intersection_threshold: float, norm: str = "min", conorm: str = 'max'):
 
         """
-        :param strengths    : THE MATCHED STRENGTHS
-        :param minimum      : THE Intersection-threshold NUMBER, OTHERWISE THE CONVERSION OF PERCENTAGE TO NUMBER.
-         THE LATTER IS BASED ON THE SMALLEST EVENT SIZE. IF THRESHOLD IS 50% AND WE MATCH A LIST OF 5 AGAINST 8,
-         THEN minimum = ceil(5 * 0.5)
-        :param norm         : THE NAME OF THE T-NORM OPTION
-        :param conorm       : THE NAME OF THE CO-NORM OPTION
-        :return             : THE FINAL STRENGTH
+        :param strengths                    : THE MATCHED STRENGTHS
+        :param intersection_threshold       : THE Intersection-threshold NUMBER, OTHERWISE THE CONVERSION OF PERCENTAGE
+                                                TO NUMBER. THE LATTER IS BASED ON THE SMALLEST EVENT SIZE. IF THRESHOLD
+                                                IS 50% AND WE MATCH A LIST OF 5 AGAINST 8, THEN minimum = ceil(5 * 0.5)
+        :param norm                         : THE NAME OF THE T-NORM OPTION
+        :param conorm                       : THE NAME OF THE CO-NORM OPTION
+        :return                             : THE FINAL STRENGTH
         """
 
-        minimum = ceil(minimum)
-        n, k = len(strengths), minimum
+        intersection_threshold = ceil(intersection_threshold)
+        n, k = len(strengths), intersection_threshold
 
         # GENERATE ALL POSSIBLE COMBINATIONS OF TUPLE OF SIZE MINIMUM
         possibilities = list(combinations(strengths, k))
@@ -152,13 +177,18 @@ class LogicOperations:
         # (OR) COMPUTE THE FINAL STRENGTH WHICH IS THE MAXIMUM OF THE PREVIOUS MINIMUMS
         strength = LogicOperations.tConormList(options, conorm)
 
-        # PRINT TO CHECK THE RESULT
-        print(F"""
-        DATA SIZE       : {n}
-        TUPLE SIZE      : {k}
-        COMBINATIONS    : {factorial(n) / (factorial(k) * factorial(n - k))}
-        DRASTIC MIN     : {min(strengths)}
-        optimum min     : {strength}
-        """)
+        # # PRINT TO CHECK THE RESULT
+        # print(F"""
+        # DATA SIZE       : {n}
+        # TUPLE SIZE      : {k}
+        # COMBINATIONS    : {factorial(n) / (factorial(k) * factorial(n - k))}
+        # DRASTIC MIN     : {min(strengths)}
+        # optimum min     : {strength}
+        # """)
+        # print(
+        #     LogicOperations.listIntersectionStrength(
+        #         strengths=[0.89, 0.89, 0.82, 0.75, 0.89, 0.78],
+        #         intersection_threshold=2))
 
         return strength
+
