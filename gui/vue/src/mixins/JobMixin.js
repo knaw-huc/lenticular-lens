@@ -122,6 +122,98 @@ export default {
                 });
         },
 
+        updateView(id, type, entityTypeSelections) {
+            let view = this.getViewByIdAndType(id, type);
+
+            if (view) {
+                const propertiesToRemove = JSON.parse(JSON.stringify(view.properties));
+                const filtersToRemove = JSON.parse(JSON.stringify(view.filters));
+
+                entityTypeSelections.forEach(etsId => {
+                    const ets = this.getEntityTypeSelectionById(etsId);
+
+                    const propsIdx = propertiesToRemove.findIndex(prop =>
+                        prop.timbuctoo_graphql === ets.dataset.timbuctoo_graphql &&
+                        prop.dataset_id === ets.dataset.dataset_id &&
+                        prop.collection_id === ets.dataset.collection_id
+                    );
+
+                    if (propsIdx > -1)
+                        propertiesToRemove.splice(propsIdx, 1);
+
+                    const filterIdx = filtersToRemove.findIndex(filter =>
+                        filter.timbuctoo_graphql === ets.dataset.timbuctoo_graphql &&
+                        filter.dataset_id === ets.dataset.dataset_id &&
+                        filter.collection_id === ets.dataset.collection_id
+                    );
+
+                    if (filterIdx > -1)
+                        filtersToRemove.splice(filterIdx, 1);
+                });
+
+                propertiesToRemove.forEach(toRemove => {
+                    const propsIdx = view.properties.findIndex(prop =>
+                        prop.timbuctoo_graphql === toRemove.timbuctoo_graphql &&
+                        prop.dataset_id === toRemove.dataset_id &&
+                        prop.collection_id === toRemove.collection_id
+                    );
+
+                    if (propsIdx > -1)
+                        view.properties.splice(propsIdx, 1);
+                });
+
+                filtersToRemove.forEach(toRemove => {
+                    const filterIdx = view.filters.findIndex(prop =>
+                        prop.timbuctoo_graphql === toRemove.timbuctoo_graphql &&
+                        prop.dataset_id === toRemove.dataset_id &&
+                        prop.collection_id === toRemove.collection_id
+                    );
+
+                    if (filterIdx > -1)
+                        view.filters.splice(filterIdx, 1);
+                });
+            }
+            else {
+                this.addView(id, type);
+                view = this.getViewByIdAndType(id, type);
+            }
+
+            entityTypeSelections.forEach(etsId => {
+                const ets = this.$root.getEntityTypeSelectionById(etsId);
+
+                const propsIdx = view.properties.findIndex(prop =>
+                    prop.timbuctoo_graphql === ets.dataset.timbuctoo_graphql &&
+                    prop.dataset_id === ets.dataset.dataset_id &&
+                    prop.collection_id === ets.dataset.collection_id
+                );
+
+                if (propsIdx < 0)
+                    view.properties.push({
+                        timbuctoo_graphql: ets.dataset.timbuctoo_graphql,
+                        dataset_id: ets.dataset.dataset_id,
+                        collection_id: ets.dataset.collection_id,
+                        properties: [['']]
+                    });
+
+                const filterIdx = view.filters.findIndex(filter =>
+                    filter.timbuctoo_graphql === ets.dataset.timbuctoo_graphql &&
+                    filter.dataset_id === ets.dataset.dataset_id &&
+                    filter.collection_id === ets.dataset.collection_id
+                );
+
+                if (filterIdx < 0)
+                    view.filters.push({
+                        timbuctoo_graphql: ets.dataset.timbuctoo_graphql,
+                        dataset_id: ets.dataset.dataset_id,
+                        collection_id: ets.dataset.collection_id,
+                        filter: {
+                            type: 'AND',
+                            conditions: [],
+                        },
+                    });
+            });
+        },
+
         getEntityTypeSelectionById(id) {
             return this.entityTypeSelections.find(res => res.id === parseInt(id));
         },
@@ -189,262 +281,17 @@ export default {
                     .filter((data, idx, res) => res.findIndex(data2 => data2 === data) === idx);
                 await Promise.all(graphQlEndpoints.map(data => this.loadDatasets(data)));
 
-                entityTypeSelections.forEach(entityTypeSelection => {
-                    delete entityTypeSelection.dataset.published;
-                    delete entityTypeSelection.dataset.timbuctoo_hsid;
-                    delete entityTypeSelection.related;
-                    delete entityTypeSelection.related_array;
-
-                    if (entityTypeSelection.filter)
-                        this.getRecursiveElements(entityTypeSelection.filter, 'conditions')
-                            .forEach(filter => {
-                                switch (filter.type) {
-                                    case '=':
-                                        filter.type = 'equals';
-                                        break;
-                                    case '!=':
-                                        filter.type = 'not_equals';
-                                        break;
-                                    case 'is_null':
-                                        filter.type = 'empty';
-                                        break;
-                                    case 'not_null':
-                                        filter.type = 'not_empty';
-                                        break;
-                                    case 'ilike':
-                                        filter.type = 'contains';
-                                        break;
-                                    case 'not_ilike':
-                                        filter.type = 'not_contains';
-                                        break;
-                                }
-                            });
-                });
-
                 this.entityTypeSelections = entityTypeSelections;
             }
 
+            if (this.job.linkset_specs)
+                this.linksetSpecs = copy(this.job.linkset_specs);
+
+            if (this.job.lens_specs)
+                this.lensSpecs = copy(this.job.lens_specs);
+
             if (this.job.views)
                 this.views = copy(this.job.views);
-
-            if (this.job.linkset_specs) {
-                const linksetSpecs = copy(this.job.linkset_specs);
-
-                linksetSpecs.forEach(linksetSpec => {
-                    delete linksetSpec.is_association;
-                    delete linksetSpec.threshold;
-
-                    this.getRecursiveElements(linksetSpec.methods, 'conditions').forEach(method => {
-                        if (method.hasOwnProperty('list_matching')
-                            && method.list_matching.hasOwnProperty('links_threshold')) {
-                            method.list_matching.threshold = method.list_matching.links_threshold;
-                            method.list_matching.is_percentage = method.list_matching.links_is_percentage;
-
-                            delete method.list_matching.links_threshold;
-                            delete method.list_matching.links_is_percentage;
-                            delete method.list_matching.unique_threshold;
-                            delete method.list_matching.unique_is_percentage;
-                            delete method.list_matching.source_threshold;
-                            delete method.list_matching.source_is_percentage;
-                            delete method.list_matching.target_threshold;
-                            delete method.list_matching.target_is_percentage;
-                        }
-                        else if (method.hasOwnProperty('list_threshold')) {
-                            method.list_matching = {
-                                threshold: method.list_threshold,
-                                is_percentage: method.list_threshold_unit === 'percentage'
-                            };
-
-                            delete method.list_threshold;
-                            delete method.list_threshold_unit;
-                        }
-
-                        if (!method.hasOwnProperty('list_matching')) {
-                            method.list_matching = {
-                                threshold: 0,
-                                is_percentage: false,
-                            };
-                        }
-
-                        if (method.method_name === 'TIME_DELTA'
-                            && method.method_config.hasOwnProperty('multiplier')) {
-                            method.method_config.type = '<>';
-                            method.method_config.years = 0;
-                            method.method_config.months = 0;
-
-                            delete method.method_config.multiplier;
-                        }
-
-                        if (method.method_name === 'INTERMEDIATE'
-                            && !Array.isArray(method.method_config.intermediate_source[0])) {
-                            method.method_config.intermediate_source = [method.method_config.intermediate_source];
-                            method.method_config.intermediate_target = [method.method_config.intermediate_target];
-                        }
-
-                        if (Array.isArray(method.sources)) {
-                            method.sources = method.sources.reduce((acc, source) => {
-                                if (!acc.hasOwnProperty(source.entity_type_selection))
-                                    acc[source.entity_type_selection] = [];
-
-                                acc[source.entity_type_selection].push({
-                                    property: source.property,
-                                    transformers: source.transformers,
-                                });
-
-                                return acc;
-                            }, {});
-                        }
-
-                        if (Array.isArray(method.targets)) {
-                            method.targets = method.targets.reduce((acc, target) => {
-                                if (!acc.hasOwnProperty(target.entity_type_selection))
-                                    acc[target.entity_type_selection] = [];
-
-                                acc[target.entity_type_selection].push({
-                                    property: target.property,
-                                    transformers: target.transformers,
-                                });
-
-                                return acc;
-                            }, {});
-                        }
-
-                        if (!method.sources.hasOwnProperty('transformers')) {
-                            method.sources = {
-                                properties: method.sources,
-                                transformers: []
-                            };
-                        }
-
-                        if (!method.targets.hasOwnProperty('transformers')) {
-                            method.targets = {
-                                properties: method.targets,
-                                transformers: []
-                            };
-                        }
-
-                        delete method.transformers;
-
-                        Object.values(method.sources.properties).forEach(properties => {
-                            properties.forEach(prop => {
-                                prop.property_transformer_first = false;
-                                if (prop.hasOwnProperty('stopwords')) {
-                                    if (prop.stopwords.dictionary !== '')
-                                        prop.transformers.push({name: 'STOPWORDS', parameters: prop.stopwords});
-                                    delete prop.stopwords;
-                                }
-                            });
-                        });
-
-                        Object.values(method.targets.properties).forEach(properties => {
-                            properties.forEach(prop => {
-                                prop.property_transformer_first = false;
-                                if (prop.hasOwnProperty('stopwords')) {
-                                    if (prop.stopwords.dictionary !== '')
-                                        prop.transformers.push({name: 'STOPWORDS', parameters: prop.stopwords});
-                                    delete prop.stopwords;
-                                }
-                            });
-                        });
-
-                        if (method.hasOwnProperty('method_name')) {
-                            method.method = {
-                                name: method.method_name,
-                                config: method.method_config,
-                            };
-
-                            delete method.method_name;
-                            delete method.method_config;
-                        }
-
-                        if (method.hasOwnProperty('method_sim_name')) {
-                            method.sim_method = {
-                                name: method.method_sim_name,
-                                config: method.method_sim_config,
-                                normalized: method.method_sim_normalized,
-                            };
-
-                            delete method.method_sim_name;
-                            delete method.method_sim_config;
-                            delete method.method_sim_normalized;
-                        }
-
-                        if (method.hasOwnProperty('t_conorm')) {
-                            method.fuzzy = {
-                                t_conorm: method.t_conorm,
-                                threshold: method.threshold,
-                            };
-
-                            delete method.t_conorm;
-                            delete method.threshold;
-                        }
-                    });
-
-                    if (linksetSpec.hasOwnProperty('properties')) {
-                        if (!this.getViewByIdAndType(linksetSpec.id, 'linkset'))
-                            this.addView(linksetSpec.id, 'linkset');
-
-                        const view = this.getViewByIdAndType(linksetSpec.id, 'linkset');
-                        linksetSpec.properties.forEach(prop => {
-                            const ets = this.$root.getEntityTypeSelectionById(prop.entity_type_selection);
-                            const propsIdx = view.properties.findIndex(viewProp =>
-                                viewProp.timbuctoo_graphql === ets.dataset.timbuctoo_graphql &&
-                                viewProp.dataset_id === ets.dataset.dataset_id &&
-                                viewProp.collection_id === ets.dataset.collection_id
-                            );
-
-                            if (propsIdx < 0)
-                                view.properties.push({
-                                    timbuctoo_graphql: ets.dataset.timbuctoo_graphql,
-                                    dataset_id: ets.dataset.dataset_id,
-                                    collection_id: ets.dataset.collection_id,
-                                    properties: [prop.property]
-                                });
-                            else
-                                view.properties[propsIdx].properties.push(prop.property);
-                        });
-
-                        delete linksetSpec.properties;
-                    }
-                });
-
-                this.linksetSpecs = linksetSpecs;
-            }
-
-            if (this.job.lens_specs) {
-                const lensSpecs = copy(this.job.lens_specs);
-
-                lensSpecs.forEach(lensSpec => {
-                    if (lensSpec.hasOwnProperty('properties')) {
-                        if (!this.getViewByIdAndType(lensSpec.id, 'lens'))
-                            this.addView(lensSpec.id, 'lens');
-
-                        const view = this.getViewByIdAndType(lensSpec.id, 'lens');
-                        lensSpec.properties.forEach(prop => {
-                            const ets = this.$root.getEntityTypeSelectionById(prop.entity_type_selection);
-                            const propsIdx = view.properties.findIndex(viewProp =>
-                                viewProp.timbuctoo_graphql === ets.dataset.timbuctoo_graphql &&
-                                viewProp.dataset_id === ets.dataset.dataset_id &&
-                                viewProp.collection_id === ets.dataset.collection_id
-                            );
-
-                            if (propsIdx < 0)
-                                view.properties.push({
-                                    timbuctoo_graphql: ets.dataset.timbuctoo_graphql,
-                                    dataset_id: ets.dataset.dataset_id,
-                                    collection_id: ets.dataset.collection_id,
-                                    properties: [prop.property]
-                                });
-                            else
-                                view.properties[propsIdx].properties.push(prop.property);
-                        });
-
-                        delete lensSpec.properties;
-                    }
-                });
-
-                this.lensSpecs = lensSpecs;
-            }
 
             await Promise.all([this.loadLinksets(), this.loadLenses(), this.loadClusterings()]);
         },
@@ -531,36 +378,74 @@ export default {
             return callApi(`/job/${this.job.job_id}/entity_type_selection/${id}?${params.join('&')}`);
         },
 
-        async getLinksTotals(type, id, min = undefined, max = undefined, clusterId = undefined) {
-            const params = [];
-            if (clusterId) params.push(`cluster_id=${clusterId}`);
-            if (min) params.push(`min=${min}`);
-            if (max) params.push(`max=${max}`);
+        async getLinksTotals(type, id, props) {
+            props = {applyFilters: true, uris: [], clusterIds: [], min: undefined, max: undefined, ...props};
+
+            const params = [`apply_filters=${props.applyFilters}`];
+
+            if (props.uris && props.uris.length > 0)
+                props.uris.forEach(uri => params.push(`uri=${encodeURIComponent(uri)}`));
+
+            if (props.clusterIds && props.clusterIds.length > 0)
+                props.clusterIds.forEach(clusterId => params.push(`cluster_id=${encodeURIComponent(clusterId)}`));
+
+            if (props.min && props.min > 0) params.push(`min=${props.min}`);
+            if (props.max && props.max < 1) params.push(`max=${props.max}`);
 
             return callApi(`/job/${this.job.job_id}/links_totals/${type}/${id}?${params.join('&')}`);
         },
 
-        async getLinks(type, id, accepted, rejected, notSure, notValidated, mixed,
-                       min = undefined, max = undefined, clusterId = undefined,
-                       limit = undefined, offset = 0) {
-            const params = [];
-            if (accepted) params.push('valid=accepted');
-            if (rejected) params.push('valid=rejected');
-            if (notSure) params.push('valid=not_sure');
-            if (notValidated) params.push('valid=not_validated');
-            if (mixed) params.push('valid=mixed');
+        async getLinks(type, id, props, limit = undefined, offset = 0) {
+            props = {
+                withProperties: 'multiple', applyFilters: true,
+                accepted: false, rejected: false, notSure: false, notValidated: false, mixed: false,
+                uris: [], clusterIds: [], min: undefined, max: undefined, ...props
+            };
 
-            if (clusterId) params.push(`cluster_id=${clusterId}`);
-            if (min && min > 0) params.push(`min=${min}`);
-            if (max && max < 1) params.push(`max=${max}`);
+            const params = [
+                `with_properties=${props.withProperties}`,
+                `apply_filters=${props.applyFilters}`
+            ];
+
+            if (props.accepted) params.push('valid=accepted');
+            if (props.rejected) params.push('valid=rejected');
+            if (props.notSure) params.push('valid=not_sure');
+            if (props.notValidated) params.push('valid=not_validated');
+            if (props.mixed) params.push('valid=mixed');
+
+            if (props.uris && props.uris.length > 0)
+                props.uris.forEach(uri => params.push(`uri=${encodeURIComponent(uri)}`));
+            if (props.clusterIds && props.clusterIds.length > 0)
+                props.clusterIds.forEach(clusterId => params.push(`cluster_id=${encodeURIComponent(clusterId)}`));
+
+            if (props.min && props.min > 0) params.push(`min=${props.min}`);
+            if (props.max && props.max < 1) params.push(`max=${props.max}`);
+
             if (limit) params.push(`limit=${limit}`);
             if (offset) params.push(`offset=${offset}`);
 
             return callApi(`/job/${this.job.job_id}/links/${type}/${id}?${params.join('&')}`);
         },
 
-        async getClusters(type, id, limit = undefined, offset = 0) {
-            const params = [];
+        async getClusters(type, id, props, limit = undefined, offset = 0) {
+            props = {
+                withProperties: 'multiple', applyFilters: true,
+                uris: [], clusterIds: [], min: undefined, max: undefined, ...props
+            };
+
+            const params = [
+                `with_properties=${props.withProperties}`,
+                `apply_filters=${props.applyFilters}`
+            ];
+
+            if (props.uris && props.uris.length > 0)
+                props.uris.forEach(uri => params.push(`uri=${encodeURIComponent(uri)}`));
+            if (props.clusterIds && props.clusterIds.length > 0)
+                props.clusterIds.forEach(clusterId => params.push(`cluster_id=${encodeURIComponent(clusterId)}`));
+
+            if (props.min && props.min > 0) params.push(`min=${props.min}`);
+            if (props.max && props.max < 1) params.push(`max=${props.max}`);
+
             if (limit) params.push(`limit=${limit}`);
             if (offset) params.push(`offset=${offset}`);
 
@@ -577,20 +462,32 @@ export default {
             return callApi(`/job/${this.job.job_id}/cluster/${type}/${id}/${clusterId}/graph?${params.join('&')}`);
         },
 
-        async validateLink(type, id, valid, source, target) {
-            return callApi(`/job/${this.job.job_id}/validate/${type}/${id}`, {valid, source, target});
+        async validateLink(type, id, validation, source, target) {
+            return callApi(`/job/${this.job.job_id}/validate/${type}/${id}`,
+                {validation, apply_filters: false, source, target});
         },
 
-        async validateSelection(type, id, valid, clusterId, accepted, rejected, notSure, notValidated, mixed) {
-            const body = {valid, validation: []};
+        async validateSelection(type, id, validation, props) {
+            props = {
+                accepted: false, rejected: false, notSure: false, notValidated: false, mixed: false,
+                uris: [], clusterIds: [], min: undefined, max: undefined, ...props
+            };
 
-            if (accepted) body.validation.push('accepted');
-            if (rejected) body.validation.push('rejected');
-            if (notSure) body.validation.push('not_sure');
-            if (notValidated) body.validation.push('not_validated');
-            if (mixed) body.validation.push('mixed');
+            const body = {validation, apply_filters: true, valid: [], uri: [], cluster_id: []};
 
-            if (clusterId) body['cluster_id'] = clusterId;
+            if (props.accepted) body.valid.push('accepted');
+            if (props.rejected) body.valid.push('rejected');
+            if (props.notSure) body.valid.push('not_sure');
+            if (props.notValidated) body.valid.push('not_validated');
+            if (props.mixed) body.valid.push('mixed');
+
+            if (props.uris && props.uris.length > 0)
+                props.uris.forEach(uri => body.uri.push(uri));
+            if (props.clusterIds && props.clusterIds.length > 0)
+                props.clusterIds.forEach(clusterId => body.cluster_id.push(clusterId));
+
+            if (props.min && props.min > 0) body.min = props.min;
+            if (props.max && props.max < 1) body.max = props.max;
 
             return callApi(`/job/${this.job.job_id}/validate/${type}/${id}`, body);
         },

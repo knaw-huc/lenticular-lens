@@ -79,7 +79,9 @@
 
                 this.loadingClusters = true;
 
-                const clusters = await this.$root.getClusters(this.type, this.specId, 5, this.clusters.length);
+                const clusters = await this.$root.getClusters(this.type, this.specId,
+                    {applyFilters: false}, 5, this.clusters.length);
+
                 if (clusters !== null)
                     this.clusters.push(...clusters);
 

@@ -1,5 +1,4 @@
 from json import dumps
-from uuid import uuid4
 
 from psycopg2 import extras, sql
 from psycopg2.extensions import AsIs
@@ -11,6 +10,7 @@ from ll.job.links_filter import LinksFilter
 from ll.job.query_builder import QueryBuilder
 from ll.job.visualize import get_visualization
 from ll.job.linkset_builder import LinksetBuilder
+from ll.job.linkset_validator import LinksetValidator
 
 from ll.elem.view import View
 from ll.elem.lens import Lens
@@ -247,106 +247,29 @@ class Job:
                 cur.execute(sql.SQL('DROP TABLE IF EXISTS lenses.{}')
                             .format(sql.Identifier(self.table_name(id))))
 
-    def validate_link(self, id, type, valid, validation_filter=Validation.ALL, cluster_id=None, link=(None, None)):
+    def validate_link(self, id, type, valid, validation_filter=Validation.ALL, cluster_ids=None, uris=None,
+                      min_strength=0, max_strength=1, link=(None, None), with_view_filters=False):
+        schema = 'lenses' if type == 'lens' else 'linksets'
+        spec = self.get_spec_by_id(id, type)
+        view = self.get_view_by_id(id, type)
+
         links_filter = LinksFilter()
         links_filter.filter_on_validation(validation_filter)
-        links_filter.filter_on_cluster(cluster_id)
+        links_filter.filter_on_clusters(cluster_ids if cluster_ids else [])
+        links_filter.filter_on_uris(uris if uris else [])
+        links_filter.filter_on_min_max_strength(min_strength, max_strength)
         links_filter.filter_on_link(link[0], link[1])
 
-        with db_conn() as conn, conn.cursor() as cur:
-            if type == 'lens':
-                temp_table_id = uuid4().hex
-                lens = self.get_lens_spec_by_id(id)
+        linkset_builder = LinksetBuilder(schema, self.table_name(spec.id), spec, view)
+        linkset_builder.apply_links_filter(links_filter)
 
-                cur.execute(sql.SQL('''
-                    CREATE TEMPORARY TABLE {table_name} ON COMMIT DROP AS 
-                    SELECT source_uri, target_uri
-                    FROM lenses.{lens_table}
-                    {filter}
-                ''').format(
-                    table_name=sql.Identifier(temp_table_id),
-                    lens_table=sql.Identifier(self.table_name(id)),
-                    filter=links_filter.sql()
-                ))
+        has_strength_filter = (min_strength and min_strength > 0) or (max_strength and max_strength < 1)
 
-                # If links in a lens are updated, then also update the same links from the originating linksets/lenses
-                update_sqls = [
-                    sql.SQL('''
-                        UPDATE {schema}.{table_name} AS trg
-                        SET valid = {valid} 
-                        FROM {selection_table_name} AS sel
-                        WHERE trg.source_uri = sel.source_uri 
-                        AND trg.target_uri = sel.target_uri;
-                    ''').format(
-                        schema=sql.Identifier(schema),
-                        table_name=sql.Identifier(self.table_name(spec.id)),
-                        valid=sql.Literal(valid),
-                        selection_table_name=sql.Identifier(temp_table_id)
-                    )
-                    for (schema, selection) in [('linksets', lens.linksets), ('lenses', lens.lenses)]
-                    for spec in selection
-                ]
-
-                update_sqls.append(sql.SQL('''
-                    UPDATE lenses.{table_name} AS lens 
-                    SET valid = {valid}
-                    FROM {selection_table_name} AS sel
-                    WHERE lens.source_uri = sel.source_uri
-                    AND lens.target_uri = sel.target_uri;
-                ''').format(
-                    table_name=sql.Identifier(self.table_name(id)),
-                    valid=sql.Literal(valid),
-                    selection_table_name=sql.Identifier(temp_table_id)
-                ))
-
-                to_exec = sql.Composed(update_sqls)
-
-                cur.execute(to_exec)
-            else:
-                query = sql.SQL('UPDATE linksets.{} SET valid = %s {}') \
-                    .format(sql.Identifier(self.table_name(id)), links_filter.sql())
-                cur.execute(query, (valid,))
-
-                # If links in a linkset are updated, then also update the same links from lenses based on this linkset
-                # However, if the same link yield different validations among the linksets, then use 'mixed'
-                for lens_spec in self.lens_specs:
-                    if id in [linkset.id for linkset in lens_spec.linksets]:
-                        validities_sql = sql.SQL(' UNION ALL ').join(
-                            sql.SQL('''
-                                SELECT ls.source_uri, ls.target_uri, ls.valid 
-                                FROM linksets.{} AS ls
-                                INNER JOIN links_selection AS sel
-                                ON ls.source_uri = sel.source_uri
-                                AND ls.target_uri = sel.target_uri
-                            ''').format(sql.Identifier(self.table_name(linkset.id)))
-                            for linkset in lens_spec.linksets
-                        )
-
-                        cur.execute(sql.SQL('''
-                            WITH links_selection AS (
-                                SELECT source_uri, target_uri
-                                FROM linksets.{linkset_table}
-                                {filter} 
-                            )
-
-                            UPDATE lenses.{lens_table} AS lens
-                            SET valid = linkset.valid
-                            FROM (
-                                SELECT source_uri, target_uri, 
-                                       CASE WHEN count(DISTINCT valid) > 1 
-                                            THEN 'mixed'::link_validity 
-                                            ELSE min(valid) END AS valid
-                                FROM ({validaties_select}) AS x
-                                GROUP BY source_uri, target_uri
-                            ) AS linkset
-                            WHERE lens.source_uri = linkset.source_uri 
-                            AND lens.target_uri = linkset.target_uri 
-                        ''').format(
-                            linkset_table=sql.Identifier(self.table_name(id)),
-                            filter=links_filter.sql(),
-                            lens_table=sql.Identifier(self.table_name(lens_spec.id)),
-                            validaties_select=validities_sql,
-                        ))
+        linkset_validator = LinksetValidator(self, spec, linkset_builder, with_view_filters, has_strength_filter)
+        if type == 'lens':
+            linkset_validator.validate_lens(valid)
+        else:
+            linkset_validator.validate_linkset(valid)
 
     def schema_name(self, id):
         return 'job_' + self.job_id + '_' + str(id)
@@ -362,7 +285,7 @@ class Job:
     def linkset_has_queued_table_data(self, linkset_id):
         linkset = self.get_linkset_spec_by_id(linkset_id)
         return any(not property.is_downloaded
-                   for entity_type_selection in linkset.entity_type_selections
+                   for entity_type_selection in linkset.all_entity_type_selections
                    for property in entity_type_selection.properties_for_matching(linkset))
 
     def get_entity_type_selection_by_id(self, id):
@@ -428,48 +351,61 @@ class Job:
             condition=get_sql_empty(where_sql)
         ), dict=True)
 
-    def get_links(self, id, type, validation_filter=Validation.ALL, cluster_id=None, uri=None,
-                  min_strength=0, max_strength=1, limit=None, offset=0, with_properties='none'):
+    def get_links(self, id, type, validation_filter=Validation.ALL, cluster_ids=None, uris=None,
+                  min_strength=0, max_strength=1, limit=None, offset=0,
+                  with_view_properties='none', with_view_filters=False):
         schema = 'lenses' if type == 'lens' else 'linksets'
         spec = self.get_spec_by_id(id, type)
         view = self.get_view_by_id(id, type)
 
         links_filter = LinksFilter()
         links_filter.filter_on_validation(validation_filter)
-        links_filter.filter_on_cluster(cluster_id)
-        links_filter.filter_on_uri(uri)
+        links_filter.filter_on_clusters(cluster_ids if cluster_ids else [])
+        links_filter.filter_on_uris(uris if uris else [])
         links_filter.filter_on_min_max_strength(min_strength, max_strength)
 
         linkset_builder = LinksetBuilder(schema, self.table_name(id), spec, view)
         linkset_builder.apply_links_filter(links_filter)
         linkset_builder.apply_paging(limit, offset)
 
-        return linkset_builder.get_links_generator(with_properties)
+        return linkset_builder.get_links_generator(with_view_properties, with_view_filters)
 
-    def get_links_totals(self, id, type, cluster_id=None, uri=None, min_strength=0, max_strength=1):
+    def get_links_totals(self, id, type, cluster_ids=None, uris=None,
+                         min_strength=0, max_strength=1, with_view_filters=False):
         schema = 'lenses' if type == 'lens' else 'linksets'
         spec = self.get_spec_by_id(id, type)
         view = self.get_view_by_id(id, type)
 
         links_filter = LinksFilter()
-        links_filter.filter_on_cluster(cluster_id)
-        links_filter.filter_on_uri(uri)
+        links_filter.filter_on_clusters(cluster_ids if cluster_ids else [])
+        links_filter.filter_on_uris(uris if uris else [])
         links_filter.filter_on_min_max_strength(min_strength, max_strength)
 
         linkset_builder = LinksetBuilder(schema, self.table_name(id), spec, view)
         linkset_builder.apply_links_filter(links_filter)
 
-        return linkset_builder.get_total_links()
+        has_strength_filter = (min_strength and min_strength > 0) or (max_strength and max_strength < 1)
 
-    def get_clusters(self, id, type, limit=None, offset=0, with_properties='none'):
+        return linkset_builder.get_total_links(with_view_filters, has_strength_filter)
+
+    def get_clusters(self, id, type, cluster_ids=None, uris=None, min_strength=0, max_strength=1, limit=None, offset=0,
+                     with_view_properties='none', with_view_filters=False):
         schema = 'lenses' if type == 'lens' else 'linksets'
         spec = self.get_spec_by_id(id, type)
         view = self.get_view_by_id(id, type)
 
+        links_filter = LinksFilter()
+        links_filter.filter_on_clusters(cluster_ids if cluster_ids else [])
+        links_filter.filter_on_uris(uris if uris else [])
+        links_filter.filter_on_min_max_strength(min_strength, max_strength)
+
         linkset_builder = LinksetBuilder(schema, self.table_name(id), spec, view)
+        linkset_builder.apply_links_filter(links_filter)
         linkset_builder.apply_paging(limit, offset)
 
-        return linkset_builder.get_clusters_generator(with_properties)
+        has_strength_filter = (min_strength and min_strength > 0) or (max_strength and max_strength < 1)
+
+        return linkset_builder.get_clusters_generator(with_view_properties, with_view_filters, has_strength_filter)
 
     def visualize(self, id, type, cluster_id):
         return get_visualization(self, id, type, cluster_id, include_compact=True)

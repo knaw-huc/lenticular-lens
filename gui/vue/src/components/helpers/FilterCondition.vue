@@ -2,8 +2,12 @@
   <div class="border border-dark p-3 mt-3">
     <div class="row align-items-center justify-content-between m-0 mb-2">
       <div class="col p-0">
-        <ets-property :entity-type-selection="entityTypeSelection" :property="condition.property"
-                      :singular="true" :entity-type-selection-info="false" ref="propertyComponent"/>
+        <ets-property v-if="entityTypeSelection" :entity-type-selection="entityTypeSelection"
+                      :property="condition.property" :singular="true" :show-info="false"
+                      ref="propertyComponent"/>
+        <property v-else :graphql-endpoint="graphqlEndpoint" :dataset-id="datasetId" :collection-id="collectionId"
+                  :property="condition.property" :singular="true" :show-info="false"
+                  ref="propertyComponent"/>
       </div>
 
       <div class="col-auto">
@@ -101,6 +105,9 @@
         mixins: [ValidationMixin],
         props: {
             entityTypeSelection: Object,
+            graphqlEndpoint: String,
+            datasetId: String,
+            collectionId: String,
             condition: Object,
             index: Number,
         },

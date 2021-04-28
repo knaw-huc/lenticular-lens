@@ -33,7 +33,11 @@ class Linkset:
 
     @property
     def entity_type_selections(self):
-        return self.sources.union(self.targets).union(self.intermediates)
+        return self.sources.union(self.targets)
+
+    @property
+    def all_entity_type_selections(self):
+        return self.entity_type_selections.union(self.intermediates)
 
     @property
     def sources(self):

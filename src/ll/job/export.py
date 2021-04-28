@@ -52,10 +52,8 @@ class Export:
         self._clusterings = {linkset.id: job.clustering(linkset.id, 'linkset') for linkset in self._linksets}
         self._totals = {linkset.id: job.get_links_totals(linkset.id, 'linkset') for linkset in self._linksets}
 
-        self._entity_type_selections = spec.entity_type_selections if self._type == 'linkset' else \
-            {ets for linkset in self._linksets for ets in linkset.entity_type_selections}
-        self._matching_methods = spec.matching_methods if self._type == 'linkset' else \
-            [matching_method for linkset in self._linksets for matching_method in linkset.matching_methods]
+        self._entity_type_selections = spec.all_entity_type_selections
+        self._matching_methods = spec.matching_methods
 
         self._filter_props = {property for ets in self._entity_type_selections for property in ets.filter_properties}
         self._matching_methods_source_props = {(ets, prop)

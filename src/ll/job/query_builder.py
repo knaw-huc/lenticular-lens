@@ -13,37 +13,9 @@ class QueryBuilder:
     def add_query(self, graphql_endpoint, dataset_id, collection_id, resource, target,
                   filter_properties, selection_properties,
                   condition=None, invert=False, single_value=False, limit=None, offset=0):
-        query = self._create_query(resource, target, filter_properties, selection_properties,
-                                   condition=condition, invert=invert, single_value=single_value,
-                                   limit=limit, offset=offset)
-        if query:
-            self._queries.append({
-                'graphql_endpoint': graphql_endpoint,
-                'dataset_id': dataset_id,
-                'collection_id': collection_id,
-                'properties': selection_properties,
-                'query': query
-            })
-
-    def add_linkset_query(self, schema, linkset, graphql_endpoint, dataset_id, collection_id, resource, target,
-                          selection_properties, condition=None, single_value=False, limit=None, offset=0):
-        linkset_join = self._linkset_join_sql(schema, linkset, resource, condition, limit, offset)
-        query = self._create_query(resource, target, [], selection_properties,
-                                   extra_join=linkset_join, single_value=single_value)
-        if query:
-            self._queries.append({
-                'graphql_endpoint': graphql_endpoint,
-                'dataset_id': dataset_id,
-                'collection_id': collection_id,
-                'properties': selection_properties,
-                'query': query
-            })
-
-    def add_cluster_query(self, schema, linkset, graphql_endpoint, dataset_id, collection_id, resource, target,
-                          selection_properties, single_value=False, limit=None, offset=0):
-        cluster_join = self._linkset_cluster_join_sql(schema, linkset, resource, limit, offset)
-        query = self._create_query(resource, target, [], selection_properties,
-                                   extra_join=cluster_join, single_value=single_value)
+        query = self.create_query(resource, target, filter_properties, selection_properties,
+                                  condition=condition, invert=invert, single_value=single_value,
+                                  limit=limit, offset=offset)
         if query:
             self._queries.append({
                 'graphql_endpoint': graphql_endpoint,
@@ -88,17 +60,16 @@ class QueryBuilder:
         return property_values
 
     @staticmethod
-    def _create_query(resource, target, filter_properties, selection_properties,
-                      condition=None, extra_join=None, invert=False, single_value=False, limit=None, offset=0):
-        filtered_filter_properties = [prop for prop in filter_properties if prop.is_downloaded]
-        filtered_selection_properties = [prop for prop in selection_properties if prop.is_downloaded]
+    def create_query(resource, target, filter_properties=None, selection_properties=None,
+                     condition=None, extra_join=None, invert=False, single_value=False, limit=None, offset=0):
+        filtered_filter_properties = [prop for prop in filter_properties if prop.is_downloaded] \
+            if filter_properties else []
+        filtered_selection_properties = [prop for prop in selection_properties if prop.is_downloaded] \
+            if selection_properties else []
 
-        selection_sqls = [sql.SQL('array_agg(DISTINCT {}) AS {}').format(prop.sql, sql.Identifier(prop.hash))
-                          for prop in filtered_selection_properties]
-        if not selection_sqls:
-            return None
-        if single_value:
-            selection_sqls = [selection_sqls[0]]
+        selection_sqls = QueryBuilder.get_selection_sqls(filtered_selection_properties, single_value)
+        selection_sql = sql.Composed([sql.SQL(', '), sql.SQL(', ').join(selection_sqls)]) \
+            if selection_sqls else sql.SQL('')
 
         condition_sql = sql.SQL('')
         if condition and condition != sql.SQL(''):
@@ -114,23 +85,41 @@ class QueryBuilder:
         if extra_join:
             filter_joins.add_join(extra_join, 'extra')
 
+        if limit or offset:
+            return sql.SQL('''
+                SELECT {resource}.uri AS uri {selection}
+                FROM timbuctoo.{table_name} AS {resource} 
+                {selection_joins}
+                WHERE {resource}.uri IN (
+                    SELECT {resource}.uri
+                    FROM timbuctoo.{table_name} AS {resource}
+                    {filter_joins}
+                    {condition}
+                    GROUP BY {resource}.uri
+                    ORDER BY {resource}.uri ASC {limit_offset}
+                )
+                GROUP BY {resource}.uri
+                ORDER BY {resource}.uri
+            ''').format(
+                resource=sql.Identifier(resource),
+                selection=selection_sql,
+                table_name=sql.Identifier(target),
+                selection_joins=selection_joins.sql,
+                filter_joins=filter_joins.sql,
+                condition=condition_sql,
+                limit_offset=sql.SQL(get_pagination_sql(limit, offset))
+            )
+
         return sql.SQL('''
-            SELECT {resource}.uri AS uri, {selection}
+            SELECT {resource}.uri AS uri {selection}
             FROM timbuctoo.{table_name} AS {resource} 
             {selection_joins}
-            WHERE {resource}.uri IN (
-                SELECT {resource}.uri
-                FROM timbuctoo.{table_name} AS {resource}
-                {filter_joins}
-                {condition}
-                GROUP BY {resource}.uri
-                ORDER BY {resource}.uri ASC {limit_offset}
-            )
+            {filter_joins}
+            {condition}
             GROUP BY {resource}.uri
-            ORDER BY {resource}.uri
         ''').format(
             resource=sql.Identifier(resource),
-            selection=sql.SQL(', ').join(selection_sqls),
+            selection=selection_sql,
             table_name=sql.Identifier(target),
             selection_joins=selection_joins.sql,
             filter_joins=filter_joins.sql,
@@ -139,48 +128,15 @@ class QueryBuilder:
         )
 
     @staticmethod
-    def _linkset_join_sql(schema, linkset, resource, where_sql=None, limit=None, offset=0):
-        limit_offset_sql = get_pagination_sql(limit, offset)
+    def get_selection_sqls(properties, single_value=False):
+        # TODO: FILTER (WHERE {prop} IS NOT NULL)
+        selection_sqls = [sql.SQL('array_agg(DISTINCT {}) AS {}').format(prop.sql, sql.Identifier(prop.hash))
+                          for prop in properties]
 
-        return sql.SQL('''
-            INNER JOIN (
-                SELECT DISTINCT nodes.uri
-                FROM (
-                    SELECT links.source_uri, links.target_uri 
-                    FROM {schema}.{linkset} AS links
-                    {where_sql} 
-                    ORDER BY sort_order ASC {limit_offset}
-                ) AS ls, LATERAL (VALUES (ls.source_uri), (ls.target_uri)) AS nodes(uri)
-            ) AS linkset ON {resource}.uri = linkset.uri
-        ''').format(
-            schema=sql.Identifier(schema),
-            linkset=sql.Identifier(linkset),
-            where_sql=where_sql if where_sql else sql.SQL(''),
-            limit_offset=sql.SQL(limit_offset_sql),
-            resource=sql.Identifier(resource)
-        )
+        if not selection_sqls:
+            return None
 
-    @staticmethod
-    def _linkset_cluster_join_sql(schema, linkset, resource, limit=None, offset=0, uri_limit=5):
-        return sql.SQL('''
-            INNER JOIN (
-                SELECT nodes.uri, ROW_NUMBER() OVER (PARTITION BY ls.cluster_id) AS cluster_row_number
-                FROM linksets.{linkset} AS ls
-                INNER JOIN (
-                    SELECT cluster_id
-                    FROM {schema}.{linkset}
-                    CROSS JOIN LATERAL (VALUES (source_uri), (target_uri)) AS nodes(uri)
-                    GROUP BY cluster_id
-                    ORDER BY count(DISTINCT nodes.uri) DESC, cluster_id ASC
-                    {limit_offset}
-                ) AS clusters ON ls.cluster_id = clusters.cluster_id
-                CROSS JOIN LATERAL (VALUES (source_uri), (target_uri)) AS nodes(uri)
-            ) AS linkset 
-            ON {resource}.uri = linkset.uri AND linkset.cluster_row_number < {uri_limit}
-        ''').format(
-            schema=sql.Identifier(schema),
-            linkset=sql.Identifier(linkset),
-            limit_offset=sql.SQL(get_pagination_sql(limit, offset)),
-            uri_limit=sql.Literal(uri_limit),
-            resource=sql.Identifier(resource)
-        )
+        if single_value:
+            return [selection_sqls[0]]
+
+        return selection_sqls

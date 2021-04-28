@@ -22,7 +22,13 @@
       <button type="button" aria-label="Close" class="close modal-header-close" @click="close()">×</button>
     </template>
 
-    <div class="plot"></div>
+    <div class="plot" ref="plot">
+      <div v-if="isLoading" class="row align-items-center justify-content-center">
+        <div class="col-auto mt-4">
+          <loading/>
+        </div>
+      </div>
+    </div>
   </b-modal>
 </template>
 
@@ -46,6 +52,7 @@
                 clusterGraph: null,
                 clusterGraphCompact: null,
                 reconciliationGraph: null,
+                isLoading: false,
             };
         },
         props: {
@@ -74,10 +81,35 @@
             },
 
             draw(graphParent) {
-                draw('.plot', graphParent);
+                draw(this.$refs.plot, graphParent);
+            },
+
+            async drawShown(show = null) {
+                if (show)
+                    this.show = show;
+
+                if (!this.clusterGraph)
+                    await this.getGraphData();
+
+                switch (this.show) {
+                    case 'visualize-compact':
+                        if (this.clusterGraphCompact) this.draw(this.clusterGraphCompact);
+                        break;
+                    case 'visualize-reconciled':
+                        if (this.reconciliationGraph) this.draw(this.reconciliationGraph);
+                        break;
+                    case 'visualize':
+                    default:
+                        if (this.clusterGraph) this.draw(this.clusterGraph);
+                }
             },
 
             async getGraphData(type) {
+                if (this.isLoading)
+                    return;
+
+                this.isLoading = true;
+
                 const data = await this.$root.getClusterGraphs(this.type, this.specId, this.cluster.id,
                     type === 'cluster', this.cluster.extended);
 
@@ -85,41 +117,26 @@
                 this.clusterGraphCompact = data.cluster_graph_compact;
                 this.reconciliationGraph = data.reconciliation_graph;
 
-                this.drawShown();
+                this.isLoading = false;
             },
-
-            drawShown(show = null) {
-                if (show)
-                    this.show = show;
-
-                switch (this.show) {
-                    case 'visualize-compact':
-                        if (this.clusterGraphCompact) this.draw(this.clusterGraphCompact);
-                        break;
-                    case 'visualize-reconciled':
-                        if (this.reconciliationGraph) this.draw(this.reconciliationGraphDrawn);
-                        break;
-                    case 'visualize':
-                    default:
-                        if (this.clusterGraph) this.draw(this.clusterGraph);
-                }
-            },
-        },
-        mounted() {
-            if (this.cluster)
-                this.getGraphData();
         },
         watch: {
             cluster() {
-                this.getGraphData();
+                this.clusterGraph = null;
+                this.clusterGraphCompact = null;
+                this.reconciliationGraph = null;
+
+                const canvas = this.$refs.plot.getElementsByTagName('canvas');
+                if (canvas.length > 0)
+                    canvas[0].remove();
             },
         },
     };
 </script>
 
 <style scoped>
-  .plot {
+.plot {
     width: 100%;
     height: 100%;
-  }
+}
 </style>

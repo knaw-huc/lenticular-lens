@@ -1,5 +1,5 @@
 from uuid import uuid4
-from psycopg2 import sql
+from psycopg2 import sql, extras
 
 from ll.elem.matching_method import MatchingMethod
 
@@ -7,8 +7,7 @@ from ll.job.links_filter import LinksFilter
 from ll.job.query_builder import QueryBuilder
 
 from ll.util.config_db import db_conn, fetch_many
-from ll.util.hasher import hash_string_min
-from ll.util.helpers import get_pagination_sql
+from ll.util.helpers import get_pagination_sql, get_sql_empty
 
 
 class LinksetBuilder:
@@ -19,7 +18,7 @@ class LinksetBuilder:
         self._view = view
 
         self._limit = None
-        self._offset = None
+        self._offset = 0
         self._links_filter = LinksFilter()
 
     def apply_paging(self, limit, offset):
@@ -29,130 +28,271 @@ class LinksetBuilder:
     def apply_links_filter(self, links_filter):
         self._links_filter = links_filter
 
-    def get_links_generator(self, with_properties='none'):
-        values = self._linkset_values(with_properties == 'single') if self._view and with_properties != 'none' else None
-        sim_fields_sql = sql.SQL('\n').join(MatchingMethod.get_similarity_fields_sqls(self._spec.matching_methods))
-
-        with db_conn() as conn, conn.cursor(name=uuid4().hex) as cur:
-            cur.execute(sql.SQL(
-                'SELECT links.source_uri, links.source_collections, '
-                '       links.target_uri, links.target_collections, '
-                '       link_order, cluster_id, valid, computed_similarity '
-                'FROM {schema}.{view_name} AS links '
-                '{sim_fields_sql} '
-                'CROSS JOIN LATERAL coalesce({sim_logic_ops_sql}, 1) AS computed_similarity '
-                '{where_sql} '
-                'ORDER BY sort_order ASC {limit_offset}'
-            ).format(
-                schema=sql.Identifier(self._schema),
-                view_name=sql.Identifier(self._table_name),
-                sim_fields_sql=sim_fields_sql,
-                sim_logic_ops_sql=self._spec.similarity_logic_ops_sql,
-                where_sql=self._links_filter.sql(),
-                limit_offset=sql.SQL(get_pagination_sql(self._limit, self._offset))
-            ))
-
-            for link in fetch_many(cur):
-                yield {
-                    'source': link[0],
-                    'source_collections': link[1],
-                    'source_values': values[link[0]] if values and link[0] in values else None,
-                    'target': link[2],
-                    'target_collections': link[3],
-                    'target_values': values[link[2]] if values and link[2] in values else None,
-                    'link_order': link[4],
-                    'cluster_id': link[5],
-                    'valid': link[6],
-                    'similarity': link[7]
-                }
-
-    def get_total_links(self):
+    def get_total_links(self, with_view_filters=False, compute_similarity=False):
         with db_conn() as conn, conn.cursor() as cur:
-            cur.execute(sql.SQL(
-                'SELECT valid, count(*) AS valid_count '
-                'FROM {schema}.{view_name} AS links '
-                '{where_sql} '
-                'GROUP BY valid'
-            ).format(
-                schema=sql.Identifier(self._schema),
-                view_name=sql.Identifier(self._table_name),
-                where_sql=self._links_filter.sql()
+            cur.execute(sql.SQL('''
+                {linkset_cte}
+                
+                SELECT valid, count(*) AS valid_count 
+                FROM linkset
+                GROUP BY valid
+            ''').format(
+                linkset_cte=self.get_linkset_cte_sql(
+                    with_view_filters=with_view_filters, compute_similarity=compute_similarity,
+                    apply_paging=False, include_linkset_uris=False)
             ))
 
             return {row[0]: row[1] for row in cur.fetchall()}
 
-    def get_clusters_generator(self, with_properties='none'):
-        values = self._cluster_values(with_properties == 'single') if self._view and with_properties != 'none' else None
+    def get_links_generator(self, with_view_properties='none', with_view_filters=False):
+        is_single_value = with_view_properties == 'single'
+        use_properties = bool(with_view_properties != 'none' and self._view.properties_per_collection)
 
-        with db_conn() as conn, conn.cursor(name=uuid4().hex) as cur:
-            cur.execute(sql.SQL(
-                'SELECT ls.cluster_id, count(DISTINCT nodes.uri) AS size, count(ls.*) / 2 AS links {nodes_sql} '
-                'FROM {schema}.{view_name} AS ls '
-                'CROSS JOIN LATERAL (VALUES (ls.source_uri), (ls.target_uri)) AS nodes(uri) '
-                'GROUP BY ls.cluster_id '
-                'ORDER BY size DESC, ls.cluster_id {limit_offset}'
-            ).format(
-                nodes_sql=sql.SQL(', array_agg(DISTINCT nodes.uri) AS nodes_arr' if with_properties != 'none' else ''),
-                schema=sql.Identifier(self._schema),
-                view_name=sql.Identifier(self._table_name),
-                limit_offset=sql.SQL(get_pagination_sql(self._limit, self._offset))
+        selection_sql = get_sql_empty(self._selection_props_sql(is_single_value),
+                                      flag=use_properties, prefix=sql.SQL(', \n'), add_new_line=False)
+
+        props_joins_sql = get_sql_empty(self._properties_join_sql(
+            sql.SQL('IN (linkset.source_uri, linkset.target_uri)'), is_single_value), flag=use_properties)
+
+        with db_conn() as conn, conn.cursor(name=uuid4().hex, cursor_factory=extras.RealDictCursor) as cur:
+            cur.execute(sql.SQL('''
+                {linkset_cte}
+                
+                SELECT source_uri, target_uri, link_order, source_collections, target_collections, 
+                       cluster_id, valid, computed_similarity {selection_sql}
+                FROM linkset
+                {props_joins_sql}
+            ''').format(
+                linkset_cte=self.get_linkset_cte_sql(with_view_filters=with_view_filters),
+                selection_sql=selection_sql,
+                props_joins_sql=props_joins_sql
+            ))
+
+            for link in fetch_many(cur):
+                yield {
+                    'source': link['source_uri'],
+                    'target': link['target_uri'],
+                    'link_order': link['link_order'],
+                    'source_collections': link['source_collections'],
+                    'target_collections': link['target_collections'],
+                    'source_values': self._get_values(link, is_source=True,
+                                                      is_single_value=is_single_value) if use_properties else None,
+                    'target_values': self._get_values(link, is_source=False,
+                                                      is_single_value=is_single_value) if use_properties else None,
+                    'cluster_id': link['cluster_id'],
+                    'valid': link['valid'],
+                    'similarity': link['computed_similarity']
+                }
+
+    def get_clusters_generator(self, with_view_properties='none', with_view_filters=False, compute_similarity=False):
+        is_single_value = with_view_properties == 'single'
+        use_properties = bool(with_view_properties != 'none' and self._view.properties_per_collection)
+
+        selection_sql = get_sql_empty(self._cluster_selection_props_sql,
+                                      flag=use_properties, prefix=sql.SQL(', \n'), add_new_line=False)
+
+        props_joins_sql = get_sql_empty(self._properties_join_sql(
+            sql.SQL('= ANY (nodes)'), is_single_value, include_unnest=True), flag=use_properties)
+
+        with db_conn() as conn, conn.cursor(name=uuid4().hex, cursor_factory=extras.RealDictCursor) as cur:
+            cur.execute(sql.SQL('''
+                {linkset_cte}
+                
+                SELECT cluster_id, size, links {selection_sql} 
+                FROM (
+                    SELECT cluster_id, array_agg(DISTINCT nodes.uri) AS nodes,
+                           count(nodes) AS size, count(*) / 2 AS links
+                    FROM linkset, LATERAL (VALUES (linkset.source_uri), (linkset.target_uri)) AS nodes(uri)
+                    GROUP BY cluster_id
+                    ORDER BY size DESC, cluster_id {limit_offset}
+                ) AS clusters
+                {props_joins_sql}
+                GROUP BY cluster_id, size, links
+                ORDER BY size DESC, cluster_id
+            ''').format(
+                linkset_cte=self.get_linkset_cte_sql(
+                    with_view_filters=with_view_filters, compute_similarity=compute_similarity, apply_paging=False),
+                selection_sql=selection_sql,
+                limit_offset=sql.SQL(get_pagination_sql(self._limit, self._offset)),
+                props_joins_sql=props_joins_sql,
             ))
 
             for cluster in fetch_many(cur):
-                cluster_values = {}
-                if values:
-                    for uri, uri_values in values.items():
-                        if uri in cluster[3]:
-                            for prop_value in uri_values:
-                                key = prop_value['graphql_endpoint'] + '_' + \
-                                      prop_value['dataset_id'] + '_' + \
-                                      prop_value['collection_id'] + '_' + \
-                                      prop_value['property'][-1]
-
-                                if key not in cluster_values:
-                                    cluster_values[key] = {
-                                        'graphql_endpoint': prop_value['graphql_endpoint'],
-                                        'dataset_id': prop_value['dataset_id'],
-                                        'collection_id': prop_value['collection_id'],
-                                        'property': prop_value['property'],
-                                        'values': set()
-                                    }
-
-                                cluster_values[key]['values'].update(prop_value['values'])
-
                 yield {
-                    'id': cluster[0],
-                    'size': cluster[1],
-                    'links': cluster[2],
-                    'values': [{
-                        'graphql_endpoint': cluster_value['graphql_endpoint'],
-                        'dataset_id': cluster_value['dataset_id'],
-                        'collection_id': cluster_value['collection_id'],
-                        'property': cluster_value['property'],
-                        'values': list(cluster_value['values'])
-                    } for key, cluster_value in cluster_values.items()] if values else None
+                    'id': cluster['cluster_id'],
+                    'size': cluster['size'],
+                    'links': cluster['links'],
+                    'values': self._get_values(cluster, include_check=False, is_single_value=is_single_value,
+                                               max_values=10) if use_properties else None
                 }
 
-    def _linkset_values(self, single_value=False):
-        query_builder = QueryBuilder()
+    def get_linkset_cte_sql(self, with_view_filters=False, compute_similarity=True,
+                            apply_paging=True, include_linkset_uris=True):
+        use_filters = bool(with_view_filters and self._view.filters_per_collection)
 
-        for (collection, properties) in self._view.properties_per_collection.items():
-            query_builder.add_linkset_query(
-                self._schema, self._table_name, collection.graphql_endpoint,
-                collection.dataset_id, collection.collection_id,
-                hash_string_min(collection.table_name), collection.table_name, properties,
-                condition=self._links_filter.sql(), limit=self._limit, offset=self._offset, single_value=single_value)
+        filter_joins_sql = get_sql_empty(self._filter_join_sql, flag=use_filters)
+        where_sql = self._links_filter.sql(additional_filter=self._additional_filter_sql if use_filters else None)
 
-        return query_builder.run_queries_single_value() if single_value else query_builder.run_queries()
+        sim_fields_sql = get_sql_empty(
+            sql.SQL('\n').join(MatchingMethod.get_similarity_fields_sqls(self._spec.matching_methods)),
+            flag=compute_similarity)
+        sim_logic_ops_sql = self._spec.similarity_logic_ops_sql if compute_similarity else sql.SQL('NULL')
 
-    def _cluster_values(self, single_value=False):
-        query_builder = QueryBuilder()
+        order_limit_offset_sql = get_sql_empty(sql.SQL(
+            'ORDER BY sort_order ASC ' + get_pagination_sql(self._limit, self._offset)), flag=apply_paging)
 
-        for (collection, properties) in self._view.properties_per_collection.items():
-            query_builder.add_cluster_query(
-                self._schema, self._table_name, collection.graphql_endpoint,
-                collection.dataset_id, collection.collection_id,
-                hash_string_min(collection.table_name), collection.table_name, properties,
-                limit=self._limit, offset=self._offset, single_value=single_value)
+        include_linkset_uris_sql = get_sql_empty(sql.SQL('''
+            , linkset_uris AS (
+                SELECT DISTINCT nodes.uri
+                FROM linkset, LATERAL (VALUES (linkset.source_uri), (linkset.target_uri)) AS nodes(uri)
+            )
+        '''), flag=include_linkset_uris)
 
-        return query_builder.run_queries_single_value() if single_value else query_builder.run_queries()
+        return sql.SQL('''
+            WITH linkset AS (
+                SELECT source_uri, target_uri, link_order, source_collections, target_collections, 
+                       cluster_id, valid, computed_similarity
+                FROM {schema}.{view_name} AS linkset
+                {filter_joins_sql}
+                {sim_fields_sql} 
+                CROSS JOIN LATERAL coalesce({sim_logic_ops_sql}, 1) AS computed_similarity 
+                {where_sql} 
+                {order_limit_offset}
+            ) {include_linkset_uris_sql} 
+        ''').format(
+            schema=sql.Identifier(self._schema),
+            view_name=sql.Identifier(self._table_name),
+            filter_joins_sql=filter_joins_sql,
+            sim_fields_sql=sim_fields_sql,
+            sim_logic_ops_sql=sim_logic_ops_sql,
+            where_sql=where_sql,
+            order_limit_offset=order_limit_offset_sql,
+            include_linkset_uris_sql=include_linkset_uris_sql,
+        )
+
+    @property
+    def _collections(self):
+        return set(ets.collection for ets in self._spec.entity_type_selections)
+
+    @property
+    def _selection_resource_uris_sql(self):
+        return sql.SQL(', \n').join([
+            sql.SQL('{}.uri AS {}').format(
+                sql.Identifier(collection.alias),
+                sql.Identifier(collection.alias + '_uri'))
+            for collection in self._collections
+        ])
+
+    @property
+    def _cluster_selection_props_sql(self):
+        return sql.SQL(', \n').join(
+            [sql.SQL('array_agg(DISTINCT {}) AS {}').format(
+                sql.Identifier(collection.alias + '_' + prop.hash + '_extended'),
+                sql.Identifier(collection.alias + '_' + prop.hash))
+                for collection in self._view.properties_per_collection
+                for prop in self._view.properties_per_collection.get(collection)]
+        )
+
+    @property
+    def _additional_filter_sql(self):
+        return sql.SQL(' AND ').join(
+            [sql.SQL('{} IN ({})').format(
+                sql.Identifier(target),
+                sql.SQL(', ').join([
+                    sql.SQL('{}.{}').format(sql.Identifier(collection.alias), sql.Identifier('uri'))
+                    for collection in self._collections
+                ])) for target in ['source_uri', 'target_uri']])
+
+    @property
+    def _filter_join_sql(self):
+        sqls = []
+        for collection in self._collections:
+            if collection in self._view.filters_per_collection:
+                sqls.append(sql.SQL('''
+                    LEFT JOIN (
+                        {resource_query}
+                    ) AS {resource}
+                    ON {resource}.uri IN (linkset.source_uri, linkset.target_uri)
+                ''').format(
+                    resource_query=QueryBuilder.create_query(
+                        collection.alias, collection.table_name,
+                        filter_properties=self._view.filters_properties_per_collection[collection],
+                        condition=self._view.filters_sql_per_collection[collection]),
+                    resource=sql.Identifier(collection.alias),
+                ))
+            else:
+                sqls.append(sql.SQL('''
+                    LEFT JOIN timbuctoo.{table_name} AS {resource}
+                    ON {resource}.uri IN (linkset.source_uri, linkset.target_uri)
+                ''').format(
+                    table_name=sql.Identifier(collection.table_name),
+                    resource=sql.Identifier(collection.alias),
+                ))
+
+        return sql.Composed(sqls)
+
+    def _selection_props_sql(self, single_value=True):
+        prop_selection_sqls = [
+            sql.SQL('{}.{} AS {}').format(
+                sql.Identifier(collection.alias),
+                sql.Identifier(prop.hash),
+                sql.Identifier(collection.alias + '_' + prop.hash))
+            for collection in self._view.properties_per_collection
+            for (idx, prop) in enumerate(self._view.properties_per_collection.get(collection))
+            if not single_value or idx == 0
+        ]
+
+        uri_selection_sqls = [
+            sql.SQL('{}.uri AS {}').format(
+                sql.Identifier(collection.alias),
+                sql.Identifier(collection.alias + '_uri'))
+            for collection in self._view.properties_per_collection
+        ]
+
+        return sql.SQL(', \n').join(prop_selection_sqls + uri_selection_sqls)
+
+    def _properties_join_sql(self, uri_match_sql, single_value=True, include_unnest=False):
+        sqls = []
+        for collection in self._collections:
+            if collection in self._view.properties_per_collection:
+                sqls.append(sql.SQL('''
+                    LEFT JOIN (
+                        {resource_query}
+                    ) AS {resource}
+                    ON {resource}.uri {uri_match_sql}
+                ''').format(
+                    resource_query=QueryBuilder.create_query(
+                        collection.alias, collection.table_name,
+                        condition=sql.SQL('{}.uri IN (SELECT uri FROM linkset_uris)')
+                            .format(sql.Identifier(collection.alias)),
+                        selection_properties=self._view.properties_per_collection[collection],
+                        single_value=single_value),
+                    resource=sql.Identifier(collection.alias),
+                    uri_match_sql=uri_match_sql,
+                ))
+
+                if include_unnest:
+                    for prop in self._view.properties_per_collection.get(collection):
+                        sqls.append(sql.SQL('LEFT JOIN unnest({resource}.{property}) '
+                                            'AS {extended_property} ON true ').format(
+                            resource=sql.Identifier(collection.alias),
+                            property=sql.Identifier(prop.hash),
+                            extended_property=sql.Identifier(collection.alias + '_' + prop.hash + '_extended'),
+                        ))
+
+        return sql.Composed(sqls)
+
+    def _get_values(self, source, include_check=True, is_source=True, is_single_value=False, max_values=None):
+        return [{
+            'graphql_endpoint': collection.graphql_endpoint,
+            'dataset_id': collection.dataset_id,
+            'collection_id': collection.collection_id,
+            'property': prop.property_path,
+            'values': list(filter(None, source[collection.alias + '_' + prop.hash]))[:(max_values or 1)]
+            if max_values or is_single_value else list(filter(None, source[collection.alias + '_' + prop.hash]))}
+            for collection in self._view.properties_per_collection
+            for (idx, prop) in enumerate(self._view.properties_per_collection.get(collection))
+            if (not is_single_value or idx == 0) and
+               (not include_check
+                or (source[collection.alias + '_uri'] == source['source_uri' if is_source else 'target_uri']))
+        ]

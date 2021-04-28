@@ -6,19 +6,19 @@ from ll.job.validation import Validation
 class LinksFilter:
     def __init__(self):
         self._alias = None
-        self._uri = None
         self._source_uri = None
         self._target_uri = None
         self._min = 0
         self._max = 1
-        self._cluster_id = None
+        self._uris = []
+        self._cluster_ids = []
         self._validation_filter = Validation.ALL
 
     def set_alias(self, alias):
         self._alias = alias
 
-    def filter_on_uri(self, uri):
-        self._uri = uri
+    def filter_on_uris(self, uris):
+        self._uris.extend(uris)
 
     def filter_on_link(self, source_uri, target_uri):
         self._source_uri = source_uri
@@ -28,25 +28,27 @@ class LinksFilter:
         self._min = min
         self._max = max
 
-    def filter_on_cluster(self, cluster_id):
-        self._cluster_id = cluster_id
+    def filter_on_clusters(self, cluster_ids):
+        self._cluster_ids.extend(cluster_ids)
 
     def filter_on_validation(self, validation_filter):
         self._validation_filter = validation_filter
 
-    def sql(self, include_where=True, default=sql.SQL('')):
+    def sql(self, include_where=True, additional_filter=None, default=sql.SQL('')):
         filters = []
 
-        if self._uri_sql:
-            filters.append(self._uri_sql)
         if self._link_sql:
             filters.append(self._link_sql)
+        if self._uris_sql:
+            filters.append(self._uris_sql)
         if self._cluster_sql:
             filters.append(self._cluster_sql)
         if self._validation_sql:
             filters.append(self._validation_sql)
         if self._min_max_sql:
             filters.append(self._min_max_sql)
+        if additional_filter:
+            filters.append(additional_filter)
 
         if filters and include_where:
             return sql.SQL('WHERE {}').format(sql.SQL(' AND ').join(filters))
@@ -59,16 +61,6 @@ class LinksFilter:
     @property
     def _alias_sql(self):
         return sql.SQL('{}.').format(sql.Identifier(self._alias)) if self._alias else sql.SQL('')
-
-    @property
-    def _uri_sql(self):
-        if self._uri:
-            return sql.SQL('({alias}source_uri = {uri} OR {alias}target_uri = {uri})').format(
-                alias=self._alias_sql,
-                uri=sql.Literal(self._uri)
-            )
-
-        return None
 
     @property
     def _link_sql(self):
@@ -102,11 +94,31 @@ class LinksFilter:
         return None
 
     @property
+    def _uris_sql(self):
+        if self._uris and len(self._uris) == 1:
+            return sql.SQL('({alias}source_uri = {uri} OR {alias}target_uri = {uri})').format(
+                alias=self._alias_sql,
+                uri=sql.Literal(self._uris[0])
+            )
+        elif self._uris and len(self._uris) > 1:
+            return sql.SQL('({alias}source_uri IN ({uris}) OR {alias}target_uri IN ({uris}))').format(
+                alias=self._alias_sql,
+                uris=sql.SQL(', ').join([sql.Literal(uri) for uri in self._uris])
+            )
+
+        return None
+
+    @property
     def _cluster_sql(self):
-        if self._cluster_id:
+        if self._cluster_ids and len(self._cluster_ids) == 1:
             return sql.SQL('{alias}cluster_id = {cluster_id}').format(
                 alias=self._alias_sql,
-                cluster_id=sql.Literal(self._cluster_id)
+                cluster_id=sql.Literal(self._cluster_ids[0])
+            )
+        elif self._cluster_ids and len(self._cluster_ids) > 1:
+            return sql.SQL('{alias}cluster_id IN ({cluster_ids})').format(
+                alias=self._alias_sql,
+                cluster_ids=sql.SQL(', ').join([sql.Literal(cluster_id) for cluster_id in self._cluster_ids])
             )
 
         return None
@@ -117,31 +129,19 @@ class LinksFilter:
             validation_filter_sqls = []
 
             if Validation.ACCEPTED in self._validation_filter:
-                validation_filter_sqls.append(sql.SQL('{alias}valid = {valid}').format(
-                    alias=self._alias_sql,
-                    valid=sql.Literal('accepted'))
-                )
+                validation_filter_sqls.append(sql.Literal('accepted'))
             if Validation.REJECTED in self._validation_filter:
-                validation_filter_sqls.append(sql.SQL('{alias}valid = {valid}').format(
-                    alias=self._alias_sql,
-                    valid=sql.Literal('rejected'))
-                )
+                validation_filter_sqls.append(sql.Literal('rejected'))
             if Validation.NOT_SURE in self._validation_filter:
-                validation_filter_sqls.append(sql.SQL('{alias}valid = {valid}').format(
-                    alias=self._alias_sql,
-                    valid=sql.Literal('not_sure'))
-                )
+                validation_filter_sqls.append(sql.Literal('not_sure'))
             if Validation.NOT_VALIDATED in self._validation_filter:
-                validation_filter_sqls.append(sql.SQL('{alias}valid = {valid}').format(
-                    alias=self._alias_sql,
-                    valid=sql.Literal('not_validated'))
-                )
+                validation_filter_sqls.append(sql.Literal('not_validated'))
             if Validation.MIXED in self._validation_filter:
-                validation_filter_sqls.append(sql.SQL('{alias}valid = {valid}').format(
-                    alias=self._alias_sql,
-                    valid=sql.Literal('mixed'))
-                )
+                validation_filter_sqls.append(sql.Literal('mixed'))
 
-            return sql.SQL(' OR ').join(validation_filter_sqls)
+            return sql.SQL('{alias}valid IN ({states})').format(
+                alias=self._alias_sql,
+                states=sql.SQL(', ').join(validation_filter_sqls)
+            )
 
         return None

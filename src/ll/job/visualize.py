@@ -410,7 +410,7 @@ def get_visualization(job, id, type, cluster_id, associations=None, include_comp
 
     nodes = {}
     links = []
-    for link in job.get_links(id, type, cluster_id=cluster_id, with_properties='single'):
+    for link in job.get_links(id, type, cluster_ids=[cluster_id], with_view_properties='single'):
         for (node, ets_id, value) in [(link['source'], link['source_collections'][0], link['source_values']),
                                       (link['target'], link['target_collections'][0], link['target_values'])]:
             if node not in nodes:
@@ -419,9 +419,13 @@ def get_visualization(job, id, type, cluster_id, associations=None, include_comp
                 collection_uri = ets.collection.table_data['collection_shortened_uri']
                 node_id = get_id_of_uri(node)
 
+                label = F"{dataset_name} {collection_uri} {node_id}"
+                if value and value[0]['values']:
+                    label = F"{value[0]['values'][0]} ({label})"
+
                 nodes[node] = create_node(
                     node, hash_string_min(ets.dataset_id),
-                    label=F"-- {value} ({dataset_name} {collection_uri} {node_id})",
+                    label="-- " + label,
                     dataset=dataset_name, entity=collection_uri, local_id=node_id
                 )
 

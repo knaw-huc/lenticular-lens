@@ -268,10 +268,14 @@ _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/entity_type_selection_total/0`_
 
 **URL**: `/job/<job_id>/links_totals/<type>/<id>`\
 **Method**: `GET`\
-**Parameters**: `cluster_id`, `limit`, `offset`
+**Parameters**: `apply_filters`, `uri`, `cluster_id`, `min`, `max`, `limit`, `offset`
 
 Returns the total number of links of `type` (`linkset` or `lens`) for the linkset/lens with `id` of the given `job_id`.
-Use `limit` and `offset` for paging. Specify `cluster_id` to only return the links of a specific cluster.
+Use `limit` and `offset` for paging.
+
+Specify `apply_filters` to apply the filters specified by the user. Specify `uri` to only return links with the
+specified URIs. Specify `cluster_id` to only return the links of specific clusters. Specify `min` and/or `max` to only
+return links with a similarity score within the specified minimum and maximum score.
 
 _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/links_totals/linkset/0`_
 
@@ -290,11 +294,17 @@ _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/entity_type_selection/0`_
 
 **URL**: `/job/<job_id>/links/<type>/<id>`\
 **Method**: `GET`\
-**Parameters**: `valid`, `cluster_id`, `limit`, `offset`
+**Parameters**: `with_properties`, `apply_filters`, `valid`, `uri`, `cluster_id`, `min`, `max`, `limit`, `offset`
 
 Returns the links of `type` (`linkset` or `lens`) for the linkset/lens with `id` of the given `job_id`. Use `limit`
-and `offset` for paging. Specify `valid` with `accepted`, `declined`, `not_sure` and/or `not_validated` to only return
-from the specified validity types. Specify `cluster_id` to only return the links of a specific cluster.
+and `offset` for paging.
+
+Specify `with_properties` with 'none' to return no property values, 'single' to only return a single property value or '
+multiple' to return multiple property values. Specify `apply_filters` to apply the filters specified by the user.
+Specify `valid` with `accepted`, `declined`, `not_sure` and/or `not_validated` to only return from the specified
+validity types. Specify `uri` to only return links with the specified URIs. Specify `cluster_id` to only return the
+links of specific clusters. Specify `min` and/or `max` to only return links with a similarity score within the specified
+minimum and maximum score.
 
 _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/links/linkset/0`_
 
@@ -302,10 +312,16 @@ _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/links/linkset/0`_
 
 **URL**: `/job/<job_id>/clusters/<type>/<id>`\
 **Method**: `GET`\
-**Parameters**: `limit`, `offset`
+**Parameters**: `with_properties`, `apply_filters`, `uri`, `cluster_id`, `min`, `max`, `limit`, `offset`
 
 Returns the clusters of `type` (`linkset` or `lens`) for the linkset/lens with `id` of the given `job_id`. Use `limit`
 and `offset` for paging.
+
+Specify `with_properties` with 'none' to return no property values, 'single' to only return a single property value or '
+multiple' to return multiple property values. Specify `apply_filters` to apply the filters specified by the user.
+Specify `uri` to only return links with the specified URIs. Specify `cluster_id` to only return the links of specific
+clusters. Specify `min` and/or `max` to only return links with a similarity score within the specified minimum and
+maximum score.
 
 _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/clusters/0`_
 
@@ -313,13 +329,18 @@ _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/clusters/0`_
 
 **URL**: `/job/<job_id>/validate/<type>/<id>`\
 **Method**: `POST`\
-**JSON**: `source`, `target`, `cluster_id`, `validation`, `valid`
+**JSON**: `source`, `target`, `apply_filters`, `valid`, `uri`, `cluster_id`, `min`, `max`, `validation`
 
-Validate a link of `type` (`linkset` or `lens`) for the linkset/lens with `id` of the given `job_id`. Specify the uris
-of the `source` and `target` to identify the link to be validated or filter the links by specifying the `cluster_id` or
-the current `validation` type.
+Validate a link of `type` (`linkset` or `lens`) for the linkset/lens with `id` of the given `job_id`.
 
-Provide `valid` with either `accepted`, `declined` or `not_sure` to validate the link or use `not_validated` to reset.
+Specify the uris of the `source` and `target` to identify the link to be validated. Or filter the links by
+specifying `apply_filters` to apply the filters specified by the user. Specify `valid` with `accepted`, `declined`,
+`not_sure` and/or `not_validated` to only return from the specified validity types. Specify `uri` to only return links
+with the specified URIs. Specify `cluster_id` to only return the links of specific clusters. Specify `min` and/or `max`
+to only return links with a similarity score within the specified minimum and maximum score.
+
+Provide `validation` with either `accepted`, `declined` or `not_sure` to validate the link or use `not_validated` to
+reset.
 
 ---
 

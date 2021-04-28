@@ -27,7 +27,7 @@ class MatchingSql:
 
     def generate_entity_type_selection_sql(self):
         entity_type_selections_sql = []
-        for entity_type_selection in self._linkset.entity_type_selections:
+        for entity_type_selection in self._linkset.all_entity_type_selections:
             random = '\nORDER BY RANDOM()' if entity_type_selection.random else ''
             limit = sql.SQL(') AS x%s\nLIMIT %i' % (random, entity_type_selection.limit)) \
                 if entity_type_selection.limit > -1 else sql.SQL('')

@@ -191,3 +191,9 @@ class Collection:
 
     def __hash__(self):
         return hash(self.graphql_endpoint) ^ hash(self.dataset_id) ^ hash(self.collection_id)
+
+    def __eq__(self, other):
+        return isinstance(other, Collection) and hash(self) == hash(other)
+
+    def __hash__(self):
+        return hash(self.graphql_endpoint) ^ hash(self.dataset_id) ^ hash(self.collection_id)

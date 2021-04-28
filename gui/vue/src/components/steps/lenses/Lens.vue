@@ -215,55 +215,9 @@
             },
 
             updateView() {
-                const entityTypeSelections = new Set(this.linksetsInLens.flatMap(
+                this.$root.updateView(this.lensSpec.id, 'lens', new Set(this.linksetsInLens.flatMap(
                     linksetSpec => [...linksetSpec.sources, ...linksetSpec.targets]
-                ));
-
-                if (this.view) {
-                    const propertiesToRemove = JSON.parse(JSON.stringify(this.view.properties));
-                    entityTypeSelections.forEach(etsId => {
-                        const ets = this.$root.getEntityTypeSelectionById(etsId);
-                        const propsIdx = propertiesToRemove.findIndex(prop =>
-                            prop.timbuctoo_graphql === ets.dataset.timbuctoo_graphql &&
-                            prop.dataset_id === ets.dataset.dataset_id &&
-                            prop.collection_id === ets.dataset.collection_id
-                        );
-
-                        if (propsIdx > -1)
-                            propertiesToRemove.splice(propsIdx, 1);
-                    });
-
-                    propertiesToRemove.forEach(toRemove => {
-                        const propsIdx = this.view.properties.findIndex(prop =>
-                            prop.timbuctoo_graphql === toRemove.timbuctoo_graphql &&
-                            prop.dataset_id === toRemove.dataset_id &&
-                            prop.collection_id === toRemove.collection_id
-                        );
-
-                        if (propsIdx > -1)
-                            this.view.properties.splice(propsIdx, 1);
-                    });
-                }
-
-                if (!this.view)
-                    this.$root.addView(this.lensSpec.id, 'lens');
-
-                entityTypeSelections.forEach(etsId => {
-                    const ets = this.$root.getEntityTypeSelectionById(etsId);
-                    const propsIdx = this.view.properties.findIndex(prop =>
-                        prop.timbuctoo_graphql === ets.dataset.timbuctoo_graphql &&
-                        prop.dataset_id === ets.dataset.dataset_id &&
-                        prop.collection_id === ets.dataset.collection_id
-                    );
-
-                    if (propsIdx < 0)
-                        this.view.properties.push({
-                            timbuctoo_graphql: ets.dataset.timbuctoo_graphql,
-                            dataset_id: ets.dataset.dataset_id,
-                            collection_id: ets.dataset.collection_id,
-                            properties: [['']]
-                        });
-                });
+                )));
             },
 
             updateLogicBoxTypes(elements) {

@@ -348,10 +348,17 @@ def entity_type_selection_total(job, id):
 @with_job
 @with_spec
 def links_totals(job, type, id):
-    return jsonify(job.get_links_totals(id, type,
-                                        cluster_id=request.args.get('cluster_id'),
-                                        min_strength=request.args.get('min', type=float),
-                                        max_strength=request.args.get('max', type=float)))
+    with_view_filters = request.args.get('apply_filters', default=True) == 'true'
+
+    uris = request.args.getlist('uri')
+    cluster_ids = request.args.getlist('cluster_id')
+
+    min_strength = request.args.get('min', type=float)
+    max_strength = request.args.get('max', type=float)
+
+    return jsonify(job.get_links_totals(
+        id, type, with_view_filters=with_view_filters, uris=uris, cluster_ids=cluster_ids,
+        min_strength=min_strength, max_strength=max_strength))
 
 
 @app.route('/job/<job:job>/entity_type_selection/<int:id>')
@@ -359,10 +366,12 @@ def links_totals(job, type, id):
 @with_job
 @with_entity_type_selection
 def entity_type_selection_sample(job, id):
-    return jsonify(job.get_entity_type_selection_sample(id,
-                                                        invert=request.args.get('invert', default=False) == 'true',
-                                                        limit=request.args.get('limit', type=int),
-                                                        offset=request.args.get('offset', 0, type=int)))
+    invert = request.args.get('invert', default=False) == 'true'
+
+    offset = request.args.get('offset', default=0, type=int)
+    limit = request.args.get('limit', type=int)
+
+    return jsonify(job.get_entity_type_selection_sample(id, invert=invert, offset=offset, limit=limit))
 
 
 @app.route('/job/<job:job>/links/<type:type>/<int:id>')
@@ -370,14 +379,28 @@ def entity_type_selection_sample(job, id):
 @with_job
 @with_spec
 def links(job, type, id):
-    links = [link for link in job.get_links(id, type,
-                                            with_properties='multiple',
-                                            validation_filter=Validation.get(request.args.getlist('valid')),
-                                            cluster_id=request.args.get('cluster_id'),
-                                            min_strength=request.args.get('min', type=float),
-                                            max_strength=request.args.get('max', type=float),
-                                            limit=request.args.get('limit', type=int),
-                                            offset=request.args.get('offset', 0, type=int))]
+    with_view_properties = request.args.get('with_properties', default='multiple')
+    if with_view_properties not in ['none', 'single', 'multiple']:
+        with_view_properties = 'multiple'
+
+    with_view_filters = request.args.get('apply_filters', default=True) == 'true'
+
+    validation_filter = Validation.get(request.args.getlist('valid'))
+
+    uris = request.args.getlist('uri')
+    cluster_ids = request.args.getlist('cluster_id')
+
+    min_strength = request.args.get('min', type=float)
+    max_strength = request.args.get('max', type=float)
+
+    offset = request.args.get('offset', default=0, type=int)
+    limit = request.args.get('limit', type=int)
+
+    links = [link for link in job.get_links(
+        id, type, with_view_properties=with_view_properties, with_view_filters=with_view_filters,
+        validation_filter=validation_filter, uris=uris, cluster_ids=cluster_ids,
+        min_strength=min_strength, max_strength=max_strength, offset=offset, limit=limit)]
+
     return jsonify(links)
 
 
@@ -386,6 +409,21 @@ def links(job, type, id):
 @with_job
 @with_spec
 def clusters(job, type, id):
+    with_view_properties = request.args.get('with_properties', default='multiple')
+    if with_view_properties not in ['none', 'single', 'multiple']:
+        with_view_properties = 'multiple'
+
+    with_view_filters = request.args.get('apply_filters', default=True) == 'true'
+
+    uris = request.args.getlist('uri')
+    cluster_ids = request.args.getlist('cluster_id')
+
+    min_strength = request.args.get('min', type=float)
+    max_strength = request.args.get('max', type=float)
+
+    offset = request.args.get('offset', default=0, type=int)
+    limit = request.args.get('limit', type=int)
+
     clusters = [{
         'id': cluster['id'],
         'size': cluster['size'],
@@ -393,10 +431,9 @@ def clusters(job, type, id):
         'values': cluster['values'],
         'reconciled': False,
         'extended': False,
-    } for cluster in job.get_clusters(id, type,
-                                      with_properties='multiple',
-                                      limit=request.args.get('limit', type=int),
-                                      offset=request.args.get('offset', 0, type=int))]
+    } for cluster in job.get_clusters(
+        id, type, with_view_properties=with_view_properties, with_view_filters=with_view_filters, uris=uris,
+        cluster_ids=cluster_ids, min_strength=min_strength, max_strength=max_strength, offset=offset, limit=limit)]
 
     return jsonify(clusters)
 
@@ -408,11 +445,22 @@ def clusters(job, type, id):
 def validate_link(job, type, id):
     source = request.json.get('source')
     target = request.json.get('target')
-    cluster_id = request.json.get('cluster_id')
-    validation = Validation.get(request.json.get('validation', []))
-    valid = request.json.get('valid')
 
-    job.validate_link(id, type, valid, validation_filter=validation, cluster_id=cluster_id, link=(source, target))
+    with_view_filters = request.json.get('apply_filters', True)
+    validation_filter = Validation.get(request.json.get('valid', []))
+
+    uris = request.json.get('uri', [])
+    cluster_ids = request.json.get('cluster_id', [])
+
+    min_strength = request.json.get('min')
+    max_strength = request.json.get('max')
+
+    validation = request.json.get('validation')
+
+    job.validate_link(id, type, validation, with_view_filters=with_view_filters, validation_filter=validation_filter,
+                      uris=uris, cluster_ids=cluster_ids, min_strength=min_strength, max_strength=max_strength,
+                      link=(source, target))
+
     return jsonify({'result': 'ok'})
 
 

@@ -43,7 +43,7 @@
           <div class="col">
             <div class="font-weight-bold mb-2">Source properties:</div>
             <property-values v-for="(prop, idx) in (switchSourceAndTarget ? targetValues : sourceValues)"
-                             :key="idx" v-if="prop.values.length > 0"
+                             :key="idx" v-if="prop.values && prop.values.length > 0"
                              :graphql-endpoint="prop.graphql_endpoint" :dataset-id="prop.dataset_id"
                              :collection-id="prop.collection_id" :property="prop.property" :values="prop.values"/>
           </div>
@@ -51,7 +51,7 @@
           <div class="col">
             <div class="font-weight-bold mb-2">Target properties:</div>
             <property-values v-for="(prop, idx) in (switchSourceAndTarget ? sourceValues : targetValues)"
-                             :key="idx" v-if="prop.values.length > 0"
+                             :key="idx" v-if="prop.values && prop.values.length > 0"
                              :graphql-endpoint="prop.graphql_endpoint" :dataset-id="prop.dataset_id"
                              :collection-id="prop.collection_id" :property="prop.property" :values="prop.values"/>
           </div>

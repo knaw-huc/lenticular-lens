@@ -21,7 +21,7 @@
     <div class="row flex-nowrap border-top mt-2 pt-2">
       <div class="col">
         <property-values v-for="(prop, idx) in sample.properties"
-                         :key="idx" v-if="prop.values.length > 0"
+                         :key="idx" v-if="prop.values && prop.values.length > 0"
                          :graphql-endpoint="prop.graphql_endpoint" :dataset-id="prop.dataset_id"
                          :collection-id="prop.collection_id" :property="prop.property" :values="prop.values"/>
       </div>

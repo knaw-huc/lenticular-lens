@@ -3,16 +3,11 @@
     <template v-slot:modal-header="{close}">
       <h5 class="modal-title">Specification info</h5>
 
-<!--      <button class="btn btn-secondary btn-sm ml-auto" @click="$root.submit()">-->
-<!--        Save-->
-<!--      </button>-->
-
       <button type="button" aria-label="Close" class="ml-auto close modal-header-close" @click="close()">×</button>
     </template>
 
-    <linkset-spec-group-info v-if="type === 'linkset'"
-                             :method-group="spec.methods" :override-fuzzy-logic="false" :add-root-margin="false"/>
-    <lens-spec-group-info v-else :elements-group="spec.specs" :override-fuzzy-logic="false" :add-root-margin="false"/>
+    <linkset-spec-group-info v-if="type === 'linkset'" :method-group="spec.methods" :add-root-margin="false"/>
+    <lens-spec-group-info v-else :elements-group="spec.specs" :add-root-margin="false"/>
   </b-modal>
 </template>
 

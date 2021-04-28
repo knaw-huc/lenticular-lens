@@ -320,44 +320,8 @@
                             }]);
                     });
 
-                this.updateView(oldId, id);
-            },
-
-            updateView(oldEntityTypeSelection, newEntityTypeSelection) {
-                const oldEts = this.$root.getEntityTypeSelectionById(oldEntityTypeSelection);
-                const sourcesHasValue = this.linksetSpec.sources.find(source => source === oldEntityTypeSelection);
-                const targetsHasValue = this.linksetSpec.targets.find(target => target === oldEntityTypeSelection);
-
-                if (this.view && oldEts && !sourcesHasValue && !targetsHasValue) {
-                    const propsIdx = this.view.properties.findIndex(prop =>
-                        prop.timbuctoo_graphql === oldEts.dataset.timbuctoo_graphql &&
-                        prop.dataset_id === oldEts.dataset.dataset_id &&
-                        prop.collection_id === oldEts.dataset.collection_id
-                    );
-
-                    if (propsIdx > -1)
-                        this.view.properties.splice(propsIdx, 1);
-                }
-
-                if (newEntityTypeSelection !== undefined) {
-                    if (!this.view)
-                        this.$root.addView(this.linksetSpec.id, 'linkset');
-
-                    const newEts = this.$root.getEntityTypeSelectionById(newEntityTypeSelection);
-                    const propsIdx = this.view.properties.findIndex(prop =>
-                        prop.timbuctoo_graphql === newEts.dataset.timbuctoo_graphql &&
-                        prop.dataset_id === newEts.dataset.dataset_id &&
-                        prop.collection_id === newEts.dataset.collection_id
-                    );
-
-                    if (propsIdx < 0)
-                        this.view.properties.push({
-                            timbuctoo_graphql: newEts.dataset.timbuctoo_graphql,
-                            dataset_id: newEts.dataset.dataset_id,
-                            collection_id: newEts.dataset.collection_id,
-                            properties: [['']]
-                        });
-                }
+                this.$root.updateView(this.linksetSpec.id, 'linkset',
+                    new Set([...this.linksetSpec.sources, ...this.linksetSpec.targets]));
             },
 
             updateLogicBoxTypes(conditions) {
