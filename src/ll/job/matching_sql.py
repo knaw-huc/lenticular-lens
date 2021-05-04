@@ -176,10 +176,8 @@ class MatchingSql:
             threshold=sql.Literal(threshold)
         ) for (threshold, similarity) in self._linkset.similarity_logic_ops_sql_per_threshold]
 
-        if self._linkset.similarity_fields and (sim_matching_methods_conditions_sqls or sim_grouping_conditions_sqls):
-            sim_fields_sql = sql.SQL('\n').join(
-                MatchingMethod.get_similarity_fields_sqls(self._linkset.matching_methods))
-
+        sim_fields_sqls = MatchingMethod.get_similarity_fields_sqls(self._linkset.matching_methods)
+        if sim_fields_sqls and (sim_matching_methods_conditions_sqls or sim_grouping_conditions_sqls):
             return sql.SQL(cleandoc(
                 """ DROP TABLE IF EXISTS linksets.{linkset} CASCADE;
                     CREATE TABLE linksets.{linkset} AS
@@ -194,7 +192,7 @@ class MatchingSql:
             ) + '\n').format(
                 linkset=sql.Identifier(self._job.table_name(self._linkset.id)),
                 linkset_sql=linkset_sql,
-                sim_fields_sql=sim_fields_sql,
+                sim_fields_sql=sql.SQL('\n').join(sim_fields_sqls),
                 sim_conditions=sql.SQL(' AND ').join(
                     sim_matching_methods_conditions_sqls + sim_grouping_conditions_sqls)
             )

@@ -44,9 +44,8 @@ class LensSql:
                                    .format(similarity=similarity, threshold=sql.Literal(threshold))
                                for (threshold, similarity) in self._lens.similarity_logic_ops_sql_per_threshold]
 
-        if self._lens.similarity_fields and sim_conditions_sqls:
-            sim_fields_sql = sql.SQL('\n').join(MatchingMethod.get_similarity_fields_sqls(self._lens.matching_methods))
-
+        sim_fields_sqls = MatchingMethod.get_similarity_fields_sqls(self._lens.matching_methods)
+        if sim_fields_sqls and sim_conditions_sqls:
             return sql.SQL(cleandoc(
                 """ DROP TABLE IF EXISTS lenses.{lens} CASCADE;
                     CREATE TABLE lenses.{lens} AS
@@ -61,7 +60,7 @@ class LensSql:
             ) + '\n').format(
                 lens=sql.Identifier(self._job.table_name(self._lens.id)),
                 lens_sql=lens_sql,
-                sim_fields_sql=sim_fields_sql,
+                sim_fields_sql=sql.SQL('\n').join(sim_fields_sqls),
                 sim_conditions=sql.SQL(' AND ').join(sim_conditions_sqls)
             )
 
