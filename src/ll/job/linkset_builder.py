@@ -7,7 +7,7 @@ from ll.job.links_filter import LinksFilter
 from ll.job.query_builder import QueryBuilder
 
 from ll.util.config_db import db_conn, fetch_many
-from ll.util.helpers import get_pagination_sql, get_sql_empty
+from ll.util.helpers import get_pagination_sql, get_sql_empty, flatten
 
 
 class LinksetBuilder:
@@ -59,7 +59,8 @@ class LinksetBuilder:
                 {linkset_cte}
                 
                 SELECT source_uri, target_uri, link_order, source_collections, target_collections, 
-                       cluster_id, valid, computed_similarity {selection_sql}
+                       source_intermediates, target_intermediates, cluster_id, valid, computed_similarity 
+                       {selection_sql}
                 FROM linkset
                 {props_joins_sql}
             ''').format(
@@ -75,6 +76,10 @@ class LinksetBuilder:
                     'link_order': link['link_order'],
                     'source_collections': link['source_collections'],
                     'target_collections': link['target_collections'],
+                    'source_intermediates': flatten(list(link['source_intermediates'].values())) if link[
+                        'source_intermediates'] else None,
+                    'target_intermediates': flatten(list(link['target_intermediates'].values())) if link[
+                        'source_intermediates'] else None,
                     'source_values': self._get_values(link, is_source=True,
                                                       is_single_value=is_single_value) if use_properties else None,
                     'target_values': self._get_values(link, is_source=False,
@@ -151,7 +156,7 @@ class LinksetBuilder:
         return sql.SQL('''
             WITH linkset AS (
                 SELECT source_uri, target_uri, link_order, source_collections, target_collections, 
-                       cluster_id, valid, computed_similarity
+                       source_intermediates, target_intermediates, cluster_id, valid, computed_similarity
                 FROM {schema}.{view_name} AS linkset
                 {filter_joins_sql}
                 {sim_fields_sql} 
