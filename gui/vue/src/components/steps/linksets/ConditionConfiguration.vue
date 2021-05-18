@@ -1,9 +1,13 @@
 <template>
   <sub-card size="sm" label="Method configuration">
-    <condition-method v-if="configureMatching && method.items.length > 0" class="config-group"
-                      :id="'method_' + id" :method="method" :config="condition.method.config" ref="methodConfig"/>
+    <div v-if="configureMatching && method.items.length > 0" class="config-group">
+      <span v-if="showLabel" class="badge badge-secondary right">Method configuration</span>
+      <condition-method :id="'method_' + id" :method="method" :config="condition.method.config" ref="methodConfig"/>
+    </div>
 
     <div v-if="useFuzzyLogic && configureFuzzyLogic" class="config-group">
+      <span v-if="showLabel" class="badge badge-secondary right">Fuzzy logic configuration</span>
+
       <div v-if="applyListMatching" class="form-group row">
         <label :for="'t_conorm_' + id" class="col-sm-3 col-form-label">
           T-norm
@@ -44,6 +48,8 @@
     </div>
 
     <div v-if="applySimMethod && method.items.length > 0 && method.acceptsSimilarityMethod" class="config-group">
+      <span v-if="showLabel" class="badge badge-secondary right">Similarity method configuration</span>
+
       <div class="form-group row">
         <label :for="'sim_method_' + id" class="col-sm-3 col-form-label">
           Apply similarity method
@@ -78,6 +84,8 @@
     </div>
 
     <div v-if="applyListMatching" class="config-group">
+      <span v-if="showLabel" class="badge badge-secondary right">List matching configuration</span>
+
       <div class="form-group row">
         <label :for="'list_links_threshold_' + id" class="col-sm-3 col-form-label">
           Minimum intersections
@@ -159,6 +167,22 @@
             configureFuzzyLogic: Boolean,
             applySimMethod: Boolean,
             applyListMatching: Boolean,
+        },
+        computed: {
+            showLabel() {
+                let show = 0;
+
+                if (this.configureMatching && this.method.items.length > 0)
+                    show++;
+                if (this.useFuzzyLogic && this.configureFuzzyLogic)
+                    show++;
+                if (this.applySimMethod && this.method.items.length > 0 && this.method.acceptsSimilarityMethod)
+                    show++;
+                if (this.applyListMatching)
+                    show++;
+
+                return show > 1;
+            },
         },
         methods: {
             validateConditionConfiguration() {

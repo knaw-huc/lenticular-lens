@@ -237,6 +237,11 @@ div#app::before {
   cursor: pointer;
 }
 
+.right {
+  position: absolute;
+  right: 0;
+}
+
 .max-overflow {
   max-height: 300px;
   overflow: auto;
@@ -274,6 +279,7 @@ ul.inline-list li:not(:first-child):before {
 }
 
 .config-group {
+  position: relative;
   padding: 0.25rem 0;
   border-bottom: 1px solid $border-color;
 
