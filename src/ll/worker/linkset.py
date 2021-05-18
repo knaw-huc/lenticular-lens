@@ -1,6 +1,6 @@
 import time
 
-from psycopg2 import sql, ProgrammingError
+from psycopg2 import sql, extras, ProgrammingError
 
 from ll.job.job import Job
 from ll.job.matching_sql import MatchingSql
@@ -16,7 +16,7 @@ class LinksetJob(WorkerJob):
 
         self._job = None
         self._matching_sql = None
-        self._distinct_counts = {}
+        self._counts = {}
 
         self.reset()
         super().__init__(self.run_generated_sql)
@@ -75,8 +75,8 @@ class LinksetJob(WorkerJob):
 
         with db_conn() as conn, conn.cursor() as cur:
             self.get_sequence_count(conn, cur, 'linkset_count', data, 'links_count')
-            self.get_distinct_count(conn, cur, 'source', data, 'distinct_sources_count')
-            self.get_distinct_count(conn, cur, 'target', data, 'distinct_targets_count')
+            self.get_count(conn, cur, 'source', data, 'sources_count')
+            self.get_count(conn, cur, 'target', data, 'targets_count')
 
         self._job.update_linkset(self._id, data)
 
@@ -95,15 +95,15 @@ class LinksetJob(WorkerJob):
         finally:
             conn.commit()
 
-    def get_distinct_count(self, conn, cur, table, data, key):
+    def get_count(self, conn, cur, table, data, key):
         try:
-            if table not in self._distinct_counts:
+            if table not in self._counts:
                 cur.execute(sql.SQL('SELECT count(DISTINCT uri) FROM {linkset_schema}.{table_name}').format(
                     linkset_schema=sql.Identifier(self._job.schema_name(self._id)),
                     table_name=sql.Identifier(table)
                 ))
-                self._distinct_counts[table] = cur.fetchone()[0]
-                data[key] = self._distinct_counts[table]
+                self._counts[table] = cur.fetchone()[0]
+                data[key] = self._counts[table]
         except ProgrammingError:
             pass
         finally:
@@ -129,50 +129,55 @@ class LinksetJob(WorkerJob):
     def on_finish(self):
         self.watch_process()
 
-        with db_conn() as conn, conn.cursor() as cur:
+        with db_conn() as conn, conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
             cur.execute(sql.SQL('''
-                SELECT  (SELECT count(*) FROM linksets.{linkset_table}) AS links_count,
-                        (SELECT count(DISTINCT uri) FROM {linkset_schema}.source) AS sources_count,
-                        (SELECT count(DISTINCT uri) FROM {linkset_schema}.target) AS targets_count,
+                SELECT  (SELECT count(*) FROM linksets.{linkset_table}) AS links,
+                        (SELECT count(DISTINCT uri) FROM {linkset_schema}.source) AS sources,
+                        (SELECT count(DISTINCT uri) FROM {linkset_schema}.target) AS targets,
+                        (SELECT count(DISTINCT uris.uri) FROM (
+                            SELECT uri FROM {linkset_schema}.source
+                            UNION ALL
+                            SELECT uri FROM {linkset_schema}.target
+                         ) AS uris) AS entities,
                         (SELECT count(DISTINCT uris.uri) FROM (
                             SELECT source_uri AS uri FROM linksets.{linkset_table} 
                             WHERE link_order = 'source_target' OR link_order = 'both'
                             UNION ALL
                             SELECT target_uri AS uri FROM linksets.{linkset_table} 
                             WHERE link_order = 'target_source' OR link_order = 'both'
-                        ) AS uris) AS linkset_sources_count,
+                        ) AS uris) AS linkset_sources,
                         (SELECT count(DISTINCT uris.uri) FROM (
                             SELECT target_uri AS uri FROM linksets.{linkset_table} 
                             WHERE link_order = 'source_target' OR link_order = 'both'
                             UNION ALL
                             SELECT source_uri AS uri FROM linksets.{linkset_table} 
                             WHERE link_order = 'target_source' OR link_order = 'both'
-                        ) AS uris) AS linkset_targets_count
+                        ) AS uris) AS linkset_targets,
+                        (SELECT count(DISTINCT uris.uri) FROM (
+                            SELECT source_uri AS uri FROM linksets.{linkset_table} 
+                            UNION ALL
+                            SELECT target_uri AS uri FROM linksets.{linkset_table}
+                        ) AS uris) AS linkset_entities
             ''').format(
                 linkset_table=sql.Identifier(self._job.table_name(self._id)),
                 linkset_schema=sql.Identifier(self._job.schema_name(self._id)),
             ))
 
             result = cur.fetchone()
-
-            links = result[0]
-            sources = result[1]
-            targets = result[2]
-            linkset_sources = result[3]
-            linkset_targets = result[4]
-
             cur.execute(sql.SQL('DROP SCHEMA {} CASCADE')
                         .format(sql.Identifier(self._job.schema_name(self._id))))
 
             cur.execute("UPDATE linksets "
-                        "SET status = %s, status_message = null, distinct_links_count = %s, "
-                        "distinct_sources_count = %s, distinct_targets_count = %s, "
-                        "distinct_linkset_sources_count = %s, distinct_linkset_targets_count = %s, "
+                        "SET status = %s, status_message = null, links_count = %s, "
+                        "sources_count = %s, targets_count = %s, entities_count = %s, "
+                        "linkset_sources_count = %s, linkset_targets_count = %s, linkset_entities_count = %s, "
                         "finished_at = now() "
                         "WHERE job_id = %s AND spec_id = %s",
-                        ('done', links, sources, targets, linkset_sources, linkset_targets, self._job_id, self._id))
+                        ('done', result['links'], result['sources'], result['targets'], result['entities'],
+                         result['linkset_sources'], result['linkset_targets'], result['linkset_entities'],
+                         self._job_id, self._id))
 
-            if links == 0:
+            if result['links'] == 0:
                 cur.execute(sql.SQL('DROP TABLE linksets.{} CASCADE')
                             .format(sql.Identifier(self._job.table_name(self._id))))
             else:

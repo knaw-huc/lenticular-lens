@@ -255,16 +255,16 @@ class Export:
                     buffer.write(n3_pred_val(NS.DCterms.description_ttl, Literal(linkset.description).n3(ns_manager)))
                     buffer.write("\n")
 
-                if self._stats[linkset.id].get('distinct_links_count', -1) > -1:
-                    buffer.write(n3_pred_val(NS.VoID.triples_ttl, self._stats[linkset.id]['distinct_links_count']))
+                if self._stats[linkset.id].get('links_count', -1) > -1:
+                    buffer.write(n3_pred_val(NS.VoID.triples_ttl, self._stats[linkset.id]['links_count']))
 
-                if self._stats[linkset.id].get('distinct_linkset_sources_count', -1) > -1:
+                if self._stats[linkset.id].get('linkset_sources_count', -1) > -1:
                     buffer.write(n3_pred_val(NS.VoID.distinctSubjects_ttl,
-                                             self._stats[linkset.id]['distinct_linkset_sources_count']))
+                                             self._stats[linkset.id]['linkset_sources_count']))
 
-                if self._stats[linkset.id].get('distinct_linkset_targets_count', -1) > -1:
+                if self._stats[linkset.id].get('linkset_targets_count', -1) > -1:
                     buffer.write(n3_pred_val(NS.VoID.distinctObjects_ttl,
-                                             self._stats[linkset.id]['distinct_linkset_targets_count']))
+                                             self._stats[linkset.id]['linkset_targets_count']))
 
                 if self._clusterings[linkset.id].get('clusters_count', -1) > -1:
                     buffer.write(n3_pred_val(VoidPlus.cluster_ttl, self._clusterings[linkset.id]['clusters_count']))

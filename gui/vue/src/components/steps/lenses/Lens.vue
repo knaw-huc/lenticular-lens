@@ -26,9 +26,8 @@
         </button>
       </div>
 
-      <div
-          v-if="lensStatus === 'done' && lens.distinct_links_count > 0 && (!clustering || clusteringStatus === 'failed')"
-          class="col-auto">
+      <div v-if="lensStatus === 'done' && lens.links_count > 0 && (!clustering || clusteringStatus === 'failed')"
+           class="col-auto">
         <button type="button" class="btn btn-secondary my-1" @click="runClustering($event)">
           Cluster
           <template v-if="clusteringStatus === 'failed'">again</template>

@@ -230,12 +230,12 @@ export default {
             return this.views.find(view => view.id === parseInt(id) && view.type === type);
         },
 
-        exportCsv(type, id, params) {
-            window.open(`/job/${this.job.job_id}/csv/${type}/${id}?${params.join('&')}`);
+        getExportCsvLink(type, id, params) {
+            return `/job/${this.job.job_id}/csv/${type}/${id}?${params.join('&')}`;
         },
 
-        exportRdf(type, id, params) {
-            window.open(`/job/${this.job.job_id}/rdf/${type}/${id}?${params.join('&')}`);
+        getExportRdfLink(type, id, params) {
+            return `/job/${this.job.job_id}/rdf/${type}/${id}?${params.join('&')}`;
         },
 
         getRecursiveElements(element, groupName) {

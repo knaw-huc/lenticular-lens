@@ -79,7 +79,7 @@ class LinksetValidator:
             for lens_spec in self._job.lens_specs:
                 lens = self._job.lens(lens_spec.id)
 
-                if lens and lens['status'] == 'done' and lens['distinct_links_count'] > 0 \
+                if lens and lens['status'] == 'done' and lens['links_count'] > 0 \
                         and self._spec.id in [linkset.id for linkset in lens_spec.linksets]:
                     validities_sql = sql.SQL(' UNION ALL ').join(
                         sql.SQL('''

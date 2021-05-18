@@ -186,17 +186,17 @@
 
       <sub-card label="Metadata" class="col-export">
         <div class="row form-group mt-3">
-          <label :for="'creator_' + type + '_' + spec.id" class="col-auto">Creator:</label>
+          <label :for="`creator_${type}_${spec.id}`" class="col-auto">Creator:</label>
           <div class="col-auto">
-            <input type="text" class="form-control form-control-sm" :id="'creator_' + type + '_' + spec.id"
+            <input type="text" class="form-control form-control-sm" :id="`creator_${type}_${spec.id}`"
                    v-model="creator" :disabled="format === 'csv'"/>
           </div>
         </div>
 
         <div class="row form-group mt-3">
-          <label :for="'publisher_' + type + '_' + spec.id" class="col-auto">Publisher:</label>
+          <label :for="`publisher_${type}_${spec.id}`" class="col-auto">Publisher:</label>
           <div class="col-auto">
-            <input type="text" class="form-control form-control-sm" :id="'publisher_' + type + '_' + spec.id"
+            <input type="text" class="form-control form-control-sm" :id="`publisher_${type}_${spec.id}`"
                    v-model="publisher" :disabled="format === 'csv'"/>
           </div>
         </div>
@@ -205,7 +205,7 @@
 
     <div class="row justify-content-end align-items-center pt-3 mb-0">
       <div class="col-auto">
-        <button class="btn btn-secondary" @click="doExport" variant="secondary">Export</button>
+        <a class="btn btn-secondary" :href="exportLink" :download="`${type}_${spec.id}.${extension}`">Export</a>
       </div>
     </div>
   </card>
@@ -267,6 +267,25 @@
         computed: {
             isLensSpec() {
                 return this.type === 'lens';
+            },
+
+            extension() {
+                switch (this.format) {
+                    case 'csv':
+                        return 'csv';
+                    case 'trig':
+                        return 'trig';
+                    case 'turtle':
+                    default:
+                        return 'ttl';
+                }
+            },
+
+            exportLink() {
+                if (this.format === 'csv')
+                    return this.getExportCsvLink();
+
+                return this.getRdfExportLink();
             },
         },
         methods: {
@@ -332,14 +351,7 @@
                 this.predicate = linkPredicate.predicate;
             },
 
-            doExport() {
-                if (this.format === 'csv')
-                    this.doCsvExport();
-                else
-                    this.doRdfExport();
-            },
-
-            doCsvExport() {
+            getExportCsvLink() {
                 const params = [];
 
                 if (this.exportAcceptedLinks) params.push('valid=accepted');
@@ -347,10 +359,10 @@
                 if (this.exportNotValidatedLinks) params.push('valid=not_validated');
                 if (this.exportAcceptedLinks && this.exportRejectedLinks) params.push('valid=mixed');
 
-                this.$root.exportCsv(this.type, this.spec.id, params);
+                return this.$root.getExportCsvLink(this.type, this.spec.id, params);
             },
 
-            doRdfExport() {
+            getRdfExportLink() {
                 const params = [];
 
                 params.push(`export_metadata=${this.exportMetadata}`);
@@ -371,7 +383,7 @@
                 if (this.creator) params.push(`creator=${encodeURIComponent(this.creator)}`);
                 if (this.publisher) params.push(`publisher=${encodeURIComponent(this.publisher)}`);
 
-                this.$root.exportRdf(this.type, this.spec.id, params);
+                return this.$root.getExportRdfLink(this.type, this.spec.id, params);
             }
         },
     };

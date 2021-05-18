@@ -8,11 +8,7 @@
             <div class="col-auto">
               <div>
                 <strong>Links: </strong>
-                {{
-                  isLinkset
-                      ? linkset.distinct_links_count.toLocaleString('en')
-                      : lens.distinct_links_count.toLocaleString('en')
-                }}
+                {{ isLinkset ? linkset.links_count.toLocaleString('en') : lens.links_count.toLocaleString('en') }}
               </div>
               <div v-if="clustering">
                 <strong>Clusters: </strong>
@@ -22,29 +18,30 @@
 
             <div v-if="isLinkset" class="col-auto">
               <div>
-                <strong>Source entities in linkset: </strong>
-                {{
-                  linkset.distinct_linkset_sources_count
-                      ? linkset.distinct_linkset_sources_count.toLocaleString('en') : 0
-                }}
+                <strong>Source / target / total entities in linkset: </strong>
+                {{ linkset.linkset_sources_count ? linkset.linkset_sources_count.toLocaleString('en') : 0 }} /
+                {{ linkset.linkset_targets_count ? linkset.linkset_targets_count.toLocaleString('en') : 0 }} /
+                {{ linkset.linkset_entities_count ? linkset.linkset_entities_count.toLocaleString('en') : 0 }}
               </div>
+
               <div>
-                <strong>Target entities in linkset: </strong>
-                {{
-                  linkset.distinct_linkset_targets_count
-                      ? linkset.distinct_linkset_targets_count.toLocaleString('en') : 0
-                }}
+                <strong>Entities in source / target / total: </strong>
+                {{ linkset.sources_count ? linkset.sources_count.toLocaleString('en') : 0 }} /
+                {{ linkset.targets_count ? linkset.targets_count.toLocaleString('en') : 0 }} /
+                {{ linkset.entities_count ? linkset.entities_count.toLocaleString('en') : 0 }}
               </div>
             </div>
 
-            <div v-if="isLinkset" class="col-auto">
+            <div v-else class="col-auto">
               <div>
-                <strong>Entities in source: </strong>
-                {{ linkset.distinct_sources_count ? linkset.distinct_sources_count.toLocaleString('en') : 0 }}
+                <strong>Source / target entities in lens: </strong>
+                {{ lens.lens_sources_count ? lens.lens_sources_count.toLocaleString('en') : 0 }} /
+                {{ lens.lens_targets_count ? lens.lens_targets_count.toLocaleString('en') : 0 }}
               </div>
+
               <div>
-                <strong>Entities in target: </strong>
-                {{ linkset.distinct_targets_count ? linkset.distinct_targets_count.toLocaleString('en') : 0 }}
+                <strong>Total entities in lens: </strong>
+                {{ lens.lens_entities_count ? lens.lens_entities_count.toLocaleString('en') : 0 }}
               </div>
             </div>
 

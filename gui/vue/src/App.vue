@@ -233,13 +233,13 @@
                 const linksetSpecs = this.$root.linksetSpecs.filter(linksetSpec => {
                     return this.$root.linksets.find(linkset => {
                         return linkset.spec_id === linksetSpec.id
-                            && linkset.status === 'done' && linkset.distinct_links_count > 0;
+                            && linkset.status === 'done' && linkset.links_count > 0;
                     });
                 });
 
                 const lensSpecs = this.$root.lensSpecs.filter(lensSpec => {
                     return this.$root.lenses.find(lens => {
-                        return lens.spec_id === lensSpec.id && lens.status === 'done' && lens.distinct_links_count > 0;
+                        return lens.spec_id === lensSpec.id && lens.status === 'done' && lens.links_count > 0;
                     });
                 });
 
@@ -455,7 +455,7 @@
                 let hasUnfinished = false;
 
                 this.$root.linksets.forEach(linkset => {
-                    if (linkset.status === 'done' && linkset.distinct_links_count > 0)
+                    if (linkset.status === 'done' && linkset.links_count > 0)
                         hasFinished = true;
                     else if (linkset.status !== 'done' && linkset.status !== 'failed')
                         hasUnfinished = true;

@@ -1,4 +1,4 @@
-from psycopg2 import sql
+from psycopg2 import sql, extras
 
 from ll.job.job import Job
 from ll.job.lens_sql import LensSql
@@ -46,38 +46,40 @@ class LensJob(WorkerJob):
         self._job.update_lens(self._id, {'status': 'failed', 'status_message': err_message})
 
     def on_finish(self):
-        with db_conn() as conn, conn.cursor() as cur:
+        with db_conn() as conn, conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
             cur.execute(sql.SQL('''
-                SELECT  (SELECT count(*) FROM lenses.{lens_table}) AS links_count,
+                SELECT  (SELECT count(*) FROM lenses.{lens_table}) AS links,
                         (SELECT count(DISTINCT uris.uri) FROM (
                             SELECT source_uri AS uri FROM lenses.{lens_table} 
                             WHERE link_order = 'source_target' OR link_order = 'both'
                             UNION ALL
                             SELECT target_uri AS uri FROM lenses.{lens_table} 
                             WHERE link_order = 'target_source' OR link_order = 'both'
-                        ) AS uris) AS lens_sources_count,
+                        ) AS uris) AS lens_sources,
                         (SELECT count(DISTINCT uris.uri) FROM (
                             SELECT target_uri AS uri FROM lenses.{lens_table} 
                             WHERE link_order = 'source_target' OR link_order = 'both'
                             UNION ALL
                             SELECT source_uri AS uri FROM lenses.{lens_table} 
                             WHERE link_order = 'target_source' OR link_order = 'both'
-                        ) AS uris) AS lens_targets_count
+                        ) AS uris) AS lens_targets,
+                        (SELECT count(DISTINCT uris.uri) FROM (
+                            SELECT source_uri AS uri FROM lenses.{lens_table} 
+                            UNION ALL
+                            SELECT target_uri AS uri FROM lenses.{lens_table}
+                        ) AS uris) AS lens_entities
             ''').format(lens_table=sql.Identifier(self._job.table_name(self._id))))
 
             result = cur.fetchone()
-
-            links = result[0]
-            lens_sources_count = result[1]
-            lens_targets_count = result[2]
-
             cur.execute("UPDATE lenses "
-                        "SET status = %s, status_message = null, distinct_links_count = %s, "
-                        "distinct_lens_sources_count = %s, distinct_lens_targets_count = %s, finished_at = now() "
+                        "SET status = %s, status_message = null, links_count = %s, "
+                        "lens_sources_count = %s, lens_targets_count = %s, lens_entities_count = %s, "
+                        "finished_at = now() "
                         "WHERE job_id = %s AND spec_id = %s",
-                        ('done', links, lens_sources_count, lens_targets_count, self._job_id, self._id))
+                        ('done', result['links'], result['lens_sources'], result['lens_targets'],
+                         result['lens_entities'], self._job_id, self._id))
 
-            if links == 0:
+            if result['links'] == 0:
                 cur.execute(sql.SQL('DROP TABLE lenses.{} CASCADE')
                             .format(sql.Identifier(self._job.table_name(self._id))))
             else:

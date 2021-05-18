@@ -35,7 +35,7 @@
           <div class="col-auto">
             <div>
               <strong>Links found: </strong>
-              {{ lens.distinct_links_count ? lens.distinct_links_count.toLocaleString('en') : 0 }}
+              {{ lens.links_count ? lens.links_count.toLocaleString('en') : 0 }}
             </div>
 
             <div v-if="clustering && clusteringStatus === 'running'">
@@ -47,6 +47,19 @@
             <div v-else-if="clustering">
               <strong>Clusters found: </strong>
               {{ clustering.clusters_count ? clustering.clusters_count.toLocaleString('en') : 0 }}
+            </div>
+          </div>
+
+          <div class="col-auto">
+            <div>
+              <strong>Source / target entities in lens: </strong>
+              {{ lens.lens_sources_count ? lens.lens_sources_count.toLocaleString('en') : 0 }} /
+              {{ lens.lens_targets_count ? lens.lens_targets_count.toLocaleString('en') : 0 }}
+            </div>
+
+            <div>
+              <strong>Total entities in lens: </strong>
+              {{ lens.lens_entities_count ? lens.lens_entities_count.toLocaleString('en') : 0 }}
             </div>
           </div>
 

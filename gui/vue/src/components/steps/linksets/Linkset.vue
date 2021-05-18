@@ -34,7 +34,7 @@
       </div>
 
       <div
-          v-if="linksetStatus === 'done' && linkset.distinct_links_count > 0 && (!clustering || clusteringStatus === 'failed')"
+          v-if="linksetStatus === 'done' && linkset.links_count > 0 && (!clustering || clusteringStatus === 'failed')"
           class="col-auto">
         <button type="button" class="btn btn-secondary my-1" @click="runClustering($event)">
           Cluster

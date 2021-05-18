@@ -42,7 +42,14 @@ class LinksetBuilder:
                     apply_paging=False, include_linkset_uris=False)
             ))
 
-            return {row[0]: row[1] for row in cur.fetchall()}
+            return {
+                'accepted': 0,
+                'rejected': 0,
+                'not_sure': 0,
+                'not_validated': 0,
+                'mixed': 0,
+                **{row[0]: row[1] for row in cur.fetchall()}
+            }
 
     def get_links_generator(self, with_view_properties='none', with_view_filters=False):
         is_single_value = with_view_properties == 'single'
