@@ -351,7 +351,7 @@ def links_totals(job, type, id):
     with_view_filters = request.args.get('apply_filters', default=True) == 'true'
 
     uris = request.args.getlist('uri')
-    cluster_ids = request.args.getlist('cluster_id')
+    cluster_ids = request.args.getlist('cluster_id', type=int)
 
     min_strength = request.args.get('min', type=float)
     max_strength = request.args.get('max', type=float)
@@ -359,6 +359,30 @@ def links_totals(job, type, id):
     return jsonify(job.get_links_totals(
         id, type, with_view_filters=with_view_filters, uris=uris, cluster_ids=cluster_ids,
         min_strength=min_strength, max_strength=max_strength))
+
+
+@app.route('/job/<job:job>/clusters_totals/<type:type>/<int:id>')
+@authenticated
+@with_job
+@with_spec
+def clusters_totals(job, type, id):
+    with_view_filters = request.args.get('apply_filters', default=True) == 'true'
+
+    uris = request.args.getlist('uri')
+    cluster_ids = request.args.getlist('cluster_id', type=int)
+
+    min_strength = request.args.get('min', type=float)
+    max_strength = request.args.get('max', type=float)
+
+    min_size = request.args.get('min_size', type=int)
+    max_size = request.args.get('max_size', type=int)
+
+    min_count = request.args.get('min_count', type=int)
+    max_count = request.args.get('max_count', type=int)
+
+    return jsonify(job.get_clusters_totals(
+        id, type, with_view_filters=with_view_filters, uris=uris, cluster_ids=cluster_ids, min_strength=min_strength,
+        max_strength=max_strength, min_size=min_size, max_size=max_size, min_count=min_count, max_count=max_count))
 
 
 @app.route('/job/<job:job>/entity_type_selection/<int:id>')
@@ -388,10 +412,11 @@ def links(job, type, id):
     validation_filter = Validation.get(request.args.getlist('valid'))
 
     uris = request.args.getlist('uri')
-    cluster_ids = request.args.getlist('cluster_id')
+    cluster_ids = request.args.getlist('cluster_id', type=int)
 
     min_strength = request.args.get('min', type=float)
     max_strength = request.args.get('max', type=float)
+    sort = request.args.get('sort')
 
     offset = request.args.get('offset', default=0, type=int)
     limit = request.args.get('limit', type=int)
@@ -399,7 +424,7 @@ def links(job, type, id):
     links = [link for link in job.get_links(
         id, type, with_view_properties=with_view_properties, with_view_filters=with_view_filters,
         validation_filter=validation_filter, uris=uris, cluster_ids=cluster_ids,
-        min_strength=min_strength, max_strength=max_strength, offset=offset, limit=limit)]
+        min_strength=min_strength, max_strength=max_strength, sort=sort, offset=offset, limit=limit)]
 
     return jsonify(links)
 
@@ -416,10 +441,18 @@ def clusters(job, type, id):
     with_view_filters = request.args.get('apply_filters', default=True) == 'true'
 
     uris = request.args.getlist('uri')
-    cluster_ids = request.args.getlist('cluster_id')
+    cluster_ids = request.args.getlist('cluster_id', type=int)
 
     min_strength = request.args.get('min', type=float)
     max_strength = request.args.get('max', type=float)
+
+    min_size = request.args.get('min_size', type=int)
+    max_size = request.args.get('max_size', type=int)
+
+    min_count = request.args.get('min_count', type=int)
+    max_count = request.args.get('max_count', type=int)
+
+    sort = request.args.get('sort')
 
     offset = request.args.get('offset', default=0, type=int)
     limit = request.args.get('limit', type=int)
@@ -433,7 +466,9 @@ def clusters(job, type, id):
         'extended': False,
     } for cluster in job.get_clusters(
         id, type, with_view_properties=with_view_properties, with_view_filters=with_view_filters, uris=uris,
-        cluster_ids=cluster_ids, min_strength=min_strength, max_strength=max_strength, offset=offset, limit=limit)]
+        cluster_ids=cluster_ids, min_strength=min_strength, max_strength=max_strength,
+        min_size=min_size, max_size=max_size, min_count=min_count, max_count=max_count, sort=sort,
+        offset=offset, limit=limit)]
 
     return jsonify(clusters)
 
@@ -464,7 +499,7 @@ def validate_link(job, type, id):
     return jsonify({'result': 'ok'})
 
 
-@app.route('/job/<job:job>/cluster/<type:type>/<int:id>/<cluster_id>/graph')
+@app.route('/job/<job:job>/cluster/<type:type>/<int:id>/<int:cluster_id>/graph')
 @authenticated
 @with_job
 @with_spec

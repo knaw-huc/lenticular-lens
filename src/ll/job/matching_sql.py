@@ -141,8 +141,10 @@ class MatchingSql:
         if self._linkset.use_counter:
             conditions_sql = sql.Composed([conditions_sql, sql.SQL("\nAND increment_counter('linkset_count')")])
 
-        linkset_sql = sql.SQL(cleandoc(
-            """ SELECT CASE WHEN source.uri < target.uri THEN source.uri ELSE target.uri END AS source_uri,
+        return sql.SQL(cleandoc(
+            """ DROP MATERIALIZED VIEW IF EXISTS linkset CASCADE;
+                CREATE MATERIALIZED VIEW linkset AS 
+                SELECT CASE WHEN source.uri < target.uri THEN source.uri ELSE target.uri END AS source_uri,
                        CASE WHEN source.uri < target.uri THEN target.uri ELSE source.uri END AS target_uri,
                        CASE WHEN every(source.uri < target.uri) THEN 'source_target'::link_order
                             WHEN every(target.uri < source.uri) THEN 'target_source'::link_order
@@ -151,13 +153,14 @@ class MatchingSql:
                        array_agg(DISTINCT target.collection) AS target_collections,
                        {source_intermediates} AS source_intermediates,
                        {target_intermediates} AS target_intermediates,
-                       {similarities} AS similarity
+                       {similarities} AS similarities
                 FROM source
                 JOIN target ON source.uri != target.uri
                 AND {conditions}
-                GROUP BY source_uri, target_uri
+                GROUP BY source_uri, target_uri;
             """
-        )).format(
+        ) + '\n').format(
+            linkset=sql.Identifier(self._job.table_name(self._linkset.id)),
             source_intermediates=sql.SQL('jsonb_build_object({})').format(sql.SQL(', ').join(source_intermediates_sqls)) \
                 if source_intermediates_sqls else sql.SQL('NULL::jsonb'),
             target_intermediates=sql.SQL('jsonb_build_object({})').format(sql.SQL(', ').join(target_intermediates_sqls)) \
@@ -166,6 +169,9 @@ class MatchingSql:
                 if similarities_sqls else sql.SQL('NULL::jsonb'),
             conditions=conditions_sql
         )
+
+    def generate_match_linkset_finish_sql(self):
+        sim_fields_sqls = MatchingMethod.get_similarity_fields_sqls(self._linkset.matching_methods)
 
         sim_matching_methods_conditions_sqls = [match_method.similarity_threshold_sql
                                                 for match_method in self._linkset.matching_methods
@@ -176,54 +182,43 @@ class MatchingSql:
             threshold=sql.Literal(threshold)
         ) for (threshold, similarity) in self._linkset.similarity_logic_ops_sql_per_threshold]
 
-        sim_fields_sqls = MatchingMethod.get_similarity_fields_sqls(self._linkset.matching_methods)
-        if sim_fields_sqls and (sim_matching_methods_conditions_sqls or sim_grouping_conditions_sqls):
-            return sql.SQL(cleandoc(
-                """ DROP TABLE IF EXISTS linksets.{linkset} CASCADE;
-                    CREATE TABLE linksets.{linkset} AS
-                    SELECT linkset.*
-                    FROM (
-                        {linkset_sql}
-                    ) AS linkset
-                    CROSS JOIN LATERAL jsonb_to_record(similarity) 
-                    AS sim({sim_fields_sql})
-                    WHERE {sim_conditions};
-                """
-            ) + '\n').format(
-                linkset=sql.Identifier(self._job.table_name(self._linkset.id)),
-                linkset_sql=linkset_sql,
-                sim_fields_sql=sql.SQL('\n').join(sim_fields_sqls),
-                sim_conditions=sql.SQL(' AND ').join(
-                    sim_matching_methods_conditions_sqls + sim_grouping_conditions_sqls)
-            )
+        sim_condition_sql = get_sql_empty(sql.Composed([
+            sql.SQL('WHERE '), sql.SQL(' AND ')
+                .join(sim_matching_methods_conditions_sqls + sim_grouping_conditions_sqls)]),
+            flag=sim_matching_methods_conditions_sqls or sim_grouping_conditions_sqls)
 
         return sql.SQL(cleandoc(
             """ DROP TABLE IF EXISTS linksets.{linkset} CASCADE;
                 CREATE TABLE linksets.{linkset} AS
-                {linkset_sql};
-            """
-        ) + '\n').format(
-            linkset=sql.Identifier(self._job.table_name(self._linkset.id)),
-            linkset_sql=linkset_sql
-        )
-
-    def generate_match_linkset_finish_sql(self):
-        return sql.SQL(cleandoc(
-            """ ALTER TABLE linksets.{linkset}
+                SELECT linkset.*, similarity
+                FROM linkset
+                {sim_fields_sql}
+                CROSS JOIN LATERAL coalesce({sim_logic_ops_sql}, 1) AS similarity 
+                {sim_condition_sql};
+                
+                ALTER TABLE linksets.{linkset}
                 ADD PRIMARY KEY (source_uri, target_uri),
-                ADD COLUMN cluster_id text,
+                ADD COLUMN cluster_id integer,
                 ADD COLUMN valid link_validity DEFAULT 'not_validated';
 
                 ALTER TABLE linksets.{linkset} ADD COLUMN sort_order serial;
 
                 CREATE INDEX ON linksets.{linkset} USING hash (source_uri);
                 CREATE INDEX ON linksets.{linkset} USING hash (target_uri);
-                CREATE INDEX ON linksets.{linkset} USING hash (cluster_id);
                 CREATE INDEX ON linksets.{linkset} USING hash (valid);
+
+                CREATE INDEX ON linksets.{linkset} USING btree (cluster_id);
+                CREATE INDEX ON linksets.{linkset} USING btree (similarity);
                 CREATE INDEX ON linksets.{linkset} USING btree (sort_order);
 
                 ANALYZE linksets.{linkset};
-            """) + '\n').format(linkset=sql.Identifier(self._job.table_name(self._linkset.id)))
+            """
+        ) + '\n').format(
+            linkset=sql.Identifier(self._job.table_name(self._linkset.id)),
+            sim_fields_sql=sql.SQL('\n').join(sim_fields_sqls),
+            sim_logic_ops_sql=self._linkset.similarity_logic_ops_sql,
+            sim_condition_sql=sim_condition_sql
+        )
 
     @property
     def sql_string(self):

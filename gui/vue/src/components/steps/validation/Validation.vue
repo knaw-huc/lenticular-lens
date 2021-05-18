@@ -70,8 +70,8 @@
           <div v-if="isOpen" class="row justify-content-center mt-2">
             <div class="col-auto">
               <div class="btn-toolbar" role="toolbar" aria-label="Toolbar">
-                <div class="btn-group btn-group-toggle ml-auto">
-                  <label class="btn btn-sm btn-secondary" v-bind:class="{'active': showAcceptedLinks}">
+                <div class="btn-group btn-group-sm btn-group-toggle ml-auto">
+                  <label class="btn btn-secondary" v-bind:class="{'active': showAcceptedLinks}">
                     <input type="checkbox" autocomplete="off" v-model="showAcceptedLinks"
                            :disabled="loadingTotals" @change="resetLinks('filtering')"/>
                     {{ showAcceptedLinks ? 'Hide accepted' : 'Show accepted' }}
@@ -87,7 +87,7 @@
                     </span>
                   </label>
 
-                  <label class="btn btn-sm btn-secondary" v-bind:class="{'active': showRejectedLinks}">
+                  <label class="btn btn-secondary" v-bind:class="{'active': showRejectedLinks}">
                     <input type="checkbox" autocomplete="off" v-model="showRejectedLinks"
                            :disabled="loadingTotals" @change="resetLinks('filtering')"/>
                     {{ showRejectedLinks ? 'Hide rejected' : 'Show rejected' }}
@@ -103,7 +103,7 @@
                     </span>
                   </label>
 
-                  <label class="btn btn-sm btn-secondary" v-bind:class="{'active': showNotSureLinks}">
+                  <label class="btn btn-secondary" v-bind:class="{'active': showNotSureLinks}">
                     <input type="checkbox" autocomplete="off" v-model="showNotSureLinks"
                            :disabled="loadingTotals" @change="resetLinks('filtering')"/>
                     {{ showNotSureLinks ? 'Hide not sure' : 'Show not sure' }}
@@ -119,7 +119,7 @@
                     </span>
                   </label>
 
-                  <label class="btn btn-sm btn-secondary" v-bind:class="{'active': showNotValidatedLinks}">
+                  <label class="btn btn-secondary" v-bind:class="{'active': showNotValidatedLinks}">
                     <input type="checkbox" autocomplete="off" v-model="showNotValidatedLinks"
                            :disabled="loadingTotals" @change="resetLinks('filtering')"/>
                     {{ showNotValidatedLinks ? 'Hide not validated' : 'Show not validated' }}
@@ -136,7 +136,7 @@
                     </span>
                   </label>
 
-                  <label v-if="isLens" class="btn btn-sm btn-secondary" v-bind:class="{'active': showMixedLinks}">
+                  <label v-if="isLens" class="btn btn-secondary" v-bind:class="{'active': showMixedLinks}">
                     <input type="checkbox" autocomplete="off" v-model="showMixedLinks"
                            :disabled="loadingTotals" @change="resetLinks('filtering')"/>
                     {{ showMixedLinks ? 'Hide mixed' : 'Show mixed' }}
@@ -153,9 +153,9 @@
                   </label>
                 </div>
 
-                <div class="btn-group ml-4" role="group">
-                  <button type="button" class="btn btn-sm btn-white border"
-                          :disabled="!resetShownLinks" @click="resetLinks('all')">
+                <div class="btn-group btn-group-sm ml-4" role="group">
+                  <button type="button" class="btn btn-white border"
+                          :disabled="!resetShownLinks" @click="resetLinks('all', 'all')">
                     <fa-icon icon="sync"/>
                     Reset
                   </button>
@@ -192,39 +192,61 @@
           <div v-if="isOpen" class="row justify-content-center mt-2">
             <div class="col-auto">
               <div class="btn-toolbar align-items-baseline" role="toolbar" aria-label="Toolbar">
-                <div class="btn-group mr-4">
-                  <button type="button" class="btn btn-secondary btn-sm" @click="showSimilarityConfig">
+                <div class="btn-group btn-group-sm mr-4">
+                  <button type="button" class="btn btn-secondary" @click="showSimilarityConfig">
                     <fa-icon icon="info-circle"/>
                     Show specification
                   </button>
 
-                  <button type="button" class="btn btn-secondary btn-sm" :disabled="!view" @click="showPropertyConfig">
+                  <button type="button" class="btn btn-secondary" :disabled="!view" @click="showPropertyConfig">
                     <fa-icon icon="cog"/>
                     Configure property labels
                   </button>
                 </div>
 
-                <div class="btn-group mr-4">
-                  <button type="button" class="btn btn-secondary btn-sm" :disabled="!view" @click="showFilterConfig">
+                <div class="btn-group btn-group-sm mr-4">
+                  <button type="button" class="btn btn-secondary" :disabled="!view" @click="showFilterConfig">
                     Filter on properties
                   </button>
 
-                  <button type="button" class="btn btn-secondary btn-sm" v-bind:class="{'active': !!clusterSelected}"
+                  <button type="button" class="btn btn-secondary" v-bind:class="{'active': clusters.length > 0}"
                           :disabled="!clustering" @click="showClusters">
                     Filter by cluster
+
+                    <span class="badge badge-light ml-1">
+                      {{ clusters.length.toLocaleString('en') }}
+                    </span>
                   </button>
                 </div>
 
-                <div class="btn-group align-items-baseline">
-                  <span class="mr-1">Similarity:</span>
-                  <vue-slider v-model="similarityRange" class="mx-5"
-                              :width="150" :min="0" :max="1" :interval="0.05" :lazy="true"
-                              :tooltip-placement="['left', 'right']" tooltip="always"
-                              @change="resetLinks('filtering')"/>
+                <div class="btn-group btn-group-sm btn-group-toggle input-group input-group-sm align-items-baseline">
+                  <div class="input-group-prepend">
+                    <div class="input-group-text bg-white">Similarity</div>
+
+                    <div class="input-group-text">
+                      <vue-slider v-model="similarityRange" class="mx-5 p-0"
+                                  :width="150" :min="0" :max="1" :interval="0.05" :lazy="true"
+                                  :tooltip-placement="['left', 'right']" tooltip="always"
+                                  @change="resetLinks('filtering', 'filtering')"/>
+                    </div>
+                  </div>
+
+                  <label class="btn btn-secondary" v-bind:class="{'active': sortDesc}">
+                    <input type="radio" autocomplete="off" v-model="sortDesc" :value="true" :disabled="loadingTotals"
+                           @change="resetLinks('reset', 'none')"/>
+                    <fa-icon icon="sort-numeric-up"/>
+                  </label>
+
+                  <label class="btn btn-secondary" v-bind:class="{'active': !sortDesc}">
+                    <input type="radio" autocomplete="off" v-model="sortDesc" :value="false" :disabled="loadingTotals"
+                           @change="resetLinks('reset', 'none')"/>
+                    <fa-icon icon="sort-numeric-down"/>
+                  </label>
                 </div>
 
-                <div class="btn-group ml-4" role="group">
-                  <button class="btn btn-sm btn-secondary" :disabled="!hasProperties || !clusterSelected"
+                <div class="btn-group btn-group-sm ml-4" role="group">
+                  <button class="btn btn-secondary"
+                          :disabled="!hasProperties || clusters.length === 0 || clusters.length > 1"
                           @click="showVisualization">
                     <fa-icon icon="project-diagram"/>
                     Visualize
@@ -240,23 +262,25 @@
     <similarity-config :type="type" :spec="spec" ref="similarityConfig"/>
 
     <property-config v-if="view" :properties="view.properties" ref="propertyConfig"
-                     @save="resetLinks('none')"/>
+                     @save="resetLinks('reset', 'properties')"/>
 
     <filter-config v-if="view" :filters="view.filters" ref="filterConfig"
-                   @save="resetLinks('filtering')"/>
+                   @save="resetLinks('filtering', 'filtering')"/>
 
     <clusters v-if="clustering"
               :type="type"
               :spec-id="spec.id"
-              :cluster-selected="clusterSelected"
+              :selected-clusters="clusters"
+              :similarity-range="similarityRange"
               ref="clusters"
-              @select="selectCluster"/>
+              @select="selectCluster"
+              @closed="resetLinks('filtering', 'none')"/>
 
     <cluster-visualization
-        v-if="clustering && clusterSelected && hasProperties"
+        v-if="clustering && clusters.length === 1 && hasProperties"
         :type="type"
         :spec-id="spec.id"
-        :cluster="clusterSelected"
+        :cluster="clusters[0]"
         ref="visualization"/>
 
     <template v-if="isOpen && !isUpdatingSelection">
@@ -265,9 +289,11 @@
           :key="idx"
           :index="idx"
           :link="link"
+          :is-active="currentIdx === idx"
           @accepted="validateLink(link,'accepted')"
           @rejected="validateLink(link,'rejected')"
-          @not_sure="validateLink(link,'not_sure')"/>
+          @not_sure="validateLink(link,'not_sure')"
+          ref="link"/>
 
       <infinite-loading :identifier="linksIdentifier" @infinite="getLinks">
         <template v-slot:spinner>
@@ -342,9 +368,11 @@
 
                 links: [],
                 linksIdentifier: +new Date(),
+                currentIdx: 0,
 
-                clusterSelected: null,
+                clusters: [],
                 similarityRange: [0, 1],
+                sortDesc: true,
             };
         },
         props: {
@@ -391,6 +419,10 @@
                     .map(prop => prop[0] !== '')
                     .includes(false);
             },
+
+            clusterIds() {
+                return this.clusters.map(cluster => cluster.id);
+            },
         },
         methods: {
             async onToggle(isOpen) {
@@ -398,11 +430,11 @@
 
                 if (isOpen) {
                     this.$emit('show');
-                    await this.resetLinks('all');
+                    await this.resetLinks('all', 'all');
                 }
                 else {
                     this.$emit('hide');
-                    await this.resetLinks('none');
+                    await this.resetLinks('reset', 'none');
                 }
             },
 
@@ -426,40 +458,57 @@
                 this.$refs.visualization.showVisualization();
             },
 
-            async selectCluster(cluster) {
-                this.clusterSelected = this.clusterSelected !== cluster ? cluster : null;
-                await this.resetLinks('filtering');
+            selectCluster(cluster) {
+                if (this.clusters.includes(cluster))
+                    this.clusters.splice(this.clusters.indexOf(cluster), 1);
+                else
+                    this.clusters.push(cluster);
             },
 
-            async resetLinks(resetLinkTotals = 'all') {
-                this.links = [];
-                this.linksIdentifier += 1;
-                this.resetShownLinks = false;
+            async resetLinks(linkUpdate = 'all', clusterUpdate = 'none') {
+                if (linkUpdate !== 'none') {
+                    this.links = [];
+                    this.linksIdentifier += 1;
+                    this.currentIdx = 0;
+                    this.resetShownLinks = false;
+                }
 
-                switch (resetLinkTotals) {
+                switch (linkUpdate) {
                     case 'no_filtering':
-                        await this.getLinkTotals(false);
+                        await this.getLinksTotals(false);
                         break;
                     case 'filtering':
-                        await this.getLinkTotals(true);
+                        await this.getLinksTotals(true);
                         break;
                     case 'all':
-                        await this.getLinkTotals(false);
-                        await this.getLinkTotals(true);
+                        await this.getLinksTotals(false);
+                        await this.getLinksTotals(true);
+                        break;
+                }
+
+                switch (clusterUpdate) {
+                    case 'properties':
+                        this.$refs.clusters.triggerPropertiesUpdate();
+                        break;
+                    case 'filtering':
+                        this.$refs.clusters.triggerFilteringUpdate();
+                        break;
+                    case 'all':
+                        this.$refs.clusters.triggerPropertiesUpdate();
+                        this.$refs.clusters.triggerFilteringUpdate();
                         break;
                 }
             },
 
-            async getLinkTotals(applyFiltering) {
+            async getLinksTotals(applyFiltering) {
                 if (this.loadingTotals)
                     return;
 
                 this.loadingTotals = true;
 
-                const clusterId = this.clusterSelected ? this.clusterSelected.id : null;
                 const totals = await this.$root.getLinksTotals(this.type, this.spec.id, {
                     applyFilters: applyFiltering,
-                    clusterIds: applyFiltering && clusterId ? [clusterId] : [],
+                    clusterIds: applyFiltering ? this.clusterIds : [],
                     min: applyFiltering ? this.similarityRange[0] : 0,
                     max: applyFiltering ? this.similarityRange[1] : 1
                 });
@@ -490,11 +539,11 @@
 
                 this.loadingLinks = true;
 
-                const clusterId = this.clusterSelected ? this.clusterSelected.id : null;
                 const links = await this.$root.getLinks(this.type, this.spec.id, {
                     accepted: this.showAcceptedLinks, rejected: this.showRejectedLinks, notSure: this.showNotSureLinks,
                     notValidated: this.showNotValidatedLinks, mixed: this.showMixedLinks,
-                    clusterIds: clusterId ? [clusterId] : [], min: this.similarityRange[0], max: this.similarityRange[1]
+                    clusterIds: this.clusterIds, min: this.similarityRange[0], max: this.similarityRange[1],
+                    sort: this.sortDesc ? 'desc' : 'asc'
                 }, 50, this.links.length);
 
                 if (links !== null)
@@ -510,6 +559,35 @@
                 }
 
                 this.loadingLinks = false;
+            },
+
+            async onKey(e) {
+                if (!this.isOpen || this.isUpdating)
+                    return;
+
+                switch (e.keyCode) {
+                    case 65: // a
+                        await this.validateLink(this.links[this.currentIdx], 'accepted');
+                        break;
+                    case 88: // x
+                        await this.validateLink(this.links[this.currentIdx], 'rejected');
+                        break;
+                    case 32: // space
+                        await this.validateLink(this.links[this.currentIdx], 'not_sure');
+                        break;
+                    case 37: // arrow left
+                    case 38: // arrow up
+                        if (this.currentIdx > 0)
+                            this.currentIdx--;
+                        break;
+                    case 39: // arrow right
+                    case 40: // arrow down
+                        if ((this.currentIdx + 1) < this.links.length)
+                            this.currentIdx++;
+                        break;
+                }
+
+                this.$refs.link[this.currentIdx].$el.scrollIntoView({behavior: 'smooth'});
             },
 
             async validateLink(link, validation) {
@@ -569,7 +647,11 @@
                             break;
                     }
 
+                    if ((this.currentIdx + 1) < this.links.length)
+                        this.currentIdx++;
+
                     this.resetShownLinks = true;
+                    await this.resetLinks('none', 'filtering');
                 }
             },
 
@@ -577,19 +659,24 @@
                 this.isUpdating = true;
                 this.isUpdatingSelection = true;
 
-                const clusterId = this.clusterSelected ? this.clusterSelected.id : null;
                 const result = await this.$root.validateSelection(this.type, this.spec.id, validation, {
                     accepted: this.showAcceptedLinks, rejected: this.showRejectedLinks, notSure: this.showNotSureLinks,
                     notValidated: this.showNotValidatedLinks, mixed: this.showMixedLinks,
-                    clusterIds: clusterId ? [clusterId] : [], min: this.similarityRange[0], max: this.similarityRange[1]
+                    clusterIds: this.clusterIds, min: this.similarityRange[0], max: this.similarityRange[1]
                 });
 
                 this.isUpdating = false;
                 this.isUpdatingSelection = false;
 
                 if (result !== null)
-                    await this.resetLinks('all');
+                    await this.resetLinks('all', 'filtering');
             },
-        }
+        },
+        mounted() {
+            document.addEventListener('keyup', this.onKey);
+        },
+        destroyed() {
+            document.removeEventListener('keyup', this.onKey);
+        },
     };
 </script>

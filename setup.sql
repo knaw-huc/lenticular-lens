@@ -110,6 +110,10 @@ CREATE TABLE IF NOT EXISTS clusterings
     clusters_count   bigint,
     extended_count   int,
     cycles_count     int,
+    smallest_size    bigint,
+    largest_size     bigint,
+    smallest_count   bigint,
+    largest_count    bigint,
     PRIMARY KEY (job_id, spec_id, spec_type)
 );
 

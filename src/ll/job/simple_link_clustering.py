@@ -1,5 +1,4 @@
 import logging
-from ll.util.hasher import hash_string_min
 
 log = logging.getLogger(__name__)
 
@@ -37,9 +36,9 @@ class SimpleLinkClustering:
         log.info('Processing the clusters for unique id and preparing for serialisation')
 
         self._all_links_processed = True
-        for (id, nodes) in self.clusters.items():
+        for (idx, nodes) in enumerate(list(sorted(self.clusters.values(), key=len, reverse=True))):
             if not self._stop:
-                yield {'id': hash_string_min(id), 'nodes': nodes}
+                yield {'id': idx + 1, 'nodes': nodes}
 
         log.info('Clustering is completed')
 

@@ -6,7 +6,7 @@ from psycopg2.pool import ThreadedConnectionPool
 
 conn_pool = ThreadedConnectionPool(
     minconn=2,
-    maxconn=6,
+    maxconn=20,
     host=os.environ.get('DATABASE_HOST', 'localhost'),
     port=os.environ.get('DATABASE_PORT', 5432),
     database=os.environ.get('DATABASE_DB', 'postgres'),

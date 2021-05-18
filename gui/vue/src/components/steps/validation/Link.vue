@@ -1,15 +1,25 @@
 <template>
-  <div class="border p-3 mb-4" v-bind:class="[bgColor]">
+  <div class="border p-3 mb-4 link-scroll" v-bind:class="[bgColor]">
     <div class="row align-items-center flex-nowrap">
       <div class="col-auto d-flex flex-column align-items-center">
         <div class="col-auto">
-          <span class="font-weight-bold font-italic"># {{ index + 1 }}</span>
+          <span class="font-weight-bold">
+            <span v-if="isActive" class="mr-1">&#8680;</span>
+            <span class="font-italic"># {{ index + 1 }}</span>
+          </span>
         </div>
 
         <div class="col-auto">
-          <div class="btn btn-sm bg-secondary-light border border-secondary text-secondary read-only m-1">
+          <div class="info-block">
             <span class="font-weight-bold">Similarity</span><br>
             {{ similarity }}
+          </div>
+        </div>
+
+        <div class="col-auto">
+          <div class="info-block">
+            <span class="font-weight-bold">Cluster</span><br>
+            <span class="font-italic"># {{ link.cluster_id }}</span>
           </div>
         </div>
       </div>
@@ -61,7 +71,7 @@
       <div class="col-auto">
         <div class="row flex-column align-items-center">
           <div class="col-auto">
-            <button type="button" class="btn btn-sm btn-success m-1" :disabled="isUpdating"
+            <button type="button" class="btn btn-sm btn-success m-1" :disabled="isUpdating" title="Accept (a)"
                     @click="$emit('accepted')">
               <fa-icon icon="check"/>
               Accept
@@ -69,7 +79,7 @@
           </div>
 
           <div class="col-auto">
-            <button type="button" class="btn btn-sm btn-danger m-1" :disabled="isUpdating"
+            <button type="button" class="btn btn-sm btn-danger m-1" :disabled="isUpdating" title="Reject (x)"
                     @click="$emit('rejected')">
               <fa-icon icon="times"/>
               Reject
@@ -77,7 +87,7 @@
           </div>
 
           <div class="col-auto">
-            <button type="button" class="btn btn-sm btn-warning m-1" :disabled="isUpdating"
+            <button type="button" class="btn btn-sm btn-warning m-1" :disabled="isUpdating" title="Not sure (space)"
                     @click="$emit('not_sure')">
               <fa-icon icon="question"/>
               Not sure
@@ -100,6 +110,10 @@
         props: {
             index: Number,
             link: Object,
+            isActive: {
+                type: Boolean,
+                default: false,
+            },
         },
         computed: {
             similarity() {
@@ -124,19 +138,18 @@
             },
 
             bgColor() {
-                if (this.link.valid === 'accepted')
-                    return 'bg-success';
-
-                if (this.link.valid === 'rejected')
-                    return 'bg-danger';
-
-                if (this.link.valid === 'not_sure')
-                    return 'bg-warning';
-
-                if (this.link.valid === 'mixed')
-                    return 'bg-warning';
-
-                return 'bg-white';
+                switch (this.link.valid) {
+                    case 'accepted':
+                        return 'bg-success';
+                    case 'rejected':
+                        return 'bg-danger';
+                    case 'not_sure':
+                        return 'bg-warning';
+                    case 'mixed':
+                        return 'bg-warning';
+                    default:
+                        return 'bg-white';
+                }
             },
         },
         methods: {

@@ -46,6 +46,18 @@ $themeColor: $secondary;
   }
 }
 
+.ext_cyc {
+  color: purple;
+}
+
+.ext_yes {
+  color: blue;
+}
+
+.ext_no {
+  color: red;
+}
+
 .absolute-handle {
   position: absolute;
   top: 8px;
@@ -68,10 +80,6 @@ div#app::before {
 
 .bg-primary-light {
   background-color: #f5ecc1 !important;
-}
-
-.bg-primary-very-light {
-  background-color: $primary-very-light !important;
 }
 
 .bg-secondary-light {
@@ -316,6 +324,10 @@ ul.inline-list li:not(:first-child):before {
   }
 }
 
+.link-scroll {
+  scroll-margin: 240px;
+}
+
 .property {
   display: flex;
   flex-wrap: wrap;
@@ -327,12 +339,25 @@ ul.inline-list li:not(:first-child):before {
     font-size: 0.9em;
   }
 
+  .first-el {
+    margin-left: -3em;
+  }
+
+  .property-collapse,
+  .property-collapse-open,
+  .property-collapse-close {
+    &.hide {
+      display: none;
+    }
+  }
+
   .property-pill {
     @extend .btn;
     @extend .border;
     @extend .border-secondary;
     @extend .rounded-pill;
     @extend .text-break-all;
+    @extend .user-select-auto;
 
     padding-top: 0 !important;
     padding-bottom: 0 !important;
@@ -341,10 +366,10 @@ ul.inline-list li:not(:first-child):before {
     &.sm {
       @extend .btn-sm;
     }
-  }
 
-  .property-pill:first-child, .property-part:first-child {
-    margin-left: -3em;
+    &.read-only {
+      cursor: auto !important;
+    }
   }
 
   .property-pill:last-child, .property-part:last-child {
@@ -364,6 +389,13 @@ ul.inline-list li:not(:first-child):before {
     @extend .text-white;
   }
 
+  .property-alias {
+    @extend .border-secondary;
+    @extend .bg-warning;
+    @extend .font-italic;
+    @extend .text-secondary;
+  }
+
   .property-download {
     font-size: 0.9em;
 
@@ -380,6 +412,21 @@ ul.inline-list li:not(:first-child):before {
 
     @extend .text-secondary;
   }
+}
+
+.info-block {
+  padding: 0.25rem 0.5rem;
+  margin: 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  border-radius: 0.2rem;
+  text-align: center;
+  min-width: 85px;
+
+  @extend .border;
+  @extend .border-secondary;
+  @extend .text-secondary;
+  @extend .bg-secondary-light;
 }
 
 .modal-full-size {

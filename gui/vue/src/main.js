@@ -49,12 +49,12 @@ import {faQuestionCircle} from '@fortawesome/free-regular-svg-icons';
 import {
     faCopy, faChevronDown, faArrowRight, faPlus, faTrashAlt, faPencilAlt, faFilter, faCheck, faTimes, faInfoCircle,
     faAlignJustify, faProjectDiagram, faList, faCog, faGripHorizontal, faFileExport, faSync, faQuestion, faCheckSquare,
-    faTextWidth
+    faTextWidth, faExpandAlt, faCompressAlt, faSortNumericUp, faSortNumericDown
 } from '@fortawesome/free-solid-svg-icons';
 
 library.add(faQuestionCircle, faCopy, faChevronDown, faArrowRight, faPlus, faTrashAlt, faPencilAlt, faFilter,
-    faCheck, faTimes, faInfoCircle, faAlignJustify, faProjectDiagram, faList, faCog,
-    faGripHorizontal, faFileExport, faSync, faQuestion, faCheckSquare, faTextWidth);
+    faCheck, faTimes, faInfoCircle, faAlignJustify, faProjectDiagram, faList, faCog, faGripHorizontal, faFileExport,
+    faSync, faQuestion, faCheckSquare, faTextWidth, faExpandAlt, faCompressAlt, faSortNumericUp, faSortNumericDown);
 
 import App from './App.vue';
 import JobMixin from './mixins/JobMixin';

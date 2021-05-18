@@ -318,33 +318,7 @@ class MatchingMethod:
                     ))
 
         if similarity_fields_sqls:
-            lateral_joins_sqls.insert(0, sql.SQL('CROSS JOIN LATERAL jsonb_to_record(similarity) AS sim({})').format(
-                sql.SQL(', ').join(similarity_fields_sqls)
-            ))
-
-        return lateral_joins_sqls
-
-    @staticmethod
-    def get_similarity_fields_sqls(matching_methods):
-        lateral_joins_sqls = []
-        similarity_fields_sqls = []
-
-        for match_method in matching_methods:
-            if match_method.similarity_sql:
-                similarity_fields_sqls.append(sql.Composed([
-                    sql.Identifier(match_method.field_name),
-                    sql.SQL(' jsonb') if match_method.is_list_match else sql.SQL(' numeric[]')
-                ]))
-
-                if match_method.is_list_match:
-                    lateral_joins_sqls.append(sql.SQL('CROSS JOIN LATERAL jsonb_to_record(sim.{}) AS {}'
-                                                      '(scores numeric[], size integer)').format(
-                        sql.Identifier(match_method.field_name),
-                        sql.Identifier('sim_' + match_method.field_name),
-                    ))
-
-        if similarity_fields_sqls:
-            lateral_joins_sqls.insert(0, sql.SQL('CROSS JOIN LATERAL jsonb_to_record(similarity) AS sim({})').format(
+            lateral_joins_sqls.insert(0, sql.SQL('CROSS JOIN LATERAL jsonb_to_record(similarities) AS sim({})').format(
                 sql.SQL(', ').join(similarity_fields_sqls)
             ))
 

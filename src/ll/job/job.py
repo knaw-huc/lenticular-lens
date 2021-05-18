@@ -3,6 +3,7 @@ from json import dumps
 from psycopg2 import extras, sql
 from psycopg2.extensions import AsIs
 
+from ll.job.clusters_filter import ClustersFilter
 from ll.job.joins import Joins
 from ll.job.transformer import transform
 from ll.job.validation import Validation
@@ -352,7 +353,7 @@ class Job:
         ), dict=True)
 
     def get_links(self, id, type, validation_filter=Validation.ALL, cluster_ids=None, uris=None,
-                  min_strength=0, max_strength=1, limit=None, offset=0,
+                  min_strength=0, max_strength=1, sort=None, limit=None, offset=0,
                   with_view_properties='none', with_view_filters=False):
         schema = 'lenses' if type == 'lens' else 'linksets'
         spec = self.get_spec_by_id(id, type)
@@ -367,6 +368,9 @@ class Job:
         linkset_builder = LinksetBuilder(schema, self.table_name(id), spec, view)
         linkset_builder.apply_links_filter(links_filter)
         linkset_builder.apply_paging(limit, offset)
+
+        if sort:
+            linkset_builder.apply_sorting(sort.lower() == 'desc')
 
         return linkset_builder.get_links_generator(with_view_properties, with_view_filters)
 
@@ -384,12 +388,11 @@ class Job:
         linkset_builder = LinksetBuilder(schema, self.table_name(id), spec, view)
         linkset_builder.apply_links_filter(links_filter)
 
-        has_strength_filter = (min_strength and min_strength > 0) or (max_strength and max_strength < 1)
+        return linkset_builder.get_total_links(with_view_filters)
 
-        return linkset_builder.get_total_links(with_view_filters, has_strength_filter)
-
-    def get_clusters(self, id, type, cluster_ids=None, uris=None, min_strength=0, max_strength=1, limit=None, offset=0,
-                     with_view_properties='none', with_view_filters=False):
+    def get_clusters(self, id, type, cluster_ids=None, uris=None, min_strength=0, max_strength=1,
+                     min_size=None, max_size=None, min_count=None, max_count=None, sort=None,
+                     limit=None, offset=0, with_view_properties='none', with_view_filters=False):
         schema = 'lenses' if type == 'lens' else 'linksets'
         spec = self.get_spec_by_id(id, type)
         view = self.get_view_by_id(id, type)
@@ -399,13 +402,40 @@ class Job:
         links_filter.filter_on_uris(uris if uris else [])
         links_filter.filter_on_min_max_strength(min_strength, max_strength)
 
+        clusters_filter = ClustersFilter()
+        clusters_filter.filter_on_min_max_size(min_size, max_size)
+        clusters_filter.filter_on_min_max_count(min_count, max_count)
+
         linkset_builder = LinksetBuilder(schema, self.table_name(id), spec, view)
         linkset_builder.apply_links_filter(links_filter)
+        linkset_builder.apply_clusters_filter(clusters_filter)
         linkset_builder.apply_paging(limit, offset)
 
-        has_strength_filter = (min_strength and min_strength > 0) or (max_strength and max_strength < 1)
+        if sort and (sort.lower() in ['size_asc', 'size_desc', 'count_asc', 'count_desc']):
+            linkset_builder.apply_cluster_sorting(sort.lower())
 
-        return linkset_builder.get_clusters_generator(with_view_properties, with_view_filters, has_strength_filter)
+        return linkset_builder.get_clusters_generator(with_view_properties, with_view_filters)
+
+    def get_clusters_totals(self, id, type, cluster_ids=None, uris=None, min_strength=0, max_strength=1,
+                            min_size=0, max_size=None, min_count=None, max_count=None, with_view_filters=False):
+        schema = 'lenses' if type == 'lens' else 'linksets'
+        spec = self.get_spec_by_id(id, type)
+        view = self.get_view_by_id(id, type)
+
+        links_filter = LinksFilter()
+        links_filter.filter_on_clusters(cluster_ids if cluster_ids else [])
+        links_filter.filter_on_uris(uris if uris else [])
+        links_filter.filter_on_min_max_strength(min_strength, max_strength)
+
+        clusters_filter = ClustersFilter()
+        clusters_filter.filter_on_min_max_size(min_size, max_size)
+        clusters_filter.filter_on_min_max_count(min_count, max_count)
+
+        linkset_builder = LinksetBuilder(schema, self.table_name(id), spec, view)
+        linkset_builder.apply_links_filter(links_filter)
+        linkset_builder.apply_clusters_filter(clusters_filter)
+
+        return linkset_builder.get_total_clusters(with_view_filters)
 
     def visualize(self, id, type, cluster_id):
         return get_visualization(self, id, type, cluster_id, include_compact=True)

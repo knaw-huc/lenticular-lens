@@ -399,7 +399,7 @@ export default {
             props = {
                 withProperties: 'multiple', applyFilters: true,
                 accepted: false, rejected: false, notSure: false, notValidated: false, mixed: false,
-                uris: [], clusterIds: [], min: undefined, max: undefined, ...props
+                uris: [], clusterIds: [], min: undefined, max: undefined, sort: 'desc', ...props
             };
 
             const params = [
@@ -420,6 +420,7 @@ export default {
 
             if (props.min && props.min > 0) params.push(`min=${props.min}`);
             if (props.max && props.max < 1) params.push(`max=${props.max}`);
+            if (props.sort) params.push(`sort=${props.sort}`);
 
             if (limit) params.push(`limit=${limit}`);
             if (offset) params.push(`offset=${offset}`);
@@ -427,10 +428,37 @@ export default {
             return callApi(`/job/${this.job.job_id}/links/${type}/${id}?${params.join('&')}`);
         },
 
+        async getClustersTotals(type, id, props) {
+            props = {
+                applyFilters: true, uris: [], clusterIds: [], min: undefined, max: undefined,
+                minSize: undefined, maxSize: undefined, minCount: undefined, maxCount: undefined, ...props
+            };
+
+            const params = [`apply_filters=${props.applyFilters}`];
+
+            if (props.uris && props.uris.length > 0)
+                props.uris.forEach(uri => params.push(`uri=${encodeURIComponent(uri)}`));
+
+            if (props.clusterIds && props.clusterIds.length > 0)
+                props.clusterIds.forEach(clusterId => params.push(`cluster_id=${encodeURIComponent(clusterId)}`));
+
+            if (props.min && props.min > 0) params.push(`min=${props.min}`);
+            if (props.max && props.max < 1) params.push(`max=${props.max}`);
+
+            if (props.minSize) params.push(`min_size=${props.minSize}`);
+            if (props.maxSize) params.push(`max_size=${props.maxSize}`);
+
+            if (props.minCount) params.push(`min_count=${props.minCount}`);
+            if (props.maxCount) params.push(`max_count=${props.maxCount}`);
+
+            return callApi(`/job/${this.job.job_id}/clusters_totals/${type}/${id}?${params.join('&')}`);
+        },
+
         async getClusters(type, id, props, limit = undefined, offset = 0) {
             props = {
                 withProperties: 'multiple', applyFilters: true,
-                uris: [], clusterIds: [], min: undefined, max: undefined, ...props
+                uris: [], clusterIds: [], min: undefined, max: undefined, minSize: undefined, maxSize: undefined,
+                minCount: undefined, maxCount: undefined, sort: undefined, ...props
             };
 
             const params = [
@@ -445,6 +473,14 @@ export default {
 
             if (props.min && props.min > 0) params.push(`min=${props.min}`);
             if (props.max && props.max < 1) params.push(`max=${props.max}`);
+
+            if (props.minSize) params.push(`min_size=${props.minSize}`);
+            if (props.maxSize) params.push(`max_size=${props.maxSize}`);
+
+            if (props.minCount) params.push(`min_count=${props.minCount}`);
+            if (props.maxCount) params.push(`max_count=${props.maxCount}`);
+
+            if (props.sort) params.push(`sort=${props.sort}`);
 
             if (limit) params.push(`limit=${limit}`);
             if (offset) params.push(`offset=${offset}`);

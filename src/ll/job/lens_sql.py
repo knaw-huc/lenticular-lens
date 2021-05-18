@@ -3,8 +3,8 @@ import locale
 from psycopg2 import sql
 from inspect import cleandoc
 
-from ll.util.helpers import get_string_from_sql
 from ll.elem.matching_method import MatchingMethod
+from ll.util.helpers import get_string_from_sql, get_sql_empty
 
 locale.setlocale(locale.LC_ALL, '')
 
@@ -17,7 +17,7 @@ class LensSql:
     def generate_lens_sql(self):
         def spec_select_sql(id, type):
             default_columns = sql.SQL('source_uri, target_uri, link_order, '
-                                      'source_collections, target_collections, similarity, valid')
+                                      'source_collections, target_collections, similarities, valid')
 
             if type == 'linkset':
                 return sql.SQL('SELECT {default_columns}, ARRAY[{id}] AS linksets, ARRAY[]::integer[] AS lenses '
@@ -40,55 +40,54 @@ class LensSql:
             lambda spec, id, type: spec_select_sql(id, type)
         )
 
+        return sql.SQL(cleandoc(
+            """ DROP MATERIALIZED VIEW IF EXISTS lens CASCADE;
+                CREATE MATERIALIZED VIEW lens AS 
+                {};
+            """
+        ) + '\n').format(lens_sql)
+
+    def generate_lens_finish_sql(self):
+        sim_fields_sqls = MatchingMethod.get_similarity_fields_sqls(self._lens.matching_methods)
+
         sim_conditions_sqls = [sql.SQL('{similarity} >= {threshold}')
                                    .format(similarity=similarity, threshold=sql.Literal(threshold))
                                for (threshold, similarity) in self._lens.similarity_logic_ops_sql_per_threshold]
 
-        sim_fields_sqls = MatchingMethod.get_similarity_fields_sqls(self._lens.matching_methods)
-        if sim_fields_sqls and sim_conditions_sqls:
-            return sql.SQL(cleandoc(
-                """ DROP TABLE IF EXISTS lenses.{lens} CASCADE;
-                    CREATE TABLE lenses.{lens} AS
-                    SELECT lens.*
-                    FROM (
-                        {lens_sql}
-                    ) AS lens
-                    CROSS JOIN LATERAL jsonb_to_record(similarity) 
-                    AS sim({sim_fields_sql})
-                    WHERE {sim_conditions};
-                """
-            ) + '\n').format(
-                lens=sql.Identifier(self._job.table_name(self._lens.id)),
-                lens_sql=lens_sql,
-                sim_fields_sql=sql.SQL('\n').join(sim_fields_sqls),
-                sim_conditions=sql.SQL(' AND ').join(sim_conditions_sqls)
-            )
+        sim_condition_sql = get_sql_empty(sql.Composed([sql.SQL('WHERE '), sql.SQL(' AND ').join(sim_conditions_sqls)]),
+                                          flag=sim_conditions_sqls)
 
         return sql.SQL(cleandoc(
             """ DROP TABLE IF EXISTS lenses.{lens} CASCADE;
                 CREATE TABLE lenses.{lens} AS
-                {lens_sql};
-            """
-        ) + '\n').format(
-            lens=sql.Identifier(self._job.table_name(self._lens.id)),
-            lens_sql=lens_sql
-        )
-
-    def generate_lens_finish_sql(self):
-        return sql.SQL(cleandoc(
-            """ ALTER TABLE lenses.{lens}
+                SELECT lens.*, similarity
+                FROM lens
+                {sim_fields_sql}
+                CROSS JOIN LATERAL coalesce({sim_logic_ops_sql}, 1) AS similarity 
+                WHERE {sim_conditions};
+                
+                ALTER TABLE lenses.{lens}
                 ADD PRIMARY KEY (source_uri, target_uri),
-                ADD COLUMN cluster_id text;
+                ADD COLUMN cluster_id integer;
 
                 ALTER TABLE lenses.{lens} ADD COLUMN sort_order serial;
 
                 CREATE INDEX ON lenses.{lens} USING hash (source_uri);
                 CREATE INDEX ON lenses.{lens} USING hash (target_uri);
-                CREATE INDEX ON lenses.{lens} USING hash (cluster_id);
+                CREATE INDEX ON lenses.{lens} USING hash (valid);
+                
+                CREATE INDEX ON lenses.{lens} USING btree (cluster_id);
+                CREATE INDEX ON lenses.{lens} USING btree (similarity);
                 CREATE INDEX ON lenses.{lens} USING btree (sort_order);
 
                 ANALYZE lenses.{lens};
-            """) + '\n').format(lens=sql.Identifier(self._job.table_name(self._lens.id)))
+            """
+        ) + '\n').format(
+            lens=sql.Identifier(self._job.table_name(self._lens.id)),
+            sim_fields_sql=sql.SQL('\n').join(sim_fields_sqls),
+            sim_logic_ops_sql=self._lens.similarity_logic_ops_sql,
+            sim_condition_sql=sim_condition_sql
+        )
 
     @property
     def sql_string(self):
@@ -103,7 +102,7 @@ class LensSql:
         return LensSql._with_select_sql(type, cleandoc('''
             SELECT l.source_uri, l.target_uri, l.link_order, 
                    l.source_collections, l.target_collections, 
-                   l.linksets, l.lenses, l.similarity, l.valid
+                   l.linksets, l.lenses, l.similarities, l.valid
         ''') if only_left else cleandoc('''
             SELECT
                 coalesce(l.source_uri, r.source_uri) AS source_uri,
@@ -118,7 +117,7 @@ class LensSql:
                          l.target_collections, r.target_collections) AS target_collections,
                 coalesce(array_distinct_merge(l.linksets, r.linksets), l.linksets, r.linksets) AS linksets,
                 coalesce(array_distinct_merge(l.lenses, r.lenses), l.lenses, r.lenses) AS lenses,
-                coalesce(jsonb_merge(l.similarity, r.similarity), l.similarity, r.similarity) AS similarity,
+                coalesce(jsonb_merge(l.similarities, r.similarities), l.similarities, r.similarities) AS similarities,
                 CASE WHEN l.valid = r.valid THEN l.valid 
                      WHEN l.valid IS NULL THEN r.valid 
                      WHEN r.valid IS NULL THEN l.valid

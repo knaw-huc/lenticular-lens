@@ -3,6 +3,8 @@
     <template v-slot:columns>
       <div class="col-auto pr-0">
         <div class="property">
+          <span class="first-el"/>
+
           <div class="property-pill property-resource read-only" :title="dataset.uri">
             {{ dataset.title }}
           </div>

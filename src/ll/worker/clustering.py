@@ -42,7 +42,7 @@ class ClusteringJob(WorkerJob):
 
                 cur.execute(sql.SQL('''
                     CREATE TEMPORARY TABLE IF NOT EXISTS {} (
-                        id text NOT NULL, node text NOT NULL
+                        id integer NOT NULL, node text NOT NULL
                     ) ON COMMIT DROP
                 ''').format(sql.Identifier(clusters_table_name)))
 
@@ -55,8 +55,7 @@ class ClusteringJob(WorkerJob):
                     WHERE linkset.source_uri = clusters.node
                 ''').format(sql.Identifier(linkset_table_name), sql.Identifier(clusters_table_name)))
 
-                cur.execute(sql.SQL('CREATE INDEX ON {} USING hash (cluster_id); '
-                                    'ANALYZE {};')
+                cur.execute(sql.SQL('CREATE INDEX ON {} USING btree (cluster_id); ANALYZE {};')
                             .format(sql.Identifier(linkset_table_name), sql.Identifier(linkset_table_name)))
 
     def watch_process(self):
@@ -88,9 +87,43 @@ class ClusteringJob(WorkerJob):
     def on_finish(self):
         if len(self._worker.clusters) > 0:
             with db_conn() as conn, conn.cursor() as cur:
+                cur.execute(sql.SQL('''
+                    SELECT (SELECT size FROM (
+                              SELECT count(DISTINCT uri) AS size
+                              FROM {schema}.{table_name}, LATERAL (VALUES (source_uri), (target_uri)) AS nodes(uri)
+                              GROUP BY cluster_id
+                           ) AS x ORDER BY size ASC LIMIT 1) AS smallest_size,
+                           (SELECT size FROM (
+                              SELECT count(DISTINCT uri) AS size
+                              FROM {schema}.{table_name}, LATERAL (VALUES (source_uri), (target_uri)) AS nodes(uri)
+                              GROUP BY cluster_id
+                           ) AS x ORDER BY size DESC LIMIT 1) AS largest_size,
+                           (SELECT count FROM (
+                              SELECT count(cluster_id) AS count
+                              FROM {schema}.{table_name}
+                              GROUP BY cluster_id
+                           ) AS x ORDER BY count ASC LIMIT 1) AS smallest_count,
+                           (SELECT count FROM (
+                              SELECT count(cluster_id) AS count
+                              FROM {schema}.{table_name}
+                              GROUP BY cluster_id
+                           ) AS x ORDER BY count DESC LIMIT 1) AS largest_count
+                ''').format(
+                    schema=sql.Identifier('linksets' if self._type == 'linkset' else 'lenses'),
+                    table_name=sql.Identifier(self._job.table_name(self._id)),
+                ))
+
+                result = cur.fetchone()
+
+                smallest_size = result[0]
+                largest_size = result[1]
+                smallest_count = result[2]
+                largest_count = result[3]
+
                 cur.execute('''
                     UPDATE clusterings
-                    SET links_count = %s, clusters_count = %s, status = %s, finished_at = now()
+                    SET links_count = %s, clusters_count = %s, smallest_size = %s, largest_size = %s,
+                        smallest_count = %s, largest_count = %s, status = %s, status_message = NULL, finished_at = now()
                     WHERE job_id = %s AND spec_id = %s AND spec_type = %s
-                ''', (self._worker.links_processed, len(self._worker.clusters), 'done',
-                      self._job_id, self._id, self._type))
+                ''', (self._worker.links_processed, len(self._worker.clusters), smallest_size, largest_size,
+                      smallest_count, largest_count, 'done', self._job_id, self._id, self._type))

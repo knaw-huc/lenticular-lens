@@ -1,5 +1,7 @@
 <template>
   <div class="property">
+    <span class="first-el"/>
+
     <template v-if="showInfo">
       <div class="property-pill property-resource read-only" :title="dataset.uri" v-bind:class="{'sm': small}">
         {{ dataset.title }}

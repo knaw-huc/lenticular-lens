@@ -75,12 +75,12 @@ class LinksFilter:
 
     @property
     def _min_max_sql(self):
-        min_sql = sql.SQL('{alias}computed_similarity > {min}').format(
+        min_sql = sql.SQL('{alias}similarity >= {min}').format(
             alias=self._alias_sql,
             min=sql.Literal(self._min),
         ) if self._min is not None and self._min > 0 else None
 
-        max_sql = sql.SQL('{alias}computed_similarity < {max}').format(
+        max_sql = sql.SQL('{alias}similarity <= {max}').format(
             alias=self._alias_sql,
             max=sql.Literal(self._max),
         ) if self._max is not None and self._max < 1 else None

@@ -597,11 +597,11 @@ def linksetSpecsDataItr(
 
     clusters = {}
     try:
-        limit, offset = 500, 0
+        limit, offset = 200000, 0
 
         while True:
             print(offset)
-            clusters_uri = F"{home}/job/{job}/clusters/linkset/{linksetId}?limit={limit}&offset={offset}"
+            clusters_uri = F"{home}/job/{job}/clusters/linkset/{linksetId}?apply_filters=false&with_properties=none&limit={limit}&offset={offset}"
             clusters_data = requests.get(clusters_uri).json()
             for item in clusters_data:
                 clusters[item['id']] = item['size']
