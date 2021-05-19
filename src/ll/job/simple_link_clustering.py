@@ -36,7 +36,9 @@ class SimpleLinkClustering:
         log.info('Processing the clusters for unique id and preparing for serialisation')
 
         self._all_links_processed = True
-        for (idx, nodes) in enumerate(list(sorted(self.clusters.values(), key=len, reverse=True))):
+
+        clusters = list(sorted(self.clusters.values(), key=lambda x: (len(x) * -1, min(x))))
+        for (idx, nodes) in enumerate(clusters):
             if not self._stop:
                 yield {'id': idx + 1, 'nodes': nodes}
 

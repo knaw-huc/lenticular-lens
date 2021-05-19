@@ -1,5 +1,5 @@
 from io import StringIO
-from psycopg2 import sql
+from psycopg2 import sql, extras
 
 from ll.worker.job import WorkerJob
 from ll.util.config_db import db_conn
@@ -85,45 +85,42 @@ class ClusteringJob(WorkerJob):
         self._job.update_clustering(self._id, self._type, {'status': 'failed', 'status_message': err_message})
 
     def on_finish(self):
-        if len(self._worker.clusters) > 0:
-            with db_conn() as conn, conn.cursor() as cur:
-                cur.execute(sql.SQL('''
-                    SELECT (SELECT size FROM (
-                              SELECT count(DISTINCT uri) AS size
-                              FROM {schema}.{table_name}, LATERAL (VALUES (source_uri), (target_uri)) AS nodes(uri)
-                              GROUP BY cluster_id
-                           ) AS x ORDER BY size ASC LIMIT 1) AS smallest_size,
-                           (SELECT size FROM (
-                              SELECT count(DISTINCT uri) AS size
-                              FROM {schema}.{table_name}, LATERAL (VALUES (source_uri), (target_uri)) AS nodes(uri)
-                              GROUP BY cluster_id
-                           ) AS x ORDER BY size DESC LIMIT 1) AS largest_size,
-                           (SELECT count FROM (
-                              SELECT count(cluster_id) AS count
-                              FROM {schema}.{table_name}
-                              GROUP BY cluster_id
-                           ) AS x ORDER BY count ASC LIMIT 1) AS smallest_count,
-                           (SELECT count FROM (
-                              SELECT count(cluster_id) AS count
-                              FROM {schema}.{table_name}
-                              GROUP BY cluster_id
-                           ) AS x ORDER BY count DESC LIMIT 1) AS largest_count
-                ''').format(
-                    schema=sql.Identifier('linksets' if self._type == 'linkset' else 'lenses'),
-                    table_name=sql.Identifier(self._job.table_name(self._id)),
-                ))
+        if len(self._worker.clusters) == 0:
+            return
 
-                result = cur.fetchone()
+        with db_conn() as conn, conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
+            cur.execute(sql.SQL('''
+                SELECT (SELECT size FROM (
+                          SELECT count(DISTINCT uri) AS size
+                          FROM {schema}.{table_name}, LATERAL (VALUES (source_uri), (target_uri)) AS nodes(uri)
+                          GROUP BY cluster_id
+                       ) AS x ORDER BY size ASC LIMIT 1) AS smallest_size,
+                       (SELECT size FROM (
+                          SELECT count(DISTINCT uri) AS size
+                          FROM {schema}.{table_name}, LATERAL (VALUES (source_uri), (target_uri)) AS nodes(uri)
+                          GROUP BY cluster_id
+                       ) AS x ORDER BY size DESC LIMIT 1) AS largest_size,
+                       (SELECT count FROM (
+                          SELECT count(cluster_id) AS count
+                          FROM {schema}.{table_name}
+                          GROUP BY cluster_id
+                       ) AS x ORDER BY count ASC LIMIT 1) AS smallest_count,
+                       (SELECT count FROM (
+                          SELECT count(cluster_id) AS count
+                          FROM {schema}.{table_name}
+                          GROUP BY cluster_id
+                       ) AS x ORDER BY count DESC LIMIT 1) AS largest_count
+            ''').format(
+                schema=sql.Identifier('linksets' if self._type == 'linkset' else 'lenses'),
+                table_name=sql.Identifier(self._job.table_name(self._id)),
+            ))
 
-                smallest_size = result[0]
-                largest_size = result[1]
-                smallest_count = result[2]
-                largest_count = result[3]
-
-                cur.execute('''
-                    UPDATE clusterings
-                    SET links_count = %s, clusters_count = %s, smallest_size = %s, largest_size = %s,
-                        smallest_count = %s, largest_count = %s, status = %s, status_message = NULL, finished_at = now()
-                    WHERE job_id = %s AND spec_id = %s AND spec_type = %s
-                ''', (self._worker.links_processed, len(self._worker.clusters), smallest_size, largest_size,
-                      smallest_count, largest_count, 'done', self._job_id, self._id, self._type))
+            result = cur.fetchone()
+            cur.execute('''
+                UPDATE clusterings
+                SET links_count = %s, clusters_count = %s, smallest_size = %s, largest_size = %s,
+                    smallest_count = %s, largest_count = %s, status = %s, status_message = NULL, finished_at = now()
+                WHERE job_id = %s AND spec_id = %s AND spec_type = %s
+            ''', (self._worker.links_processed, len(self._worker.clusters),
+                  result['smallest_size'], result['largest_size'], result['smallest_count'], result['largest_count'],
+                  'done', self._job_id, self._id, self._type))
