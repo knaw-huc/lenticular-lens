@@ -124,6 +124,17 @@ def index():
     return app.send_static_file('index.html')
 
 
+@app.route('/job/<job:job>/update_temp/<type:type>/<int:id>')
+@authenticated
+@with_job
+@with_spec
+def update_temp(job, type, id):
+    from temp_update import temp_update
+
+    temp_update(job, type, id)
+    return jsonify({'result': 'done'})
+
+
 @app.route('/datasets')
 @authenticated
 def datasets():
