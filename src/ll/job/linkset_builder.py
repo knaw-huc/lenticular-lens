@@ -83,11 +83,16 @@ class LinksetBuilder:
         is_single_value = with_view_properties == 'single'
         use_properties = bool(with_view_properties != 'none' and self._view.properties_per_collection)
 
-        selection_sql = get_sql_empty(self._selection_props_sql(is_single_value),
+        selection_sql = get_sql_empty(self._selection_props_sql(is_single_value, array_agg=True),
                                       flag=use_properties, prefix=sql.SQL(', \n'), add_new_line=False)
 
         props_joins_sql = get_sql_empty(self._properties_join_sql(
             sql.SQL('IN (linkset.source_uri, linkset.target_uri)'), is_single_value), flag=use_properties)
+
+        group_by_sql = get_sql_empty(sql.SQL(
+            'GROUP BY source_uri, target_uri, link_order, source_collections, target_collections, '
+            'source_intermediates, target_intermediates, cluster_id, valid, similarity'),
+            flag=use_properties, add_new_line=False)
 
         with db_conn() as conn, conn.cursor(name=uuid4().hex, cursor_factory=extras.RealDictCursor) as cur:
             cur.execute(sql.SQL('''
@@ -98,10 +103,12 @@ class LinksetBuilder:
                        {selection_sql}
                 FROM linkset
                 {props_joins_sql}
+                {group_by_sql}
             ''').format(
                 linkset_cte=self.get_linkset_cte_sql(with_view_filters=with_view_filters),
                 selection_sql=selection_sql,
-                props_joins_sql=props_joins_sql
+                props_joins_sql=props_joins_sql,
+                group_by_sql=group_by_sql
             ))
 
             for link in fetch_many(cur):
@@ -115,9 +122,9 @@ class LinksetBuilder:
                         'source_intermediates'] else None,
                     'target_intermediates': flatten(list(link['target_intermediates'].values())) if link[
                         'source_intermediates'] else None,
-                    'source_values': self._get_values(link, is_source=True,
+                    'source_values': self._get_values(link, check_key='source_uri',
                                                       is_single_value=is_single_value) if use_properties else None,
-                    'target_values': self._get_values(link, is_source=False,
+                    'target_values': self._get_values(link, check_key='target_uri',
                                                       is_single_value=is_single_value) if use_properties else None,
                     'cluster_id': link['cluster_id'],
                     'valid': link['valid'],
@@ -132,7 +139,7 @@ class LinksetBuilder:
                                       flag=use_properties, prefix=sql.SQL(', \n'), add_new_line=False)
 
         props_joins_sql = get_sql_empty(self._properties_join_sql(
-            sql.SQL('= ANY (all_nodes)'), is_single_value, include_unnest=True), flag=use_properties)
+            sql.SQL('= ANY (all_nodes[:50])'), is_single_value, include_unnest=True), flag=use_properties)
 
         sort_sql = sql.SQL('ORDER BY cluster_id')
         if self._cluster_sort_type is not None:
@@ -179,7 +186,7 @@ class LinksetBuilder:
                     'id': cluster['cluster_id'],
                     'size': cluster['size'],
                     'links': cluster['links'],
-                    'values': self._get_values(cluster, include_check=False, is_single_value=is_single_value,
+                    'values': self._get_values(cluster, is_single_value=is_single_value,
                                                max_values=10) if use_properties else None
                 }
 
@@ -284,25 +291,26 @@ class LinksetBuilder:
 
         return sql.Composed(sqls)
 
-    def _selection_props_sql(self, single_value=True):
+    def _selection_props_sql(self, single_value=True, array_agg=False):
         prop_selection_sqls = [
-            sql.SQL('{}.{} AS {}').format(
-                sql.Identifier(collection.alias),
-                sql.Identifier(prop.hash),
-                sql.Identifier(collection.alias + '_' + prop.hash))
+            (sql.SQL('{}.{}').format(sql.Identifier(collection.alias), sql.Identifier(prop.hash)),
+             sql.Identifier(collection.alias + '_' + prop.hash))
             for collection in self._view.properties_per_collection
             for (idx, prop) in enumerate(self._view.properties_per_collection.get(collection))
             if not single_value or idx == 0
         ]
 
         uri_selection_sqls = [
-            sql.SQL('{}.uri AS {}').format(
-                sql.Identifier(collection.alias),
-                sql.Identifier(collection.alias + '_uri'))
+            (sql.SQL('{}.uri').format(sql.Identifier(collection.alias)),
+             sql.Identifier(collection.alias + '_uri'))
             for collection in self._view.properties_per_collection
         ]
 
-        return sql.SQL(', \n').join(prop_selection_sqls + uri_selection_sqls)
+        selection_sqls = [sql.SQL('array_agg({}) AS {}' if array_agg else '{} AS {}')
+                              .format(selection_sql[0], selection_sql[1])
+                          for selection_sql in (prop_selection_sqls + uri_selection_sqls)]
+
+        return sql.SQL(', \n').join(selection_sqls)
 
     def _properties_join_sql(self, uri_match_sql, single_value=True, include_unnest=False):
         sqls = []
@@ -335,17 +343,27 @@ class LinksetBuilder:
 
         return sql.Composed(sqls)
 
-    def _get_values(self, source, include_check=True, is_source=True, is_single_value=False, max_values=None):
-        return [{
-            'graphql_endpoint': collection.graphql_endpoint,
-            'dataset_id': collection.dataset_id,
-            'collection_id': collection.collection_id,
-            'property': prop.property_path,
-            'values': list(filter(None, source[collection.alias + '_' + prop.hash]))[:(max_values or 1)]
-            if max_values or is_single_value else list(filter(None, source[collection.alias + '_' + prop.hash]))}
-            for collection in self._view.properties_per_collection
-            for (idx, prop) in enumerate(self._view.properties_per_collection.get(collection))
-            if (not is_single_value or idx == 0) and
-               (not include_check
-                or (source[collection.alias + '_uri'] == source['source_uri' if is_source else 'target_uri']))
-        ]
+    def _get_values(self, source, check_key=None, is_single_value=False, max_values=None):
+        all_values = []
+
+        for collection in self._view.properties_per_collection:
+            for (idx, prop) in enumerate(self._view.properties_per_collection.get(collection)):
+                uri_key = collection.alias + '_uri'
+                if (not is_single_value or idx == 0) and (not check_key or (source[check_key] in source[uri_key])):
+                    values = source[collection.alias + '_' + prop.hash]
+                    if check_key:
+                        values = values[source[uri_key].index(source[check_key])]
+
+                    values = list(filter(None, values))
+                    if max_values or is_single_value:
+                        values = values[:(max_values or 1)]
+
+                    all_values.append({
+                        'graphql_endpoint': collection.graphql_endpoint,
+                        'dataset_id': collection.dataset_id,
+                        'collection_id': collection.collection_id,
+                        'property': prop.property_path,
+                        'values': values
+                    })
+
+        return all_values
