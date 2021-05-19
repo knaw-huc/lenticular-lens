@@ -131,12 +131,14 @@ class LinksetBuilder:
                     'similarity': link['similarity']
                 }
 
-    def get_clusters_generator(self, with_view_properties='none', with_view_filters=False):
+    def get_clusters_generator(self, with_view_properties='none', with_view_filters=False, include_nodes=False):
         is_single_value = with_view_properties == 'single'
         use_properties = bool(with_view_properties != 'none' and self._view.properties_per_collection)
 
         selection_sql = get_sql_empty(self._cluster_selection_props_sql,
                                       flag=use_properties, prefix=sql.SQL(', \n'), add_new_line=False)
+        if include_nodes:
+            selection_sql = sql.Composed([selection_sql, sql.SQL(', all_nodes AS nodes')])
 
         props_joins_sql = get_sql_empty(self._properties_join_sql(
             sql.SQL('= ANY (all_nodes[:50])'), is_single_value, include_unnest=True), flag=use_properties)
@@ -158,7 +160,7 @@ class LinksetBuilder:
                 
                 SELECT cluster_id, size, links {selection_sql} 
                 FROM (
-                    SELECT cluster_id, array_agg(nodes) AS all_nodes, count(DISTINCT nodes) AS size, 
+                    SELECT cluster_id, array_agg(DISTINCT nodes) AS all_nodes, count(DISTINCT nodes) AS size, 
                            jsonb_object_agg(valid, valid_count) AS links, sum(valid_count) AS total_links
                     FROM (
                         SELECT cluster_id, array_agg(nodes.uri) AS all_nodes, valid, count(valid) / 2 AS valid_count
@@ -170,7 +172,7 @@ class LinksetBuilder:
                     {sort_sql} {limit_offset}
                 ) AS clusters
                 {props_joins_sql}
-                GROUP BY cluster_id, size, links, total_links
+                GROUP BY cluster_id, all_nodes, size, links, total_links
                 {sort_sql}
             ''').format(
                 linkset_cte=self.get_linkset_cte_sql(with_view_filters=with_view_filters, apply_paging=False),
@@ -186,6 +188,7 @@ class LinksetBuilder:
                     'id': cluster['cluster_id'],
                     'size': cluster['size'],
                     'links': cluster['links'],
+                    'nodes': cluster['nodes'] if include_nodes else None,
                     'values': self._get_values(cluster, is_single_value=is_single_value,
                                                max_values=10) if use_properties else None
                 }

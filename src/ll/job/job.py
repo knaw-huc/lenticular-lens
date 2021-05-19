@@ -392,7 +392,7 @@ class Job:
 
     def get_clusters(self, id, type, cluster_ids=None, uris=None, min_strength=0, max_strength=1,
                      min_size=None, max_size=None, min_count=None, max_count=None, sort=None,
-                     limit=None, offset=0, with_view_properties='none', with_view_filters=False):
+                     limit=None, offset=0, with_view_properties='none', with_view_filters=False, include_nodes=False):
         schema = 'lenses' if type == 'lens' else 'linksets'
         spec = self.get_spec_by_id(id, type)
         view = self.get_view_by_id(id, type)
@@ -414,7 +414,7 @@ class Job:
         if sort and (sort.lower() in ['size_asc', 'size_desc', 'count_asc', 'count_desc']):
             linkset_builder.apply_cluster_sorting(sort.lower())
 
-        return linkset_builder.get_clusters_generator(with_view_properties, with_view_filters)
+        return linkset_builder.get_clusters_generator(with_view_properties, with_view_filters, include_nodes)
 
     def get_clusters_totals(self, id, type, cluster_ids=None, uris=None, min_strength=0, max_strength=1,
                             min_size=0, max_size=None, min_count=None, max_count=None, with_view_filters=False):

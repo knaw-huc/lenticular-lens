@@ -330,19 +330,20 @@ _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/links/linkset/0`_
 
 **URL**: `/job/<job_id>/clusters/<type>/<id>`\
 **Method**: `GET`\
-**Parameters**: `with_properties`, `apply_filters`, `uri`, `cluster_id`, `min`, `max`, `min_size`, `max_size`
-, `min_count`, `max_count`, `limit`, `offset`
+**Parameters**: `with_properties`, `apply_filters`, `include_nodes`, `uri`, `cluster_id`, `min`, `max`, `min_size`
+, `max_size`, `min_count`, `max_count`, `limit`, `offset`
 
 Returns the clusters of `type` (`linkset` or `lens`) for the linkset/lens with `id` of the given `job_id`. Use `limit`
 and `offset` for paging.
 
 Specify `with_properties` with 'none' to return no property values, 'single' to only return a single property value or '
 multiple' to return multiple property values. Specify `apply_filters` to apply the filters specified by the user.
-Specify `uri` to only return links with the specified URIs. Specify `cluster_id` to only return the links of specific
-clusters. Specify `min` and/or `max` to only return links with a similarity score within the specified minimum and
-maximum score. Specify `min_size` and/or `max_size` to only return clusters with a size that is within the specified
-minimum and maximum size. Specify `min_count` and/or `max_count` to only return clusters with a links count that is
-within the specified minimum and maximum count.
+Specify `include_nodes` to include all nodes that are part of the cluster in the response. Specify `uri` to only return
+links with the specified URIs. Specify `cluster_id` to only return the links of specific clusters. Specify `min`
+and/or `max` to only return links with a similarity score within the specified minimum and maximum score.
+Specify `min_size` and/or `max_size` to only return clusters with a size that is within the specified minimum and
+maximum size. Specify `min_count` and/or `max_count` to only return clusters with a links count that is within the
+specified minimum and maximum count.
 
 _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/clusters/0`_
 

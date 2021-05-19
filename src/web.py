@@ -450,6 +450,7 @@ def clusters(job, type, id):
         with_view_properties = 'multiple'
 
     with_view_filters = request.args.get('apply_filters', default=True) == 'true'
+    include_nodes = request.args.get('include_nodes', default=False) == 'true'
 
     uris = request.args.getlist('uri')
     cluster_ids = request.args.getlist('cluster_id', type=int)
@@ -468,18 +469,12 @@ def clusters(job, type, id):
     offset = request.args.get('offset', default=0, type=int)
     limit = request.args.get('limit', type=int)
 
-    clusters = [{
-        'id': cluster['id'],
-        'size': cluster['size'],
-        'links': cluster['links'],
-        'values': cluster['values'],
-        'reconciled': False,
-        'extended': False,
-    } for cluster in job.get_clusters(
-        id, type, with_view_properties=with_view_properties, with_view_filters=with_view_filters, uris=uris,
-        cluster_ids=cluster_ids, min_strength=min_strength, max_strength=max_strength,
-        min_size=min_size, max_size=max_size, min_count=min_count, max_count=max_count, sort=sort,
-        offset=offset, limit=limit)]
+    clusters = [{**cluster, 'reconciled': False, 'extended': False}
+                for cluster in job.get_clusters(
+            id, type, with_view_properties=with_view_properties, with_view_filters=with_view_filters,
+            include_nodes=include_nodes, uris=uris, cluster_ids=cluster_ids,
+            min_strength=min_strength, max_strength=max_strength, min_size=min_size, max_size=max_size,
+            min_count=min_count, max_count=max_count, sort=sort, offset=offset, limit=limit)]
 
     return jsonify(clusters)
 
