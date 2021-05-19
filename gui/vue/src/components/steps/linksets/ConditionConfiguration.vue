@@ -1,53 +1,11 @@
 <template>
   <sub-card size="sm" label="Method configuration">
-    <div v-if="configureMatching && method.items.length > 0" class="config-group">
+    <div v-if="showMatchingConfig" class="config-group">
       <span v-if="showLabel" class="badge badge-secondary right">Method configuration</span>
       <condition-method :id="'method_' + id" :method="method" :config="condition.method.config" ref="methodConfig"/>
     </div>
 
-    <div v-if="useFuzzyLogic && configureFuzzyLogic" class="config-group">
-      <span v-if="showLabel" class="badge badge-secondary right">Fuzzy logic configuration</span>
-
-      <div v-if="applyListMatching" class="form-group row">
-        <label :for="'t_conorm_' + id" class="col-sm-3 col-form-label">
-          T-norm
-        </label>
-
-        <div class="col-sm-3">
-          <select :id="'t_norm_' + id" class="form-control form-control-sm" v-model="condition.fuzzy.t_norm">
-            <option v-for="(description, key) in tNorms" :value="key">
-              {{ description }}
-            </option>
-          </select>
-        </div>
-      </div>
-
-      <div class="form-group row">
-        <label :for="'t_conorm_' + id" class="col-sm-3 col-form-label">
-          T-conorm
-        </label>
-
-        <div class="col-sm-3">
-          <select :id="'t_conorm_' + id" class="form-control form-control-sm" v-model="condition.fuzzy.t_conorm">
-            <option v-for="(description, key) in tConorms" :value="key">
-              {{ description }}
-            </option>
-          </select>
-        </div>
-      </div>
-
-      <div class="form-group row">
-        <label :for="'threshold_' + id" class="col-sm-3 col-form-label">
-          Threshold
-        </label>
-
-        <div class="col-sm-2">
-          <range :id="'threshold_' + id" v-model.number="condition.fuzzy.threshold" :allow-zero="false"/>
-        </div>
-      </div>
-    </div>
-
-    <div v-if="applySimMethod && method.items.length > 0 && method.acceptsSimilarityMethod" class="config-group">
+    <div v-if="showSimMatchingConfig" class="config-group">
       <span v-if="showLabel" class="badge badge-secondary right">Similarity method configuration</span>
 
       <div class="form-group row">
@@ -126,8 +84,74 @@
         </div>
       </div>
 
+      <div v-if="useFuzzyLogic" class="form-group row">
+        <label :for="'t_conorm_' + id" class="col-sm-3 col-form-label">
+          T-norm
+        </label>
+
+        <div class="col-sm-3">
+          <select :id="'t_norm_' + id" class="form-control form-control-sm" v-model="condition.fuzzy.t_norm">
+            <option v-for="(description, key) in tNorms" :value="key">
+              {{ description }}
+            </option>
+          </select>
+        </div>
+      </div>
+
+      <div v-if="useFuzzyLogic" class="form-group row">
+        <label :for="'t_conorm_' + id" class="col-sm-3 col-form-label">
+          T-conorm
+        </label>
+
+        <div class="col-sm-3">
+          <select :id="'t_conorm' + id" class="form-control form-control-sm" v-model="condition.fuzzy.t_conorm">
+            <option v-for="(description, key) in tConorms" :value="key">
+              {{ description }}
+            </option>
+          </select>
+        </div>
+      </div>
+
+      <div v-if="useFuzzyLogic" class="form-group row">
+        <label :for="'threshold_' + id" class="col-sm-3 col-form-label">
+          Threshold
+        </label>
+
+        <div class="col-sm-2">
+          <range :id="'threshold_' + id" v-model.number="condition.fuzzy.threshold" :allow-zero="false"/>
+        </div>
+      </div>
+
       <div class="invalid-feedback mb-2" v-bind:class="{'is-invalid': errors.includes('list_matching')}">
         Please specify at least a minimum number of intersections
+      </div>
+    </div>
+
+    <div v-else-if="useFuzzyLogic" class="config-group">
+      <span v-if="showLabel" class="badge badge-secondary right">Fuzzy logic configuration</span>
+
+      <div class="form-group row">
+        <label :for="'t_conorm_' + id" class="col-sm-3 col-form-label">
+          T-conorm
+        </label>
+
+        <div class="col-sm-3">
+          <select :id="'t_conorm' + id" class="form-control form-control-sm" v-model="condition.fuzzy.t_conorm">
+            <option v-for="(description, key) in tConorms" :value="key">
+              {{ description }}
+            </option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group row">
+        <label :for="'threshold_' + id" class="col-sm-3 col-form-label">
+          Threshold
+        </label>
+
+        <div class="col-sm-2">
+          <range :id="'threshold_' + id" v-model.number="condition.fuzzy.threshold" :allow-zero="false"/>
+        </div>
       </div>
     </div>
   </sub-card>
@@ -164,21 +188,26 @@
             simMethod: Object,
             useFuzzyLogic: Boolean,
             configureMatching: Boolean,
-            configureFuzzyLogic: Boolean,
             applySimMethod: Boolean,
             applyListMatching: Boolean,
         },
         computed: {
+            showMatchingConfig() {
+                return this.configureMatching && this.method.items.length > 0;
+            },
+
+            showSimMatchingConfig() {
+                return this.applySimMethod && this.method.items.length > 0 && this.method.acceptsSimilarityMethod;
+            },
+
             showLabel() {
                 let show = 0;
 
-                if (this.configureMatching && this.method.items.length > 0)
+                if (this.showMatchingConfig)
                     show++;
-                if (this.useFuzzyLogic && this.configureFuzzyLogic)
+                if (this.showSimMatchingConfig)
                     show++;
-                if (this.applySimMethod && this.method.items.length > 0 && this.method.acceptsSimilarityMethod)
-                    show++;
-                if (this.applyListMatching)
+                if (this.applyListMatching || this.useFuzzyLogic)
                     show++;
 
                 return show > 1;

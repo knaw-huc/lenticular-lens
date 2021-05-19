@@ -22,11 +22,6 @@
                 Configure
               </label>
 
-              <label v-if="allowFuzzyLogic" class="btn btn-secondary btn-sm"
-                     v-bind:class="{'active': configureFuzzyLogic}" @click="configureFuzzyLogic = !configureFuzzyLogic">
-                Configure fuzzy logic
-              </label>
-
               <label v-if="method.items.length > 0 && method.acceptsSimilarityMethod" class="btn btn-secondary btn-sm"
                      v-bind:class="{'active': applySimMethod}">
                 <input type="checkbox" autocomplete="off" v-model="applySimMethod"/>
@@ -53,10 +48,9 @@
 
     <condition-configuration
         v-if="showConfiguration" :id="id" :condition="condition" :method="method" :sim-method="simMethod"
-        :use-fuzzy-logic="allowFuzzyLogic" :configure-matching="configureMatching"
-        :configure-fuzzy-logic="configureFuzzyLogic" :apply-sim-method="applySimMethod"
-        :apply-list-matching="applyListMatching"
-        @sim-method-change="handleSimMethodChange" ref="conditionConfiguration"/>
+        :use-fuzzy-logic="allowFuzzyLogic" :configure-matching="configureMatching" :apply-sim-method="applySimMethod"
+        :apply-list-matching="applyListMatching" @sim-method-change="handleSimMethodChange"
+        ref="conditionConfiguration"/>
 
     <b-collapse :id="id" :visible="visible">
       <sub-card v-for="key in ['sources', 'targets']"
@@ -145,7 +139,6 @@
             return {
                 visible: true,
                 configureMatching: true,
-                configureFuzzyLogic: false,
                 applySimMethod: false,
                 applyListMatching: false,
                 matchingMethods: props.matchingMethods,
@@ -189,7 +182,6 @@
 
             showConfiguration() {
                 return (this.configureMatching && this.method.items.length > 0) ||
-                    (this.allowFuzzyLogic && this.configureFuzzyLogic) ||
                     (this.applySimMethod && this.method.items.length > 0 && this.method.acceptsSimilarityMethod) ||
                     this.applyListMatching;
             },
