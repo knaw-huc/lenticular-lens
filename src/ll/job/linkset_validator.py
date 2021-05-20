@@ -5,12 +5,11 @@ from ll.util.config_db import db_conn
 
 
 class LinksetValidator:
-    def __init__(self, job, spec, linkset_builder, with_view_filters=True, compute_similarity=False):
+    def __init__(self, job, spec, linkset_builder, with_view_filters=True):
         self._job = job
         self._spec = spec
-        self._cte_sql = linkset_builder.get_linkset_cte_sql(
-            with_view_filters=with_view_filters, compute_similarity=compute_similarity,
-            apply_paging=False, include_linkset_uris=False)
+        self._cte_sql = linkset_builder.get_linkset_cte_sql(with_view_filters=with_view_filters,
+                                                            apply_paging=False, include_linkset_uris=False)
 
     def validate_lens(self, valid):
         with db_conn() as conn, conn.cursor() as cur:

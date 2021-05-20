@@ -49,8 +49,8 @@ class LinksetBuilder:
                 FROM linkset
                 GROUP BY valid
             ''').format(
-                linkset_cte=self.get_linkset_cte_sql(
-                    with_view_filters=with_view_filters, apply_paging=False, include_linkset_uris=False)
+                linkset_cte=self.get_linkset_cte_sql(with_view_filters=with_view_filters,
+                                                     apply_paging=False, include_linkset_uris=False)
             ))
 
             return {

@@ -264,9 +264,7 @@ class Job:
         linkset_builder = LinksetBuilder(schema, self.table_name(spec.id), spec, view)
         linkset_builder.apply_links_filter(links_filter)
 
-        has_strength_filter = (min_strength and min_strength > 0) or (max_strength and max_strength < 1)
-
-        linkset_validator = LinksetValidator(self, spec, linkset_builder, with_view_filters, has_strength_filter)
+        linkset_validator = LinksetValidator(self, spec, linkset_builder, with_view_filters)
         if type == 'lens':
             linkset_validator.validate_lens(valid)
         else:
