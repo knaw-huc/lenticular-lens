@@ -10,12 +10,12 @@ class Timbuctoo:
     def __init__(self, graphql_uri):
         self._graphql_uri = graphql_uri
 
-    def fetch_graph_ql(self, query, variables=None):
+    def fetch_graph_ql(self, query, variables=None, timeout=60):
         try:
             response = requests.post(self._graphql_uri, json={
                 'query': query,
                 'variables': variables
-            }, timeout=60, verify=False)
+            }, timeout=timeout, verify=False)
             response.raise_for_status()
 
             result = response.json()
@@ -64,9 +64,12 @@ class Timbuctoo:
                         }
                     }
                 }
-            }""")
+            }""", timeout=10)
 
         datasets = {}
+        if not datasets_data:
+            return datasets
+
         for dataset in datasets_data['dataSetMetadataList']:
             dataset_id = dataset['dataSetId']
             dataset_name = dataset['dataSetName']
