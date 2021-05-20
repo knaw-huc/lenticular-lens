@@ -16,7 +16,7 @@
           </div>
         </div>
 
-        <div class="col-auto">
+        <div v-if="link.cluster_id" class="col-auto">
           <div class="info-block">
             <span class="font-weight-bold">Cluster</span><br>
             <span class="font-italic"># {{ link.cluster_id }}</span>
@@ -93,6 +93,35 @@
               Not sure
             </button>
           </div>
+
+          <div class="col-auto mt-2">
+            <b-dropdown size="sm" variant="outline-dark" class="m-1" :disabled="isUpdating" title="Add motivation (m)"
+                        @show="onOpenMotivation" @hide="onCloseMotivation" @shown="focusOnMotivationTextarea"
+                        ref="motivationBtn">
+              <template #button-content>
+                <fa-icon icon="pencil-alt"/>
+                {{ link.motivation ? 'Update' : 'Add' }} motivation
+              </template>
+
+              <b-dropdown-form>
+                <div class="form-group mb-2">
+                  <textarea class="form-control motivation" v-model="motivation"></textarea>
+                </div>
+
+                <div class="text-right">
+                  <button type="button" class="btn btn-sm border mr-3" :disabled="isUpdating" title="Close (Esc)"
+                          @click="closeMotivationButton(false)">
+                    Close
+                  </button>
+
+                  <button type="button" class="btn btn-sm border" :disabled="isUpdating" title="Save (Shift + Enter)"
+                          @click="closeMotivationButton(true)">
+                    Save
+                  </button>
+                </div>
+              </b-dropdown-form>
+            </b-dropdown>
+          </div>
         </div>
       </div>
     </div>
@@ -106,6 +135,12 @@
         name: "Link",
         components: {
             PropertyValues
+        },
+        data() {
+            return {
+                motivation: '',
+                motivationIsOpen: false,
+            };
         },
         props: {
             index: Number,
@@ -153,6 +188,34 @@
             },
         },
         methods: {
+            openMotivationButton() {
+                if (!this.motivationIsOpen)
+                    this.$refs.motivationBtn.visible = true;
+            },
+
+            closeMotivationButton(save = false) {
+                if (this.motivationIsOpen) {
+                    this.$refs.motivationBtn.visible = false;
+                    if (save)
+                        this.$emit('motivation', this.motivation);
+                }
+            },
+
+            onOpenMotivation() {
+                this.motivationIsOpen = true;
+                this.motivation = this.link.motivation;
+                this.$emit('motivation_open');
+            },
+
+            onCloseMotivation() {
+                this.motivationIsOpen = false;
+                this.$emit('motivation_close');
+            },
+
+            focusOnMotivationTextarea() {
+                this.$refs.motivationBtn.$el.querySelector('textarea').focus();
+            },
+
             async copySourceUriToClipboard() {
                 await navigator.clipboard.writeText(
                     this.switchSourceAndTarget ? this.link.target : this.link.source);

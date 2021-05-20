@@ -563,6 +563,36 @@ export default {
             return callApi(`/job/${this.job.job_id}/validate/${type}/${id}`, body);
         },
 
+        async setMotivationForLink(type, id, motivation, source, target) {
+            return callApi(`/job/${this.job.job_id}/motivate/${type}/${id}`,
+                {motivation, apply_filters: false, source, target});
+        },
+
+        async setMotivationForSelection(type, id, motivation, props) {
+            props = {
+                accepted: false, rejected: false, notSure: false, notValidated: false, mixed: false,
+                uris: [], clusterIds: [], min: undefined, max: undefined, ...props
+            };
+
+            const body = {motivation, apply_filters: true, valid: [], uri: [], cluster_id: []};
+
+            if (props.accepted) body.valid.push('accepted');
+            if (props.rejected) body.valid.push('rejected');
+            if (props.notSure) body.valid.push('not_sure');
+            if (props.notValidated) body.valid.push('not_validated');
+            if (props.mixed) body.valid.push('mixed');
+
+            if (props.uris && props.uris.length > 0)
+                props.uris.forEach(uri => body.uri.push(uri));
+            if (props.clusterIds && props.clusterIds.length > 0)
+                props.clusterIds.forEach(clusterId => body.cluster_id.push(clusterId));
+
+            if (props.min && props.min > 0) body.min = props.min;
+            if (props.max && props.max < 1) body.max = props.max;
+
+            return callApi(`/job/${this.job.job_id}/motivate/${type}/${id}`, body);
+        },
+
         async loadDatasets(graphqlEndpoint) {
             if (this.datasets.hasOwnProperty(graphqlEndpoint))
                 return;

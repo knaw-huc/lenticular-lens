@@ -161,30 +161,60 @@
                   </button>
                 </div>
 
-                <b-dropdown class="ml-4" variant="secondary" size="sm">
-                  <template #button-content>
-                    <fa-icon icon="check-square"/>
-                    With selection
-                  </template>
+                <div class="btn-group btn-group-sm ml-4">
+                  <b-dropdown variant="secondary" size="sm" :disabled="isUpdating">
+                    <template #button-content>
+                      <fa-icon icon="check-square"/>
+                      Validate selection
+                    </template>
 
-                  <b-dropdown-item-button variant="success" :disabled="isUpdating"
-                                          @click="validateSelection('accepted')">
-                    <fa-icon icon="check"/>
-                    Accept
-                  </b-dropdown-item-button>
+                    <b-dropdown-item-button variant="success" :disabled="isUpdating"
+                                            @click="validateSelection('accepted')">
+                      <fa-icon icon="check"/>
+                      Accept
+                    </b-dropdown-item-button>
 
-                  <b-dropdown-item-button variant="danger" :disabled="isUpdating"
-                                          @click="validateSelection('rejected')">
-                    <fa-icon icon="times"/>
-                    Reject
-                  </b-dropdown-item-button>
+                    <b-dropdown-item-button variant="danger" :disabled="isUpdating"
+                                            @click="validateSelection('rejected')">
+                      <fa-icon icon="times"/>
+                      Reject
+                    </b-dropdown-item-button>
 
-                  <b-dropdown-item-button variant="warning" :disabled="isUpdating"
-                                          @click="validateSelection('not_sure')">
-                    <fa-icon icon="question"/>
-                    Not sure
-                  </b-dropdown-item-button>
-                </b-dropdown>
+                    <b-dropdown-item-button variant="warning" :disabled="isUpdating"
+                                            @click="validateSelection('not_sure')">
+                      <fa-icon icon="question"/>
+                      Not sure
+                    </b-dropdown-item-button>
+                  </b-dropdown>
+
+                  <b-dropdown variant="secondary" size="sm" :disabled="isUpdating"
+                              @show="onOpenMotivation" @hide="onCloseMotivation" @shown="focusOnMotivationTextarea"
+                              ref="motivationBtn">
+                    <template #button-content>
+                      <fa-icon icon="pencil-alt"/>
+                      Motivate selection
+                    </template>
+
+                    <b-dropdown-form>
+                      <div class="form-group mb-2">
+                        <textarea class="form-control motivation" v-model="motivation"></textarea>
+                      </div>
+
+                      <div class="text-right">
+                        <button type="button" class="btn btn-sm border mr-3" :disabled="isUpdating" title="Close (Esc)"
+                                @click="closeMotivationButton(false)">
+                          Close
+                        </button>
+
+                        <button type="button" class="btn btn-sm border" :disabled="isUpdating"
+                                title="Save (Shift + Enter)"
+                                @click="closeMotivationButton(true)">
+                          Save
+                        </button>
+                      </div>
+                    </b-dropdown-form>
+                  </b-dropdown>
+                </div>
               </div>
             </div>
           </div>
@@ -293,6 +323,9 @@
           @accepted="validateLink(link,'accepted')"
           @rejected="validateLink(link,'rejected')"
           @not_sure="validateLink(link,'not_sure')"
+          @motivation="setMotivationForLink(link, $event)"
+          @motivation_open="isLinkMotivationOpen = true; currentIdx = idx"
+          @motivation_close="isLinkMotivationOpen = false"
           ref="link"/>
 
       <infinite-loading :identifier="linksIdentifier" @infinite="getLinks">
@@ -373,6 +406,10 @@
                 clusters: [],
                 similarityRange: [0, 1],
                 sortDesc: true,
+
+                isLinkMotivationOpen: false,
+                motivationIsOpen: false,
+                motivation: '',
             };
         },
         props: {
@@ -436,6 +473,27 @@
                     this.$emit('hide');
                     await this.resetLinks('reset', 'none');
                 }
+            },
+
+            closeMotivationButton(save = false) {
+                if (this.motivationIsOpen) {
+                    this.$refs.motivationBtn.visible = false;
+                    if (save)
+                        this.setMotivationForSelection();
+                }
+            },
+
+            onOpenMotivation() {
+                this.motivation = '';
+                this.motivationIsOpen = true;
+            },
+
+            onCloseMotivation() {
+                this.motivationIsOpen = false;
+            },
+
+            focusOnMotivationTextarea() {
+                this.$refs.motivationBtn.$el.querySelector('textarea').focus();
             },
 
             showSimilarityConfig() {
@@ -565,29 +623,45 @@
                 if (!this.isOpen || this.isUpdating)
                     return;
 
-                switch (e.keyCode) {
-                    case 65: // a
-                        await this.validateLink(this.links[this.currentIdx], 'accepted');
-                        break;
-                    case 88: // x
-                        await this.validateLink(this.links[this.currentIdx], 'rejected');
-                        break;
-                    case 32: // space
-                        await this.validateLink(this.links[this.currentIdx], 'not_sure');
-                        break;
-                    case 37: // arrow left
-                    case 38: // arrow up
-                        if (this.currentIdx > 0)
-                            this.currentIdx--;
-                        break;
-                    case 39: // arrow right
-                    case 40: // arrow down
-                        if ((this.currentIdx + 1) < this.links.length)
-                            this.currentIdx++;
-                        break;
+                if (this.isLinkMotivationOpen || this.motivationIsOpen) {
+                    switch (e.keyCode) {
+                        case 13: // enter
+                            if (e.shiftKey)
+                                this.$refs.link[this.currentIdx].closeMotivationButton(true);
+                            break;
+                        case 27: // esc
+                            this.$refs.link[this.currentIdx].closeMotivationButton(false);
+                            break;
+                    }
                 }
+                else {
+                    switch (e.keyCode) {
+                        case 65: // a
+                            await this.validateLink(this.links[this.currentIdx], 'accepted');
+                            break;
+                        case 88: // x
+                            await this.validateLink(this.links[this.currentIdx], 'rejected');
+                            break;
+                        case 32: // space
+                            await this.validateLink(this.links[this.currentIdx], 'not_sure');
+                            break;
+                        case 77: // m
+                            this.$refs.link[this.currentIdx].openMotivationButton();
+                            break;
+                        case 37: // arrow left
+                        case 38: // arrow up
+                            if (this.currentIdx > 0)
+                                this.currentIdx--;
+                            break;
+                        case 39: // arrow right
+                        case 40: // arrow down
+                            if ((this.currentIdx + 1) < this.links.length)
+                                this.currentIdx++;
+                            break;
+                    }
 
-                this.$refs.link[this.currentIdx].$el.scrollIntoView({behavior: 'smooth'});
+                    this.$refs.link[this.currentIdx].$el.scrollIntoView({behavior: 'smooth'});
+                }
             },
 
             async validateLink(link, validation) {
@@ -670,6 +744,37 @@
 
                 if (result !== null)
                     await this.resetLinks('all', 'filtering');
+            },
+
+            async setMotivationForLink(link, motivation) {
+                this.isUpdating = true;
+                link.updating = true;
+
+                const result = await this.$root.setMotivationForLink(
+                    this.type, this.spec.id, motivation, link.source, link.target);
+
+                this.isUpdating = false;
+                link.updating = false;
+
+                if (result !== null)
+                    link.motivation = motivation;
+            },
+
+            async setMotivationForSelection() {
+                this.isUpdating = true;
+                this.isUpdatingSelection = true;
+
+                const result = await this.$root.setMotivationForSelection(this.type, this.spec.id, this.motivation, {
+                    accepted: this.showAcceptedLinks, rejected: this.showRejectedLinks, notSure: this.showNotSureLinks,
+                    notValidated: this.showNotValidatedLinks, mixed: this.showMixedLinks,
+                    clusterIds: this.clusterIds, min: this.similarityRange[0], max: this.similarityRange[1]
+                });
+
+                this.isUpdating = false;
+                this.isUpdatingSelection = false;
+
+                if (result !== null)
+                    await this.resetLinks('all', 'none');
             },
         },
         mounted() {

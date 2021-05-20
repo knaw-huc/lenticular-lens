@@ -5,13 +5,39 @@ from ll.util.config_db import db_conn
 
 
 class LinksetValidator:
-    def __init__(self, job, spec, linkset_builder, with_view_filters=True):
+    def __init__(self, job, type, spec, linkset_builder, with_view_filters=True):
         self._job = job
+        self._type = type
         self._spec = spec
         self._cte_sql = linkset_builder.get_linkset_cte_sql(with_view_filters=with_view_filters,
                                                             apply_paging=False, include_linkset_uris=False)
 
-    def validate_lens(self, valid):
+    def validate(self, valid):
+        if self._type == 'lens':
+            self._validate_lens(valid)
+        else:
+            self._validate_linkset(valid)
+
+    def add_motivation(self, motivation):
+        motivation = motivation.strip() if motivation is not None and motivation.strip() else None
+
+        with db_conn() as conn, conn.cursor() as cur:
+            cur.execute(sql.SQL('''
+                {cte_sql}
+                 
+                UPDATE {schema}.{table_name} AS ls
+                SET motivation = {motivation} 
+                FROM linkset
+                WHERE ls.source_uri = linkset.source_uri
+                AND ls.target_uri = linkset.target_uri
+            ''').format(
+                cte_sql=self._cte_sql,
+                schema=sql.Identifier('linksets' if self._type == 'linkset' else 'lenses'),
+                table_name=sql.Identifier(self._job.table_name(self._spec.id)),
+                motivation=sql.Literal(motivation.strip())
+            ))
+
+    def _validate_lens(self, valid):
         with db_conn() as conn, conn.cursor() as cur:
             temp_table_id = uuid4().hex
 
@@ -57,7 +83,7 @@ class LinksetValidator:
 
             cur.execute(sql.Composed(update_sqls))
 
-    def validate_linkset(self, valid):
+    def _validate_linkset(self, valid):
         with db_conn() as conn, conn.cursor() as cur:
             cur.execute(sql.SQL('''
                 {cte_sql}

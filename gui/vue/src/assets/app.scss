@@ -296,6 +296,11 @@ ul.inline-list li:not(:first-child):before {
   }
 }
 
+.motivation {
+  width: 300px !important;
+  height: 120px !important;
+}
+
 .main-card {
   @extend .position-relative;
   @extend .bg-light;

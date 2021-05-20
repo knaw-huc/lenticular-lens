@@ -91,7 +91,7 @@ class LinksetBuilder:
 
         group_by_sql = get_sql_empty(sql.SQL(
             'GROUP BY source_uri, target_uri, link_order, source_collections, target_collections, '
-            'source_intermediates, target_intermediates, cluster_id, valid, similarity'),
+            'source_intermediates, target_intermediates, cluster_id, valid, similarity, motivation'),
             flag=use_properties, add_new_line=False)
 
         with db_conn() as conn, conn.cursor(name=uuid4().hex, cursor_factory=extras.RealDictCursor) as cur:
@@ -99,7 +99,7 @@ class LinksetBuilder:
                 {linkset_cte}
                 
                 SELECT source_uri, target_uri, link_order, source_collections, target_collections, 
-                       source_intermediates, target_intermediates, cluster_id, valid, similarity 
+                       source_intermediates, target_intermediates, cluster_id, valid, similarity, motivation 
                        {selection_sql}
                 FROM linkset
                 {props_joins_sql}
@@ -128,7 +128,8 @@ class LinksetBuilder:
                                                       is_single_value=is_single_value) if use_properties else None,
                     'cluster_id': link['cluster_id'],
                     'valid': link['valid'],
-                    'similarity': link['similarity']
+                    'similarity': link['similarity'],
+                    'motivation': link['motivation']
                 }
 
     def get_clusters_generator(self, with_view_properties='none', with_view_filters=False, include_nodes=False):
@@ -187,7 +188,14 @@ class LinksetBuilder:
                 yield {
                     'id': cluster['cluster_id'],
                     'size': cluster['size'],
-                    'links': cluster['links'],
+                    'links': {
+                        'accepted': 0,
+                        'rejected': 0,
+                        'not_sure': 0,
+                        'not_validated': 0,
+                        'mixed': 0,
+                        **cluster['links']
+                    },
                     'nodes': cluster['nodes'] if include_nodes else None,
                     'values': self._get_values(cluster, is_single_value=is_single_value,
                                                max_values=10) if use_properties else None
@@ -217,7 +225,7 @@ class LinksetBuilder:
         return sql.SQL('''
             WITH linkset AS (
                 SELECT source_uri, target_uri, link_order, source_collections, target_collections, 
-                       source_intermediates, target_intermediates, cluster_id, valid, similarity
+                       source_intermediates, target_intermediates, cluster_id, valid, similarity, motivation
                 FROM {schema}.{view_name} AS linkset
                 {filter_joins_sql}
                 {where_sql} 

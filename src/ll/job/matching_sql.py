@@ -199,7 +199,8 @@ class MatchingSql:
                 ALTER TABLE linksets.{linkset}
                 ADD PRIMARY KEY (source_uri, target_uri),
                 ADD COLUMN cluster_id integer,
-                ADD COLUMN valid link_validity DEFAULT 'not_validated';
+                ADD COLUMN valid link_validity DEFAULT 'not_validated',
+                ADD COLUMN motivation text;
 
                 ALTER TABLE linksets.{linkset} ADD COLUMN sort_order serial;
 

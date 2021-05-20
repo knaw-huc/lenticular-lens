@@ -264,11 +264,27 @@ class Job:
         linkset_builder = LinksetBuilder(schema, self.table_name(spec.id), spec, view)
         linkset_builder.apply_links_filter(links_filter)
 
-        linkset_validator = LinksetValidator(self, spec, linkset_builder, with_view_filters)
-        if type == 'lens':
-            linkset_validator.validate_lens(valid)
-        else:
-            linkset_validator.validate_linkset(valid)
+        linkset_validator = LinksetValidator(self, type, spec, linkset_builder, with_view_filters)
+        linkset_validator.validate(valid)
+
+    def motivate_link(self, id, type, motivation, validation_filter=Validation.ALL, cluster_ids=None, uris=None,
+                      min_strength=0, max_strength=1, link=(None, None), with_view_filters=False):
+        schema = 'lenses' if type == 'lens' else 'linksets'
+        spec = self.get_spec_by_id(id, type)
+        view = self.get_view_by_id(id, type)
+
+        links_filter = LinksFilter()
+        links_filter.filter_on_validation(validation_filter)
+        links_filter.filter_on_clusters(cluster_ids if cluster_ids else [])
+        links_filter.filter_on_uris(uris if uris else [])
+        links_filter.filter_on_min_max_strength(min_strength, max_strength)
+        links_filter.filter_on_link(link[0], link[1])
+
+        linkset_builder = LinksetBuilder(schema, self.table_name(spec.id), spec, view)
+        linkset_builder.apply_links_filter(links_filter)
+
+        linkset_validator = LinksetValidator(self, type, spec, linkset_builder, with_view_filters)
+        linkset_validator.add_motivation(motivation)
 
     def schema_name(self, id):
         return 'job_' + self.job_id + '_' + str(id)

@@ -505,6 +505,32 @@ def validate_link(job, type, id):
     return jsonify({'result': 'ok'})
 
 
+@app.route('/job/<job:job>/motivate/<type:type>/<int:id>', methods=['POST'])
+@authenticated
+@with_job
+@with_spec
+def motivate_link(job, type, id):
+    source = request.json.get('source')
+    target = request.json.get('target')
+
+    with_view_filters = request.json.get('apply_filters', True)
+    validation_filter = Validation.get(request.json.get('valid', []))
+
+    uris = request.json.get('uri', [])
+    cluster_ids = request.json.get('cluster_id', [])
+
+    min_strength = request.json.get('min')
+    max_strength = request.json.get('max')
+
+    motivation = request.json.get('motivation')
+
+    job.motivate_link(id, type, motivation, with_view_filters=with_view_filters, validation_filter=validation_filter,
+                      uris=uris, cluster_ids=cluster_ids, min_strength=min_strength, max_strength=max_strength,
+                      link=(source, target))
+
+    return jsonify({'result': 'ok'})
+
+
 @app.route('/job/<job:job>/cluster/<type:type>/<int:id>/<int:cluster_id>/graph')
 @authenticated
 @with_job

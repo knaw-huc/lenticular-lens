@@ -366,6 +366,20 @@ reset.
 
 ---
 
+**URL**: `/job/<job_id>/motivate/<type>/<id>`\
+**Method**: `POST`\
+**JSON**: `source`, `target`, `apply_filters`, `valid`, `uri`, `cluster_id`, `min`, `max`, `motivation`
+
+Motivate using `motivation` of `type` (`linkset` or `lens`) for the linkset/lens with `id` of the given `job_id`.
+
+Specify the uris of the `source` and `target` to identify the link to be motivated. Or filter the links by
+specifying `apply_filters` to apply the filters specified by the user. Specify `valid` with `accepted`, `declined`,
+`not_sure` and/or `not_validated` to only return from the specified validity types. Specify `uri` to only return links
+with the specified URIs. Specify `cluster_id` to only return the links of specific clusters. Specify `min` and/or `max`
+to only return links with a similarity score within the specified minimum and maximum score.
+
+---
+
 **URL**: `/job/<job_id>/cluster/<type>/<id>/<cluster_id>/graph`\
 **Method**: `GET`
 
