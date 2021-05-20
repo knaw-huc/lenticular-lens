@@ -158,32 +158,6 @@
             groupInclude() {
                 return {t_conorm: this.useFuzzyLogic ? 'MAXIMUM_T_CONORM' : '', threshold: 0};
             },
-
-            lensesInLens() {
-                const lensesInSpec = lensSpec => this.$root
-                    .getRecursiveElements(lensSpec.specs, 'elements')
-                    .filter(elem => elem.type === 'lens')
-                    .flatMap(elem => {
-                        const elemLensSpec = this.$root.getLensSpecById(elem.id);
-                        if (elemLensSpec)
-                            return [elemLensSpec, ...lensesInSpec(elemLensSpec)];
-                        return [];
-                    });
-
-                const lenses = lensesInSpec(this.lensSpec);
-                return [...new Set(lenses)];
-            },
-
-            linksetsInLens() {
-                const linksets = [this.lensSpec, ...this.lensesInLens].flatMap(lensSpec => {
-                    return this.$root
-                        .getRecursiveElements(lensSpec.specs, 'elements')
-                        .filter(elem => elem.type === 'linkset')
-                        .map(elem => this.$root.getLinksetSpecById(elem.id))
-                        .filter(spec => spec !== undefined);
-                });
-                return [...new Set(linksets)];
-            },
         },
         methods: {
             validateLens() {
@@ -214,9 +188,9 @@
             },
 
             updateView() {
-                this.$root.updateView(this.lensSpec.id, 'lens', new Set(this.linksetsInLens.flatMap(
-                    linksetSpec => [...linksetSpec.sources, ...linksetSpec.targets]
-                )));
+                this.$root.updateView(this.lensSpec.id, 'lens',
+                    new Set(this.$root.getLinksetSpecsInLens(this.lensSpec.id)
+                        .flatMap(linksetSpec => [...linksetSpec.sources, ...linksetSpec.targets])));
             },
 
             updateLogicBoxTypes(elements) {

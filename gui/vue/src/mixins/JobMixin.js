@@ -251,6 +251,32 @@ export default {
             return [element];
         },
 
+        getLensSpecsInLens(id) {
+            const lensSpec = this.getLensSpecById(id);
+            const lensesInSpec = lensSpec => this.getRecursiveElements(lensSpec.specs, 'elements')
+                .filter(elem => elem.type === 'lens')
+                .flatMap(elem => {
+                    const elemLensSpec = this.getLensSpecById(elem.id);
+                    if (elemLensSpec)
+                        return [elemLensSpec, ...lensesInSpec(elemLensSpec)];
+                    return [];
+                });
+
+            const lenses = lensesInSpec(lensSpec);
+            return [...new Set(lenses)];
+        },
+
+        getLinksetSpecsInLens(id) {
+            const lensSpec = this.getLensSpecById(id);
+            const linksets = [lensSpec, ...this.getLensSpecsInLens(id)].flatMap(lensSpec => {
+                return this.getRecursiveElements(lensSpec.specs, 'elements')
+                    .filter(elem => elem.type === 'linkset')
+                    .map(elem => this.getLinksetSpecById(elem.id))
+                    .filter(spec => spec !== undefined);
+            });
+            return [...new Set(linksets)];
+        },
+
         async submit() {
             await this.updateJob({
                 job_id: this.job.job_id,
@@ -292,6 +318,15 @@ export default {
 
             if (this.job.views)
                 this.views = copy(this.job.views);
+
+            this.linksetSpecs.forEach(linksetSpec =>
+                this.updateView(linksetSpec.id, 'linkset',
+                    new Set([...linksetSpec.sources, ...linksetSpec.targets])));
+
+            this.lensSpecs.forEach(lensSpec =>
+                this.updateView(lensSpec.id, 'lens',
+                    new Set(this.getLinksetSpecsInLens(lensSpec.id)
+                        .flatMap(linksetSpec => [...linksetSpec.sources, ...linksetSpec.targets]))));
 
             await Promise.all([this.loadLinksets(), this.loadLenses(), this.loadClusterings()]);
         },
