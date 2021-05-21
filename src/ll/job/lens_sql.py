@@ -16,8 +16,8 @@ class LensSql:
 
     def generate_lens_sql(self):
         def spec_select_sql(id, type):
-            default_columns = sql.SQL('source_uri, target_uri, link_order, '
-                                      'source_collections, target_collections, similarities, valid')
+            default_columns = sql.SQL('source_uri, target_uri, link_order, source_collections, target_collections, '
+                                      'source_intermediates, target_intermediates, similarities, valid')
 
             if type == 'linkset':
                 return sql.SQL('SELECT {default_columns}, ARRAY[{id}] AS linksets, ARRAY[]::integer[] AS lenses '
@@ -40,14 +40,6 @@ class LensSql:
             lambda spec, id, type: spec_select_sql(id, type)
         )
 
-        return sql.SQL(cleandoc(
-            """ DROP MATERIALIZED VIEW IF EXISTS lens CASCADE;
-                CREATE MATERIALIZED VIEW lens AS 
-                {};
-            """
-        ) + '\n').format(lens_sql)
-
-    def generate_lens_finish_sql(self):
         sim_fields_sqls = MatchingMethod.get_similarity_fields_sqls(self._lens.matching_methods)
 
         sim_conditions_sqls = [sql.SQL('{similarity} >= {threshold}')
@@ -61,12 +53,24 @@ class LensSql:
             """ DROP TABLE IF EXISTS lenses.{lens} CASCADE;
                 CREATE TABLE lenses.{lens} AS
                 SELECT lens.*, similarity
-                FROM lens
+                FROM (
+                    {lens_sql}
+                ) AS lens
                 {sim_fields_sql}
                 CROSS JOIN LATERAL coalesce({sim_logic_ops_sql}, 1) AS similarity 
-                WHERE {sim_conditions};
-                
-                ALTER TABLE lenses.{lens}
+                {sim_condition_sql};
+            """
+        ) + '\n').format(
+            lens=sql.Identifier(self._job.table_name(self._lens.id)),
+            lens_sql=lens_sql,
+            sim_fields_sql=sql.SQL('\n').join(sim_fields_sqls),
+            sim_logic_ops_sql=self._lens.similarity_logic_ops_sql,
+            sim_condition_sql=sim_condition_sql
+        )
+
+    def generate_lens_finish_sql(self):
+        return sql.SQL(cleandoc(
+            """ ALTER TABLE lenses.{lens}
                 ADD PRIMARY KEY (source_uri, target_uri),
                 ADD COLUMN cluster_id integer,
                 ADD COLUMN motivation text;
@@ -83,12 +87,7 @@ class LensSql:
 
                 ANALYZE lenses.{lens};
             """
-        ) + '\n').format(
-            lens=sql.Identifier(self._job.table_name(self._lens.id)),
-            sim_fields_sql=sql.SQL('\n').join(sim_fields_sqls),
-            sim_logic_ops_sql=self._lens.similarity_logic_ops_sql,
-            sim_condition_sql=sim_condition_sql
-        )
+        ) + '\n').format(lens=sql.Identifier(self._job.table_name(self._lens.id)))
 
     @property
     def sql_string(self):
@@ -101,9 +100,8 @@ class LensSql:
     @staticmethod
     def _lens_sql(type, only_left, left_sql, right_sql):
         return LensSql._with_select_sql(type, cleandoc('''
-            SELECT l.source_uri, l.target_uri, l.link_order, 
-                   l.source_collections, l.target_collections, 
-                   l.linksets, l.lenses, l.similarities, l.valid
+            SELECT l.source_uri, l.target_uri, l.link_order, l.source_collections, l.target_collections, 
+                   l.source_intermediates, l.target_intermediates, l.linksets, l.lenses, l.similarities, l.valid
         ''') if only_left else cleandoc('''
             SELECT
                 coalesce(l.source_uri, r.source_uri) AS source_uri,
@@ -116,6 +114,10 @@ class LensSql:
                          l.source_collections, r.source_collections) AS source_collections,
                 coalesce(array_distinct_merge(l.target_collections, r.target_collections), 
                          l.target_collections, r.target_collections) AS target_collections,
+                coalesce(jsonb_merge(l.source_intermediates, r.source_intermediates), 
+                         l.source_intermediates, r.source_intermediates) AS source_intermediates,
+                coalesce(jsonb_merge(l.target_intermediates, r.target_intermediates), 
+                         l.target_intermediates, r.target_intermediates) AS target_intermediates,
                 coalesce(array_distinct_merge(l.linksets, r.linksets), l.linksets, r.linksets) AS linksets,
                 coalesce(array_distinct_merge(l.lenses, r.lenses), l.lenses, r.lenses) AS lenses,
                 coalesce(jsonb_merge(l.similarities, r.similarities), l.similarities, r.similarities) AS similarities,
