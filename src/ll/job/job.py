@@ -3,13 +3,13 @@ from json import dumps
 from psycopg2 import extras, sql
 from psycopg2.extensions import AsIs
 
-from ll.job.clusters_filter import ClustersFilter
 from ll.job.joins import Joins
 from ll.job.transformer import transform
 from ll.job.validation import Validation
 from ll.job.links_filter import LinksFilter
 from ll.job.query_builder import QueryBuilder
 from ll.job.visualize import get_visualization
+from ll.job.clusters_filter import ClustersFilter
 from ll.job.linkset_builder import LinksetBuilder
 from ll.job.linkset_validator import LinksetValidator
 
@@ -254,15 +254,9 @@ class Job:
         spec = self.get_spec_by_id(id, type)
         view = self.get_view_by_id(id, type)
 
-        links_filter = LinksFilter()
-        links_filter.filter_on_validation(validation_filter)
-        links_filter.filter_on_clusters(cluster_ids if cluster_ids else [])
-        links_filter.filter_on_uris(uris if uris else [])
-        links_filter.filter_on_min_max_strength(min_strength, max_strength)
-        links_filter.filter_on_link(link[0], link[1])
-
-        linkset_builder = LinksetBuilder(schema, self.table_name(spec.id), spec, view)
-        linkset_builder.apply_links_filter(links_filter)
+        links_filter = LinksFilter.create(validation_filter=validation_filter, cluster_ids=cluster_ids, uris=uris,
+                                          min_strength=min_strength, max_strength=max_strength, link=link)
+        linkset_builder = LinksetBuilder.create(schema, self.table_name(id), spec, view, links_filter=links_filter)
 
         linkset_validator = LinksetValidator(self, type, spec, linkset_builder, with_view_filters)
         linkset_validator.validate(valid)
@@ -273,15 +267,9 @@ class Job:
         spec = self.get_spec_by_id(id, type)
         view = self.get_view_by_id(id, type)
 
-        links_filter = LinksFilter()
-        links_filter.filter_on_validation(validation_filter)
-        links_filter.filter_on_clusters(cluster_ids if cluster_ids else [])
-        links_filter.filter_on_uris(uris if uris else [])
-        links_filter.filter_on_min_max_strength(min_strength, max_strength)
-        links_filter.filter_on_link(link[0], link[1])
-
-        linkset_builder = LinksetBuilder(schema, self.table_name(spec.id), spec, view)
-        linkset_builder.apply_links_filter(links_filter)
+        links_filter = LinksFilter.create(validation_filter=validation_filter, cluster_ids=cluster_ids, uris=uris,
+                                          min_strength=min_strength, max_strength=max_strength, link=link)
+        linkset_builder = LinksetBuilder.create(schema, self.table_name(id), spec, view, links_filter=links_filter)
 
         linkset_validator = LinksetValidator(self, type, spec, linkset_builder, with_view_filters)
         linkset_validator.add_motivation(motivation)
@@ -373,18 +361,10 @@ class Job:
         spec = self.get_spec_by_id(id, type)
         view = self.get_view_by_id(id, type)
 
-        links_filter = LinksFilter()
-        links_filter.filter_on_validation(validation_filter)
-        links_filter.filter_on_clusters(cluster_ids if cluster_ids else [])
-        links_filter.filter_on_uris(uris if uris else [])
-        links_filter.filter_on_min_max_strength(min_strength, max_strength)
-
-        linkset_builder = LinksetBuilder(schema, self.table_name(id), spec, view)
-        linkset_builder.apply_links_filter(links_filter)
-        linkset_builder.apply_paging(limit, offset)
-
-        if sort:
-            linkset_builder.apply_sorting(sort.lower() == 'desc')
+        links_filter = LinksFilter.create(validation_filter=validation_filter, cluster_ids=cluster_ids, uris=uris,
+                                          min_strength=min_strength, max_strength=max_strength)
+        linkset_builder = LinksetBuilder.create(schema, self.table_name(id), spec, view,
+                                                links_filter=links_filter, sort=sort, limit=limit, offset=offset)
 
         return linkset_builder.get_links_generator(with_view_properties, with_view_filters)
 
@@ -394,13 +374,9 @@ class Job:
         spec = self.get_spec_by_id(id, type)
         view = self.get_view_by_id(id, type)
 
-        links_filter = LinksFilter()
-        links_filter.filter_on_clusters(cluster_ids if cluster_ids else [])
-        links_filter.filter_on_uris(uris if uris else [])
-        links_filter.filter_on_min_max_strength(min_strength, max_strength)
-
-        linkset_builder = LinksetBuilder(schema, self.table_name(id), spec, view)
-        linkset_builder.apply_links_filter(links_filter)
+        links_filter = LinksFilter.create(cluster_ids=cluster_ids, uris=uris,
+                                          min_strength=min_strength, max_strength=max_strength)
+        linkset_builder = LinksetBuilder.create(schema, self.table_name(id), spec, view, links_filter=links_filter)
 
         return linkset_builder.get_total_links(with_view_filters)
 
@@ -411,22 +387,13 @@ class Job:
         spec = self.get_spec_by_id(id, type)
         view = self.get_view_by_id(id, type)
 
-        links_filter = LinksFilter()
-        links_filter.filter_on_clusters(cluster_ids if cluster_ids else [])
-        links_filter.filter_on_uris(uris if uris else [])
-        links_filter.filter_on_min_max_strength(min_strength, max_strength)
-
-        clusters_filter = ClustersFilter()
-        clusters_filter.filter_on_min_max_size(min_size, max_size)
-        clusters_filter.filter_on_min_max_count(min_count, max_count)
-
-        linkset_builder = LinksetBuilder(schema, self.table_name(id), spec, view)
-        linkset_builder.apply_links_filter(links_filter)
-        linkset_builder.apply_clusters_filter(clusters_filter)
-        linkset_builder.apply_paging(limit, offset)
-
-        if sort and (sort.lower() in ['size_asc', 'size_desc', 'count_asc', 'count_desc']):
-            linkset_builder.apply_cluster_sorting(sort.lower())
+        links_filter = LinksFilter.create(cluster_ids=cluster_ids, uris=uris,
+                                          min_strength=min_strength, max_strength=max_strength)
+        clusters_filter = ClustersFilter.create(min_size=min_size, max_size=max_size,
+                                                min_count=min_count, max_count=max_count)
+        linkset_builder = LinksetBuilder.create(schema, self.table_name(id), spec, view, links_filter=links_filter,
+                                                clusters_filter=clusters_filter, cluster_sort=sort,
+                                                limit=limit, offset=offset)
 
         return linkset_builder.get_clusters_generator(with_view_properties, with_view_filters, include_nodes)
 
@@ -436,18 +403,12 @@ class Job:
         spec = self.get_spec_by_id(id, type)
         view = self.get_view_by_id(id, type)
 
-        links_filter = LinksFilter()
-        links_filter.filter_on_clusters(cluster_ids if cluster_ids else [])
-        links_filter.filter_on_uris(uris if uris else [])
-        links_filter.filter_on_min_max_strength(min_strength, max_strength)
-
-        clusters_filter = ClustersFilter()
-        clusters_filter.filter_on_min_max_size(min_size, max_size)
-        clusters_filter.filter_on_min_max_count(min_count, max_count)
-
-        linkset_builder = LinksetBuilder(schema, self.table_name(id), spec, view)
-        linkset_builder.apply_links_filter(links_filter)
-        linkset_builder.apply_clusters_filter(clusters_filter)
+        links_filter = LinksFilter.create(cluster_ids=cluster_ids, uris=uris,
+                                          min_strength=min_strength, max_strength=max_strength)
+        clusters_filter = ClustersFilter.create(min_size=min_size, max_size=max_size,
+                                                min_count=min_count, max_count=max_count)
+        linkset_builder = LinksetBuilder.create(schema, self.table_name(id), spec, view,
+                                                links_filter=links_filter, clusters_filter=clusters_filter)
 
         return linkset_builder.get_total_clusters(with_view_filters)
 

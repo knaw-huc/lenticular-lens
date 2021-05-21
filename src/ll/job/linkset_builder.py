@@ -196,6 +196,8 @@ class LinksetBuilder:
                         'mixed': 0,
                         **cluster['links']
                     },
+                    'reconciled': False,
+                    'extended': False,
                     'nodes': cluster['nodes'] if include_nodes else None,
                     'values': self._get_values(cluster, is_single_value=is_single_value,
                                                max_values=10) if use_properties else None
@@ -378,3 +380,21 @@ class LinksetBuilder:
                     })
 
         return all_values
+
+    @staticmethod
+    def create(schema, table_name, spec, view,
+               links_filter=None, clusters_filter=None, sort=None, cluster_sort=None, offset=0, limit=None):
+        linkset_builder = LinksetBuilder(schema, table_name, spec, view)
+
+        if links_filter:
+            linkset_builder.apply_links_filter(links_filter)
+        if clusters_filter:
+            linkset_builder.apply_clusters_filter(clusters_filter)
+        if sort:
+            linkset_builder.apply_sorting(sort.lower() == 'desc')
+        if cluster_sort and (cluster_sort.lower() in ['size_asc', 'size_desc', 'count_asc', 'count_desc']):
+            linkset_builder.apply_cluster_sorting(cluster_sort.lower())
+        if offset > 0 or limit:
+            linkset_builder.apply_paging(limit, offset)
+
+        return linkset_builder

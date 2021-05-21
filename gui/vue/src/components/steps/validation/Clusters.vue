@@ -1,7 +1,7 @@
 <template>
-  <b-modal ref="clusters" size="xl" header-class="flex-column align-items-stretch" body-class="bg-light"
+  <b-modal size="xl" header-class="flex-column align-items-stretch" body-class="bg-light"
            dialog-class="modal-full-height" scrollable hide-footer static
-           @show="onOpenClose(true)" @hide="onOpenClose(false)">
+           @show="onOpenClose(true)" @hide="onOpenClose(false)" ref="clusters">
     <template v-slot:modal-header="{close}">
       <div class="d-flex align-items-center">
         <h5 class="modal-title">Clusters</h5>
@@ -74,6 +74,8 @@
         :cluster="clusterData.cluster"
         :selected="selectedClusters.includes(clusterData.cluster)"
         :is-lens="type === 'lens'"
+        :is-loading-stats="clusterData.updateFiltering"
+        :is-loading-values="clusterData.updateProperties"
         @mounted="observer.observe($event)"
         @select="$emit('select', clusterData.cluster)"/>
 
@@ -121,6 +123,9 @@
                 clusters: [],
                 clustersIdentifier: +new Date(),
 
+                updatingFiltering: new Set(),
+                updatingProperties: new Set(),
+
                 loadingTotals: false,
                 loadingClusters: false,
 
@@ -162,9 +167,10 @@
                 if (isOpen) {
                     if (this.total === null)
                         this.getClustersTotals();
+                    this.$emit('show');
                 }
                 else
-                    this.$emit('closed');
+                    this.$emit('hide');
             },
 
             async getClustersTotals() {
@@ -242,8 +248,12 @@
             },
 
             async updateProperties(clusterIds) {
+                clusterIds = clusterIds.filter(clusterId => !this.updatingProperties.has(clusterId))
+                if (clusterIds.length === 0)
+                    return;
+
                 const clusterDatas = this.clusters.filter(clusterData => clusterIds.includes(clusterData.cluster.id));
-                clusterDatas.forEach(clusterData => clusterData.updateProperties = false);
+                clusterDatas.forEach(clusterData => this.updatingProperties.add(clusterData.cluster.id));
 
                 const clusters = await this.$root.getClusters(this.type, this.specId, {
                     clusterIds, applyFilters: false
@@ -251,14 +261,21 @@
 
                 clusterDatas.forEach(clusterData => {
                     const newCluster = clusters.find(cluster => cluster.id === clusterData.cluster.id);
-                    if (newCluster)
+                    if (newCluster) {
+                        clusterData.updateProperties = false;
                         clusterData.cluster.values = newCluster.values;
+                    }
+                    this.updatingProperties.delete(clusterData.cluster.id);
                 });
             },
 
             async updateFiltering(clusterIds) {
+                clusterIds = clusterIds.filter(clusterId => !this.updatingFiltering.has(clusterId))
+                if (clusterIds.length === 0)
+                    return;
+
                 const clusterDatas = this.clusters.filter(clusterData => clusterIds.includes(clusterData.cluster.id));
-                clusterDatas.forEach(clusterData => clusterData.updateFiltering = false);
+                clusterDatas.forEach(clusterData => this.updatingFiltering.add(clusterData.cluster.id));
 
                 const clusters = await this.$root.getClusters(this.type, this.specId, {
                     clusterIds, withProperties: 'none', min: this.similarityRange[0], max: this.similarityRange[1]
@@ -266,8 +283,18 @@
 
                 clusterDatas.forEach(clusterData => {
                     const newCluster = clusters.find(cluster => cluster.id === clusterData.cluster.id);
-                    clusterData.cluster.linksFiltered = newCluster ? newCluster.links : {};
+
+                    clusterData.updateFiltering = false;
+                    clusterData.cluster.linksFiltered = newCluster ? newCluster.links : {
+                        accepted: 0,
+                        declined: 0,
+                        not_sure: 0,
+                        not_validated: 0,
+                        mixed: 0
+                    };
                     clusterData.cluster.sizeFiltered = newCluster ? newCluster.size : 0;
+
+                    this.updatingFiltering.delete(clusterData.cluster.id);
                 });
             },
 

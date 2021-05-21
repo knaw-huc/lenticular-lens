@@ -277,13 +277,13 @@ div#app::before {
 
 ul.inline-list li {
   list-style: none;
-  float: left;
-}
+  display: inline;
 
-ul.inline-list li:not(:first-child):before {
-  content: '•';
-  margin: 0 0.5em;
-  color: black;
+  &:not(:first-child):before {
+    content: '•';
+    margin: 0 0.5em;
+    color: black;
+  }
 }
 
 .config-group {
@@ -411,7 +411,6 @@ ul.inline-list li:not(:first-child):before {
   }
 
   .property-values {
-    flex-shrink: 1;
     padding: 0;
     margin: 0 0.25rem;
 

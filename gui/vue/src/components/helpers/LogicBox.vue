@@ -203,8 +203,6 @@
             },
 
             onMove(event) {
-                console.log('onMove', event, this.isRoot, this.logicBoxElements);
-
                 if (event.hasOwnProperty('removed') && !this.isRoot && this.logicBoxElements.length === 1)
                     this.$emit('demote', this.index);
             },
@@ -249,8 +247,6 @@
             },
 
             demoteElement(index) {
-                console.log('demoteElement', index, this.element[this.elementsName][index][this.elementsName][0], this.element[this.elementsName]);
-
                 const element = this.element[this.elementsName][index][this.elementsName][0];
                 const elementCopy = JSON.parse(JSON.stringify(element));
 

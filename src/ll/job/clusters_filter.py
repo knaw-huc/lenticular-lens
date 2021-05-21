@@ -60,3 +60,14 @@ class ClustersFilter:
         if max_sql:
             return max_sql
         return None
+
+    @staticmethod
+    def create(min_size=None, max_size=None, min_count=None, max_count=None):
+        clusters_filter = ClustersFilter()
+
+        if min_size and max_size:
+            clusters_filter.filter_on_min_max_size(min_size, max_size)
+        if min_count and max_count:
+            clusters_filter.filter_on_min_max_count(min_count, max_count)
+
+        return clusters_filter

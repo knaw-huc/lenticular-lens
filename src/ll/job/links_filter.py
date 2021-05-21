@@ -145,3 +145,21 @@ class LinksFilter:
             )
 
         return None
+
+    @staticmethod
+    def create(uris=None, link=(None, None), min_strength=None, max_strength=None,
+               cluster_ids=None, validation_filter=Validation.ALL):
+        links_filter = LinksFilter()
+
+        if uris:
+            links_filter.filter_on_uris(uris)
+        if link:
+            links_filter.filter_on_link(link[0], link[1])
+        if min_strength and max_strength:
+            links_filter.filter_on_min_max_strength(min_strength, max_strength)
+        if cluster_ids:
+            links_filter.filter_on_clusters(cluster_ids)
+        if validation_filter:
+            links_filter.filter_on_validation(validation_filter)
+
+        return links_filter

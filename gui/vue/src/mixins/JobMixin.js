@@ -367,7 +367,7 @@ export default {
         },
 
         async updateJob(jobData) {
-            return callApi('/job/update', jobData);
+            return callApi('/job/update', jobData, {isJson: true});
         },
 
         async runLinkset(id, restart) {
@@ -397,7 +397,7 @@ export default {
         },
 
         async deleteResult(type, id) {
-            return callApi(`/job/${this.job.job_id}/${type}/${id}`, undefined, true);
+            return callApi(`/job/${this.job.job_id}/${type}/${id}`, undefined, {isDelete: true});
         },
 
         async getEntityTypeSelectionSampleTotal(id) {
@@ -625,21 +625,29 @@ function findId(objs) {
     return latestId + 1;
 }
 
-async function callApi(path, body, isDelete = false) {
+async function callApi(path, body, params = {}) {
     try {
-        let response;
+        params = {isJson: false, isDelete: false, ...params};
 
-        if (body) {
+        let response;
+        if (body && params.isJson) {
             response = await fetch(path, {
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json',
-                },
+                headers: {'Accept': 'application/json', 'Content-Type': 'application/json'},
                 method: 'POST',
                 body: JSON.stringify(body)
             });
         }
-        else if (isDelete) {
+        else if (body) {
+            response = await fetch(path, {
+                headers: {'Accept': 'application/json'},
+                method: 'POST',
+                body: Object.keys(body).reduce((formData, key) => {
+                    formData.append(key, body[key]);
+                    return formData;
+                }, new FormData())
+            });
+        }
+        else if (params.isDelete) {
             response = await fetch(path, {method: 'DELETE'});
         }
         else {

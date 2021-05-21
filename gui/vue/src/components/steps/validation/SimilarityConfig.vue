@@ -1,5 +1,6 @@
 <template>
-  <b-modal ref="similarityConfig" body-class="bg-light" size="xl" hide-footer static>
+  <b-modal body-class="bg-light" size="xl" hide-footer static
+           @show="$emit('show')" @hide="$emit('hide')" ref="similarityConfig">
     <template v-slot:modal-header="{close}">
       <h5 class="modal-title">Specification info</h5>
 

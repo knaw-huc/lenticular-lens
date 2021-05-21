@@ -80,6 +80,8 @@ def with_job(func):
     def wrapper(*args, **kwargs):
         if 'job' in kwargs:
             job = kwargs['job']
+        elif request.values and 'job_id' in request.values:
+            job = Job(request.values['job_id'])
         elif request.json and 'job_id' in request.json:
             job = Job(request.json['job_id'])
         else:
@@ -138,19 +140,19 @@ def update_temp(job, type, id):
 @app.route('/datasets')
 @authenticated
 def datasets():
-    if not request.args.get('endpoint'):
+    if not request.values.get('endpoint'):
         return jsonify({'result': 'error', 'error': 'Please apply the GraphQL endpoint'}), 400
 
-    return jsonify(TimbuctooDatasets(request.args.get('endpoint')).datasets)
+    return jsonify(TimbuctooDatasets(request.values.get('endpoint')).datasets)
 
 
 @app.route('/datasets/update', methods=['POST'])
 @authenticated
 def datasets_update():
-    if not request.form.get('endpoint'):
+    if not request.values.get('endpoint'):
         return jsonify({'result': 'error', 'error': 'Please apply the GraphQL endpoint'}), 400
 
-    TimbuctooDatasets(request.form.get('endpoint')).update()
+    TimbuctooDatasets(request.values.get('endpoint')).update()
     return jsonify({'result': 'updated'})
 
 
@@ -163,15 +165,15 @@ def downloads():
 @app.route('/download')
 @authenticated
 def start_download():
-    if not request.args.get('endpoint'):
+    if not request.values.get('endpoint'):
         return jsonify({'result': 'error', 'error': 'Please apply the GraphQL endpoint'}), 400
-    if not request.args.get('dataset_id'):
+    if not request.values.get('dataset_id'):
         return jsonify({'result': 'error', 'error': 'Please apply the Timbuctoo dataset id'}), 400
-    if not request.args.get('collection_id'):
+    if not request.values.get('collection_id'):
         return jsonify({'result': 'error', 'error': 'Please apply the Timbuctoo collection id'}), 400
 
-    collection = Collection(request.args.get('endpoint'),
-                            request.args.get('dataset_id'), request.args.get('collection_id'))
+    collection = Collection(request.values.get('endpoint'),
+                            request.values.get('dataset_id'), request.values.get('collection_id'))
     collection.start_download()
 
     return jsonify({'result': 'ok'})
@@ -189,20 +191,20 @@ def stopwords(dictionary):
 @app.route('/job/create', methods=['POST'])
 @authenticated
 def job_create():
-    if not request.json.get('job_title'):
+    if not request.values.get('job_title'):
         return jsonify({'result': 'error', 'error': 'Please specify a title for this new job'}), 400
-    if not request.json.get('job_description'):
+    if not request.values.get('job_description'):
         return jsonify({'result': 'error', 'error': 'Please specify a description for this new job'}), 400
 
-    job_id = hash_string(request.json['job_title'] + request.json['job_description'])
+    job_id = hash_string(request.values['job_title'] + request.values['job_description'])
     job = Job(job_id)
 
     created = False
     while not created:
         try:
-            job.create_job(request.json['job_title'], request.json['job_description'],
-                           request.json['job_link'] if 'job_link' in request.json
-                                                       and len(request.json['job_link'].strip()) > 0 else None)
+            job_link = request.values['job_link'] if 'job_link' in request.values \
+                                                     and len(request.values['job_link'].strip()) > 0 else None
+            job.create_job(request.values['job_title'], request.values['job_description'], job_link)
             created = True
         except:
             job_id = hash_string(uuid.uuid4().hex)
@@ -283,7 +285,7 @@ def job_clusterings(job):
 @with_spec
 def run_spec(job, type, id):
     try:
-        restart = 'restart' in request.json and request.json['restart'] is True
+        restart = 'restart' in request.values and request.values['restart'] == 'true'
         job.run_linkset(id, restart) if type == 'linkset' else job.run_lens(id, restart)
         return jsonify({'result': 'ok'})
     except psycopg2.errors.UniqueViolation:
@@ -359,17 +361,8 @@ def entity_type_selection_total(job, id):
 @with_job
 @with_spec
 def links_totals(job, type, id):
-    with_view_filters = request.args.get('apply_filters', default=True) == 'true'
-
-    uris = request.args.getlist('uri')
-    cluster_ids = request.args.getlist('cluster_id', type=int)
-
-    min_strength = request.args.get('min', type=float)
-    max_strength = request.args.get('max', type=float)
-
-    return jsonify(job.get_links_totals(
-        id, type, with_view_filters=with_view_filters, uris=uris, cluster_ids=cluster_ids,
-        min_strength=min_strength, max_strength=max_strength))
+    return jsonify(job.get_links_totals(id, type, **get_data_retrieval_params([
+        'with_view_filters', 'uris', 'cluster_ids', 'min_strength', 'max_strength'])))
 
 
 @app.route('/job/<job:job>/clusters_totals/<type:type>/<int:id>')
@@ -377,23 +370,9 @@ def links_totals(job, type, id):
 @with_job
 @with_spec
 def clusters_totals(job, type, id):
-    with_view_filters = request.args.get('apply_filters', default=True) == 'true'
-
-    uris = request.args.getlist('uri')
-    cluster_ids = request.args.getlist('cluster_id', type=int)
-
-    min_strength = request.args.get('min', type=float)
-    max_strength = request.args.get('max', type=float)
-
-    min_size = request.args.get('min_size', type=int)
-    max_size = request.args.get('max_size', type=int)
-
-    min_count = request.args.get('min_count', type=int)
-    max_count = request.args.get('max_count', type=int)
-
-    return jsonify(job.get_clusters_totals(
-        id, type, with_view_filters=with_view_filters, uris=uris, cluster_ids=cluster_ids, min_strength=min_strength,
-        max_strength=max_strength, min_size=min_size, max_size=max_size, min_count=min_count, max_count=max_count))
+    return jsonify(job.get_clusters_totals(id, type, **get_data_retrieval_params([
+        'with_view_filters', 'uris', 'cluster_ids', 'min_strength', 'max_strength',
+        'min_size', 'max_size', 'min_count', 'max_count'])))
 
 
 @app.route('/job/<job:job>/entity_type_selection/<int:id>')
@@ -401,12 +380,8 @@ def clusters_totals(job, type, id):
 @with_job
 @with_entity_type_selection
 def entity_type_selection_sample(job, id):
-    invert = request.args.get('invert', default=False) == 'true'
-
-    offset = request.args.get('offset', default=0, type=int)
-    limit = request.args.get('limit', type=int)
-
-    return jsonify(job.get_entity_type_selection_sample(id, invert=invert, offset=offset, limit=limit))
+    return jsonify(job.get_entity_type_selection_sample(
+        id, invert=(request.values.get('invert', default=False) == 'true'), **get_paging_params()))
 
 
 @app.route('/job/<job:job>/links/<type:type>/<int:id>')
@@ -414,30 +389,9 @@ def entity_type_selection_sample(job, id):
 @with_job
 @with_spec
 def links(job, type, id):
-    with_view_properties = request.args.get('with_properties', default='multiple')
-    if with_view_properties not in ['none', 'single', 'multiple']:
-        with_view_properties = 'multiple'
-
-    with_view_filters = request.args.get('apply_filters', default=True) == 'true'
-
-    validation_filter = Validation.get(request.args.getlist('valid'))
-
-    uris = request.args.getlist('uri')
-    cluster_ids = request.args.getlist('cluster_id', type=int)
-
-    min_strength = request.args.get('min', type=float)
-    max_strength = request.args.get('max', type=float)
-    sort = request.args.get('sort')
-
-    offset = request.args.get('offset', default=0, type=int)
-    limit = request.args.get('limit', type=int)
-
-    links = [link for link in job.get_links(
-        id, type, with_view_properties=with_view_properties, with_view_filters=with_view_filters,
-        validation_filter=validation_filter, uris=uris, cluster_ids=cluster_ids,
-        min_strength=min_strength, max_strength=max_strength, sort=sort, offset=offset, limit=limit)]
-
-    return jsonify(links)
+    return jsonify(list(job.get_links(id, type, **get_data_retrieval_params([
+        'with_view_filters', 'with_view_properties', 'validation_filter', 'uris', 'cluster_ids',
+        'min_strength', 'max_strength', 'sort']), **get_paging_params())))
 
 
 @app.route('/job/<job:job>/clusters/<type:type>/<int:id>')
@@ -445,38 +399,10 @@ def links(job, type, id):
 @with_job
 @with_spec
 def clusters(job, type, id):
-    with_view_properties = request.args.get('with_properties', default='multiple')
-    if with_view_properties not in ['none', 'single', 'multiple']:
-        with_view_properties = 'multiple'
-
-    with_view_filters = request.args.get('apply_filters', default=True) == 'true'
-    include_nodes = request.args.get('include_nodes', default=False) == 'true'
-
-    uris = request.args.getlist('uri')
-    cluster_ids = request.args.getlist('cluster_id', type=int)
-
-    min_strength = request.args.get('min', type=float)
-    max_strength = request.args.get('max', type=float)
-
-    min_size = request.args.get('min_size', type=int)
-    max_size = request.args.get('max_size', type=int)
-
-    min_count = request.args.get('min_count', type=int)
-    max_count = request.args.get('max_count', type=int)
-
-    sort = request.args.get('sort')
-
-    offset = request.args.get('offset', default=0, type=int)
-    limit = request.args.get('limit', type=int)
-
-    clusters = [{**cluster, 'reconciled': False, 'extended': False}
-                for cluster in job.get_clusters(
-            id, type, with_view_properties=with_view_properties, with_view_filters=with_view_filters,
-            include_nodes=include_nodes, uris=uris, cluster_ids=cluster_ids,
-            min_strength=min_strength, max_strength=max_strength, min_size=min_size, max_size=max_size,
-            min_count=min_count, max_count=max_count, sort=sort, offset=offset, limit=limit)]
-
-    return jsonify(clusters)
+    return jsonify(list(job.get_clusters(id, type, **get_data_retrieval_params([
+        'with_view_filters', 'with_view_properties', 'include_nodes', 'uris', 'cluster_ids',
+        'min_strength', 'max_strength', 'min_size', 'max_size', 'min_count', 'max_count', 'sort'
+    ]), **get_paging_params())))
 
 
 @app.route('/job/<job:job>/validate/<type:type>/<int:id>', methods=['POST'])
@@ -484,23 +410,8 @@ def clusters(job, type, id):
 @with_job
 @with_spec
 def validate_link(job, type, id):
-    source = request.json.get('source')
-    target = request.json.get('target')
-
-    with_view_filters = request.json.get('apply_filters', True)
-    validation_filter = Validation.get(request.json.get('valid', []))
-
-    uris = request.json.get('uri', [])
-    cluster_ids = request.json.get('cluster_id', [])
-
-    min_strength = request.json.get('min')
-    max_strength = request.json.get('max')
-
-    validation = request.json.get('validation')
-
-    job.validate_link(id, type, validation, with_view_filters=with_view_filters, validation_filter=validation_filter,
-                      uris=uris, cluster_ids=cluster_ids, min_strength=min_strength, max_strength=max_strength,
-                      link=(source, target))
+    job.validate_link(id, type, request.values.get('validation'), **get_data_retrieval_params([
+        'with_view_filters', 'validation_filter', 'uris', 'cluster_ids', 'link', 'min_strength', 'max_strength']))
 
     return jsonify({'result': 'ok'})
 
@@ -510,23 +421,8 @@ def validate_link(job, type, id):
 @with_job
 @with_spec
 def motivate_link(job, type, id):
-    source = request.json.get('source')
-    target = request.json.get('target')
-
-    with_view_filters = request.json.get('apply_filters', True)
-    validation_filter = Validation.get(request.json.get('valid', []))
-
-    uris = request.json.get('uri', [])
-    cluster_ids = request.json.get('cluster_id', [])
-
-    min_strength = request.json.get('min')
-    max_strength = request.json.get('max')
-
-    motivation = request.json.get('motivation')
-
-    job.motivate_link(id, type, motivation, with_view_filters=with_view_filters, validation_filter=validation_filter,
-                      uris=uris, cluster_ids=cluster_ids, min_strength=min_strength, max_strength=max_strength,
-                      link=(source, target))
+    job.motivate_link(id, type, request.values.get('motivation'), **get_data_retrieval_params([
+        'with_view_filters', 'validation_filter', 'uris', 'cluster_ids', 'link', 'min_strength', 'max_strength']))
 
     return jsonify({'result': 'ok'})
 
@@ -546,7 +442,7 @@ def get_cluster_graph_data(job, type, id, cluster_id):
 def export_to_csv(job, type, id):
     export = Export(job, type, id)
 
-    validation_filter = Validation.get(request.args.getlist('valid'))
+    validation_filter = Validation.get(request.values.getlist('valid'))
     export_generator = export.csv_export_generator(validation_filter)
 
     return Response(export_generator, mimetype='text/csv',
@@ -560,15 +456,15 @@ def export_to_csv(job, type, id):
 def export_to_rdf(job, type, id):
     export = Export(job, type, id)
 
-    link_pred_namespace = request.args.get('link_pred_namespace')
-    link_pred_shortname = request.args.get('link_pred_shortname')
-    export_metadata = request.args.get('export_metadata', default=True) == 'true'
-    export_linkset = request.args.get('export_linkset', default=True) == 'true'
-    reification = request.args.get('reification', default='none')
-    use_graphs = request.args.get('use_graphs', default=True) == 'true'
-    creator = request.args.get('creator')
-    publisher = request.args.get('publisher')
-    validation_filter = Validation.get(request.args.getlist('valid'))
+    link_pred_namespace = request.values.get('link_pred_namespace')
+    link_pred_shortname = request.values.get('link_pred_shortname')
+    export_metadata = request.values.get('export_metadata', default=True) == 'true'
+    export_linkset = request.values.get('export_linkset', default=True) == 'true'
+    reification = request.values.get('reification', default='none')
+    use_graphs = request.values.get('use_graphs', default=True) == 'true'
+    creator = request.values.get('creator')
+    publisher = request.values.get('publisher')
+    validation_filter = Validation.get(request.values.getlist('valid'))
 
     export_generator = export.rdf_export_generator(
         link_pred_namespace, link_pred_shortname, export_metadata, export_linkset,
@@ -579,6 +475,55 @@ def export_to_rdf(job, type, id):
 
     return Response(export_generator, mimetype=mimetype,
                     headers={'Content-Disposition': 'attachment; filename=' + type + '_' + str(id) + extension})
+
+
+def get_paging_params():
+    offset = request.values.get('offset', default=0, type=int)
+    limit = request.values.get('limit', type=int)
+
+    return {'offset': offset, 'limit': limit}
+
+
+def get_data_retrieval_params(whitelist):
+    data_retrieval_params = dict()
+
+    if 'with_view_filters' in whitelist:
+        data_retrieval_params['with_view_filters'] = request.values.get('apply_filters', default=True) == 'true'
+    if 'with_view_properties' in whitelist:
+        data_retrieval_params['with_view_properties'] = request.values.get('with_view_properties', default='multiple')
+        if data_retrieval_params['with_view_properties'] not in ['none', 'single', 'multiple']:
+            data_retrieval_params['with_view_properties'] = 'multiple'
+    if 'include_nodes' in whitelist:
+        data_retrieval_params['include_nodes'] = request.values.get('include_nodes', default=False) == 'true'
+
+    if 'validation_filter' in whitelist:
+        data_retrieval_params['validation_filter'] = Validation.get(request.values.getlist('valid'))
+    if 'uris' in whitelist:
+        data_retrieval_params['uris'] = request.values.getlist('uri')
+    if 'cluster_ids' in whitelist:
+        data_retrieval_params['cluster_ids'] = request.values.getlist('cluster_id', type=int)
+    if 'link' in whitelist:
+        data_retrieval_params['link'] = (request.values.get('source'), request.values.get('target'))
+
+    if 'min_strength' in whitelist:
+        data_retrieval_params['min_strength'] = request.values.get('min', type=float)
+    if 'max_strength' in whitelist:
+        data_retrieval_params['max_strength'] = request.values.get('max', type=float)
+
+    if 'min_size' in whitelist:
+        data_retrieval_params['min_size'] = request.values.get('min_size', type=int)
+    if 'max_size' in whitelist:
+        data_retrieval_params['max_size'] = request.values.get('max_size', type=int)
+
+    if 'min_count' in whitelist:
+        data_retrieval_params['min_count'] = request.values.get('min_count', type=int)
+    if 'max_count' in whitelist:
+        data_retrieval_params['max_count'] = request.values.get('max_count', type=int)
+
+    if 'sort' in whitelist:
+        data_retrieval_params['sort'] = request.values.get('sort')
+
+    return data_retrieval_params
 
 
 if __name__ == '__main__':

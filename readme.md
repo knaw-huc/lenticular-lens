@@ -156,7 +156,7 @@ Returns the stopwords for the given `dictionary`.
 
 **URL**: `/job/create`\
 **Method**: `POST`\
-**JSON**: `job_title`, `job_description`
+**Form data**: `job_title`, `job_description`
 
 Creates a new job with the given `job_title` and `job_description`. Returns the identifier of this new job.
 
@@ -210,7 +210,7 @@ _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/clusterings`_
 
 **URL**: `/job/<job_id>/run/<type>/<linkset>`\
 **Method**: `POST`\
-**JSON**: `restart`
+**Form data**: `restart`
 
 Start a process for the given spec of `type` (`linkset` or `lens`) of a specific `job_id`. Specify `restart` to restart
 the process.
@@ -351,7 +351,7 @@ _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/clusters/0`_
 
 **URL**: `/job/<job_id>/validate/<type>/<id>`\
 **Method**: `POST`\
-**JSON**: `source`, `target`, `apply_filters`, `valid`, `uri`, `cluster_id`, `min`, `max`, `validation`
+**Form data**: `source`, `target`, `apply_filters`, `valid`, `uri`, `cluster_id`, `min`, `max`, `validation`
 
 Validate a link of `type` (`linkset` or `lens`) for the linkset/lens with `id` of the given `job_id`.
 
@@ -368,7 +368,7 @@ reset.
 
 **URL**: `/job/<job_id>/motivate/<type>/<id>`\
 **Method**: `POST`\
-**JSON**: `source`, `target`, `apply_filters`, `valid`, `uri`, `cluster_id`, `min`, `max`, `motivation`
+**Form data**: `source`, `target`, `apply_filters`, `valid`, `uri`, `cluster_id`, `min`, `max`, `motivation`
 
 Motivate using `motivation` of `type` (`linkset` or `lens`) for the linkset/lens with `id` of the given `job_id`.
 

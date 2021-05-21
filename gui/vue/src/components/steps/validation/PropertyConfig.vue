@@ -1,5 +1,6 @@
 <template>
-  <b-modal ref="propertyConfig" body-class="bg-light" size="xl" hide-footer static>
+  <b-modal body-class="bg-light" size="xl" hide-footer static
+           @show="$emit('show')" @hide="$emit('hide')" ref="propertyConfig">
     <template v-slot:modal-header="{close}">
       <h5 class="modal-title">Property labels configuration</h5>
 

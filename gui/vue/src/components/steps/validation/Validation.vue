@@ -73,7 +73,7 @@
                 <div class="btn-group btn-group-sm btn-group-toggle ml-auto">
                   <label class="btn btn-secondary" v-bind:class="{'active': showAcceptedLinks}">
                     <input type="checkbox" autocomplete="off" v-model="showAcceptedLinks"
-                           :disabled="loadingTotals" @change="resetLinks('filtering')"/>
+                           :disabled="loadingTotals" @change="resetLinks('reset')"/>
                     {{ showAcceptedLinks ? 'Hide accepted' : 'Show accepted' }}
 
                     <span v-if="acceptedLinks !== null || allAcceptedLinks !== null" class="badge badge-light ml-1">
@@ -89,7 +89,7 @@
 
                   <label class="btn btn-secondary" v-bind:class="{'active': showRejectedLinks}">
                     <input type="checkbox" autocomplete="off" v-model="showRejectedLinks"
-                           :disabled="loadingTotals" @change="resetLinks('filtering')"/>
+                           :disabled="loadingTotals" @change="resetLinks('reset')"/>
                     {{ showRejectedLinks ? 'Hide rejected' : 'Show rejected' }}
 
                     <span v-if="rejectedLinks !== null || allRejectedLinks !== null" class="badge badge-light ml-1">
@@ -105,7 +105,7 @@
 
                   <label class="btn btn-secondary" v-bind:class="{'active': showNotSureLinks}">
                     <input type="checkbox" autocomplete="off" v-model="showNotSureLinks"
-                           :disabled="loadingTotals" @change="resetLinks('filtering')"/>
+                           :disabled="loadingTotals" @change="resetLinks('reset')"/>
                     {{ showNotSureLinks ? 'Hide not sure' : 'Show not sure' }}
 
                     <span v-if="notSureLinks !== null || allAcceptedLinks !== null" class="badge badge-light ml-1">
@@ -121,7 +121,7 @@
 
                   <label class="btn btn-secondary" v-bind:class="{'active': showNotValidatedLinks}">
                     <input type="checkbox" autocomplete="off" v-model="showNotValidatedLinks"
-                           :disabled="loadingTotals" @change="resetLinks('filtering')"/>
+                           :disabled="loadingTotals" @change="resetLinks('reset')"/>
                     {{ showNotValidatedLinks ? 'Hide not validated' : 'Show not validated' }}
 
                     <span v-if="notValidatedLinks !== null || allNotValidatedLinks !== null"
@@ -138,7 +138,7 @@
 
                   <label v-if="isLens" class="btn btn-secondary" v-bind:class="{'active': showMixedLinks}">
                     <input type="checkbox" autocomplete="off" v-model="showMixedLinks"
-                           :disabled="loadingTotals" @change="resetLinks('filtering')"/>
+                           :disabled="loadingTotals" @change="resetLinks('reset')"/>
                     {{ showMixedLinks ? 'Hide mixed' : 'Show mixed' }}
 
                     <span v-if="mixedLinks !== null || allMixedLinks !== null" class="badge badge-light ml-1">
@@ -237,6 +237,13 @@
                 <div class="btn-group btn-group-sm mr-4">
                   <button type="button" class="btn btn-secondary" :disabled="!view" @click="showFilterConfig">
                     Filter on properties
+
+                    <span class="badge badge-light ml-1">
+                      <template v-if="view">
+                        {{ view.filters.filter(f => f.filter.conditions.length > 0).length.toLocaleString('en') }}
+                      </template>
+                      <template v-else>0</template>
+                    </span>
                   </button>
 
                   <button type="button" class="btn btn-secondary" v-bind:class="{'active': clusters.length > 0}"
@@ -275,9 +282,7 @@
                 </div>
 
                 <div class="btn-group btn-group-sm ml-4" role="group">
-                  <button class="btn btn-secondary"
-                          :disabled="!hasProperties || clusters.length === 0 || clusters.length > 1"
-                          @click="showVisualization">
+                  <button class="btn btn-secondary" :disabled="!allowVisualization" @click="showVisualization">
                     <fa-icon icon="project-diagram"/>
                     Visualize
                   </button>
@@ -289,29 +294,24 @@
       </div>
     </template>
 
-    <similarity-config :type="type" :spec="spec" ref="similarityConfig"/>
+    <similarity-config :type="type" :spec="spec"
+                       @show="isModalOpen = true" @hide="isModalOpen = false" ref="similarityConfig"/>
 
-    <property-config v-if="view" :properties="view.properties" ref="propertyConfig"
-                     @save="resetLinks('reset', 'properties')"/>
+    <property-config v-if="view" :properties="view.properties"
+                     @save="resetLinks('reset', 'properties')"
+                     @show="isModalOpen = true" @hide="isModalOpen = false" ref="propertyConfig"/>
 
-    <filter-config v-if="view" :filters="view.filters" ref="filterConfig"
-                   @save="resetLinks('filtering', 'filtering')"/>
+    <filter-config v-if="view" :filters="view.filters"
+                   @save="resetLinks('filtering', 'filtering')"
+                   @show="isModalOpen = true" @hide="isModalOpen = false" ref="filterConfig"/>
 
-    <clusters v-if="clustering"
-              :type="type"
-              :spec-id="spec.id"
-              :selected-clusters="clusters"
-              :similarity-range="similarityRange"
-              ref="clusters"
-              @select="selectCluster"
-              @closed="resetLinks('filtering', 'none')"/>
+    <clusters v-if="clustering" :type="type" :spec-id="spec.id"
+              :selected-clusters="clusters" :similarity-range="similarityRange"
+              @select="selectCluster" @show="isModalOpen = true" @hide="onClustersClose" ref="clusters"/>
 
     <cluster-visualization
-        v-if="clustering && clusters.length === 1 && hasProperties"
-        :type="type"
-        :spec-id="spec.id"
-        :cluster="clusters[0]"
-        ref="visualization"/>
+        v-if="allowVisualization" :type="type" :spec-id="spec.id" :cluster="clusters[0]"
+        @show="isModalOpen = true" @hide="isModalOpen = false" ref="visualization"/>
 
     <template v-if="isOpen && !isUpdatingSelection">
       <link-component
@@ -374,6 +374,7 @@
         data() {
             return {
                 isOpen: false,
+                isModalOpen: false,
                 isUpdating: false,
                 isUpdatingSelection: false,
 
@@ -404,6 +405,8 @@
                 currentIdx: 0,
 
                 clusters: [],
+                updateClusters: false,
+
                 similarityRange: [0, 1],
                 sortDesc: true,
 
@@ -457,12 +460,20 @@
                     .includes(false);
             },
 
+            allowVisualization() {
+                return this.clustering && this.hasProperties && this.clusters.length === 1 &&
+                    Object.values(this.clusters[0].links).reduce((a, b) => a + b, 0) < 10000;
+            },
+
             clusterIds() {
                 return this.clusters.map(cluster => cluster.id);
             },
         },
         methods: {
             async onToggle(isOpen) {
+                if (this.isOpen === isOpen)
+                    return
+
                 this.isOpen = isOpen;
 
                 if (isOpen) {
@@ -517,10 +528,19 @@
             },
 
             selectCluster(cluster) {
+                this.updateClusters = true;
                 if (this.clusters.includes(cluster))
                     this.clusters.splice(this.clusters.indexOf(cluster), 1);
                 else
                     this.clusters.push(cluster);
+            },
+
+            onClustersClose() {
+                if (this.updateClusters)
+                    this.resetLinks('filtering', 'none');
+
+                this.isModalOpen = false;
+                this.updateClusters = false;
             },
 
             async resetLinks(linkUpdate = 'all', clusterUpdate = 'none') {
@@ -620,7 +640,7 @@
             },
 
             async onKey(e) {
-                if (!this.isOpen || this.isUpdating)
+                if (!this.isOpen || this.isUpdating || this.isModalOpen)
                     return;
 
                 if (this.isLinkMotivationOpen || this.motivationIsOpen) {
@@ -774,7 +794,7 @@
                 this.isUpdatingSelection = false;
 
                 if (result !== null)
-                    await this.resetLinks('all', 'none');
+                    await this.resetLinks('reset', 'none');
             },
         },
         mounted() {

@@ -1,5 +1,6 @@
 <template>
-  <b-modal ref="filterConfig" body-class="bg-light" size="xl" hide-footer static>
+  <b-modal body-class="bg-light" size="xl" hide-footer static
+           @show="$emit('show')" @hide="$emit('hide')" ref="filterConfig">
     <template v-slot:modal-header="{close}">
       <h5 class="modal-title">Filter configuration</h5>
 

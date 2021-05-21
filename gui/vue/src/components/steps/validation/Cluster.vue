@@ -42,23 +42,29 @@
       <div class="col">
         <div class="row small">
           <div class="col-8 font-weight-bold">
-            Size:
+            Number of nodes (size):
           </div>
 
           <div class="col">
-            {{ cluster.sizeFiltered.toLocaleString('en') }} /
-            {{ cluster.size.toLocaleString('en') }}
+            <loading v-if="isLoadingStats" :inline="true"/>
+            <template v-else>
+              {{ cluster.sizeFiltered.toLocaleString('en') }}
+            </template>
+            / {{ cluster.size.toLocaleString('en') }}
           </div>
         </div>
 
         <div class="row small">
           <div class="col-8 font-weight-bold">
-            Links:
+            Number of links:
           </div>
 
           <div class="col">
-            {{ Object.values(cluster.linksFiltered).reduce((a, b) => a + b, 0).toLocaleString('en') }} /
-            {{ Object.values(cluster.links).reduce((a, b) => a + b, 0).toLocaleString('en') }}
+            <loading v-if="isLoadingStats" :inline="true"/>
+            <template v-else>
+              {{ Object.values(cluster.linksFiltered).reduce((a, b) => a + b, 0).toLocaleString('en') }}
+            </template>
+            / {{ Object.values(cluster.links).reduce((a, b) => a + b, 0).toLocaleString('en') }}
           </div>
         </div>
 
@@ -68,12 +74,11 @@
           </div>
 
           <div class="col">
-            {{
-              cluster.linksFiltered.hasOwnProperty('accepted') ? cluster.linksFiltered.accepted.toLocaleString('en') : 0
-            }} /
-            {{
-              cluster.links.hasOwnProperty('accepted') ? cluster.links.accepted.toLocaleString('en') : 0
-            }}
+            <loading v-if="isLoadingStats" :inline="true"/>
+            <template v-else>
+              {{ cluster.linksFiltered.accepted.toLocaleString('en') }}
+            </template>
+            / {{ cluster.links.accepted.toLocaleString('en') }}
           </div>
         </div>
 
@@ -83,12 +88,11 @@
           </div>
 
           <div class="col">
-            {{
-              cluster.linksFiltered.hasOwnProperty('rejected') ? cluster.linksFiltered.rejected.toLocaleString('en') : 0
-            }} /
-            {{
-              cluster.links.hasOwnProperty('rejected') ? cluster.links.rejected.toLocaleString('en') : 0
-            }}
+            <loading v-if="isLoadingStats" :inline="true"/>
+            <template v-else>
+              {{ cluster.linksFiltered.rejected.toLocaleString('en') }}
+            </template>
+            / {{ cluster.links.rejected.toLocaleString('en') }}
           </div>
         </div>
 
@@ -98,12 +102,11 @@
           </div>
 
           <div class="col">
-            {{
-              cluster.linksFiltered.hasOwnProperty('not_sure') ? cluster.linksFiltered.not_sure.toLocaleString('en') : 0
-            }} /
-            {{
-              cluster.links.hasOwnProperty('not_sure') ? cluster.links.not_sure.toLocaleString('en') : 0
-            }}
+            <loading v-if="isLoadingStats" :inline="true"/>
+            <template v-else>
+              {{ cluster.linksFiltered.not_sure.toLocaleString('en') }}
+            </template>
+            / {{ cluster.links.not_sure.toLocaleString('en') }}
           </div>
         </div>
 
@@ -113,12 +116,11 @@
           </div>
 
           <div class="col">
-            {{
-              cluster.linksFiltered.hasOwnProperty('not_validated') ? cluster.linksFiltered.not_validated.toLocaleString('en') : 0
-            }} /
-            {{
-              cluster.links.hasOwnProperty('not_validated') ? cluster.links.not_validated.toLocaleString('en') : 0
-            }}
+            <loading v-if="isLoadingStats" :inline="true"/>
+            <template v-else>
+              {{ cluster.linksFiltered.not_validated.toLocaleString('en') }}
+            </template>
+            / {{ cluster.links.not_validated.toLocaleString('en') }}
           </div>
         </div>
 
@@ -128,21 +130,24 @@
           </div>
 
           <div class="col">
-            {{
-              cluster.linksFiltered.hasOwnProperty('mixed') ? cluster.linksFiltered.mixed.toLocaleString('en') : 0
-            }} /
-            {{
-              cluster.links.hasOwnProperty('mixed') ? cluster.linksFiltered.mixed.toLocaleString('en') : 0
-            }}
+            <loading v-if="isLoadingStats" :inline="true"/>
+            <template v-else>
+              {{ cluster.linksFiltered.mixed.toLocaleString('en') }}
+            </template>
+            / {{ cluster.links.mixed.toLocaleString('en') }}
           </div>
         </div>
       </div>
 
       <div class="col-8 border-left">
-        <property-values v-for="(prop, idx) in cluster.values"
-                         :key="idx" v-if="prop.values && prop.values.length > 0"
-                         :graphql-endpoint="prop.graphql_endpoint" :dataset-id="prop.dataset_id"
-                         :collection-id="prop.collection_id" :property="prop.property" :values="prop.values"/>
+        <loading v-if="isLoadingValues" class="mt-4"/>
+
+        <template v-else>
+          <property-values v-for="(prop, idx) in cluster.values"
+                           :key="idx" v-if="prop.values && prop.values.length > 0"
+                           :graphql-endpoint="prop.graphql_endpoint" :dataset-id="prop.dataset_id"
+                           :collection-id="prop.collection_id" :property="prop.property" :values="prop.values"/>
+        </template>
       </div>
     </div>
   </div>
@@ -160,10 +165,9 @@
             index: Number,
             cluster: Object,
             selected: false,
-            isLens: {
-                type: Boolean,
-                default: false
-            }
+            isLens: false,
+            isLoadingStats: false,
+            isLoadingValues: false,
         },
         computed: {
             isAllValidated() {

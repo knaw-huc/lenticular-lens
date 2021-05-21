@@ -1,5 +1,6 @@
 <template>
-  <b-modal ref="visualization" size="xl" dialog-class="modal-full-size" hide-footer static>
+  <b-modal size="xl" dialog-class="modal-full-size" hide-footer static
+           @show="$emit('show')" @hide="$emit('hide')" ref="visualization">
     <template v-slot:modal-header="{close}">
       <h5 class="modal-title">{{ label }}</h5>
 
