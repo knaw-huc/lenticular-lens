@@ -14,3 +14,74 @@ services:
       - POSTGRES_PASSWORD=postgres
     ports:
       - 5431:5432
+
+  timbuctoo_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    image: knawhuc/lenticular-lens-worker:latest
+    depends_on:
+      - postgres
+    environment:
+      - DATABASE_HOST=postgres
+      - DATABASE_DB=postgres
+      - DATABASE_USER=postgres
+      - DATABASE_PASSWORD=postgres
+      - WORKER_TYPE=timbuctoo
+
+  linkset_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    image: knawhuc/lenticular-lens-worker:latest
+    depends_on:
+      - postgres
+    environment:
+      - DATABASE_HOST=postgres
+      - DATABASE_DB=postgres
+      - DATABASE_USER=postgres
+      - DATABASE_PASSWORD=postgres
+      - WORKER_TYPE=linkset
+
+  lens_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    image: knawhuc/lenticular-lens-worker:latest
+    depends_on:
+      - postgres
+    environment:
+      - DATABASE_HOST=postgres
+      - DATABASE_DB=postgres
+      - DATABASE_USER=postgres
+      - DATABASE_PASSWORD=postgres
+      - WORKER_TYPE=lens
+
+  clustering_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    image: knawhuc/lenticular-lens-worker:latest
+    depends_on:
+      - postgres
+    environment:
+      - DATABASE_HOST=postgres
+      - DATABASE_DB=postgres
+      - DATABASE_USER=postgres
+      - DATABASE_PASSWORD=postgres
+      - WORKER_TYPE=clustering
+
+  web_server:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    image: knawhuc/lenticular-lens-web:latest
+    depends_on:
+      - postgres
+    environment:
+      - DATABASE_HOST=postgres
+      - DATABASE_DB=postgres
+      - DATABASE_USER=postgres
+      - DATABASE_PASSWORD=postgres
+    ports:
+      - 8000:8000
