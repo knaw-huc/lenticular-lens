@@ -13,6 +13,6 @@ rdflib==5.0.0
 requests==2.25.1
 unidecode==1.2.0
 xmltodict==0.12.0
-urllib3==1.26.4
+urllib3==1.26.5
 anytree==2.8.0
 sparqlwrapper==1.8.5
