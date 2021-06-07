@@ -8,5 +8,6 @@
   "SUFFIX": "{property} || {suffix}",
   "REPLACE": "replace({property}, {from}, {to})",
   "UNACCENT": "unaccent({property})",
-  "REGEXP_REPLACE": "regexp_replace({property}, {pattern}, {replacement}, {flags})"
+  "REGEXP_REPLACE": "regexp_replace({property}, {pattern}, {replacement}, {flags})",
+  "NFKC_NORMALIZE": "normalize({property}, nfkc)"
 }

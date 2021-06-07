@@ -1,9 +1,12 @@
+from io import StringIO
 from json import dumps
 from uuid import uuid4
 from psycopg2 import sql
+from unicodedata import normalize
 
 from ll.util.hasher import column_name_hash
 from ll.util.config_db import db_conn, fetch_many
+from ll.util.postgres_copy import prepare_for_copy
 
 from ll.worker.job import WorkerJob
 from ll.data.timbuctoo import Timbuctoo
@@ -42,17 +45,20 @@ class TimbuctooJob(WorkerJob):
 
     @staticmethod
     def extract_value(value):
-        if not value or isinstance(value, str):
+        if not value:
             return value
+
+        if isinstance(value, str):
+            return normalize('NFC', value.strip())
 
         if 'items' in value and value['items']:
             return [TimbuctooJob.extract_value(item) for item in value['items']]
 
         if 'value' in value:
-            return value['value']
+            return normalize('NFC', value['value'].strip())
 
         if 'uri' in value:
-            return value['uri']
+            return normalize('NFC', value['uri'].strip())
 
         return None
 
@@ -131,15 +137,10 @@ class TimbuctooJob(WorkerJob):
                                     % (self._table_name, table_rows, self._rows_count + total_insert))
 
                 if len(results) > 0:
-                    columns_sql = sql.SQL(', ').join(
-                        [sql.Identifier(key) for key in results[0].keys()])
+                    data = StringIO("\n".join(["\t".join(prepare_for_copy(result.values())) for result in results]))
+                    data.seek(0)
 
-                    for result in results:
-                        cur.execute(sql.SQL('INSERT INTO timbuctoo.{} ({}) VALUES %s').format(
-                            sql.Identifier(self._table_name),
-                            columns_sql,
-                        ), (tuple(result.values()),))
-
+                    cur.copy_from(data, f'timbuctoo."{self._table_name}"')
                     total_insert += len(results)
 
                     cur.execute('''

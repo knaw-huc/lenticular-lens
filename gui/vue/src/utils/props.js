@@ -356,6 +356,10 @@ export default {
             label: 'Unaccent',
             items: []
         },
+        'NFKC_NORMALIZE': {
+            label: 'Unicode equivalence normalization (NFKC)',
+            items: []
+        },
         'REGEXP_REPLACE': {
             label: 'Regular expression replace',
             items: [{
