@@ -8,6 +8,7 @@ alignment and is also able to report on manual corrections and the amount of man
 1. [Definition of terms](#definition-of-terms)
 1. [API](#api)
     1. [Default](#default)
+    1. [Authentication and authorization](#authentication-and-authorization)
     1. [Job creation and updates](#job-creation-and-updates)
     1. [Job processes](#job-processes)
     1. [Data retrieval](#data-retrieval)
@@ -151,6 +152,23 @@ Example: `/download?endpoint=https://repository.goldenagents.org/v5/graphql&data
 **Method**: `GET`
 
 Returns the stopwords for the given `dictionary`.
+
+### Authentication and authorization
+
+**URL**: `/login`\
+**Method**: `GET`\
+**Parameters**: `redirect-uri`
+
+Allow the user to login and then redirect back to the given `redirect-uri`.
+
+_Example: `/login?redirect-uri=https://lenticularlens.org`_
+
+---
+
+**URL**: `/user_info`\
+**Method**: `GET`
+
+Returns the user information of the logged-in user.
 
 ### Job creation and updates
 

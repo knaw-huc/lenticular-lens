@@ -290,6 +290,10 @@ export default {
             });
         },
 
+        async loadUserInfo() {
+            return callApi('/user_info');
+        },
+
         async loadJob(id) {
             const job = await callApi('/job/' + id);
             if (!job)

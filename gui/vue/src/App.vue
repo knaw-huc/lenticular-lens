@@ -535,7 +535,13 @@
                 }
             },
         },
-        mounted() {
+        async mounted() {
+            if (process.env.OIDC_SERVER) {
+                const userInfo = await this.$root.loadUserInfo();
+                if (!userInfo)
+                    window.location.replace('/login?redirect-uri=' + encodeURIComponent(window.location.href));
+            }
+
             const urlParams = new URLSearchParams(window.location.search);
 
             const jobId = urlParams.get('job_id');

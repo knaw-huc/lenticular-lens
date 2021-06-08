@@ -1,9 +1,9 @@
-FROM python:3.7-slim
+FROM python:3.9-slim
 
 ENV PYTHONPATH /app
 ENV PYTHONUNBUFFERED 1
 
-RUN apt-get update && apt-get install -y procps locales
+RUN apt-get update && apt-get install -y locales
 
 RUN echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen &&\
   echo "de_DE.UTF-8 UTF-8" >> /etc/locale.gen &&\
