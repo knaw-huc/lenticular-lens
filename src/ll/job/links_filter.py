@@ -155,7 +155,7 @@ class LinksFilter:
             links_filter.filter_on_uris(uris)
         if link:
             links_filter.filter_on_link(link[0], link[1])
-        if min_strength and max_strength:
+        if min_strength or max_strength:
             links_filter.filter_on_min_max_strength(min_strength, max_strength)
         if cluster_ids:
             links_filter.filter_on_clusters(cluster_ids)

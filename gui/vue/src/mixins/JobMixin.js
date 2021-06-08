@@ -646,7 +646,11 @@ async function callApi(path, body, params = {}) {
                 headers: {'Accept': 'application/json'},
                 method: 'POST',
                 body: Object.keys(body).reduce((formData, key) => {
-                    formData.append(key, body[key]);
+                    if (Array.isArray(body[key]))
+                        body[key].forEach(value => formData.append(key, value));
+                    else
+                        formData.append(key, body[key]);
+
                     return formData;
                 }, new FormData())
             });
