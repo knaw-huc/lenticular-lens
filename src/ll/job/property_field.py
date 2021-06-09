@@ -1,4 +1,4 @@
-from psycopg2 import sql as psycopg2_sql
+from psycopg2 import sql
 from rdflib import URIRef
 
 from ll.util.hasher import hash_string_min, column_name_hash
@@ -52,21 +52,24 @@ class PropertyField:
 
     @property
     def is_list(self):
-        if self.prop_label in self._collection.columns:
-            return self._collection.columns[self.prop_label]['isList']
+        if not self._intermediate_property_path:
+            if self.prop_label in self._collection.columns:
+                return self._collection.columns[self.prop_label]['isList']
 
-        return False
+            return False
+
+        return self._intermediate_property_path[-1]['to_collection'].columns[self.prop_label]['isList']
 
     @property
     def sql(self):
-        sql = self.get_property_sql(self.resource_label, self.prop_label, self._extend and self.is_list)
+        property_sql = self.get_property_sql(self.resource_label, self.prop_label, self._extend and self.is_list)
 
         for transformer in self._transformers:
-            template_sql = psycopg2_sql.SQL(transformer['sql_template'])
-            sql_parameters = {key: psycopg2_sql.Literal(value) for (key, value) in transformer['parameters'].items()}
-            sql = template_sql.format(property=sql, **sql_parameters)
+            template_sql = sql.SQL(transformer['sql_template'])
+            sql_parameters = {key: sql.Literal(value) for (key, value) in transformer['parameters'].items()}
+            property_sql = template_sql.format(property=property_sql, **sql_parameters)
 
-        return sql
+        return property_sql
 
     @property
     def prefix_mappings(self):
@@ -126,34 +129,34 @@ class PropertyField:
 
             if is_list:
                 extended_prop_alias = self.get_extended_property_alias(cur_resource, prop_in_path['property'])
-                joins.add_join(psycopg2_sql.SQL(
+                joins.add_join(sql.SQL(
                     'LEFT JOIN unnest({alias}.{column_name}) ' +
                     'AS {column_name_expanded} ON true'
                 ).format(
-                    alias=psycopg2_sql.Identifier(cur_resource),
-                    column_name=psycopg2_sql.Identifier(prop_in_path['property']),
-                    column_name_expanded=psycopg2_sql.Identifier(extended_prop_alias)
+                    alias=sql.Identifier(cur_resource),
+                    column_name=sql.Identifier(prop_in_path['property']),
+                    column_name_expanded=sql.Identifier(extended_prop_alias)
                 ), extended_prop_alias)
 
             lhs = self.get_property_sql(cur_resource, prop_in_path['property'], is_list)
             rhs = self.get_property_sql(next_resource, 'uri')
 
-            joins.add_join(psycopg2_sql.SQL('LEFT JOIN timbuctoo.{target} AS {alias} \nON {lhs} = {rhs}').format(
-                target=psycopg2_sql.Identifier(next_table_name),
-                alias=psycopg2_sql.Identifier(next_resource),
+            joins.add_join(sql.SQL('LEFT JOIN timbuctoo.{target} AS {alias} \nON {lhs} = {rhs}').format(
+                target=sql.Identifier(next_table_name),
+                alias=sql.Identifier(next_resource),
                 lhs=lhs, rhs=rhs
             ), next_resource)
 
             cur_resource = next_resource
 
         if self.is_list:
-            joins.add_join(psycopg2_sql.SQL(
+            joins.add_join(sql.SQL(
                 'LEFT JOIN unnest({alias}.{column_name}) ' +
                 'AS {column_name_expanded} ON true'
             ).format(
-                alias=psycopg2_sql.Identifier(self._alias),
-                column_name=psycopg2_sql.Identifier(self.prop_label),
-                column_name_expanded=psycopg2_sql.Identifier(self.extended_prop_label)
+                alias=sql.Identifier(self.resource_label),
+                column_name=sql.Identifier(self.prop_label),
+                column_name_expanded=sql.Identifier(self.extended_prop_label)
             ), self.extended_prop_label)
 
     @property
@@ -188,12 +191,12 @@ class PropertyField:
     def _intermediate_property_path(self):
         if not self._prop_path:
             self._prop_path = []
-            path = ''
+            path = self._collection.table_name
 
             prev_collection = self._collection
             for (prop, collection_id) in [(self._data[i], self._data[i + 1]) for i in range(0, len(self._data) - 2, 2)]:
                 collection = prev_collection.get_collection_by_id(collection_id)
-                path += collection.table_name
+                path += f'[{collection.table_name}_{prop}]'
 
                 self._prop_path.append({
                     'from_collection': prev_collection,
@@ -214,7 +217,7 @@ class PropertyField:
     def get_property_sql(resource, prop, extend=False):
         absolute_property = [PropertyField.get_extended_property_alias(resource, prop)] \
             if extend else [resource, prop]
-        return psycopg2_sql.SQL('.').join(map(psycopg2_sql.Identifier, absolute_property))
+        return sql.SQL('.').join(map(sql.Identifier, absolute_property))
 
     def __eq__(self, other):
         return isinstance(other, PropertyField) and self.hash == other.hash
