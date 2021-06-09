@@ -34,8 +34,8 @@ class View:
                 dataset_props['collection_id']
             )
 
-            properties[collection] = [PropertyField(prop, collection=collection)
-                                      for prop in dataset_props['properties']]
+            properties[collection] = list(dict.fromkeys([PropertyField(prop, collection=collection)
+                                                         for prop in dataset_props['properties']]))
 
         return properties
 
