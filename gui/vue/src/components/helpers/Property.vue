@@ -31,7 +31,7 @@
         <div v-if="prop.collection === '' && !readOnly" class="property-part">
           <v-select :value="prop.collection" :clearable="false" autocomplete="off"
                     placeholder="Choose a referenced collection"
-                    :options="['__value__', ...Object.keys(prop.collections)]"
+                    :options="['__value__', ...Object.keys(prop.collections)]" :filter-by="prop.collectionFilterBy"
                     v-bind:class="{'is-invalid': errors.includes(`value_${prop.collectionIdx}`)}"
                     @input="updateProperty($event, prop.collectionIdx)" ref="select">
             <div slot="option" slot-scope="option">
@@ -81,7 +81,8 @@
 
         <div v-if="!prop.property && !readOnly" class="property-part">
           <v-select :clearable="false" autocomplete="off" placeholder="Choose a property"
-                    :options="Object.keys(prop.properties)" @input="updateProperty($event, prop.propIdx)"
+                    :options="Object.keys(prop.properties)" :filter-by="prop.propertyFilterBy"
+                    @input="updateProperty($event, prop.propIdx)"
                     v-bind:class="{'is-invalid': errors.includes(`value_${prop.propIdx}`)}" ref="select">
             <div slot="option" slot-scope="option">
               <div>
@@ -212,7 +213,11 @@
             },
 
             props() {
-                return getPropertyInfo(this.property, this.collectionId, this.dataset.collections);
+                return getPropertyInfo(this.property, this.collectionId, this.dataset.collections).map(prop => ({
+                    ...prop,
+                    collectionFilterBy: this.collectionFilterBy(prop.collections),
+                    propertyFilterBy: this.propertyFilterBy(prop.properties),
+                }));
             },
         },
         methods: {
@@ -229,6 +234,32 @@
 
             getPropertyLabel(property, propertyId) {
                 return property.shortenedUri ? (property.isInverse ? '← ' : '') + property.shortenedUri : propertyId;
+            },
+
+            collectionFilterBy(collections) {
+                return function (option, label, search) {
+                    const s = search.toLowerCase();
+                    const collection = collections.hasOwnProperty(option) ? collections[option] : null;
+
+                    const optionMatches = (option || '').toLowerCase().indexOf(s) > -1;
+                    const shortUriMatches = collection && (collection.shortenedUri || '').toLowerCase().indexOf(s) > -1;
+                    const uriMatches = collection && (collection.uri || '').toLowerCase().indexOf(s) > -1;
+
+                    return optionMatches || shortUriMatches || uriMatches;
+                };
+            },
+
+            propertyFilterBy(properties) {
+                return function (option, label, search) {
+                    const s = search.toLowerCase();
+                    const property = properties.hasOwnProperty(option) ? properties[option] : null;
+
+                    const optionMatches = (option || '').toLowerCase().indexOf(s) > -1;
+                    const shortUriMatches = property && (property.shortenedUri || '').toLowerCase().indexOf(s) > -1;
+                    const uriMatches = property && (property.uri || '').toLowerCase().indexOf(s) > -1;
+
+                    return optionMatches || shortUriMatches || uriMatches;
+                };
             },
 
             isSameShortenedAndLongUri(props) {
