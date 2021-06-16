@@ -1,7 +1,7 @@
 import os
 
 from contextlib import contextmanager
-from psycopg2 import extras as psycopg2_extras
+from psycopg2 import extras
 from psycopg2.pool import ThreadedConnectionPool
 
 conn_pool = ThreadedConnectionPool(
@@ -34,7 +34,7 @@ def db_conn(key=None):
 
 def fetch_one(query, args=None, dict=False):
     with db_conn() as conn:
-        with conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) if dict else conn.cursor() as cur:
+        with conn.cursor(cursor_factory=extras.RealDictCursor) if dict else conn.cursor() as cur:
             cur.execute(query, args)
             return cur.fetchone() if cur.description else None
 

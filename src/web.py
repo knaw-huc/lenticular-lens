@@ -129,7 +129,7 @@ def with_entity_type_selection(func):
 
 @app.get('/')
 def index():
-    return app.send_static_file('index.html')
+    return 'Lenticular Lens'
 
 
 if auth:
