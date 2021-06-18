@@ -46,7 +46,7 @@ class ClusteringJob(WorkerJob):
                     ) ON COMMIT DROP
                 ''').format(sql.Identifier(clusters_table_name)))
 
-                cur.copy_from(data, f'"{clusters_table_name}"')
+                cur.copy_from(data, clusters_table_name)
 
                 cur.execute(sql.SQL('''
                     UPDATE {} AS linkset

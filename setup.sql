@@ -18,14 +18,14 @@ CREATE TABLE IF NOT EXISTS jobs
     job_title                        text                    not null,
     job_description                  text                    not null,
     job_link                         text,
-    entity_type_selections_form_data json,
-    linkset_specs_form_data          json,
-    lens_specs_form_data             json,
-    views_form_data                  json,
-    entity_type_selections           json,
-    linkset_specs                    json,
-    lens_specs                       json,
-    views                            json,
+    entity_type_selections_form_data jsonb,
+    linkset_specs_form_data          jsonb,
+    lens_specs_form_data             jsonb,
+    views_form_data                  jsonb,
+    entity_type_selections           jsonb,
+    linkset_specs                    jsonb,
+    lens_specs                       jsonb,
+    views                            jsonb,
     created_at                       timestamp default now() not null,
     updated_at                       timestamp default now() not null
 );
@@ -33,24 +33,24 @@ CREATE TABLE IF NOT EXISTS jobs
 CREATE TABLE IF NOT EXISTS timbuctoo_tables
 (
     table_name               text primary key,
-    graphql_endpoint         text                    not null,
-    dataset_id               text                    not null,
-    collection_id            text                    not null,
-    dataset_uri              text                    not null,
-    dataset_name             text                    not null,
-    title                    text                    not null,
+    graphql_endpoint         text                      not null,
+    dataset_id               text                      not null,
+    collection_id            text                      not null,
+    dataset_uri              text                      not null,
+    dataset_name             text                      not null,
+    title                    text                      not null,
     description              text,
-    collection_uri           text                    not null,
+    collection_uri           text                      not null,
     collection_title         text,
-    collection_shortened_uri text                    not null,
-    total                    int                     not null,
-    columns                  json                    not null,
-    prefix_mappings          json                    not null,
-    uri_prefix_mappings      json default '{}'::json not null,
-    create_time              timestamp               not null,
+    collection_shortened_uri text                      not null,
+    total                    int                       not null,
+    columns                  jsonb                     not null,
+    prefix_mappings          jsonb                     not null,
+    uri_prefix_mappings      jsonb default '{}'::jsonb not null,
+    create_time              timestamp                 not null,
     update_start_time        timestamp,
     next_page                text,
-    rows_count               int  default 0          not null,
+    rows_count               int   default 0           not null,
     last_push_time           timestamp,
     update_finish_time       timestamp,
     UNIQUE (graphql_endpoint, dataset_id, collection_id)
@@ -193,3 +193,121 @@ EXCEPTION
         RETURN NULL;
 END;
 $$ LANGUAGE plpgsql STRICT IMMUTABLE;
+
+CREATE OR REPLACE FUNCTION notify_job_update() RETURNS trigger AS $$
+DECLARE
+    notification json;
+BEGIN
+    IF NEW.job_title != OLD.job_title OR
+       NEW.job_description != OLD.job_description OR
+       NEW.job_link != OLD.job_link OR
+       NEW.entity_type_selections_form_data != OLD.entity_type_selections_form_data OR
+       NEW.linkset_specs_form_data != OLD.linkset_specs_form_data OR
+       NEW.lens_specs_form_data != OLD.lens_specs_form_data OR
+       NEW.views_form_data != OLD.views_form_data THEN
+        notification = json_build_object(
+            'job_id', NEW.job_id,
+            'updated_at', NEW.updated_at,
+            'is_title_update', NEW.job_title != OLD.job_title,
+            'is_description_update', NEW.job_description != OLD.job_description,
+            'is_link_update', NEW.job_link != OLD.job_link,
+            'is_entity_type_selections_update',
+                NEW.entity_type_selections_form_data != OLD.entity_type_selections_form_data,
+            'is_linkset_specs_update', NEW.linkset_specs_form_data != OLD.linkset_specs_form_data,
+            'is_lens_specs_update', NEW.lens_specs_form_data != OLD.lens_specs_form_data,
+            'is_views_update', NEW.views_form_data != OLD.views_form_data
+        );
+
+        PERFORM pg_notify('job_update', notification::text);
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION notify_timbuctoo_update() RETURNS trigger AS $$
+DECLARE
+    notification json;
+BEGIN
+    IF NEW IS NULL THEN
+        PERFORM pg_notify('timbuctoo_delete', notification::text);
+    ELSIF OLD IS NULL OR NEW.rows_count != OLD.rows_count THEN
+        notification = json_build_object(
+            'graphql_endpoint', NEW.graphql_endpoint,
+            'dataset_id', NEW.dataset_id,
+            'collection_id', NEW.collection_id,
+            'total', NEW.total,
+            'rows_count', NEW.rows_count
+        );
+
+        PERFORM pg_notify('timbuctoo_update', notification::text);
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION notify_alignment_update() RETURNS trigger AS $$
+DECLARE
+    notification json;
+BEGIN
+    IF NEW IS NULL THEN
+        PERFORM pg_notify('alignment_delete', notification::text);
+    ELSIF OLD IS NULL OR NEW.status != OLD.status OR
+       (TG_TABLE_NAME = 'linksets' AND NEW.links_progress != OLD.links_progress) THEN
+        notification = json_build_object(
+            'job_id', NEW.job_id,
+            'spec_type', CASE WHEN TG_TABLE_NAME = 'linksets' THEN 'linkset' ELSE 'lens' END,
+            'spec_id', NEW.spec_id,
+            'status', NEW.status,
+            'status_message', NEW.status_message,
+            'links_progress', CASE WHEN TG_TABLE_NAME = 'linksets' THEN NEW.links_progress END
+        );
+
+        PERFORM pg_notify('alignment_update', notification::text);
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION notify_clustering_update() RETURNS trigger AS $$
+DECLARE
+    notification json;
+BEGIN
+    IF NEW IS NULL THEN
+        PERFORM pg_notify('clustering_delete', notification::text);
+    ELSIF OLD IS NULL OR NEW.status != OLD.status OR
+       NEW.links_count != OLD.links_count OR NEW.clusters_count != OLD.clusters_count THEN
+        notification = json_build_object(
+            'job_id', NEW.job_id,
+            'spec_type', NEW.spec_type,
+            'spec_id', NEW.spec_id,
+            'clustering_type', NEW.clustering_type,
+            'status', NEW.status,
+            'status_message', NEW.status_message,
+            'links_count', NEW.links_count,
+            'clusters_count', NEW.clusters_count
+        );
+
+        PERFORM pg_notify('clustering_update', notification::text);
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER job_notify AFTER UPDATE ON jobs
+FOR EACH ROW EXECUTE PROCEDURE notify_job_update();
+
+CREATE TRIGGER timbuctoo_notify AFTER INSERT OR UPDATE OR DELETE ON timbuctoo_tables
+FOR EACH ROW EXECUTE PROCEDURE notify_timbuctoo_update();
+
+CREATE TRIGGER linkset_notify AFTER INSERT OR UPDATE OR DELETE ON linksets
+FOR EACH ROW EXECUTE PROCEDURE notify_alignment_update();
+
+CREATE TRIGGER lens_notify AFTER INSERT OR UPDATE OR DELETE ON lenses
+FOR EACH ROW EXECUTE PROCEDURE notify_alignment_update();
+
+CREATE TRIGGER clustering_notify AFTER INSERT OR UPDATE OR DELETE ON clusterings
+FOR EACH ROW EXECUTE PROCEDURE notify_clustering_update();

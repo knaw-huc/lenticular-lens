@@ -1,14 +1,17 @@
 import os
 import uuid
+import json
 import decimal
 import datetime
 import psycopg2
+import eventlet
 import functools
 
 from flask import Flask, Response, jsonify, session, request, redirect
 from flask_cors import CORS
 from flask.json import JSONEncoder
 from flask_compress import Compress
+from flask_socketio import SocketIO
 
 from flask_pyoidc import OIDCAuthentication
 from flask_pyoidc.user_session import UserSession
@@ -22,6 +25,7 @@ from ll.job.job import Job, Validation
 from ll.util.hasher import hash_string
 from ll.util.logging import config_logger
 from ll.util.stopwords import get_stopwords
+from ll.util.config_db import listen_for_notify
 
 from ll.data.collection import Collection
 from ll.data.timbuctoo_datasets import TimbuctooDatasets
@@ -48,6 +52,15 @@ class TypeConverter(BaseConverter):
         raise ValidationError()
 
 
+def emit_database_events():
+    q = eventlet.Queue()
+    eventlet.spawn(listen_for_notify, q)
+    while True:
+        notify = q.get()
+        ns = '' if notify.channel.startswith('timbuctoo_') else json.loads(notify.payload)['job_id']
+        socketio.emit(notify.channel, notify.payload, namespace=f'/{ns}')
+
+
 config_logger()
 
 app = Flask(__name__)
@@ -70,6 +83,9 @@ auth = OIDCAuthentication({'default': ProviderConfiguration(
         client_id=os.environ['OIDC_CLIENT_ID'],
         client_secret=os.environ['OIDC_CLIENT_SECRET'])
 )}, app) if 'OIDC_SERVER' in os.environ and len(os.environ['OIDC_SERVER']) > 0 else None
+
+socketio = SocketIO(app, cors_allowed_origins='*')
+socketio.start_background_task(emit_database_events)
 
 
 def authenticated(func):
@@ -547,4 +563,4 @@ def get_data_retrieval_params(whitelist):
 
 
 if __name__ == '__main__':
-    app.run()
+    socketio.run(app)

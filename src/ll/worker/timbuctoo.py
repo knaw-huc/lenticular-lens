@@ -107,7 +107,8 @@ class TimbuctooJob(WorkerJob):
             ]
 
             with self._db_conn.cursor() as cur:
-                cur.execute("LOCK TABLE timbuctoo_tables IN ACCESS EXCLUSIVE MODE;")
+                cur.execute('SET search_path TO "$user", timbuctoo, public; '
+                            'LOCK TABLE timbuctoo_tables IN ACCESS EXCLUSIVE MODE;')
 
                 # Check if the data we have is still the data that is expected to be inserted
                 cur.execute('''
@@ -128,8 +129,7 @@ class TimbuctooJob(WorkerJob):
                                     'Someone else updated the job for table %s '
                                     'while I was fetching data.' % self._table_name)
 
-                cur.execute(sql.SQL('SELECT count(*) FROM timbuctoo.{}')
-                            .format(sql.Identifier(self._table_name)))
+                cur.execute(sql.SQL('SELECT count(*) FROM {}').format(sql.Identifier(self._table_name)))
                 table_rows = cur.fetchone()[0]
 
                 if table_rows != self._rows_count + total_insert:
@@ -140,7 +140,7 @@ class TimbuctooJob(WorkerJob):
                     data = StringIO("\n".join(["\t".join(prepare_for_copy(result.values())) for result in results]))
                     data.seek(0)
 
-                    cur.copy_from(data, f'timbuctoo."{self._table_name}"')
+                    cur.copy_from(data, self._table_name, columns=results[0].keys())
                     total_insert += len(results)
 
                     cur.execute('''
@@ -155,8 +155,7 @@ class TimbuctooJob(WorkerJob):
 
     def determine_prefix_mappings(self):
         with self._db_conn.cursor(name=uuid4().hex) as cur:
-            cur.execute(sql.SQL('SELECT uri FROM timbuctoo.{}')
-                        .format(sql.Identifier(self._table_name)))
+            cur.execute(sql.SQL('SELECT uri FROM timbuctoo.{}').format(sql.Identifier(self._table_name)))
 
             for uri in fetch_many(cur):
                 for prefix, prefix_uri in self._prefix_mappings.items():

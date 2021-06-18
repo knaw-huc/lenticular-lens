@@ -74,7 +74,7 @@ class LinksetJob(WorkerJob):
         data = {'status_message': self._status}
 
         with db_conn() as conn, conn.cursor() as cur:
-            self.get_sequence_count(conn, cur, 'linkset_count', data, 'links_count')
+            self.get_sequence_count(conn, cur, 'linkset_count', data, 'links_progress')
             self.get_count(conn, cur, 'source', data, 'sources_count')
             self.get_count(conn, cur, 'target', data, 'targets_count')
 

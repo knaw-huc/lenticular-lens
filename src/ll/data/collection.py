@@ -169,10 +169,11 @@ class Collection:
         collections = {'downloaded': [], 'downloading': []}
 
         with db_conn() as conn, conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
-            cur.execute('SELECT dataset_id, collection_id, total, rows_count FROM timbuctoo_tables')
+            cur.execute('SELECT graphql_endpoint, dataset_id, collection_id, total, rows_count FROM timbuctoo_tables')
 
             for table in cur:
                 data_info = {
+                    'graphql_endpoint': table['graphql_endpoint'],
                     'dataset_id': table['dataset_id'],
                     'collection_id': table['collection_id'],
                     'total': table['total'],
@@ -185,12 +186,6 @@ class Collection:
                     collections['downloading'].append(data_info)
 
         return collections
-
-    def __eq__(self, other):
-        return isinstance(other, Collection) and hash(self) == hash(other)
-
-    def __hash__(self):
-        return hash(self.graphql_endpoint) ^ hash(self.dataset_id) ^ hash(self.collection_id)
 
     def __eq__(self, other):
         return isinstance(other, Collection) and hash(self) == hash(other)

@@ -2,7 +2,7 @@ import sys
 import signal
 import threading
 
-from web import app as webapp
+from web import app as webapp, socketio
 from worker import Worker, WorkerType
 
 if __name__ == "__main__":
@@ -27,4 +27,4 @@ if __name__ == "__main__":
     threading.Thread(target=lens_worker.run).start()
     threading.Thread(target=clustering_worker.run).start()
 
-    webapp.run()
+    socketio.run(webapp)

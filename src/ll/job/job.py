@@ -308,7 +308,7 @@ class Job:
 
     def get_entity_type_selection_sample(self, id, invert=False, limit=None, offset=0):
         entity_type_selection = self.get_entity_type_selection_by_id(id)
-        if not entity_type_selection:
+        if not entity_type_selection or not entity_type_selection.collection.is_downloaded:
             return []
 
         filter_properties = entity_type_selection.filter_properties
@@ -328,7 +328,7 @@ class Job:
 
     def get_entity_type_selection_sample_total(self, id):
         entity_type_selection = self.get_entity_type_selection_by_id(id)
-        if not entity_type_selection:
+        if not entity_type_selection or not entity_type_selection.collection.is_downloaded:
             return {'total': 0}
 
         filter_properties = entity_type_selection.filter_properties

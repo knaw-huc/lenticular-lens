@@ -17,4 +17,4 @@ ENV FLASK_ENV=production
 
 EXPOSE 8000
 
-CMD ["gunicorn", "-b", ":8000", "-t", "60", "-w", "4", "web:app"]
+CMD ["gunicorn", "--worker-class", "eventlet", "-b", ":8000", "-t", "60", "-w", "1", "--threads", "4", "web:app"]

@@ -1,8 +1,11 @@
 import os
 
 from contextlib import contextmanager
+from eventlet.hubs import trampoline
+
 from psycopg2 import extras
 from psycopg2.pool import ThreadedConnectionPool
+from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
 conn_pool = ThreadedConnectionPool(
     minconn=2,
@@ -33,10 +36,9 @@ def db_conn(key=None):
 
 
 def fetch_one(query, args=None, dict=False):
-    with db_conn() as conn:
-        with conn.cursor(cursor_factory=extras.RealDictCursor) if dict else conn.cursor() as cur:
-            cur.execute(query, args)
-            return cur.fetchone() if cur.description else None
+    with db_conn() as conn, conn.cursor(cursor_factory=extras.RealDictCursor) if dict else conn.cursor() as cur:
+        cur.execute(query, args)
+        return cur.fetchone() if cur.description else None
 
 
 def fetch_many(cur, size=2000):
@@ -47,3 +49,19 @@ def fetch_many(cur, size=2000):
 
         for result in results:
             yield result
+
+
+def listen_for_notify(q):
+    conn = get_conn()
+    conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+
+    cur = conn.cursor()
+    cur.execute('LISTEN job_update; '
+                'LISTEN timbuctoo_update; LISTEN alignment_update; LISTEN clustering_update; '
+                'LISTEN timbuctoo_delete; LISTEN alignment_delete; LISTEN clustering_delete;')
+
+    while True:
+        trampoline(conn, read=True)
+        conn.poll()
+        while conn.notifies:
+            q.put(conn.notifies.pop())
