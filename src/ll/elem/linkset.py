@@ -32,6 +32,19 @@ class Linkset:
         return self.with_matching_methods_recursive(lambda c, operator, fuzzy, threshold: flatten(c))
 
     @property
+    def all_props(self):
+        props = {(ets, prop.prop_original)
+                 for matching_method in self.matching_methods
+                 for ets, props_ets in (matching_method.sources | matching_method.targets).items()
+                 for prop in props_ets}
+
+        return props.union({(ets, prop.prop_original)
+                     for matching_method in self.matching_methods
+                     for ets, props_ets in matching_method.intermediates.items()
+                     for prop in (props_ets['source'] + props_ets['target'])
+                     if matching_method.is_intermediate})
+
+    @property
     def entity_type_selections(self):
         return self.sources.union(self.targets)
 

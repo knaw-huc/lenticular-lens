@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS timbuctoo_tables
     columns                  jsonb                     not null,
     prefix_mappings          jsonb                     not null,
     uri_prefix_mappings      jsonb default '{}'::jsonb not null,
+    uri_prefixes             text[]                    not null,
     create_time              timestamp                 not null,
     update_start_time        timestamp,
     next_page                text,

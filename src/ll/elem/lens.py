@@ -49,6 +49,10 @@ class Lens:
         return [matching_method for linkset in self.linksets for matching_method in linkset.matching_methods]
 
     @property
+    def all_props(self):
+        return set().union(*[all_props for linkset in self.linksets for all_props in linkset.all_props])
+
+    @property
     def similarity_logic_ops_sql(self):
         return self.with_lenses_recursive(
             lambda left, right, type, t_conorm, threshold, only_left: self._logic_ops_for_condition(

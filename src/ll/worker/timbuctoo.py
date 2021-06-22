@@ -2,6 +2,7 @@ from io import StringIO
 from json import dumps
 from uuid import uuid4
 from psycopg2 import sql
+from os.path import commonprefix
 from unicodedata import normalize
 
 from ll.util.hasher import column_name_hash
@@ -25,6 +26,7 @@ class TimbuctooJob(WorkerJob):
         self._rows_count = rows_count
         self._rows_per_page = rows_per_page
         self._uri_prefix_mappings = {}
+        self._uri_prefixes = set()
 
         super().__init__(self.run_process)
 
@@ -158,11 +160,39 @@ class TimbuctooJob(WorkerJob):
             cur.execute(sql.SQL('SELECT uri FROM timbuctoo.{}').format(sql.Identifier(self._table_name)))
 
             for uri in fetch_many(cur):
+                mapping_found = False
                 for prefix, prefix_uri in self._prefix_mappings.items():
                     if uri[0].startswith(prefix_uri):
+                        mapping_found = True
                         if prefix not in self._uri_prefix_mappings:
                             self._uri_prefix_mappings[prefix] = prefix_uri
                         break
+
+                if not mapping_found:
+                    prefix_found = False
+                    for ns in self._uri_prefixes:
+                        common_prefix = commonprefix([uri[0], ns])
+
+                        prefix_allowed = common_prefix != '' and common_prefix != 'http'
+                        if common_prefix.startswith('http://') or common_prefix.startswith('https://'):
+                            domain = common_prefix.replace('http://', '').replace('https://', '')
+                            prefix_allowed = '/' in domain
+
+                        if prefix_allowed:
+                            prefix_found = True
+
+                            idx1 = common_prefix.rfind('/')
+                            idx2 = common_prefix.rfind('#')
+                            if (idx1 > -1 or idx2 > -1) and \
+                                    not (common_prefix.endswith('/') or common_prefix.endswith('#')):
+                                common_prefix = common_prefix[:idx1 + 1] if idx1 > idx2 else common_prefix[:idx2 + 1]
+
+                            if ns != common_prefix and ns.startswith(common_prefix):
+                                self._uri_prefixes.remove(ns)
+                            self._uri_prefixes.add(common_prefix)
+
+                    if not prefix_found:
+                        self._uri_prefixes.add(uri[0])
 
     def on_finish(self):
         if self._cursor is None:
@@ -170,8 +200,9 @@ class TimbuctooJob(WorkerJob):
                 cur.execute(sql.SQL('ANALYZE timbuctoo.{}').format(sql.Identifier(self._table_name)))
 
                 cur.execute('UPDATE timbuctoo_tables '
-                            'SET uri_prefix_mappings = %s, update_finish_time = now() '
-                            'WHERE "table_name" = %s', (dumps(self._uri_prefix_mappings), self._table_name,))
+                            'SET uri_prefix_mappings = %s, uri_prefixes = %s, update_finish_time = now() '
+                            'WHERE "table_name" = %s',
+                            (dumps(self._uri_prefix_mappings), list(self._uri_prefixes), self._table_name,))
 
     def watch_process(self):
         pass

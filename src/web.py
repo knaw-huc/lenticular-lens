@@ -181,6 +181,16 @@ def datasets_update():
     return jsonify(result='updated')
 
 
+@app.get('/datasets/determine_prefix_mappings')
+@authenticated
+def determine_prefix_mappings():
+    if not request.values.get('endpoint'):
+        return jsonify(result='error', error='Please apply the GraphQL endpoint'), 400
+
+    TimbuctooDatasets(request.values.get('endpoint')).determine_prefix_mappings()
+    return jsonify(result='updated')
+
+
 @app.get('/downloads')
 @authenticated
 def downloads():

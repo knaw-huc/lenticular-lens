@@ -54,6 +54,10 @@ class Collection:
         return self.table_data['uri_prefix_mappings']
 
     @property
+    def uri_prefixes(self):
+        return self.table_data['uri_prefixes']
+
+    @property
     def prefix_info(self):
         uri = self.table_data['collection_uri']
         short_uri = self.table_data['collection_shortened_uri']
@@ -142,6 +146,57 @@ class Collection:
                 ''', (dataset['uri'], dataset['name'], dataset['title'], dataset['description'],
                       collection['uri'], collection['title'], collection['shortenedUri'],
                       collection['total'], dumps(columns), dumps(dataset['prefixMappings']), self.table_name))
+
+    def determine_prefix_mappings(self):
+        from uuid import uuid4
+        from os.path import commonprefix
+        from ll.util.config_db import fetch_many
+
+        uri_prefix_mappings = {}
+        uri_prefixes = set()
+
+        with db_conn() as conn, conn.cursor(name=uuid4().hex) as cur:
+            cur.execute(sql.SQL('SELECT uri FROM timbuctoo.{}').format(sql.Identifier(self.table_name)))
+
+            for uri in fetch_many(cur):
+                mapping_found = False
+                for prefix, prefix_uri in self.table_data['prefix_mappings'].items():
+                    if uri[0].startswith(prefix_uri):
+                        mapping_found = True
+                        if prefix not in uri_prefix_mappings:
+                            uri_prefix_mappings[prefix] = prefix_uri
+                        break
+
+                if not mapping_found:
+                    prefix_found = False
+                    for ns in uri_prefixes.copy():
+                        common_prefix = commonprefix([uri[0], ns])
+
+                        prefix_allowed = common_prefix != '' and common_prefix != 'http'
+                        if common_prefix.startswith('http://') or common_prefix.startswith('https://'):
+                            domain = common_prefix.replace('http://', '').replace('https://', '')
+                            prefix_allowed = '/' in domain
+
+                        if prefix_allowed:
+                            prefix_found = True
+
+                            idx1 = common_prefix.rfind('/')
+                            idx2 = common_prefix.rfind('#')
+                            if (idx1 > -1 or idx2 > -1) and \
+                                    not (common_prefix.endswith('/') or common_prefix.endswith('#')):
+                                common_prefix = common_prefix[:idx1 + 1] if idx1 > idx2 else common_prefix[:idx2 + 1]
+
+                            if ns != common_prefix and ns.startswith(common_prefix):
+                                uri_prefixes.remove(ns)
+                            uri_prefixes.add(common_prefix)
+
+                    if not prefix_found:
+                        uri_prefixes.add(uri[0])
+
+            conn.cursor().execute('UPDATE timbuctoo_tables '
+                                  'SET uri_prefix_mappings = %s, uri_prefixes = %s '
+                                  'WHERE "table_name" = %s',
+                                  (dumps(uri_prefix_mappings), list(uri_prefixes), self.table_name,))
 
     def get_collection_by_id(self, collection_id):
         return Collection(self.graphql_endpoint, self.dataset_id, collection_id,

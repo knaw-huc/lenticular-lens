@@ -28,6 +28,16 @@ class TimbuctooDatasets:
                     collection = Collection(self._graphql_uri, dataset_id, collection_id, timbuctoo_data)
                     collection.update()
 
+    def determine_prefix_mappings(self):
+        timbuctoo_data = Timbuctoo(self._graphql_uri).datasets
+        database_data = self._datasets_from_database()
+
+        for dataset_id, dataset_data in database_data.items():
+            for collection_id, collection_data in dataset_data['collections'].items():
+                if dataset_id in timbuctoo_data and collection_id in timbuctoo_data[dataset_id]['collections']:
+                    collection = Collection(self._graphql_uri, dataset_id, collection_id, timbuctoo_data)
+                    collection.determine_prefix_mappings()
+
     def _datasets_from_database(self):
         with db_conn() as conn, conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) as cur:
             cur.execute('SELECT * FROM timbuctoo_tables WHERE graphql_endpoint = %s', (self._graphql_uri,))
@@ -48,6 +58,7 @@ class TimbuctooDatasets:
                     'title': table['collection_title'],
                     'shortenedUri': table['collection_shortened_uri'],
                     'total': table['total'],
+                    'downloaded': True,
                     'properties': {
                         column_info['name']: {
                             'uri': column_info.get('uri', None),

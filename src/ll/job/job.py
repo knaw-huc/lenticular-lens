@@ -71,15 +71,21 @@ class Job:
 
     @property
     def linksets(self):
+        specs = self.linkset_specs
         with db_conn() as conn, conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
             cur.execute('SELECT * FROM linksets WHERE job_id = %s', (self.job_id,))
-            return cur.fetchall()
+            linksets = cur.fetchall()
+
+        return self._include_prefix_mappings_in_results(linksets, specs)
 
     @property
     def lenses(self):
+        specs = self.lens_specs
         with db_conn() as conn, conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
             cur.execute('SELECT * FROM lenses WHERE job_id = %s', (self.job_id,))
-            return cur.fetchall()
+            lenses = cur.fetchall()
+
+        return self._include_prefix_mappings_in_results(lenses, specs)
 
     @property
     def clusterings(self):
@@ -414,3 +420,26 @@ class Job:
 
     def visualize(self, id, type, cluster_id):
         return get_visualization(self, id, type, cluster_id, include_compact=True)
+
+    @staticmethod
+    def _include_prefix_mappings_in_results(results, specs):
+        return [{
+            **result,
+            **{
+                'prefix_mappings': {
+                    prefix: uri
+                    for (ets, prop) in next(x for x in specs if x.id == result['spec_id']).all_props
+                    for prefix, uri in prop.prefix_mappings.items()
+                },
+                'uri_prefix_mappings': {
+                    prefix: uri
+                    for ets in next(x for x in specs if x.id == result['spec_id']).all_entity_type_selections
+                    for prefix, uri in ets.collection.uri_prefix_mappings.items()
+                },
+                'uri_prefixes': [
+                    uri
+                    for ets in next(x for x in specs if x.id == result['spec_id']).all_entity_type_selections
+                    for uri in ets.collection.uri_prefixes
+                ]
+            }
+        } for result in results]
