@@ -59,6 +59,10 @@ class View:
             lambda filter_func: filter_func.sql
         )
 
+    @property
+    def prefix_mappings(self):
+        return self._data['prefix_mappings']
+
     def _with_filters_per_collection(self, with_conditions, with_filter_function=None):
         filters = dict()
         for dataset_filter in self._data['filters']:

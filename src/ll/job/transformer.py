@@ -213,7 +213,8 @@ def get_view_schema():
                 Optional('value'): Or(And(str, len), int),
                 Optional('format'): And(str, len),
             }, ignore_extra_keys=True), 'conditions', ('and', 'or')),
-        }]
+        }],
+        Optional('prefix_mappings', default={}): dict
     }, ignore_extra_keys=True)
 
 
