@@ -77,7 +77,7 @@ class PropertyField:
         for prop_in_path in self._intermediate_property_path:
             prop = prop_in_path['property']
 
-            prefix = prop_in_path['from_collection'].columns[prop]['prefix']
+            prefix = prop_in_path['from_collection'].columns[prop].get('prefix')
             if prefix and prefix not in property_prefix_mappings:
                 property_prefix_mappings[prefix] = prop_in_path['from_collection'].columns[prop]['prefixUri']
 
@@ -85,7 +85,7 @@ class PropertyField:
             if prefix and prefix not in property_prefix_mappings:
                 property_prefix_mappings[prefix] = prefix_uri
 
-        prefix = self._property_collection.columns[self.prop_label]['prefix'] if self.prop_label != 'uri' else None
+        prefix = self._property_collection.columns[self.prop_label].get('prefix') if self.prop_label != 'uri' else None
         if prefix and prefix not in property_prefix_mappings:
             property_prefix_mappings[prefix] = self._property_collection.columns[self.prop_label]['prefixUri']
 
