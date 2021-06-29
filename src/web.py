@@ -1,5 +1,7 @@
 import os
 import uuid
+from collections import OrderedDict
+
 import json
 import decimal
 import datetime
@@ -23,6 +25,7 @@ from ll.job.export import Export
 from ll.job.job import Job, Validation
 
 from ll.util.hasher import hash_string
+from ll.util.helpers import get_json_from_file
 from ll.util.logging import config_logger
 from ll.util.stopwords import get_stopwords
 from ll.util.config_db import listen_for_notify
@@ -62,6 +65,10 @@ def emit_database_events():
 
 
 config_logger()
+
+filter_functions_info = get_json_from_file('filter_functions.json')
+matching_methods_info = get_json_from_file('matching_methods.json')
+transformers_info = get_json_from_file('transformers.json')
 
 app = Flask(__name__)
 app.config.update(
@@ -223,6 +230,20 @@ def stopwords(dictionary):
         return jsonify(result='error', error='Please specify a valid dictionary key'), 400
 
 
+@app.get('/methods')
+@authenticated
+def methods():
+    return jsonify(
+        filter_functions=filter_functions_info,
+        filter_functions_order=list(filter_functions_info.keys()),
+        matching_methods=matching_methods_info,
+        matching_methods_order=list(matching_methods_info.keys()),
+        transformers={key: transformers_info[key] for key in transformers_info.keys()
+                      if not transformers_info[key].get('internal', False)},
+        transformers_order=list([key for key, item in transformers_info.items() if not item.get('internal', False)]),
+    )
+
+
 @app.post('/job/create')
 @authenticated
 def job_create():
@@ -273,17 +294,6 @@ def job_update(job):
         lens_specs=[lens_spec['id'] for lens_spec in lens_specs],
         views=[[view['id'], view['type']] for view in views],
     )
-
-
-@app.route('/job/<job:job>/update_temp/<type:type>/<int:id>')
-@authenticated
-@with_job
-@with_spec
-def update_temp(job, type, id):
-    from temp_update import temp_update
-
-    temp_update(job, type, id)
-    return jsonify({'result': 'done'})
 
 
 @app.get('/job/<job:job>')
@@ -502,20 +512,26 @@ def export_to_csv(job, type, id):
 def export_to_rdf(job, type, id):
     export = Export(job, type, id)
 
-    link_pred_namespace = request.values.get('link_pred_namespace')
-    link_pred_shortname = request.values.get('link_pred_shortname')
-    export_metadata = request.values.get('export_metadata', default=True) == 'true'
     export_linkset = request.values.get('export_linkset', default=True) == 'true'
-    reification = request.values.get('reification', default='none')
-    use_graphs = request.values.get('use_graphs', default=True) == 'true'
-    creator = request.values.get('creator')
-    publisher = request.values.get('publisher')
+    export_metadata = request.values.get('export_metadata', default=True) == 'true'
+    export_validation_set = request.values.get('export_validation_set', default=True) == 'true'
+    export_cluster_set = request.values.get('export_cluster_set', default=True) == 'true'
+
     validation_filter = Validation.get(request.values.getlist('valid'))
 
-    export_generator = export.rdf_export_generator(
-        link_pred_namespace, link_pred_shortname, export_metadata, export_linkset,
-        reification, use_graphs, creator, publisher, validation_filter)
+    reification = request.values.get('reification', default='none')
 
+    link_pred_namespace = request.values.get('link_pred_namespace')
+    link_pred_shortname = request.values.get('link_pred_shortname')
+
+    creator = request.values.get('creator')
+    publisher = request.values.get('publisher')
+
+    export_generator = export.rdf_export_generator(
+        link_pred_namespace, link_pred_shortname, export_linkset, export_metadata,
+        export_validation_set, export_cluster_set, reification, creator, publisher, validation_filter)
+
+    use_graphs = export_linkset and not export_metadata
     mimetype = 'application/trig' if use_graphs else 'text/turtle'
     extension = '.trig' if use_graphs else '.ttl'
 

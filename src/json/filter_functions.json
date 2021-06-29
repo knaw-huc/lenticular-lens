@@ -1,38 +1,64 @@
 {
   "equals": {
-    "sql_template": "{property} = {value}"
+    "label": "Equal to",
+    "sql_template": "{property} = {value}",
+    "type": "string"
   },
   "not_equals": {
-    "sql_template": "{property} != {value}"
+    "label": "Not equal to",
+    "sql_template": "{property} != {value}",
+    "type": "string"
   },
   "empty": {
+    "label": "Has no values",
     "sql_template": "{property} IS NULL"
   },
   "not_empty": {
+    "label": "Has a value",
     "sql_template": "{property} IS NOT NULL"
   },
   "contains": {
-    "sql_template": "{property} ILIKE {value}"
+    "label": "Contains",
+    "sql_template": "{property} ILIKE {value}",
+    "type": "string",
+    "help_text": "Use % as a wildcard character"
   },
   "not_contains": {
-    "sql_template": "{property} NOT ILIKE {value}"
+    "label": "Does not contain",
+    "sql_template": "{property} NOT ILIKE {value}",
+    "type": "string",
+    "help_text": "Use % as a wildcard character"
   },
   "minimal": {
-    "sql_template": "to_numeric_immutable({property}) IS NOT NULL AND to_numeric_immutable({property}) >= {value}"
+    "label": "Has minimal value",
+    "sql_template": "to_numeric_immutable({property}) IS NOT NULL AND to_numeric_immutable({property}) >= {value}",
+    "type": "number"
   },
   "maximum": {
-    "sql_template": "to_numeric_immutable({property}) IS NOT NULL AND to_numeric_immutable({property}) <= {value}"
+    "label": "Has maximum value",
+    "sql_template": "to_numeric_immutable({property}) IS NOT NULL AND to_numeric_immutable({property}) <= {value}",
+    "type": "number"
   },
   "minimal_date": {
-    "sql_template": "to_date_immutable({property}, {format}) IS NOT NULL AND to_date_immutable({property}, {format}) >= to_date_immutable({value}, 'YYYY-MM-DD')"
+    "label": "Has minimal date",
+    "sql_template": "to_date_immutable({property}, {format}) IS NOT NULL AND to_date_immutable({property}, {format}) >= to_date_immutable({value}, 'YYYY-MM-DD')",
+    "type": "date",
+    "help_text": "Use the format YYYY-MM-DD, YYYY-MM or YYYY for year/month/day, year/month and year respectively"
   },
   "maximum_date": {
-    "sql_template": "to_date_immutable({property}, {format}) IS NOT NULL AND to_date_immutable({property}, {format}) <= to_date_immutable({value}, 'YYYY-MM-DD')"
+    "label": "Has maximum date",
+    "sql_template": "to_date_immutable({property}, {format}) IS NOT NULL AND to_date_immutable({property}, {format}) <= to_date_immutable({value}, 'YYYY-MM-DD')",
+    "type": "date",
+    "help_text": "Use the format YYYY-MM-DD, YYYY-MM or YYYY for year/month/day, year/month and year respectively"
   },
   "minimal_appearances": {
-    "sql_template": "array_length({property} || ARRAY[]::text[], 1) >= {value}"
+    "label": "Has minimal appearances",
+    "sql_template": "array_length({property} || ARRAY[]::text[], 1) >= {value}",
+    "type": "number"
   },
   "maximum_appearances": {
-    "sql_template": "array_length({property} || ARRAY[]::text[], 1) <= {value}"
+    "label": "Has maximum appearances",
+    "sql_template": "array_length({property} || ARRAY[]::text[], 1) <= {value}",
+    "type": "number"
   }
 }

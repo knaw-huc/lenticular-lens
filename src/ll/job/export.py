@@ -2,7 +2,6 @@ import csv
 import io
 import itertools
 
-from inspect import cleandoc
 from datetime import datetime
 
 from rdflib import Literal, URIRef, XSD, Graph
@@ -39,6 +38,10 @@ class Export:
     _predefined_export_only_prefix_mappings = {
         NS.RDF.prefix: str(NS.RDF.rdf),
         VoidPlus.ontology_prefix_ttl: VoidPlus.ontology
+    }
+    _predefined_export_only_reification_prefix_mappigs = {
+        NS.XSD.prefix: str(NS.XSD.xsd),
+        VoidPlus.resource_prefix: VoidPlus.resource
     }
 
     def __init__(self, job, type, id):
@@ -109,36 +112,15 @@ class Export:
         yield buffer.getvalue()
 
     def rdf_export_generator(self, link_pred_namespace, link_pred_shortname,
-                             export_metadata=True, export_linkset=True,
-                             reification='none', use_graphs=True, creator=None, publisher=None,
-                             validation_filter=Validation.ALL):
+                             export_linkset=True, export_metadata=True,
+                             export_validation_set=True, export_cluster_set=True,
+                             reification='none', creator=None, publisher=None, validation_filter=Validation.ALL):
         def rdf_namespaces_export():
             buffer = io.StringIO()
             buffer.write(F"{'#' * 110}\n#{'NAMESPACES':^108}#\n{'#' * 110}\n\n")
 
-            if export_metadata:
-                buffer.write(cleandoc(F"""
-                        {NS.RDF.prefix_ttl}
-                        {NS.RDFS.prefix_ttl}
-                        {NS.VoID.prefix_ttl}
-                        {NS.DCterms.prefix_ttl}
-                        {NS.Formats.prefix_ttl}
-                        {NS.CC.prefix_ttl}
-                        {NS.XSD.prefix_ttl}
-
-                        {VoidPlus.ontology_prefix_ttl}
-                        {VoidPlus.resource_prefix_ttl}
-                        {VoidPlus.linkset_prefix_ttl}
-                """) + '\n\n')
-            else:
-                buffer.write(cleandoc(F"""
-                        {NS.RDF.prefix_ttl}
-                        {VoidPlus.ontology_prefix_ttl}
-                """) + '\n\n')
-
             for prefix, uri in prefix_mappings.items():
-                if prefix not in predefined_prefix_mappings:
-                    buffer.write(F"@prefix {prefix:>{20}}: {URIRef(uri).n3()} .\n")
+                buffer.write(F"@prefix {prefix:>{20}}: {URIRef(uri).n3()} .\n")
 
             return buffer.getvalue()
 
@@ -146,19 +128,20 @@ class Export:
             yield rdf_namespaces_export()
 
             if export_metadata:
-                yield self._rdf_metadata_export(prefix_mappings, link_pred_shortname, creator, publisher)
+                yield self._rdf_metadata_export(ns_manager, link_pred_shortname, creator, publisher)
 
         link_pred = link_pred_shortname.split(':')
-        predefined_prefix_mappings = self._get_predefined_prefix_mappings(export_metadata)
-        prefix_mappings = self._determine_prefix_mappings(link_pred[0], link_pred_namespace,
-                                                          export_metadata, export_linkset)
+        prefix_mappings = self._determine_prefix_mappings(
+            link_pred[0], link_pred_namespace, export_linkset, export_metadata,
+            export_validation_set, export_cluster_set, reification != 'none')
+        ns_manager = self._get_namespace_manager(prefix_mappings)
 
         if export_linkset:
             links_iter = self._job.get_links(self._id, self._type, validation_filter=validation_filter)
             return itertools.chain(
                 namespaces_metadata_generator(),
-                self._rdf_linkset_export_generator(links_iter, link_pred_namespace + link_pred[1], prefix_mappings,
-                                                   reification, use_graphs))
+                self._rdf_linkset_export_generator(links_iter, link_pred_namespace + link_pred[1], ns_manager,
+                                                   reification, not export_metadata))
 
         return namespaces_metadata_generator()
 
@@ -166,19 +149,24 @@ class Export:
         return self._predefined_metadata_prefix_mappings.copy() \
             if export_metadata else self._predefined_export_only_prefix_mappings.copy()
 
-    def _determine_prefix_mappings(self, link_pred_prefix, link_pred_uri, export_metadata, export_linkset):
+    def _determine_prefix_mappings(self, link_pred_prefix, link_pred_uri, export_linkset, export_metadata,
+                                   export_validation_set, export_cluster_set, export_link_metadata):
         predefined_prefix_mappings = self._get_predefined_prefix_mappings(export_metadata)
 
         if export_metadata:
             for property in self._all_props:
                 predefined_prefix_mappings = {**predefined_prefix_mappings, **property.prefix_mappings}
 
-            # TODO: Better handling of matching method property value namespaces
-            for method_info in flatten([[mm.method_info, mm.method_sim_info] for mm in self._matching_methods]):
-                for prop_key in method_info.get('extra_properties', {}).keys():
-                    predicate = method_info['extra_properties'][prop_key]['predicate']
-                    if 'http://www.w3.org/2006/time#' in predicate and 'time' not in predefined_prefix_mappings:
-                        predefined_prefix_mappings['time'] = 'http://www.w3.org/2006/time#'
+            for [method_info, method_config] in flatten(
+                    [[[mm.method_info, mm.method_config],
+                      [mm.method_sim_info, mm.method_sim_config]] for mm in self._matching_methods]):
+                for prop_key in method_info.get('items', {}).keys():
+                    predicate_rdf_info = method_info['items'][prop_key].get('rdf')
+                    if predicate_rdf_info:
+                        predefined_prefix_mappings[predicate_rdf_info['prefix']] = predicate_rdf_info['uri']
+                        if method_config[prop_key] in predicate_rdf_info.get('values', {}):
+                            for value_rdf_info in predicate_rdf_info['values'][method_config[prop_key]]:
+                                predefined_prefix_mappings[value_rdf_info['prefix']] = value_rdf_info['uri']
 
             for transformer in self._all_transformers:
                 if transformer['name'] == 'STOPWORDS':
@@ -191,12 +179,16 @@ class Export:
             if link_pred_prefix not in predefined_prefix_mappings:
                 predefined_prefix_mappings[link_pred_prefix] = link_pred_uri
 
+            if export_link_metadata:
+                predefined_prefix_mappings = {**predefined_prefix_mappings,
+                                              **self._predefined_export_only_reification_prefix_mappigs}
+
             for ets in self._entity_type_selections:
                 predefined_prefix_mappings = {**predefined_prefix_mappings, **ets.collection.uri_prefix_mappings}
 
         return predefined_prefix_mappings
 
-    def _rdf_metadata_export(self, namespaces, link_pred_shortname, creator=None, publisher=None):
+    def _rdf_metadata_export(self, ns_manager, link_pred_shortname, creator=None, publisher=None):
         def header(x):
             liner = "\n"
             return F"{liner * 2}{'#' * 80:^110}\n{' ' * 15}#{x:^78}#\n{'#' * 80:^110}{liner * 3}"
@@ -400,33 +392,25 @@ class Export:
 
         def methods_signatures():
             def write_algorithm(method_config, method_info, tabs=1):
-                if method_info['threshold_range'] == ']0, 1]':
-                    buffer.write(n3_pred_val(VoidPlus.simThreshold_ttl,
-                                             Literal(method_config['threshold']).n3(ns_manager), tabs=tabs))
                 buffer.write(n3_pred_val(VoidPlus.thresholdRange_ttl,
                                          Literal(method_info['threshold_range']).n3(ns_manager), tabs=tabs))
 
-                for prop_key in method_info.get('extra_properties', {}).keys():
-                    predicate = method_info['extra_properties'][prop_key]['predicate']
+                for prop_key in method_info.get('items', {}).keys():
+                    if 'rdf' in method_info['items'][prop_key]:
+                        predicate_rdf_info = method_info['items'][prop_key]['rdf']
 
-                    value = method_config[prop_key]
-                    if 'values' in method_info['extra_properties'][prop_key]:
-                        value = method_info['extra_properties'][prop_key]['values'][value]
+                        values = method_config[prop_key]
+                        if values in predicate_rdf_info.get('values', {}):
+                            values = predicate_rdf_info['values'][values]
 
-                    # TODO: Better uri and namespace handling
-                    if isinstance(value, list):
-                        is_uri = isinstance(value[0], str) and value[0].startswith('http')
+                        if not isinstance(values, list):
+                            values = [values]
+
+                        is_uri_ref = isinstance(values[0], dict)
                         buffer.write(n3_pred_val(
-                            URIRef(predicate).n3(ns_manager),
-                            ', '.join([URIRef(v).n3(ns_manager)
-                                       if is_uri else Literal(v).n3(ns_manager) for v in value]),
-                            tabs=tabs))
-                    else:
-                        is_uri = isinstance(value, str) and value.startswith('http')
-                        buffer.write(n3_pred_val(
-                            URIRef(predicate).n3(ns_manager),
-                            URIRef(value).n3(ns_manager) if is_uri else Literal(value).n3(ns_manager),
-                            tabs=tabs))
+                            URIRef(predicate_rdf_info['predicate']).n3(ns_manager),
+                            ', '.join([URIRef(v['predicate']).n3(ns_manager) if is_uri_ref else
+                                       Literal(v).n3(ns_manager) for v in values]), tabs=tabs))
 
             buffer.write(header('METHOD SIGNATURES'))
 
@@ -656,7 +640,6 @@ class Export:
                     buffer.write("\n")
 
         buffer = io.StringIO()
-        ns_manager = self._get_namespace_manager(namespaces)
 
         generic_metadata()
         linkset_logic()
@@ -668,11 +651,9 @@ class Export:
 
         return buffer.getvalue()
 
-    def _rdf_linkset_export_generator(self, links_iter, link_predicate, namespaces,
+    def _rdf_linkset_export_generator(self, links_iter, link_predicate, ns_manager,
                                       reification='none', use_graphs=True):
         buffer = io.StringIO()
-        ns_manager = self._get_namespace_manager(namespaces)
-
         buffer.write(F"\n\n{'#' * 110}\n#{'ANNOTATED LINKSET':^108}#\n{'#' * 110}\n\n\n")
         if use_graphs:
             buffer.write(F"linkset:{self._job.job_id}-{self._id}\n{{\n")

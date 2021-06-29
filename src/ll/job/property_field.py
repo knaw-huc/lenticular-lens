@@ -58,6 +58,9 @@ class PropertyField:
 
             return False
 
+        if self.prop_label == 'uri':
+            return False
+
         return self._intermediate_property_path[-1]['to_collection'].columns[self.prop_label]['isList']
 
     @property

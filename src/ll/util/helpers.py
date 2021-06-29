@@ -1,8 +1,9 @@
 import re
+import json
 import datetime
-import jstyleson
 
 from psycopg2 import sql
+from collections import OrderedDict
 from os.path import join, dirname, realpath
 
 from ll.util.config_db import db_conn
@@ -19,7 +20,7 @@ def file_date():
 
 def get_json_from_file(filename):
     json_file = open(join(dirname(realpath(__file__)), '../../json', filename), 'r')
-    json_config = jstyleson.load(json_file)
+    json_config = json.load(json_file, object_pairs_hook=OrderedDict)
     json_file.close()
 
     return json_config

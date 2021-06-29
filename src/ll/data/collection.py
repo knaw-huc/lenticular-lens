@@ -172,9 +172,11 @@ class Collection:
                     for ns in uri_prefixes.copy():
                         common_prefix = commonprefix([uri[0], ns])
 
-                        prefix_allowed = common_prefix != '' and common_prefix != 'http'
+                        prefix_allowed = not common_prefix.startswith('urn:') \
+                                         and common_prefix not in ['', 'http', 'BlankNode']
                         if common_prefix.startswith('http://') or common_prefix.startswith('https://'):
-                            domain = common_prefix.replace('http://', '').replace('https://', '')
+                            domain = common_prefix.replace('http://', '').replace('https://', '') \
+                                .replace('BlankNode:', '')
                             prefix_allowed = '/' in domain
 
                         if prefix_allowed:

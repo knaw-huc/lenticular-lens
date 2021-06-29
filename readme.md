@@ -153,6 +153,13 @@ Example: `/download?endpoint=https://repository.goldenagents.org/v5/graphql&data
 
 Returns the stopwords for the given `dictionary`.
 
+---
+
+**URL**: `/methods`\
+**Method**: `GET`
+
+Returns the various available filter functions, matching methods and transformers.
+
 ### Authentication and authorization
 
 **URL**: `/login`\

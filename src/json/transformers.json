@@ -1,13 +1,149 @@
 {
-  "TO_NUMERIC_IMMUTABLE": "to_numeric_immutable({property})",
-  "TO_DATE_IMMUTABLE": "to_date_immutable({property}, {format})",
-  "STOPWORDS": "remove_stopwords({key}, {property})",
-  "TRANSFORM_LAST_NAME_FORMAT": "transform_last_name_format({property}, {infix})",
-  "LOWERCASE": "lower({property})",
-  "PREFIX": "{prefix} || {property}",
-  "SUFFIX": "{property} || {suffix}",
-  "REPLACE": "replace({property}, {from}, {to})",
-  "UNACCENT": "unaccent({property})",
-  "REGEXP_REPLACE": "regexp_replace({property}, {pattern}, {replacement}, {flags})",
-  "NFKC_NORMALIZE": "normalize({property}, nfkc)"
+  "TRANSFORM_LAST_NAME_FORMAT": {
+    "label": "Transform 'last name first' format",
+    "sql_template": "transform_last_name_format({property}, {infix})",
+    "items": {
+      "infix": {
+        "label": "Keep infix?",
+        "type": "boolean",
+        "default_value": true
+      }
+    }
+  },
+  "PREFIX": {
+    "label": "Prefix",
+    "sql_template": "{prefix} || {property}",
+    "items": {
+      "prefix": {
+        "label": "Prefix with",
+        "type": "string",
+        "size": "large",
+        "default_value": "",
+        "allow_empty_value": false
+      }
+    }
+  },
+  "SUFFIX": {
+    "label": "Suffix",
+    "sql_template": "{property} || {suffix}",
+    "items": {
+      "suffix": {
+        "label": "Suffix with",
+        "type": "string",
+        "size": "large",
+        "default_value": "",
+        "allow_empty_value": false
+      }
+    }
+  },
+  "REPLACE": {
+    "label": "Replace",
+    "sql_template": "replace({property}, {from}, {to})",
+    "items": {
+      "from": {
+        "label": "From",
+        "type": "string",
+        "size": "large",
+        "default_value": "",
+        "allow_empty_value": false
+      },
+      "to": {
+        "label": "To",
+        "type": "string",
+        "size": "large",
+        "default_value": "",
+        "allow_empty_value": true
+      }
+    }
+  },
+  "UNACCENT": {
+    "label": "Unaccent",
+    "sql_template": "unaccent({property})",
+    "items": {}
+  },
+  "NFKC_NORMALIZE": {
+    "label": "Unicode equivalence normalization (NFKC)",
+    "sql_template": "normalize({property}, nfkc)",
+    "items": {}
+  },
+  "REGEXP_REPLACE": {
+    "label": "Regular expression replace",
+    "sql_template": "regexp_replace({property}, {pattern}, {replacement}, {flags})",
+    "items": {
+      "pattern": {
+        "label": "Pattern",
+        "type": "string",
+        "default_value": "",
+        "allow_empty_value": false
+      },
+      "replacement": {
+        "label": "Replacement",
+        "type": "string",
+        "default_value": "",
+        "allow_empty_value": false
+      },
+      "flags": {
+        "label": "Flags",
+        "type": "string",
+        "size": "small",
+        "default_value": "ig",
+        "allow_empty_value": true
+      }
+    }
+  },
+  "STOPWORDS": {
+    "label": "Stopwords",
+    "sql_template": "remove_stopwords({key}, {property})",
+    "items": {
+      "dictionary": {
+        "label": "Dictionary",
+        "type": "choices",
+        "choices": {
+          "arabic": "Arabic",
+          "azerbaijani": "Azerbaijani",
+          "danish": "Danish",
+          "dutch": "Dutch",
+          "dutch_names": "Dutch names",
+          "english": "English",
+          "finnish": "Finnish",
+          "french": "French",
+          "german": "German",
+          "greek": "Greek",
+          "hungarian": "Hungarian",
+          "indonesian": "Indonesian",
+          "italian": "Italian",
+          "kazakh": "Kazakh",
+          "nepali": "Nepali",
+          "norwegian": "Norwegian",
+          "portuguese": "Portuguese",
+          "romanian": "Romanian",
+          "russian": "Russian",
+          "slovene": "Slovene",
+          "spanish": "Spanish",
+          "swedish": "Swedish",
+          "tajik": "Tajik",
+          "turkish": "Turkish"
+        },
+        "allow_empty_value": false
+      },
+      "additional": {
+        "label": "Specify additional stop words",
+        "type": "tags",
+        "default_value": [],
+        "allow_empty_value": true
+      }
+    }
+  },
+  "LOWERCASE": {
+    "internal": true,
+    "sql_template": "lower({property})"
+  },
+  "TO_NUMERIC_IMMUTABLE": {
+    "internal": true,
+    "sql_template": "to_numeric_immutable({property})"
+  },
+  "TO_DATE_IMMUTABLE": {
+    "internal": true,
+    "sql_template": "to_date_immutable({property}, {format})"
+  }
 }

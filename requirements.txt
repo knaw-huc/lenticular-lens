@@ -5,7 +5,6 @@ flask-pyoidc==3.7.0
 flask-socketio==5.1.0
 gunicorn==20.1.0
 eventlet==0.30.2
-jstyleson==0.0.2
 schema==0.7.4
 kitchen==1.2.6
 psycopg2-binary==2.9.1
@@ -15,6 +14,6 @@ rdflib==5.0.0
 requests==2.25.1
 unidecode==1.2.0
 xmltodict==0.12.0
-urllib3==1.26.5
+urllib3==1.26.6
 anytree==2.8.0
 sparqlwrapper==1.8.5
