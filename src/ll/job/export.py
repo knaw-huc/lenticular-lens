@@ -1,5 +1,5 @@
-import csv
 import io
+import csv
 import itertools
 
 from datetime import datetime
@@ -92,17 +92,18 @@ class Export:
         buffer = io.StringIO()
         writer = csv.writer(buffer)
 
-        writer.writerow(['Source URI', 'Target URI', 'Strength', 'Valid', 'Cluster ID'])
+        writer.writerow(['Source URI', 'Target URI', 'Strength', 'Valid', 'Cluster ID', 'Motivation'])
 
         i = 0
         for link in self._job.get_links(self._id, self._type, validation_filter=validation_filter):
             similarity = round(link['similarity'], 5) if link['similarity'] else 1
             cluster_id = link['cluster_id'] if link['cluster_id'] else ''
+            motivation = link['motivation'] if link['motivation'] else ''
 
             source_uri = link['source'] if link['link_order'] != 'target_source' else link['target']
             target_uri = link['target'] if link['link_order'] != 'target_source' else link['source']
 
-            writer.writerow([source_uri, target_uri, similarity, link['valid'], cluster_id])
+            writer.writerow([source_uri, target_uri, similarity, link['valid'], cluster_id, motivation])
 
             i += 1
             if i > 1000:

@@ -1,6 +1,5 @@
 import os
 import uuid
-from collections import OrderedDict
 
 import json
 import decimal
@@ -25,10 +24,10 @@ from ll.job.export import Export
 from ll.job.job import Job, Validation
 
 from ll.util.hasher import hash_string
-from ll.util.helpers import get_json_from_file
 from ll.util.logging import config_logger
 from ll.util.stopwords import get_stopwords
 from ll.util.config_db import listen_for_notify
+from ll.util.helpers import get_json_from_file
 
 from ll.data.collection import Collection
 from ll.data.timbuctoo_datasets import TimbuctooDatasets
