@@ -8,6 +8,7 @@ from unicodedata import normalize
 from ll.util.hasher import column_name_hash
 from ll.util.config_db import db_conn, fetch_many
 from ll.util.postgres_copy import prepare_for_copy
+from ll.util.prefix_builder import get_uri_local_name, get_namespace_prefix
 
 from ll.worker.job import WorkerJob
 from ll.data.timbuctoo import Timbuctoo
@@ -173,28 +174,26 @@ class TimbuctooJob(WorkerJob):
                     for ns in self._uri_prefixes:
                         common_prefix = commonprefix([uri[0], ns])
 
-                        prefix_allowed = not common_prefix.startswith('urn:') \
-                                         and common_prefix not in ['', 'http', 'BlankNode']
+                        prefix_allowed = common_prefix not in ['', 'http', 'BlankNode']
                         if common_prefix.startswith('http://') or common_prefix.startswith('https://'):
-                            domain = common_prefix.replace('http://', '').replace('https://', '') \
-                                .replace('BlankNode:', '')
+                            domain = common_prefix.replace('http://', '').replace('https://', '')
                             prefix_allowed = '/' in domain
 
                         if prefix_allowed:
                             prefix_found = True
 
-                            idx1 = common_prefix.rfind('/')
-                            idx2 = common_prefix.rfind('#')
-                            if (idx1 > -1 or idx2 > -1) and \
-                                    not (common_prefix.endswith('/') or common_prefix.endswith('#')):
-                                common_prefix = common_prefix[:idx1 + 1] if idx1 > idx2 else common_prefix[:idx2 + 1]
+                            if not common_prefix.endswith('/') and not common_prefix.endswith('#'):
+                                idx = [common_prefix.rfind('/'), common_prefix.rfind('#')]
+                                if max(idx) > -1:
+                                    common_prefix = common_prefix[:max(idx) + 1]
 
                             if ns != common_prefix and ns.startswith(common_prefix):
                                 self._uri_prefixes.remove(ns)
-                            self._uri_prefixes.add(common_prefix)
+                            if ns != common_prefix:
+                                self._uri_prefixes.add(common_prefix)
 
                     if not prefix_found:
-                        self._uri_prefixes.add(uri[0])
+                        self._uri_prefixes.add(uri[0].replace(get_uri_local_name(uri[0]), ''))
 
     def on_finish(self):
         if self._cursor is None:
@@ -202,9 +201,11 @@ class TimbuctooJob(WorkerJob):
                 cur.execute(sql.SQL('ANALYZE timbuctoo.{}').format(sql.Identifier(self._table_name)))
 
                 cur.execute('UPDATE timbuctoo_tables '
-                            'SET uri_prefix_mappings = %s, uri_prefixes = %s, update_finish_time = now() '
-                            'WHERE "table_name" = %s',
-                            (dumps(self._uri_prefix_mappings), list(self._uri_prefixes), self._table_name,))
+                            'SET uri_prefix_mappings = %s, dynamic_uri_prefix_mappings = %s, update_finish_time = now() '
+                            'WHERE "table_name" = %s', (dumps(self._uri_prefix_mappings), dumps({
+                    get_namespace_prefix(namespace): namespace
+                    for namespace in self._uri_prefixes
+                }), self._table_name,))
 
     def watch_process(self):
         pass

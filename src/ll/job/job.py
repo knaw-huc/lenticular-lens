@@ -436,10 +436,10 @@ class Job:
                     for ets in next(x for x in specs if x.id == result['spec_id']).all_entity_type_selections
                     for prefix, uri in ets.collection.uri_prefix_mappings.items()
                 },
-                'uri_prefixes': [
-                    uri
+                'dynamic_uri_prefix_mappings': {
+                    prefix: uri
                     for ets in next(x for x in specs if x.id == result['spec_id']).all_entity_type_selections
-                    for uri in ets.collection.uri_prefixes
-                ]
+                    for prefix, uri in ets.collection.dynamic_uri_prefix_mappings.items()
+                }
             }
         } for result in results]

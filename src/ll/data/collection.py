@@ -54,8 +54,8 @@ class Collection:
         return self.table_data['uri_prefix_mappings']
 
     @property
-    def uri_prefixes(self):
-        return self.table_data['uri_prefixes']
+    def dynamic_uri_prefix_mappings(self):
+        return self.table_data['dynamic_uri_prefix_mappings']
 
     @property
     def prefix_info(self):
@@ -150,7 +150,9 @@ class Collection:
     def determine_prefix_mappings(self):
         from uuid import uuid4
         from os.path import commonprefix
+
         from ll.util.config_db import fetch_many
+        from ll.util.prefix_builder import get_uri_local_name, get_namespace_prefix
 
         uri_prefix_mappings = {}
         uri_prefixes = set()
@@ -172,33 +174,33 @@ class Collection:
                     for ns in uri_prefixes.copy():
                         common_prefix = commonprefix([uri[0], ns])
 
-                        prefix_allowed = not common_prefix.startswith('urn:') \
-                                         and common_prefix not in ['', 'http', 'BlankNode']
+                        prefix_allowed = common_prefix not in ['', 'http', 'BlankNode']
                         if common_prefix.startswith('http://') or common_prefix.startswith('https://'):
-                            domain = common_prefix.replace('http://', '').replace('https://', '') \
-                                .replace('BlankNode:', '')
+                            domain = common_prefix.replace('http://', '').replace('https://', '')
                             prefix_allowed = '/' in domain
 
                         if prefix_allowed:
                             prefix_found = True
 
-                            idx1 = common_prefix.rfind('/')
-                            idx2 = common_prefix.rfind('#')
-                            if (idx1 > -1 or idx2 > -1) and \
-                                    not (common_prefix.endswith('/') or common_prefix.endswith('#')):
-                                common_prefix = common_prefix[:idx1 + 1] if idx1 > idx2 else common_prefix[:idx2 + 1]
+                            if not common_prefix.endswith('/') and not common_prefix.endswith('#'):
+                                idx = [common_prefix.rfind('/'), common_prefix.rfind('#')]
+                                if max(idx) > -1:
+                                    common_prefix = common_prefix[:max(idx) + 1]
 
                             if ns != common_prefix and ns.startswith(common_prefix):
                                 uri_prefixes.remove(ns)
-                            uri_prefixes.add(common_prefix)
+                            if ns != common_prefix:
+                                uri_prefixes.add(common_prefix)
 
                     if not prefix_found:
-                        uri_prefixes.add(uri[0])
+                        uri_prefixes.add(uri[0].replace(get_uri_local_name(uri[0]), ''))
 
             conn.cursor().execute('UPDATE timbuctoo_tables '
-                                  'SET uri_prefix_mappings = %s, uri_prefixes = %s '
-                                  'WHERE "table_name" = %s',
-                                  (dumps(uri_prefix_mappings), list(uri_prefixes), self.table_name,))
+                                  'SET uri_prefix_mappings = %s, dynamic_uri_prefix_mappings = %s '
+                                  'WHERE "table_name" = %s', (dumps(uri_prefix_mappings), dumps({
+                get_namespace_prefix(namespace): namespace
+                for namespace in uri_prefixes
+            }), self.table_name,))
 
     def get_collection_by_id(self, collection_id):
         return Collection(self.graphql_endpoint, self.dataset_id, collection_id,

@@ -8,7 +8,7 @@ import signal
 from enum import Enum
 
 from ll.util.config_db import db_conn
-from ll.util.logging import config_logger
+from ll.util.config_logging import config_logger
 
 from ll.worker.timbuctoo import TimbuctooJob
 from ll.worker.linkset import LinksetJob
