@@ -231,6 +231,12 @@ DECLARE
     notification json;
 BEGIN
     IF NEW IS NULL THEN
+        notification = json_build_object(
+            'graphql_endpoint', OLD.graphql_endpoint,
+            'dataset_id', OLD.dataset_id,
+            'collection_id', OLD.collection_id
+        );
+
         PERFORM pg_notify('timbuctoo_delete', notification::text);
     ELSIF OLD IS NULL OR NEW.rows_count != OLD.rows_count THEN
         notification = json_build_object(
@@ -253,6 +259,12 @@ DECLARE
     notification json;
 BEGIN
     IF NEW IS NULL THEN
+        notification = json_build_object(
+            'job_id', OLD.job_id,
+            'spec_type', CASE WHEN TG_TABLE_NAME = 'linksets' THEN 'linkset' ELSE 'lens' END,
+            'spec_id', OLD.spec_id
+        );
+
         PERFORM pg_notify('alignment_delete', notification::text);
     ELSIF OLD IS NULL OR NEW.status != OLD.status OR
        (TG_TABLE_NAME = 'linksets' AND NEW.links_progress != OLD.links_progress) THEN
@@ -277,6 +289,13 @@ DECLARE
     notification json;
 BEGIN
     IF NEW IS NULL THEN
+        notification = json_build_object(
+            'job_id', OLD.job_id,
+            'spec_type', OLD.spec_type,
+            'spec_id', OLD.spec_id,
+            'clustering_type', OLD.clustering_type
+        );
+
         PERFORM pg_notify('clustering_delete', notification::text);
     ELSIF OLD IS NULL OR NEW.status != OLD.status OR
        NEW.links_count != OLD.links_count OR NEW.clusters_count != OLD.clusters_count THEN
