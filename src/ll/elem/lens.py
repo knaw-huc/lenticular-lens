@@ -50,7 +50,7 @@ class Lens:
 
     @property
     def all_props(self):
-        return set().union(*[all_props for linkset in self.linksets for all_props in linkset.all_props])
+        return set(all_props for linkset in self.linksets for all_props in linkset.all_props)
 
     @property
     def similarity_logic_ops_sql(self):
