@@ -1,4 +1,6 @@
-translation_table = str.maketrans({'\\': r'\\\\', '\t': r'\\t', '\n': r'\\n'})
+translation_table = str.maketrans({'\\': r'\\\\',
+                                   '\b': r'\\b', '\f': r'\\f', '\n': r'\\n',
+                                   '\r': r'\\r', '\t': r'\\t', '\v': r'\\v'})
 array_translation_table = str.maketrans({'"': r'\\"'})
 
 
