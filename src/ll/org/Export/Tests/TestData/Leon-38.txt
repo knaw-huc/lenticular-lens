@@ -97,6 +97,7 @@ https://archief.amsterdam/indexen/deeds/171241c8-3f90-49db-84c0-f06bb6624333?eve
 https://archief.amsterdam/indexen/deeds/23aa5861-e139-4f03-b592-c1910d054794?event=Event1,https://archief.amsterdam/indexen/deeds/00055c72-1002-4873-8371-a392ccdaecbc?event=Event1,0.88889,rejected,PH0010598716681b9
 https://archief.amsterdam/indexen/deeds/3328b4e9-accf-41d8-b14b-1b8c2828a370?event=Event1,https://archief.amsterdam/indexen/deeds/00055c72-1002-4873-8371-a392ccdaecbc?event=Event1,1.00000,rejected,PH0010598716681b9
 https://archief.amsterdam/indexen/deeds/41612c44-831f-4636-964d-b434e022d8f6?event=Event1,https://archief.amsterdam/indexen/deeds/00055c72-1002-4873-8371-a392ccdaecbc?event=Event1,1.00000,rejected,PH0010598716681b9
+Process finished with exit code 0
 https://archief.amsterdam/indexen/deeds/49a56608-dd0e-416d-be5b-1ef485c4974e?event=Event1,https://archief.amsterdam/indexen/deeds/00055c72-1002-4873-8371-a392ccdaecbc?event=Event1,0.88889,rejected,PH0010598716681b9
 https://archief.amsterdam/indexen/deeds/4b929fcc-9e04-4c5d-b033-7e2e0047f870?event=Event1,https://archief.amsterdam/indexen/deeds/00055c72-1002-4873-8371-a392ccdaecbc?event=Event1,0.88889,rejected,PH0010598716681b9
 

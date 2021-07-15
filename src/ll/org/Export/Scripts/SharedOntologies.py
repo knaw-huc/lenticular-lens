@@ -30,7 +30,7 @@ class Namespaces:
     class RDF:
 
         # rdf = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-        rdf = ns.RDF
+        rdf = ns.RDF.__str__()
         prefix = F"@prefix {'rdf':>{PREF_SIZE}}: <{rdf}> ."
 
         type = F"{rdf}type"
@@ -42,7 +42,7 @@ class Namespaces:
     class RDFS:
 
         # rdfs = "http://www.w3.org/2000/01/rdf-schema#"
-        rdfs = ns.RDFS
+        rdfs = ns.RDFS.__str__()
         prefix = F"@prefix {'rdfs':>{PREF_SIZE}}: <{rdfs}> ."
 
         resource = F"{rdfs}Resource"
@@ -57,16 +57,19 @@ class Namespaces:
         comment = F"{rdfs}comment"
         comment_ttl = F"rdfs:comment"
 
+        seeAlso = F"{rdfs}seeAlso"
+        seeAlso_ttl = F"rdfs:seeAlso"
+
     class XSD:
 
         # xsd = 'http://www.w3.org/2001/XMLSchema#'
-        xsd = ns.XSD
+        xsd = ns.XSD.__str__()
         prefix = F"@prefix {'xsd':>{PREF_SIZE}}: <{xsd}> ."
 
     class OWL:
 
         # owl = "http://www.w3.org/2002/07/owl#"
-        owl = ns.OWL
+        owl = ns.OWL.__str__()
         prefix = F"@prefix {'owl':>{PREF_SIZE}}: <{owl}> ."
 
         sameAs = F"{owl}sameAs"
@@ -115,7 +118,7 @@ class Namespaces:
     class VoID:
 
         # void = "http://rdfs.org/ns/void#"
-        void = ns.VOID
+        void = ns.VOID.__str__()
         prefix = F"@prefix {'void':>{PREF_SIZE}}: <{void}> ."
 
         # A collection of RDF links between two void:Datasets.
@@ -187,7 +190,7 @@ class Namespaces:
         # https://www.w3.org/TR/2008/WD-skos-reference-20080829/skos.html
 
         # skos = "http://www.w3.org/2004/02/skos/core#"
-        skos = ns.SKOS
+        skos = ns.SKOS.__str__()
         prefix = F"@prefix {'skos':>{PREF_SIZE}}: <{skos}> ."
 
         # -------------------------------------------------- #
@@ -212,7 +215,7 @@ class Namespaces:
     class PROV:
 
         # prov = "http://www.w3.org/ns/prov#"
-        prov = ns.PROV
+        prov = ns.PROV.__str__()
         prefix = F"@prefix {'prov':>{PREF_SIZE}}: <{prov}> ."
 
         wasDerivedFrom = F"{prov}wasDerivedFrom"
@@ -228,7 +231,7 @@ class Namespaces:
 
     class DC:
 
-        dc = ns.DC
+        dc = ns.DC.__str__()
         prefix = F"@prefix {'dc':>{PREF_SIZE}}: <{dc}> ."
 
         language = F"{dc}language"
@@ -237,7 +240,7 @@ class Namespaces:
     class DCterms:
 
         # dcterms = "http://purl.org/dc/terms"
-        dcterms = ns.DCTERMS
+        dcterms = ns.DCTERMS.__str__()
         prefix = F"@prefix {'dcterms':>{PREF_SIZE}}: <{dcterms}> ."
 
         description = F"{dcterms}description"
@@ -270,7 +273,7 @@ class Namespaces:
     class FOAF:
 
         # foaf = "http://xmlns.com/foaf/0.1/"
-        foaf = ns.FOAF
+        foaf = ns.FOAF.__str__()
         prefix = F"@prefix {'foaf':>{PREF_SIZE}}: <{foaf}> ."
 
     class Units:
@@ -319,7 +322,7 @@ class Namespaces:
     class SIM:
 
         sim = "http://purl.org/ontology/similarity/"
-        prefix = F"@prefix {'pav':>{PREF_SIZE}}: <{sim}> ."
+        prefix = F"@prefix {'sim':>{PREF_SIZE}}: <{sim}> ."
 
         # weight - A weighting value bound to a sim:Association where a value of 0 implies two elements are not at all
         # associated and a higher value implies a closer association.

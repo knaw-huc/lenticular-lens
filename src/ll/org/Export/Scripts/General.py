@@ -22,6 +22,14 @@ from unidecode import unidecode
 #                                                                                                         #
 # #########################################################################################################
 
+def ERROR(page, function, location, message):
+
+    return F"\n{'File':15} : {page}.py\n" \
+        F"{'Function':15} : {function}\n" \
+        F"{'Whereabouts':15} : {location}\n" \
+       F"{'Message':15} : {message}\n" \
+       F"{'Error Message':15} : {traceback.format_exc()}\n"
+
 # CLEARS THE StringIO GIVEN OBJECT
 def clearBuffer(buffer):
 
@@ -61,17 +69,17 @@ def hasher(obj, size=15):
     # print(F"H{h.hexdigest()}")
     h = md5()
     h.update(bytes(obj.__str__(), encoding='utf-8'))
-    return F"H{h.hexdigest()[:size]}" if size else F"H{h.hexdigest()}"
+    return F"{h.hexdigest()[:size]}" if size else F"{h.hexdigest()}"
 
 
-# OFFERS TO CHOICE TO RANDOMIZE IT OR NOT
+# OFFERS CHOICE TO RANDOMIZE IT OR NOT
 def hasherBlake2b(msg, digest_size=8, randomize=False, seed=0):
 
     h = blake2b(digest_size=digest_size, salt=bytes(seed.__str__(), encoding='utf-8')) \
         if randomize is True else blake2b(digest_size=digest_size)
 
     h.update(bytes(msg.__str__(), encoding='utf-8'))
-    return F"H{h.hexdigest()}"
+    return F"{h.hexdigest()}"
 
 
 def hashNumber(text):
@@ -90,12 +98,12 @@ def hashIt(text):
     return hashed
 
 
-def deterministicHash(text):
+def deterministicHash(text, digest_size=8):
 
-    code = hasherBlake2b(str(text))
-    hashed = str(code).replace("-", "N") if str(code).__contains__("-") else "P{}".format(code)
+    code = hasherBlake2b(str(text), digest_size=digest_size)
+    # hashed = str(code).replace("-", "N") if str(code).__contains__("-") else "P{}".format(code)
     # print hashed
-    return hashed
+    return code
 
 
 def convertBytes(num):
@@ -128,6 +136,9 @@ def queryEndpoint(query="select * {?s ?p ?o.} LIMIT 10", endpoint=LOV):
     try:
         sparql = SPARQLWrapper(endpoint)
         sparql.setQuery(query)
+        # print(query)
+        # print(sparql)
+        # exit()
         sparql.setReturnFormat(JSON)
         # print(sparql.query().convert())
         return sparql.query().convert()
@@ -287,7 +298,8 @@ def validate_RDFStar_(file):
 
 def validateRDFStar(file, removeIt=True):
 
-    print(F"\n{'-' * 70}\n\tVALIDATING RDFStar FILE {fileSize(file)}\n{'-' * 70}")
+    center, line = 66, 70
+    print(F"\n{'':>16}{'-' * line:^{center}}\n{'|':>16}\t{F'VALIDATING RDFStar FILE {fileSize(file)}':^{center}}|\n{'':>16}{'-' * line:^{center}}\n")
     if 'trig' in file:
         temp = file.replace('.trig', '_rdf_check.trig')
     elif 'ttl' in file:
@@ -331,12 +343,13 @@ def validateRDFStar(file, removeIt=True):
         print(F"\n\t3. Removing the converted file from disc..\n\t{temp}")
         if isfile(temp) and removeIt is True:
             remove(temp)
-        print(F"\n\t{'4. Done in':.<50} {str(timedelta(seconds=time() - start))}")
+        print(F"\n\t{'4. Done in':.<53} {str(timedelta(seconds=time() - start))}")
 
 
 def validateRDF(file):
 
-    print(F"\n{'-' * 70}\n\tVALIDATING RDFStar FILE {fileSize(file)}\n{'-' * 70}")
+    center, line = 66, 70
+    print(F"\n{'':>16}{'-' * line:^{center}}\n{'|':>16}\t{F'VALIDATING RDF FILE {fileSize(file)}':^{center}}|\n{'':>16}{'-' * line:^{center}}\n")
 
     start = time()
     from pathlib import Path
@@ -347,7 +360,7 @@ def validateRDF(file):
         print("\n\t1. Checking the RDF file.")
         start = time()
         Dataset().parse(file, format="trig")
-        print(F"\n\t\t>>> ✅ The converted file \n\t\t[{file}] \n\t\tis in a valid RDFStar format! "
+        print(F"\n\t\t>>> ✅ The converted file \n\t\t[{file}] \n\t\tis in a valid RDF format! "
               F"\n\n\t\t>>> We therefore can highly ascertain that the original file "
               F"\n\t\t[{file}]\n\t\tis in a valid RDF format.")
         print("" if start is None else F"""\n\t2. {'Parsing time':.<50} {str(timedelta(seconds=time() - start))}""")
@@ -357,4 +370,4 @@ def validateRDF(file):
         print(F"\t\t\t>>> [DETAIL ERROR FROM validate_RDF] {err}")
 
     finally:
-        print(F"\n\t{'2. Done in':.<50} {str(timedelta(seconds=time() - start))}")
+        print(F"\n\t{'2. Done in':.<53} {str(timedelta(seconds=time() - start))}")

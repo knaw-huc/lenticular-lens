@@ -26,11 +26,12 @@ from ll.org.Export.Scripts.Variables import PREF_SIZE, LL
 class VoidPlus:
 
     genericPrefix = "voidPlus"
+    resource_ns = F"{LL}resource/"
 
     # ###############################################################################
     #                                     PREFIXES                                  #
     # ###############################################################################
-    ontology = F'{LL}void+/'
+    ontology = F'{LL}voidPlus/'
     ontology_prefix = F"@prefix {F'{genericPrefix}':>{PREF_SIZE}}: <{ontology}> ."
 
     algorithm = F"{ontology}matchingMethod/"
@@ -41,44 +42,80 @@ class VoidPlus:
 
     # TYPES
     Project = F'{ontology}Project'
-    Lens = F'{ontology}Lens'
 
     # ###############################################################################
     #                                   CLASSES                                     #
     # ###############################################################################
 
-    Linkset = F'{LL}ontology/Linkset'
+    Linkset = F'{ontology}Linkset'
     Linkset_ttl = F'{genericPrefix}:Linkset'
 
-    LogicFormulation = F'{LL}ontology/LinksetFormulation'
-    LogicFormulation_ttl = F'{genericPrefix}:LinksetFormulation'
+    Lens = F'{ontology}Lens'
+    Lens_ttl = F'{genericPrefix}:Lens'
 
-    MatchingMethod = F'{LL}ontology/MatchingMethod'
-    MatchingMethod_ttl = F'{genericPrefix}:MatchingMethod'
+    Cluster = F'{ontology}Cluster'
+    Cluster_ttl = F'{genericPrefix}:Cluster'
 
-    EntitySelection = F'{LL}ontology/ResourceSelection'
-    EntitySelection_ttl = F'{genericPrefix}:ResourceSelection'
+    Clusterset = F'{ontology}Clusterset'
+    Clusterset_ttl = F'{genericPrefix}:Clusterset'
 
-    PropertySelection = F'{LL}ontology/PropertySelection'
-    PropertySelection_ttl = F'{genericPrefix}:PropertySelection'
-
-    Validation = F'{LL}ontology/Validation'
+    Validation = F'{ontology}Validation'
     Validation_ttl = F'{genericPrefix}:Validation'
 
-    PropertyPartition = F'{LL}ontology/PropertyPartition'
+    Validationset = F'{ontology}Validationset'
+    Validationset_ttl = F'{genericPrefix}:Validationset'
+
+    ValidationFlag = F'{ontology}ValidationFlag'
+    ValidationFlag_ttl = F'{genericPrefix}:ValidationFlag'
+
+    LinksetLogicFormulation = F'{ontology}LinksetFormulation'
+    LinksetLogicFormulation_ttl = F'{genericPrefix}:LinksetFormulation'
+
+    LensFormulation = F'{ontology}LensFormulation'
+    LensFormulation_ttl = F'{genericPrefix}:LensFormulation'
+
+    MatchingMethod = F'{ontology}MatchingMethod'
+    MatchingMethod_ttl = F'{genericPrefix}:MatchingMethod'
+
+    EntitySelection = F'{ontology}ResourceSelection'
+    EntitySelection_ttl = F'{genericPrefix}:ResourceSelection'
+
+    # PropertySelection = F'{ontology}PropertySelection'
+    # PropertySelection_ttl = F'{genericPrefix}:PropertySelection'
+
+    PropertyPartition = F'{ontology}PropertyPartition'
     PropertyPartition_ttl = F'{genericPrefix}:PropertyPartition'
 
-    algoSequence = F'{LL}ontology/AlgorithmSequence'
+    algoSequence = F'{ontology}AlgorithmSequence'
     algoSequence_ttl = F'{genericPrefix}:AlgorithmSequence'
 
-    ClassPartition = F'{LL}ontology/ClassPartition'
+    ClassPartition = F'{ontology}ClassPartition'
     ClassPartition_ttl = F'{genericPrefix}:ClassPartition'
 
-    PartitionFormulation = F'{LL}ontology/PartitionFormulation'
+    PartitionFormulation = F'{ontology}PartitionFormulation'
     PartitionFormulation_ttl = F'{genericPrefix}:PartitionFormulation'
 
-    MatchingAlgorithm = F'{LL}ontology/MatchingAlgorithm'
+    MatchingAlgorithm = F'{ontology}MatchingAlgorithm'
     MatchingAlgorithm_ttl = F'{genericPrefix}:MatchingAlgorithm'
+
+    ClusteringAlgorithm = F'{ontology}ClusteringAlgorithm'
+    ClusteringAlgorithm_ttl = F'{genericPrefix}:ClusteringAlgorithm'
+
+    LensOperator = F'{ontology}LensOperator'
+    LensOperator_ttl = F'{genericPrefix}:LensOperator'
+
+
+    # ###############################################################################
+    #                            PREDEFINED RESOURCES                               #
+    # ###############################################################################
+    Linkset_prefix = F"@prefix {'linkset':>{PREF_SIZE}}: <{resource_ns}linkset#> ."
+    Lens_prefix = F"@prefix {'lens':>{PREF_SIZE}}: <{resource_ns}lens#> ."
+    LensOperator_prefix = F"@prefix {'operator':>{PREF_SIZE}}: <{resource_ns}lensOperator#> ."
+    Cluster_prefix = F"@prefix {'cluster':>{PREF_SIZE}}: <{resource_ns}cluster#> ."
+    Clusterset_prefix = F"@prefix {'clusterset':>{PREF_SIZE}}: <{resource_ns}clusterset#> ."
+    Validation_prefix = F"@prefix {'validation':>{PREF_SIZE}}: <{resource_ns}validation#> ."
+    Validationset_prefix = F"@prefix {'validationset':>{PREF_SIZE}}: <{resource_ns}validationset#> ."
+    ValidationFlag_prefix = F"@prefix {'flag':>{PREF_SIZE}}: <{resource_ns}validationFlag#> ."
 
     ##############################################################################################################
     #                                              GENERIC METADATA                                              #
@@ -108,22 +145,20 @@ class VoidPlus:
     # 	  ll_val:has-rejected                      6 ;
     # 	  ll_val:has-remaining                     1683 .
 
-    validation_tt = F"{genericPrefix}:hasValidation"
+    clusters = F"{ontology}clusters"
+    clusters_prefix = F"@prefix {F'{genericPrefix}':>{PREF_SIZE}}: <{ontology}> ."
+    clusters_ttl = F"{genericPrefix}:clusters"
 
-    contradictions_tt = F"{genericPrefix}:hasContradictions"
-
-    validations_tt = F"{genericPrefix}:hasValidations"
-    accepted_ttl = F"{genericPrefix}:hasAccepted"
-    rejected_ttl = F"{genericPrefix}:hasRejected"
-    remains_ttl = F"{genericPrefix}:hasRemaining"
-
-    cluster = F"{ontology}hasClusters"
-    cluster_prefix = F"@prefix {F'{genericPrefix}':>{PREF_SIZE}}: <{ontology}> ."
-    cluster_ttl = F"{genericPrefix}:hasClusters"
+    clusterset = F"{ontology}hasClusterset"
+    clusterset_prefix = F"@prefix {F'{genericPrefix}':>{PREF_SIZE}}: <{ontology}> ."
+    clusterset_ttl = F"{genericPrefix}:hasClusterset"
 
     formulation = F"{ontology}hasFormulation"
     formulation_prefix = F"@prefix {F'{genericPrefix}':>{PREF_SIZE}}: <{ontology}> ."
     formulation_ttl = F'{genericPrefix}:hasFormulation'
+
+    hasTarget = F"{ontology}hasTarget"
+    hasTarget_ttl = F"{genericPrefix}:hasTarget"
 
     # The void:Dataset that contains the resources in the subject position of this void:Linkset's triples.
     subTarget = F"{ontology}subjectsTarget"
@@ -132,6 +167,51 @@ class VoidPlus:
     # The void:Dataset that contains the resources in the object position of a void:Linkset's triples.
     objTarget = F"{ontology}objectsTarget"
     objTarget_ttl = F"{genericPrefix}:objectsTarget"
+
+    sourceEntities = F"{ontology}sourceEntities"
+    sourceEntities_ttl = F"{genericPrefix}:sourceEntities"
+
+    targetEntities = F"{ontology}targetEntities"
+    targetEntities_ttl = F"{genericPrefix}:targetEntities"
+
+    srcTrgEntities = F"{ontology}srcTrgEntities"
+    srcTrgEntities_ttl = F"{genericPrefix}:srcTrgEntities"
+
+    hasOperator = F"{ontology}hasOperator"
+    hasOperator_ttl = F"{genericPrefix}:hasOperator"
+    hasOperand = F"{ontology}hasOperand"
+    hasOperand_ttl = F"{genericPrefix}:hasOperand"
+
+    # ###############################################################################
+    #                                  CLUSTERS                                     #
+    # ###############################################################################
+
+    id_ttl = F"{genericPrefix}:id"
+    size_ttl = F"{genericPrefix}:nodes"
+    links_ttl = F"{genericPrefix}:links"
+    extended_ttl = F"{genericPrefix}:isExtended"
+    reconciled_ttl = F"{genericPrefix}:isReconciled"
+    largestNodeCount_ttl = F"{genericPrefix}:largestNodeCount"
+    largestLinkCount_ttl = F"{genericPrefix}:largestLinkCount"
+
+    # ###############################################################################
+    #                                  VALIDATION                                   #
+    # ###############################################################################
+
+    contradictions_ttl = F"{genericPrefix}:contradictions"
+    validations_ttl = F"{genericPrefix}:validations"
+    accepted_ttl = F"{genericPrefix}:accepted"
+    rejected_ttl = F"{genericPrefix}:rejected"
+    uncertain_ttl = F"{genericPrefix}:uncertain"
+    unchecked_ttl = F"{genericPrefix}:unchecked"
+    remains_ttl = F"{genericPrefix}:remaining"
+    motivation_ttl = F"{genericPrefix}:motivation"
+    has_validation_ttl = F"{genericPrefix}:hasValidation"
+    has_validation_status_ttl = F"{genericPrefix}:hasValidationStatus"
+    has_validationset_ttl = F"{genericPrefix}:hasValidationSet"
+
+    hasSourceEvidence_ttl = F"{genericPrefix}:hasSourceEvidence"
+    hasTargetEvidence_ttl = F"{genericPrefix}:hasTargetEvidence"
 
     # ###############################################################################
     #                             LOGIC FORMULA PARTS                               #
@@ -172,29 +252,29 @@ class VoidPlus:
     methodSequence_prefix = F"@prefix {F'{genericPrefix}':>{PREF_SIZE}}: <{ontology}> ."
     methodSequence_ttl = F'{genericPrefix}:hasAlgorithmSequence'
 
-    simThreshold = F"{ontology}hasSimilarityThreshold"
+    simThreshold = F"{ontology}similarityThreshold"
     simThreshold_prefix = F"@prefix {F'{genericPrefix}':>{PREF_SIZE}}: <{ontology}> ."
-    simThreshold_ttl = F'{genericPrefix}:hasSimilarityThreshold'
+    simThreshold_ttl = F'{genericPrefix}:similarityThreshold'
 
-    combiThreshold = F"{ontology}hasCombinationThreshold"
+    combiThreshold = F"{ontology}combinationThreshold"
     combiThreshold_prefix = F"@prefix {F'{genericPrefix}':>{PREF_SIZE}}: <{ontology}> ."
-    combiThreshold_ttl = F'{genericPrefix}:hasCombinationThreshold'
+    combiThreshold_ttl = F'{genericPrefix}:combinationThreshold'
 
-    thresholdRange = F"{ontology}hasSimilarityThresholdRange"
+    thresholdRange = F"{ontology}similarityThresholdRange"
     thresholdRange_prefix = F"@prefix {F'{genericPrefix}':>{PREF_SIZE}}: <{ontology}> ."
-    thresholdRange_ttl = F'{genericPrefix}:hasSimilarityThresholdRange'
+    thresholdRange_ttl = F'{genericPrefix}:similarityThresholdRange'
 
-    combiThresholdRange = F"{ontology}hasCombinationThresholdRange"
+    combiThresholdRange = F"{ontology}combinationThresholdRange"
     combiThresholdRange_prefix = F"@prefix {F'{genericPrefix}':>{PREF_SIZE}}: <{ontology}> ."
-    combiThresholdRange_ttl = F'{genericPrefix}:hasCombinationThresholdRange'
+    combiThresholdRange_ttl = F'{genericPrefix}:combinationThresholdRange'
 
     simOperator = F"{ontology}hasThresholdAcceptanceOperator"
     simOperator_prefix = F"@prefix {F'{genericPrefix}':>{PREF_SIZE}}: <{ontology}> ."
     simOperator_ttl = F'{genericPrefix}:hasThresholdAcceptanceOperator'
 
-    strength = F"{ontology}hasMatchingStrength"
+    strength = F"{ontology}matchingStrength"
     strength_prefix = F"@prefix {F'{genericPrefix}':>{PREF_SIZE}}: <{ontology}> ."
-    strength_ttl = F'{genericPrefix}:hasMatchingStrength'
+    strength_ttl = F'{genericPrefix}:matchingStrength'
 
     # A RESOURCE DESCRIBING THE SELECTED DATASET AND DATATYPE FOR A SELECTED PREDICATE AT THE SOURCE POSITION
     entitySelectionSubj = F"{ontology}hasSubjResourceSelection"
@@ -206,15 +286,19 @@ class VoidPlus:
     entitySelectionObj_prefix = F"@prefix {F'{genericPrefix}':>{PREF_SIZE}}: <{ontology}> ."
     entitySelectionObj_ttl = F'{genericPrefix}:hasObjResourceSelection'
 
-    # THE INTERMEIDATE DATASET
-    intermediateEntitySelection = F"{ontology}hasInterResourceSelection"
-    intermediateEntitySelectionPrefix = F"@prefix {F'{genericPrefix}':>{PREF_SIZE}}: <{ontology}> ."
-    intermediateEntitySelection_ttl = F'{genericPrefix}:hasInterResourceSelection'
+    # THE INTERMEDIATE DATASET
+    intermediateSubjEntitySelection = F"{ontology}hasInterSubjResourceSelection"
+    intermediateSubjEntitySelectionPrefix = F"@prefix {F'{genericPrefix}':>{PREF_SIZE}}: <{ontology}> ."
+    intermediateSubjEntitySelection_ttl = F'{genericPrefix}:hasInterSubjResourceSelection'
+
+    intermediateObjEntitySelection = F"{ontology}hasInterObjResourceSelection"
+    intermediateObjEntitySelectionPrefix = F"@prefix {F'{genericPrefix}':>{PREF_SIZE}}: <{ontology}> ."
+    intermediateObjEntitySelection_ttl = F'{genericPrefix}:hasInterObjResourceSelection'
 
     # THE URI OF GHE SELECTED ALGORITHM
-    method_hash = F"{ontology}hasMatchingMethodHash"
+    method_hash = F"{ontology}matchingMethodHash"
     method_hash_prefix = F"@prefix {F'{genericPrefix}':>{PREF_SIZE}}: <{ontology}> ."
-    method_hash_ttl = F'{genericPrefix}:hasMatchingMethodHash'
+    method_hash_ttl = F'{genericPrefix}:matchingMethodHash'
 
     sub_predicate_selected = F"{ontology}hasSubjPredicateSelection"
     sub_predicate_selected_prefix = F"@prefix {F'{genericPrefix}':>{PREF_SIZE}}: <{ontology}> ."
@@ -290,27 +374,27 @@ class VoidPlus:
     #                                 LENS OPERATORS                               #
     # ##############################################################################
 
-    operator = F"{ontology}lensOperator/"
+    operator = F"{ontology}lensOperator#"
 
     union = F"{operator}union"
-    union_prefix = F"@prefix {'ll_operator':>{PREF_SIZE}}: <{operator}> ."
-    union_ttl = F"ll_operator:union"
+    union_prefix = F"@prefix {'operator':>{PREF_SIZE}}: <{operator}> ."
+    union_ttl = F"operator:union"
 
     intersection = F"{operator}intersection"
-    intersection_prefix = F"@prefix {'ll_operator':>{PREF_SIZE}}: <{operator}> ."
-    intersection_ttl = F"ll_operator:intersection"
+    intersection_prefix = F"@prefix {'operator':>{PREF_SIZE}}: <{operator}> ."
+    intersection_ttl = F"operator:intersection"
 
     transitive = F"{operator}transitive"
-    transitive_prefix = F"@prefix {'ll_operator':>{PREF_SIZE}}: <{operator}> ."
-    transitive_ttl = F"ll_operator:transitive"
+    transitive_prefix = F"@prefix {'operator':>{PREF_SIZE}}: <{operator}> ."
+    transitive_ttl = F"operator:transitive"
 
     difference = F"{operator}difference"
-    difference_prefix = F"@prefix {'ll_operator':>{PREF_SIZE}}: <{operator}> ."
-    difference_ttl = F"ll_operator:difference"
+    difference_prefix = F"@prefix {'operator':>{PREF_SIZE}}: <{operator}> ."
+    difference_ttl = F"operator:difference"
 
     composition = F"{operator}composition"
-    composition_prefix = F"@prefix {'ll_operator':>{PREF_SIZE}}: <{operator}> ."
-    composition_ttl = F"ll_operator:composition"
+    composition_prefix = F"@prefix {'operator':>{PREF_SIZE}}: <{operator}> ."
+    composition_ttl = F"operator:composition"
 
     # ##############################################################################
     #                             ...................                             #
@@ -328,9 +412,9 @@ class VoidPlus:
     view_prefix = F"@prefix {F'{genericPrefix}':>{PREF_SIZE}}: <{ontology}> ."
     view_ttl = F"{genericPrefix}:hasView"
 
-    cluster_ID = F"{ontology}hasClustersID"
+    cluster_ID = F"{ontology}hasClusterID"
     cluster_ID_prefix = F"@prefix {F'{genericPrefix}':>{PREF_SIZE}}: <{ontology}> ."
-    cluster_ID_ttl = F"{genericPrefix}:hasClustersID"
+    cluster_ID_ttl = F"{genericPrefix}:hasClusterID"
 
     cluster_size = F"{ontology}hasClusterSize"
     cluster_size_prefix = F"@prefix {F'{genericPrefix}':>{PREF_SIZE}}: <{ontology}> ."
@@ -344,4 +428,4 @@ class VoidPlus:
     #                                    LINKSET                                  #
     # ##############################################################################
 
-    link_validation_tt = F"{genericPrefix}:hasLinkValidation"
+

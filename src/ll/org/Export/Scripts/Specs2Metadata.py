@@ -20,6 +20,11 @@ from anytree import Node, RenderTree, DoubleStyle, PostOrderIter
 from rdflib import Graph
 import ll.org.Export.Scripts.CountryCode as Country
 
+import traceback
+from time import time
+from ll.org.Export.Scripts.General import getUriLocalNamePlus
+from ll.org.Export.Scripts.LinkPredicates import LinkPredicates
+
 
 RSC_SELECTION = {}
 SAME_AS = Sns.OWL.sameAs_ttl
@@ -27,11 +32,11 @@ MANAGER = Graph().namespace_manager
 DEFAULT_LICENCE = Sns.DCterms.license_ttl
 GET_LOGIC_OPERATOR = lambda operator: FuzzyNorms.LogicOperations.operator_format[operator.lower()]
 CSV_HEADERS = {
-    "Valid": VoidPlus.link_validation_tt,
+    "Valid": VoidPlus.has_validation_status_ttl,
     "Max Strength": VoidPlus.strength_ttl,
     "Cluster ID": VoidPlus.cluster_ID_ttl
 }
-NORMSs = [
+NORMS = [
 
     'AND', 'OR',
 
@@ -39,10 +44,21 @@ NORMSs = [
     'AND [Nilpotent Minimum (⊤nM)]', 'AND [Łukasiewicz t-norm (⊤Luk)]', 'AND [Drastic t-norm (⊤D)]',
 
     'OR [Maximum s-norm (⊥max)]', 'OR [Probabilistic Sum (⊥sum)]', 'OR [Bounded Sum (⊥Luk)]',
-    'OR [Drastic s-norm (⊥D)]', 'OR [Nilpotent Maximum (⊥nM)]', 'OR [Einstein Sum (⊥D)]']
+    'OR [Drastic s-norm (⊥D)]', 'OR [Nilpotent Maximum (⊥nM)]', 'OR [Einstein Sum (⊥D)]'
+]
 space = "    "
 language_code = Sns.ISO()
+CUMMULATED_METADATA = Buffer()
 
+
+def mainHeader(message, linesAfter=1):
+    liner = "\n"
+    return F"""{'#' * 110}\n#{F'{message.upper()}':^108}#\n{'#' * 110}{liner * linesAfter}"""
+
+
+def subHeader(message, linesBefore=2, linesAfter=2):
+    liner = "\n"
+    return F"{liner * linesBefore}\n{'#'*80:^110}\n{' '*15}#{message.upper():^78}#\n{'#'*80:^110}{liner * linesAfter}"
 
 
 # CLEARS THE StringIO GIVEN OBJECT
@@ -83,11 +99,12 @@ def expression_generator(postOrder):
 
     temporary = []
     new = []
-
     for item in postOrder:
-
+        item = item.strip()
         # NOT AN OPERATOR
-        if item.strip() and item.strip().startswith("AND") is False and item.strip().startswith("OR") is False:
+        # if item and item.startswith("AND") is False and item.startswith("OR") is False:
+        if item and True not in [item.startswith(operator.upper())
+                                 for operator in ['AND', 'OR', 'UNION', 'INTERSECTION', 'DIFFERENCE']]:
             temporary.append(item)
 
         else:
@@ -187,6 +204,24 @@ def rdfSAlgorithmSequence(sequence: list, auto=True):
     return triples, code
 
 
+# Given a registered namespace such as http://purl.org/dc/terms/,
+# return the query for fetching the URI's preferred prefix which is dcterms
+def getLovPrefixes(namespace):
+
+    return F"""
+    PREFIX vann:<http://purl.org/vocab/vann/>
+    PREFIX voaf:<http://purl.org/vocommons/voaf#>
+
+    ### Vocabularies contained in LOV and their prefix
+    SELECT DISTINCT ?output {{
+        GRAPH <https://lov.linkeddata.es/dataset/lov>{{
+            ?vocab a voaf:Vocabulary;
+                   vann:preferredNamespacePrefix ?output ;
+                   vann:preferredNamespaceUri "{namespace}" .
+    }}}}
+        """
+
+
 # Given a URI such as http://www.w3.org/2004/02/skos/core#exactMatch
 # reconstruct it in turtle format as skos:exactMatch,
 # THIS FUNCTION ALSO UPDATES THE VARIABLE auto_prefixes
@@ -196,7 +231,7 @@ def uri2ttl(uri, auto_prefixes):
     if Grl.isNtFormat(uri):
         uri = Grl.undoNtFormat(uri)
 
-    try:
+    if True:
 
         # Get the local name of the URI
         rsc_name = Grl.getUriLocalNamePlus(uri=uri, sep="_")
@@ -222,7 +257,7 @@ def uri2ttl(uri, auto_prefixes):
                 code = Grl.hasher(rsc_namespace.replace(prefix, ""))
 
                 if prefix[0] in digits:
-                    prefix = F"N{prefix}"
+                    prefix = F"N{prefix.replace('.', '').replace(',', '')}"
                 rsc_prefix = F"""{prefix.replace('-', '_')}_{code[:5]}"""
 
             # Update the global prefix dictionary
@@ -232,15 +267,20 @@ def uri2ttl(uri, auto_prefixes):
         turtle = F"{rsc_prefix}:{rsc_name}" if rsc_prefix is not None and not Grl.isNumber(rsc_prefix) else URIRef(
             uri).n3(MANAGER)
 
-        return rsc_prefix, rsc_namespace, rsc_name, turtle
+        return {"prefix": rsc_prefix, "namespace": rsc_namespace, "local_name": rsc_name, "short": turtle}
 
-    except Exception as err:
-        print(F">>> [ERROR FROM uri_2_turtle] URI: \n{space}{uri:30}\n{space}{err}\n")
+    # except Exception as err:
+    #     print(F">>> [ERROR FROM uri_2_turtle] URI: \n{space}{uri:30}\n{space}{err}\n")
 
-
+uri2ttl('http://www.vondel.humanities.uva.nl/ecartico/persons/4706', {})
+uri2ttl('http://www.humanities.uva.nl/dataset/persons/4706', {})
+uri2ttl('http://purl.org/vocab/bio/0.1/example-1', {})
+uri2ttl('http://purl.org/vocab/bios/0.1/example-1', {})
 # Given a turtle format such as owl:sameAs or skos:exactMatch,
 # reconstruct it as http://www.w3.org/2004/02/skos/core#exactMatch and
 # http://www.w3.org/2002/07/owl#
+
+
 def reconstructTurtle(turtle, auto_prefixes):
 
     if not turtle.__contains__("://"):
@@ -270,36 +310,39 @@ def reconstructTurtle(turtle, auto_prefixes):
         return turtle
 
 
-# Given a registered namespace such as http://purl.org/dc/terms/,
-# return the query for fetching the URI's preferred prefix which is dcterms
-def getLovPrefixes(namespace):
-
-    return F"""
-    PREFIX vann:<http://purl.org/vocab/vann/>
-    PREFIX voaf:<http://purl.org/vocommons/voaf#>
-
-    ### Vocabularies contained in LOV and their prefix
-    SELECT DISTINCT ?output {{
-        GRAPH <https://lov.linkeddata.es/dataset/lov>{{
-            ?vocab a voaf:Vocabulary;
-                   vann:preferredNamespacePrefix ?output ;
-                   vann:preferredNamespaceUri "{namespace}" .
-    }}}}
-        """
-
-
 # RETURNS A PREDICATE VALUE LINE
-def preVal(predicate, value, end=False, line=True):
+def preVal(predicate, value, end=False, line=True, position=1):
 
     new_line = '\n' if line is True else ''
-    tab = F'{space}' if line is True else ''
+    tab = F'{space*position}' if line is True else ''
     return F"{tab}{predicate:{Vars.PRED_SIZE}}{value} {'.' if end is True else ';'}{new_line}"
 
 
-# RETURN THE GENERIC NAMESPACES USED IN A LINKSET
-def linksetNamespaces(automated: dict):
+def objectList(objects, padding=1):
+    return F" ,\n{space * padding}{' ' * Vars.PRED_SIZE}".join(Rsc.ga_resource_ttl(elt) for elt in objects)
 
-    names = F"""{'#'*110}\n#{'NAMESPACES':^108}#\n{'#'*110}\n
+
+def validationGraphs(set_id, validations):
+    if not validations:
+        return None
+    return F" ,\n{' ' * (Vars.PRED_SIZE + 4)}".join(
+        Rsc.validationset_ttl(F"{Grl.deterministicHash(validation)}-{set_id}") for validation in validations)
+
+
+# RETURN THE GENERIC NAMESPACES USED IN A LINKSET
+def linksetNamespaces(automated: dict, isValidated: bool, isClustered: bool):
+
+    # TODO: make sure that the automated namespace dictionary does
+    #  not duplicate the predefined shared or specific namespaces
+
+    tab = "\t"
+    new = "\n"
+    validation = F"{new}{tab}{VoidPlus.Validation_prefix if isValidated else ''}"
+    cluster = F"{new}{tab}{VoidPlus.Cluster_prefix if isClustered else ''}"
+    validation_set = F'' if isValidated is False else F"{new}{tab}{Rsc.validationset_prefix}"
+    clustered = '' if isClustered is False else F"{new}{tab}{Rsc.clusterset_prefix}"
+
+    names = F"""{mainHeader('NAMESPACES')}
 
 ### PREDEFINED SHARED NAMESPACES    
     {Sns.RDF.prefix}
@@ -315,15 +358,14 @@ def linksetNamespaces(automated: dict):
 ### PREDEFINED SPECIFIC NAMESPACES
     {VoidPlus.ontology_prefix}
     {Rsc.resource_prefix}
-    {Rsc.linkset_prefix}
+    {Rsc.linkset_prefix}{cluster}{clustered}{validation}{validation_set}"""
 
-### AUTOMATED / EXTRACTED NAMESPACES
-    """
     if automated:
+        names += "\n\n### AUTOMATED / EXTRACTED NAMESPACES"
         for count, (namespace, prefix) in enumerate(automated.items()):
-            names += F"{'    ' if count > 0 else ''}@prefix {prefix:>{Vars.PREF_SIZE}}: {URIRef(namespace).n3(MANAGER)} .\n"
+            names += F"{'    ' if count > 0 else ''}\n\t@prefix {prefix:>{Vars.PREF_SIZE}}: {URIRef(namespace).n3(MANAGER)} ."
 
-    return names
+    return names + "\n"
 
 
 # THE UNBOXING OF A FILTER LOGIC BOX
@@ -407,17 +449,16 @@ def unboxingFilter(logicBox, checker):
 
 
 # THE UNBOXING OF THE ENTITY SELECTION FILTER
-#  ### RESOURCE
-def unboxingFilterBox(job_id, collection, checker):
+def unboxingFilterBox(job_id, collection, checker, prefixes):
 
     global RSC_SELECTION
     writer = Buffer()
-    id = collection[Vars.id]
+    identifier = collection[Vars.id]
 
     label = collection[Vars.label]
     description = collection[Vars.description] if Vars.description in collection else ""
     dataset = collection[Vars.dataset]
-    RSC_SELECTION[id] = dataset
+    RSC_SELECTION[identifier] = dataset
     predicate_selections, sequences, root = unboxingFilter(logicBox=collection['filter'], checker=checker)
 
     # FORMULATION HAS CLASS PARTITION
@@ -431,7 +472,7 @@ def unboxingFilterBox(job_id, collection, checker):
         Node(class_partition_rsc, parent=root.parent)
         expression, f_tree = getExpressionAndTree(root.parent)
 
-    formulation_code = Rsc.ga_resource_ttl(F"SelectionFormulation-{Grl.deterministicHash(expression)}-{id}")
+    formulation_code = Rsc.ga_resource_ttl(F"SelectionFormulation-{Grl.deterministicHash(expression)}-{identifier}")
     check_code = Grl.deterministicHash(F"{expression}{dataset['dataset_id']}{dataset['collection_id']}")
 
     if check_code not in checker:
@@ -440,8 +481,8 @@ def unboxingFilterBox(job_id, collection, checker):
         return ""
 
     # WRITE THE RESOURCE SELECTION ID AND THE TYPE OF THE RESOURCE
-    writer.write(F"\n\n### RESOURCE {id}\n")
-    writer.write(F"{Rsc.ga_resource_ttl(F'ResourceSelection-{job_id}-{id}')}\n\n")
+    writer.write(F"\n\n### RESOURCE {identifier}\n")
+    writer.write(F"{Rsc.ga_resource_ttl(F'ResourceSelection-{job_id}-{identifier}')}\n\n")
     writer.write(preVal('a', F"{Sns.VoID.dataset_ttl}, {VoidPlus.EntitySelection_ttl}"))
 
     # LABEL AND  DESCRIPTION IF THEY EXISTS
@@ -451,22 +492,37 @@ def unboxingFilterBox(job_id, collection, checker):
     if len(description.strip()) > 0:
         writer.write(preVal(Sns.DCterms.description_ttl, Literal(description).n3(MANAGER)))
 
-    # DATASET AND DATA-TYPE
+    # THE RESOURCE IS A CLASS PARTITION WHICH IS A SUBSET OF THE SELECTED DATASET
     writer.write(preVal(VoidPlus.subset_of_ttl, Rsc.ga_resource_ttl(dataset['dataset_id'])))
 
-    # DATASET NAME
+    # DATASET NAME USINg DC-TERMs IDENTIFIER
     writer.write(preVal(Sns.DCterms.identifier_ttl, Rsc.literal_resource(dataset['name'])))
 
-    # FORMULATION
+    # THE FORMULATION OF SELECTED DATASET WHICH SPECIFIES THE CLASS PARTITION
     writer.write(preVal(VoidPlus.hasFormulation_ttl, formulation_code, end=True))
 
     # FORMULATION HAS CLASS PARTITION
-    writer.write(F"\n\n### CLASS PARTITION OF RESOURCE {id}\n")
+    writer.write(F"\n\n### CLASS PARTITION OF RESOURCE {identifier}\n")
     writer.write(F"{class_partition_rsc}\n")
     writer.write(preVal('a', F"{VoidPlus.ClassPartition_ttl}"))
+
     writer.write(preVal(Sns.VoID.voidClass_ttl, Rsc.ga_resource_ttl(dataset['short_uri']), end=True))
 
-    writer.write(F"\n\n### FORMULATION OF RESOURCE {id}\n")
+    # AN UPDATE OF THE PREFIX DICTIONARY IS REQUIRES DUE TO THE LINE ABOVE
+    if dataset['long_uri'] == dataset['short_uri']:
+        local_name = Grl.getUriLocalNamePlus(dataset['long_uri'])
+        prefix_uri = dataset['long_uri'].replace(local_name, '')
+        prefix = F"{getUriLocalNamePlus(prefix_uri)}_{Grl.deterministicHash(dataset['long_uri'], 2)}"
+        if prefix_uri not in prefixes:
+            prefixes[prefix_uri] = prefix
+    else:
+        ns = dataset['short_uri'].split(":")
+        if len(ns) > 1:
+            key = dataset['long_uri'].replace(ns[1], '')
+            if key not in prefixes:
+                prefixes[key] = ns[0]
+
+    writer.write(F"\n\n### FORMULATION OF RESOURCE {identifier}\n")
     writer.write(F"{formulation_code}\n\n")
     writer.write(preVal('a', F"{VoidPlus.PartitionFormulation_ttl}"))
     writer.write(preVal(VoidPlus.hasItem_ttl, class_partition_rsc, end=True if not predicate_selections else False))
@@ -492,6 +548,8 @@ def unboxingFilterBox(job_id, collection, checker):
 def printSpecs(data, tab=1):
 
     pad = 60
+    if not data:
+        return "THE OBJECT OF printSpecs IS EMPTY"
 
     for i, (key, val) in enumerate(data.items()):
 
@@ -500,7 +558,7 @@ def printSpecs(data, tab=1):
             if tab == 1:
                 print(F"\n{tab * space} {key} {{{i+1}/{len(data)}}}")
             else:
-                print(F"{tab * space}- {key} {{{i+1}/{len(data)}}}")
+                print(F"{tab * space} - {key} {{{i+1}/{len(data)}}}")
             printSpecs(val, tab=tab + 1)
 
         # LIST OBJECT
@@ -508,7 +566,7 @@ def printSpecs(data, tab=1):
             if tab == 1:
                 print(F"\n{tab * space} {key} [{len(val)}]")
             else:
-                print(F"{tab * space}- {key} [{len(val)}]")
+                print(F"{tab * space} - {key} [{len(val)}]")
 
             for counter, item in enumerate(val):
 
@@ -521,7 +579,7 @@ def printSpecs(data, tab=1):
                 else:
                     print(F"{tab * space}{space}  {counter+1}. {item}")
         else:
-            print(F"{tab * space}- {key:{pad - (tab - 1) * 4}}: {val}")
+            print(F"{tab * space} -> {key:{pad - (tab - 1) * 4}}: {val}")
 
 
 # CODE TO GENERATE THE FORMULA EXPRESSION OF THE FILTER LOGIC BOX OF THE SELECTED ENTITY
@@ -598,63 +656,752 @@ def method_formula(filter_list, parent=None):
             Node(code, parent=parent)
 
 
+# CHECKS THE CORRECTNESS OF GHE LOCAL NAME IN A TURTLE RDF FORMAT
+def checkLocalName(string):
+
+    """
+    This code checks whether the provided local name of a turtle RDF format is correct indeed.
+    It returns TRUE if the input string does not contain irregularities and FALSE otherwise.
+    For example:
+        - in [sem:#Time], "#Time" is not a correct local name.
+        - in [ns2:ontology/HuwelijkseVoorwaarden] "ontology/HuwelijkseVoorwaarden" is not a correct local name
+    """
+
+    if True in [s in ['/', '#', '\\'] for s in string]:
+        # print(F"{string:20} : {False}")
+        return False
+    # print(F"{string:20} : {True}")
+    return True
+
+
+def method_conditions(method_conditions_list, entity_type_selections, dataset_specs, prefixes):
+
+    problems = {}
+
+    def intermediate(i_path):
+
+        keys = ['intermediate_source', 'intermediate_target']
+        ent_sel_id = entity_type_selections[i_path['entity_type_selection']]['dataset']['dataset_id']
+        ent_type = entity_type_selections[i_path['entity_type_selection']]['dataset']['collection_id']
+
+        for key in keys:
+
+            temp_ent_type = ent_type
+            s_uris, l_uris = [], []
+
+            # SINGLE PROPERTY HAS BEEN SELECTED
+            if len(i_path[key][0]) == 1:
+
+                l_uri = dataset_specs[
+                    ent_sel_id]['collections'][temp_ent_type]['properties'][i_path[key][0][0]]['uri']
+
+                s_uri = dataset_specs[
+                    ent_sel_id]['collections'][temp_ent_type]['properties'][i_path[key][0][0]]['shortenedUri']
+
+                # Collect namespaces
+                if s_uri:
+                    ns = s_uri.split(':')
+                    if len(ns) == 2:
+                        if l_uri and checkLocalName(ns[1]) is False:
+                            ns[1] = getUriLocalNamePlus(l_uri)
+                            s_uri = F"{ns[0]}:{ns[1]}"
+
+                        ns[1] = l_uri.replace(ns[1], '') if l_uri else "http://problem/long-uri-not-provided"
+                        if ns[1] not in prefixes:
+                            prefixes[ns[1]] = ns[0]
+
+                s_uris.append(s_uri)
+                l_uris.append(l_uri)
+
+            # A PROPERTY PATH HAS BEEN SELECTED
+            else:
+
+                for features in i_path[key]:
+
+                    for idx, feature in enumerate(features):
+
+                        if (idx + 1) % 2 != 0:
+
+                            if 'uri' == feature:
+                                l_uri = feature
+                                s_uri = feature
+
+                            else:
+                                l_uri = dataset_specs[ent_sel_id][
+                                    'collections'][temp_ent_type]['properties'][feature]['uri']
+
+                                s_uri = dataset_specs[ent_sel_id][
+                                    'collections'][temp_ent_type]['properties'][feature]['shortenedUri']
+
+                            # Collect namespaces
+                            if l_uri and s_uri and l_uri != s_uri:
+
+                                ns = s_uri.split(':')
+                                if len(ns) == 2:
+                                    if checkLocalName(ns[1]) is False:
+                                        ns[1] = getUriLocalNamePlus(l_uri)
+                                        s_uri = F"{ns[0]}:{ns[1]}"
+
+                                    ns[1] = l_uri.replace(ns[1], '')
+                                    if ns[1] not in prefixes:
+                                        prefixes[ns[1]] = ns[0]
+
+                            if l_uri is None and feature not in problems:
+                                problems[feature] = True
+                                print(F"\n\t{len(problems):3}. DATA PROBLEM: Long URI is none.\n"
+                                      F"\n\t\t\t{entity_type_selections[i_path['entity_type_selection']]['label']}"
+                                      F"\n\t\t\t{feature} ==-> [ short: {s_uri} ] [ long: {l_uri} ]")
+
+                            # UPDATE SHORT AND LONG URI
+                            s_uris.append(s_uri)
+                            l_uris.append(l_uri)
+
+                        else:
+                            temp_ent_type = feature
+
+                            # print(F"{e_type} -> {dataset_specs[id]['collections'][e_type]['shortenedUri']}")
+                            if temp_ent_type in dataset_specs[ent_sel_id]['collections']:
+                                s_uri = dataset_specs[ent_sel_id]['collections'][temp_ent_type]['shortenedUri']
+                                l_uri = dataset_specs[ent_sel_id]['collections'][temp_ent_type]['uri']
+                            else:
+                                s_uri = temp_ent_type
+                                l_uri = temp_ent_type
+
+                            # Collect namespaces
+                            if l_uri != s_uri:
+                                ns = s_uri.split(':')
+                                if len(ns) == 2:
+                                    if checkLocalName(ns[1]) is False:
+                                        ns[1] = getUriLocalNamePlus(l_uri)
+                                        s_uri = F"{ns[0]}:{ns[1]}"
+                                    ns[1] = l_uri.replace(ns[1], '')
+                                    if ns[1] not in prefixes:
+                                        prefixes[ns[1]] = ns[0]
+
+                            s_uris.append(s_uri)
+                            l_uris.append(l_uri)
+
+            # update
+            i_path[F'short_{key}'] = s_uris
+            i_path[F'long_{key}'] = l_uris
+
+    for method in method_conditions_list:
+
+        try:
+
+            if 'conditions' in method:
+                method_conditions(method['conditions'], entity_type_selections, dataset_specs, prefixes)
+
+            else:
+                # print("\n-->", method['method'])
+                if 'date_part' in method['method'] and Sns.Time.time not in prefixes:
+                    prefixes[Sns.Time.time] = "time"
+
+                if 'intermediate_source' in method['method']['config']:
+                    method_config = method['method']['config']
+                    entity_type_selection_id = method_config['entity_type_selection']
+                    intermediate(method_config)
+                    method_config[entity_type_selection_id] = entity_type_selections[entity_type_selection_id]
+
+                for rsc_trg in ['sources', 'targets']:
+
+                    # A DICTIONARY OF SELECTED ENTITY-TYPE IDS
+                    for e_sel_idx, property_list in method[rsc_trg]['properties'].items():
+
+                        e_sel_idx = int(e_sel_idx)
+                        e_sel_id = entity_type_selections[e_sel_idx]['dataset']['dataset_id']
+                        e_type = entity_type_selections[e_sel_idx]['dataset']['collection_id']
+
+                        # print("\nPROPERTIES--->", dataset_specs[e_sel_id][
+                        #     'collections'][e_type]['properties'])
+
+                        # A LIST OF SELECTED PROPERTIES FOR THE CURRENTLY SELECTED ENTITY TYPE
+                        for choices in property_list:
+
+                            short_uris, long_uris = [], []
+                            choice = choices['property']
+
+                            # SINGLE PROPERTY HAS BEEN SELECTED
+                            if len(choice) == 1:
+                                long_uri = dataset_specs[e_sel_id]['collections'][e_type]['properties'][
+                                    choice[0]]['uri'] if choice[0] != 'uri' else Rsc.ga_resource_ttl('uri')
+
+                                short_uri = dataset_specs[
+                                    e_sel_id]['collections'][e_type]['properties'][choice[0]][
+                                    'shortenedUri'] if choice[0] != 'uri' else Rsc.ga_resource_ttl('uri')
+
+                                # Collect namespaces
+                                if long_uri and short_uri and long_uri != short_uri:
+                                    ns = short_uri.split(':')
+                                    if len(ns) == 2:
+                                        if checkLocalName(ns[1]) is False:
+                                            ns[1] = getUriLocalNamePlus(long_uri)
+                                            short_uri = F"{ns[0]}:{ns[1]}"
+
+                                        ns[1] = long_uri.replace(ns[1], '')
+                                        if ns[1] not in prefixes:
+                                            prefixes[ns[1]] = ns[0]
+
+                                short_uris.append(short_uri)
+                                long_uris.append(long_uri)
+
+                            # A PROPERTY PATH HAS BEEN SELECTED
+                            else:
+
+                                for i, property_list_1 in enumerate(choice):
+
+                                    # print("--->", property_list_1, e_sel_id, e_type)
+                                    # KeyError: 'roar_Doop'
+                                    if (i + 1) % 2 != 0:
+
+                                        if property_list_1 == 'uri':
+                                            long_uri = property_list_1
+                                            short_uri = property_list_1
+
+                                        else:
+
+                                            long_uri = dataset_specs[e_sel_id][
+                                                'collections'][e_type]['properties'][property_list_1]['uri']
+
+                                            short_uri = dataset_specs[e_sel_id][
+                                                'collections'][e_type]['properties'][property_list_1]['shortenedUri']
+
+                                        # Collect namespaces
+                                        if long_uri and short_uri and long_uri != short_uri:
+
+                                            ns = short_uri.split(':')
+                                            if len(ns) == 2:
+                                                if checkLocalName(ns[1]) is False:
+                                                    ns[1] = getUriLocalNamePlus(long_uri)
+                                                    short_uri = F"{ns[0]}:{ns[1]}"
+
+                                                ns[1] = long_uri.replace(ns[1], '')
+                                                if ns[1] not in prefixes:
+                                                    prefixes[ns[1]] = ns[0]
+
+                                        if long_uri is None and property_list_1 not in problems:
+                                            problems[property_list_1] = True
+                                            print(F"\n\t{len(problems):3}. DATA PROBLEM: Long URI is none.\n"
+                                                  F"\n\t\t\t{choice}"
+                                                  F"\n\t\t\t{property_list_1} ==-> [ short: {short_uri} ] [ long: {long_uri} ]")
+
+                                        # UPDATE SHORT AND LONG URI
+                                        short_uris.append(short_uri)
+                                        long_uris.append(long_uri)
+
+                                    else:
+                                        e_type = property_list_1
+
+                                        # print(F"{e_type} -> {dataset_specs[id]['collections'][e_type]['shortenedUri']}")
+                                        if e_type in dataset_specs[e_sel_id]['collections']:
+                                            short_uri = dataset_specs[e_sel_id]['collections'][e_type]['shortenedUri']
+                                            long_uri = dataset_specs[e_sel_id]['collections'][e_type]['uri']
+                                        else:
+                                            short_uri = e_type
+                                            long_uri = e_type
+
+                                        # Collect namespaces
+                                        if long_uri != short_uri:
+                                            ns = short_uri.split(':')
+                                            if len(ns) == 2:
+                                                if checkLocalName(ns[1]) is False:
+                                                    ns[1] = getUriLocalNamePlus(long_uri)
+                                                    short_uri = F"{ns[0]}:{ns[1]}"
+                                                ns[1] = long_uri.replace(ns[1], '')
+                                                if ns[1] not in prefixes:
+                                                    prefixes[ns[1]] = ns[0]
+
+                                        short_uris.append(short_uri)
+                                        long_uris.append(long_uri)
+                                # print('')
+
+                            # update
+                            choices['short_properties'] = short_uris
+                            choices['long_properties'] = long_uris
+
+        except KeyError:
+            print(Grl.ERROR(page='SpecsBuilder', function='method_conditions',
+                            location='For loop with variable [method_conditions_list]'))
+            exit()
+
+
+def getLinksetSpecs(linksetId: int, job: str, prefixes: dict, printSpec: bool = True):
+    """
+    :param linksetId        : An integer parameter denoting the ID of the linkset to convert into an RDF documentation.
+    :param job              : A string parameter indicating the IF of job from which to find the selected linkset.
+    :param printSpec        : A boolean parameter for displaying the specification object if needed.
+    :return:
+    """
+
+    center, line = 70, 70
+    clusters = {}
+    # prefixes = {}
+    data_collected = {}
+    dataset_specs = None
+
+    home = "https://recon.diginfra.net"
+
+    # LINKSET URL
+    linkset_url = F"{home}/job/{job}"
+
+    # LINKSET STATS URIS
+    stats_url_1 = F"{home}/job/{job}/clusterings"
+    stats_url2 = F"{home}/job/{job}/linksets"
+    stats_url_3 = F"{home}/job/{job}/links_totals/linkset/{linksetId}"
+
+    # AVAILABLE DATASETS URI
+    dataset_url = F"{home}/datasets?endpoint=https://repository.goldenagents.org/v5/graphql"
+
+    # CLUSTER URI
+    clusters_uri = F"{home}/job/{job}/clusters/linkset/{linksetId}?"
+
+    # print(
+    #     F"\n{'':>16}{'-' * line:^{center}}\n{'|':>16}{'BUILDING THE SPECIFICATION':^{center}}|\n{'|':>16}{F'JOB IDENTIFIER : {job}':^{center}}|\n"
+    #     F"{'|':>16}{F'LINKSET INDEX : {linksetId}':^{center}}|\n{'':>16}{'-' * line:^{center}}\n")
+
+    # ###############################################################################
+    # 1. COLLECTING THE AVAILABLE DATASETS                                          #
+    # ###############################################################################
+    if True:
+
+        # 1.1 REQUEST ON DATASET INFO
+        try:
+            dataset_specs = requests.get(dataset_url).json()
+
+        except Exception as err:
+            print(
+                Grl.ERROR(
+                    page='SpecsBuilder', function='linksetSpecsDataItr',
+                    location='1.1 REQUEST ON DATASET INFO',
+                    message="PROBLEM WITH REQUESTING INFO ON DATASETS FROM TIMBUKTU"
+                )
+            )
+            return
+
+        # 1.2 REQUEST ON LINKSET INFO
+        try:
+            lst_specs = requests.get(linkset_url).json()
+
+            # GETTING THE ENTITY SELECTION OBJECT FROM THE lst_specs
+            entity_type_selections = lst_specs['entity_type_selections']
+
+            # RESET THE RIGHT lst_specs WITH THE ACTUAL SPECS
+            try:
+                found = False
+                for counter, spec in enumerate(lst_specs['linkset_specs']):
+                    if spec['id'] == int(linksetId):
+                        found, lst_specs = True, spec
+                        break
+
+                if found is False:
+                    print(F"\nTHE LINKSET WITH ID: [{linksetId}] COULD NOT BE FOUND")
+                    return
+
+            except IndexError as err:
+                print(F"\n-> THE LINKSET [{linksetId}] CAN NOT BE FOUND DUE TO INDEX OUT OF RANGE ERROR")
+                return
+
+            # 3. MISSING SETTINGS
+            linkset_name = lst_specs['id']
+            lst_specs["job_id"] = job
+            lst_specs["linkType"] = {
+                'prefix': 'owl',
+                'namespace': LinkPredicates.owl.__str__(),
+                'long': LinkPredicates.sameAs,
+                'short': LinkPredicates.sameAs_tt,
+            }
+            lst_specs["creator"] = "AL IDRISSOU"
+            lst_specs["publisher"] = "GoldenAgents"
+            lst_specs['clusters'] = clusters
+
+        except ValueError as err:
+            print("\nTHE JOB REQUEST CAN N0T BE PLACED")
+            print(
+                Grl.ERROR(
+                    page='SpecsBuilder',
+                    function='linksetSpecsDataItr',
+                    location='LINKSET URI try clause for collecting information on the linkset under scrutiny'
+                ))
+            # print(
+            #     F"\n{'File':15} : SpecsBuilder.py\n"
+            #     F"{'Function':15} : linksetSpecsDataItr\n"
+            #     F"{'Whereabouts':15} : LINKSET URI try clause for collecting information on the linkset under scrutiny\n"
+            #     F"{'Error Message':15} : {err.__str__()}")
+            return
+
+    # ###############################################################################
+    # 2. COLLECTION INFO ON CLUSTERED LINKS                                         #
+    # ###############################################################################
+    if True:
+
+        start = time()
+        limit, offset = 200000, 0
+
+        try:
+
+            while True:
+
+                cluster_limit = F"{clusters_uri}with_properties=none&limit={limit}&offset={offset}&include_nodes=true"
+                clusters_data = requests.get(cluster_limit).json()
+
+                for item in clusters_data:
+                    # Adding a set is better but will not work in the
+                    # need of a deterministic hash output for the name of the cluster
+                    # item['item'] = list()
+                    clusters[item['id']] = item
+
+                offset = offset + limit
+                if len(clusters_data) < limit:
+                    break
+
+        except Exception as err:
+            # print(F"{clusters_uri}limit={limit}&offset={offset}")
+            if err.__str__() != 'Expecting value: line 1 column 1 (char 0)':
+                print(
+                    F"\n{'File':15} : SpecsBuilder.py\n"
+                    F"{'Function':15} : linksetSpecsDataItr\n"
+                    F"{'Whereabouts':15} : First try clause for collecting information on cluster if available\n"
+                    F"{'Error Message':15} : {err.__str__()}\n"
+                    F"{traceback.print_exc()}")
+
+    # 4. ENTITY SELECTIONS IN A DICTIONARY AS {ID: SLECTION OBJECT}
+    # entity_type_selections = lst_specs['entity_type_selections']
+    entity_type_selections = {selection['id']: selection for selection in entity_type_selections}
+
+    # 5. UPDATING SOURCE AND TARGET WITH THEIR RESPECTIVE OBJECTS
+    sources, targets, methods = lst_specs['sources'], lst_specs['targets'], lst_specs['methods']['conditions']
+
+    # ###############################################################################
+    # 6. UPDATE OF SOURCE AND TARGET ALSO WITH SHORT AND LONG URIS                  #
+    # ###############################################################################
+
+    method_conditions(methods, entity_type_selections, dataset_specs, prefixes)
+
+    # ###############################################################################
+    # 7. UPDATE OF SOURCE AND TARGET PROPERTIES OF FILTERS WITH SHORT AND LONG URIS #
+    # ###############################################################################
+
+    def update(item_list):
+
+        for info in item_list:
+
+            if 'property' in info:
+
+                # New list of property short names and uri
+                short_properties, long_properties = [], []
+
+                # the original entity type of the collection
+                entity_type = collection_id
+
+                for i, i_property in enumerate(info['property']):
+
+                    # Odds numbers slots are container of a property name
+                    if (i + 1) % 2 != 0:
+                        try:
+                            # print(F"{i_property}:{id}")
+                            # print("\t", dataset_specs[id][
+                            #     'collections'][entity_type]['properties'][i_property]['shortenedUri'])
+                            # getting the short version of the current property
+                            short_uri = dataset_specs[id][
+                                'collections'][entity_type]['properties'][i_property]['shortenedUri'] \
+                                if i_property != 'uri' else i_property
+
+                            # getting the uri of the current property
+                            long_uri = dataset_specs[id]['collections'][entity_type]['properties'][i_property]['uri'] \
+                                if i_property != 'uri' else i_property
+
+                            if short_uri is None:
+                                print(F"\n+ DATA PROBLEM:\n\tShort : {short_uri}\n\tLong  : {long_uri}")
+
+                            # Collect namespaces
+                            if long_uri and short_uri and long_uri != short_uri:
+
+                                ns = short_uri.split(':')
+                                if len(ns) == 2:
+                                    if checkLocalName(ns[1]) is False:
+                                        ns[1] = getUriLocalNamePlus(long_uri)
+                                        short_uri = F"{ns[0]}:{ns[1]}"
+                                    ns[1] = long_uri.replace(ns[1], '')
+                                    if ns[1] not in prefixes:
+                                        prefixes[ns[1]] = ns[0]
+
+                            short_properties.append(short_uri)
+                            long_properties.append(long_uri)
+
+                        except KeyError as err:
+                            print(F"{i_property}:{id}")
+                            print(dataset_specs[id]['collections'][entity_type]['properties'])
+                            print(dataset_specs[id]['collections'][entity_type]['properties'][i_property])
+
+                    # Even numbers slots are container of an entity type
+                    else:
+
+                        entity_type = i_property
+                        curr_data = dataset_specs[id]['collections'][entity_type]
+
+                        # # getting the short version of the current entity-type
+                        # # getting the uri version of the current entity-type
+                        short_uri, long_uri = curr_data['shortenedUri'], curr_data['uri']
+
+                        # Collect namespaces
+                        if long_uri != short_uri:
+                            ns = short_uri.split(':')
+                            if len(ns) == 2:
+                                if checkLocalName(ns[1]) is False:
+                                    ns[1] = getUriLocalNamePlus(long_uri)
+                                    short_uri = F"{ns[0]}:{ns[1]}"
+                                ns[1] = long_uri.replace(ns[1], '')
+                                if ns[1] not in prefixes:
+                                    prefixes[ns[1]] = ns[0]
+
+                        short_properties.append(short_uri if short_uri else "...........")
+                        long_properties.append(long_uri if long_uri else "...........")
+
+                # update
+                info['short_properties'] = short_properties
+                info['uri_properties'] = long_properties
+
+            if 'conditions' in info:
+                update(info['conditions'])
+
+        # Reset the source or target selection
+        selections[idx] = entity_type_selections[item_id]
+
+    for selections in [sources, targets]:
+
+        for idx, item_id in enumerate(selections):
+            id = entity_type_selections[item_id]['dataset']['dataset_id']
+            collection_id = entity_type_selections[item_id]['dataset']['collection_id']
+
+            l_uri = dataset_specs[id]['collections'][collection_id]['uri']
+
+            # RESOURCE TYPE SHORT AND LONG URI
+            if 'shortenedUri' in dataset_specs[id]['collections'][collection_id] and len(
+                    dataset_specs[id]['collections'][collection_id]['shortenedUri']) > 0:
+
+                s_uri = dataset_specs[id]['collections'][collection_id]['shortenedUri']
+
+                # COLLECTING NAMESPACES
+                if l_uri and s_uri and l_uri != s_uri:
+
+                    ns = s_uri.split(':')
+                    if len(ns) == 2:
+                        if checkLocalName(ns[1]) is False:
+                            ns[1] = getUriLocalNamePlus(l_uri)
+                            s_uri = F"{ns[0]}:{ns[1]}"
+                        ns[1] = l_uri.replace(ns[1], '')
+                        if ns[1] not in prefixes:
+                            prefixes[ns[1]] = ns[0]
+
+                elif l_uri and s_uri and l_uri == s_uri:
+
+                    local_name = getUriLocalNamePlus(l_uri)
+                    prefix_uri = l_uri.replace(local_name, "")
+                    prefix = F"{getUriLocalNamePlus(prefix_uri)}_{Grl.deterministicHash(l_uri, 2)}"
+                    if prefix_uri not in prefixes:
+                        prefixes[prefix_uri] = prefix
+
+                entity_type_selections[item_id]['dataset']['short_uri'] = s_uri
+                entity_type_selections[item_id]['dataset']['long_uri'] = l_uri
+
+            else:
+
+                # print("=====================================================")
+                # print(l_uri)
+                entity_type_selections[item_id]['dataset']['long_uri'] = l_uri
+
+                if 'uri' in dataset_specs[id]['collections'][collection_id] and len(
+                        dataset_specs[id]['collections'][collection_id]['uri']) > 0:
+
+                    local_name = getUriLocalNamePlus(l_uri)
+                    prefix_uri = F"{getUriLocalNamePlus(prefix_uri)}_{Grl.deterministicHash(l_uri, 2)}"
+                    prefix = getUriLocalNamePlus(prefix_uri)
+
+                    entity_type_selections[item_id]['dataset']['long_uri'] = dataset_specs[
+                        id]['collections'][collection_id]['uri']
+
+                    entity_type_selections[item_id]['dataset']['short_uri'] = F"{prefix}:{local_name}"
+                    if prefix_uri not in prefixes:
+                        prefixes[prefix_uri] = prefix
+
+                else:
+                    entity_type_selections[item_id]['dataset'][
+                        'short_uri'] = "...... NO SHORT URI FOR THE RESOURCE ......"
+                    entity_type_selections[item_id]['dataset'][
+                        'long_uri'] = "...... NO LONG URI FOR THE RESOURCE ......"
+
+            # Set the selected resource's name
+            entity_type_selections[item_id]['dataset']['name'] = dataset_specs[id]['name']
+
+            # Set the property/entity-type names
+            condition_list = entity_type_selections[item_id]['filter']['conditions']
+
+            # selection_rsc_type = dataset_specs[id]['name']
+            # print(collection_id)
+
+            # Property path condition
+            update(condition_list)
+
+            # Reset the source or target selection
+            selections[idx] = entity_type_selections[item_id]
+
+    # ###############################################################################
+    # 8. MERGING STATS                                                              #
+    # ###############################################################################
+    stats_specs = requests.get(stats_url_1).json()
+
+    for data in stats_specs:
+        if data['spec_id'] == linkset_name:
+            stats_specs = data
+            break
+
+    # IF THE LINKSET HAS NO STATS YET, SET THE stats_specs OBJECT
+    if isinstance(stats_specs, list):
+        stats_specs = {}
+        print("\t\t\t\t* THERE IS NOT CLUSTERING STATS.")
+
+    # MOVE CLUSTER STATS TO LINKSET STATS
+    stats_specs2 = requests.get(stats_url2).json()
+
+    # found = False
+    for data in stats_specs2:
+        if data['spec_id'] == linkset_name:
+            stats_specs.update(data)
+            break
+
+    # ###############################################################################
+    # VALIDATION STATS                                                              #
+    # ###############################################################################
+    try:
+        stats_specs3 = requests.get(stats_url_3).json()
+        if stats_specs3:
+            stats_specs.update(stats_specs3)
+    except Exception as err:
+        # print(F"{clusters_uri}limit={limit}&offset={offset}")
+        print("\t\t\t\t* THE LINKS HAVE NOT YET BEEN VALIDATED.")
+        if err.__str__() != 'Expecting value: line 1 column 1 (char 0)':
+            print(
+                F"\n{'File':15} : SpecsBuilder.py\n"
+                F"{'Function':15} : linksetSpecsDataItr\n"
+                F"{'Whereabouts':15} : VALIDATION STATS clause.\n"
+                F"{'Error Message':15} : {err.__str__()}\n"
+                F"{traceback.print_exc()}")
+
+    # if found is False:
+    #     print("THE LINKSET HAS NOT BEEN EXECUTED")
+
+    # GETTING THE
+    if "sources_count" in stats_specs and "targets_count" in stats_specs \
+            and stats_specs["sources_count"] and stats_specs["targets_count"]:
+        stats_specs['entities'] = stats_specs["sources_count"] + stats_specs["targets_count"]
+    else:
+        stats_specs['entities'] = 0
+
+    specs = {'linksetStats': stats_specs, 'linksetSpecs': lst_specs, 'validations': []}
+
+    if printSpec:
+        printSpecs(specs, tab=1)
+
+    return specs
+
+
 # THE UNBOXING OF THE LINKSET SPECIFICATIONS
 def unboxingLinksetSpecs(specs: dict, prefixes: dict, triples: bool = True):
 
     formula_parts = set()
     linkset_buffer = Buffer()
     checker = defaultdict(str)
+    methods_descriptions = Buffer()
     job_code = specs[Vars.linksetSpecs][Vars.job_id]
     linkset_id = specs[Vars.linksetSpecs][Vars.id]
-
-    def header(x, lines=2):
-        liner = "\n"
-        return F"{liner * lines}{'#'*80:^110}\n{' '*15}#{x:^78}#\n{'#'*80:^110}{liner * (lines-1)}"
-
     formula_uri_place_holder = F"LinksetFormulation-###FORMULA URI###-{linkset_id}"
-    methods_descriptions = Buffer()
+
+    def header(message, lines=2):
+        liner = "\n"
+        return F"{liner * lines}{'#'*80:^110}\n{' '*15}#{message:^78}#\n{'#'*80:^110}{liner * (lines-1)}"
+
     methods_descriptions.write(header("METHODS'S DESCRIPTION", lines=2))
 
-    def genericStats(linksetStats: dict):
+    def genericStats(linksetStats: dict, validationGraph: str):
 
         stats = Buffer()
+        has_validation = False
         stats.write(F"\n{space}### VOID LINKSET STATS\n")
 
-        if Vars.triples in linksetStats and linksetStats[Vars.triples] and linksetStats[Vars.triples] > -1:
-            stats.write(preVal(Sns.VoID.triples_ttl, linksetStats[Vars.triples]))
+        # TOTAL LINKS COUNT
+        if Vars.triples in linksetStats and linksetStats[Vars.triples] > -1:
+            stats.write(preVal(Sns.VoID.triples_ttl, Rsc.literal_resource(linksetStats[Vars.triples])))
 
-        if Vars.entities in linksetStats and linksetStats[Vars.entities] and linksetStats[Vars.entities] > -1:
-            stats.write(preVal(Sns.VoID.entities_ttl, linksetStats[Vars.entities]))
+        # THE TOTAL NUMBER OF ENTITIES
+        if Vars.distinctLinkedEntities in linksetStats and linksetStats[Vars.distinctLinkedEntities] > -1:
+            stats.write(preVal(Sns.VoID.entities_ttl, Rsc.literal_resource(linksetStats[Vars.distinctLinkedEntities])))
 
-        if Vars.distinctSub in linksetStats and linksetStats[Vars.distinctSub] and linksetStats[Vars.distinctSub] > -1:
-            stats.write(preVal(Sns.VoID.distinctSubjects_ttl, linksetStats[Vars.distinctSub]))
+        # NUMBER OF DISTINCT SUBJECT RESOURCES IN THE LINKSET
+        if Vars.distinctSub in linksetStats and linksetStats[Vars.distinctSub] > -1:
+            stats.write(preVal(Sns.VoID.distinctSubjects_ttl, Rsc.literal_resource(linksetStats[Vars.distinctSub])))
 
-        if Vars.distinctObj in linksetStats and linksetStats[Vars.distinctObj] and linksetStats[Vars.distinctObj] > -1:
-            stats.write(preVal(Sns.VoID.distinctObjects_ttl, linksetStats[Vars.distinctObj]))
+        # NUMBER OF DISTINCT OBJECT RESOURCES IN THE LINKSET
+        if Vars.distinctObj in linksetStats and linksetStats[Vars.distinctObj] > -1:
+            stats.write(preVal(Sns.VoID.distinctObjects_ttl, Rsc.literal_resource(linksetStats[Vars.distinctObj])))
 
-        stats.write(F"\n{space}### LENTICULAR LENS LINKSET STATS\n")
+        stats.write(F"\n{space}### SOURCE AND TARGET DATASETS STATS\n")
 
-        if Vars.clusters in linksetStats and linksetStats[Vars.clusters] and linksetStats[Vars.clusters] > -1:
-            stats.write(preVal(VoidPlus.cluster_ttl, linksetStats[Vars.clusters]))
+        # NUMBER OF DISTINCT RESOURCES IN THE SOURCE AND TARGET DATASETS
+        if Vars.distinctSrcTrgEntities in linksetStats and linksetStats[Vars.distinctSrcTrgEntities] > -1:
+            stats.write(preVal(VoidPlus.srcTrgEntities_ttl, Rsc.literal_resource(linksetStats[Vars.distinctSrcTrgEntities])))
 
-        if Vars.validations in linksetStats and linksetStats[Vars.validations] and linksetStats[Vars.validations] > -1:
-            stats.write(preVal(VoidPlus.validations_tt, linksetStats[Vars.validations]))
+        # NUMBER OF DISTINCT RESOURCES IN THE TARGET DATASETS
+        if Vars.distinctSourceEntities in linksetStats and linksetStats[Vars.distinctSourceEntities] > -1:
+            stats.write(
+                preVal(VoidPlus.sourceEntities_ttl,
+                       Rsc.literal_resource(linksetStats[Vars.distinctSourceEntities])))
 
-        if Vars.remains in linksetStats and linksetStats[Vars.remains] and linksetStats[Vars.remains] > -1:
-            stats.write(preVal(VoidPlus.remains_ttl, linksetStats[Vars.remains]))
+        # NUMBER OF DISTINCT RESOURCES IN THE TARGET DATASETS
+        if Vars.distinctTargetEntities in linksetStats and linksetStats[Vars.distinctTargetEntities] > -1:
+            stats.write(
+                preVal(VoidPlus.targetEntities_ttl, Rsc.literal_resource(linksetStats[Vars.distinctTargetEntities])))
 
-        if Vars.contradictions in linksetStats and linksetStats[Vars.contradictions] and linksetStats[Vars.contradictions] > -1:
-            stats.write(preVal(VoidPlus.contradictions_tt, linksetStats[Vars.contradictions]))
+        stats.write(F"\n{space}### ABOUT CLUSTERS\n")
 
-        stats.write("\n")
+        # THE NUMBER OF CLUSTERS IF AVAILABLE
+        if Vars.clusters in linksetStats and linksetStats[Vars.clusters] > -1:
+            stats.write(preVal(VoidPlus.clusters_ttl, Literal(linksetStats[Vars.clusters]).n3(MANAGER)))
+            stats.write(preVal(
+                VoidPlus.clusterset_ttl,
+                F"{Rsc.clusterset_ttl(Grl.deterministicHash(specs['linksetSpecs']['clusters']))}-{linkset_id}"))
+
+        # # THE TOTAL AMOUNT OF LINKS ACCEPTED
+        # if Vars.accepted in linksetStats and linksetStats[Vars.accepted] > -1:
+        #     stats.write(preVal(VoidPlus.accepted_ttl, Rsc.literal_resource(linksetStats[Vars.accepted])))
+        #
+        # # THE TOTAL AMOUNT OF LINKS REJECTED
+        # if Vars.rejected in linksetStats and linksetStats[Vars.rejected] > -1:
+        #     stats.write(preVal(VoidPlus.rejected_ttl, Rsc.literal_resource(linksetStats[Vars.rejected])))
+        #
+        # # THE TOTAL AMOUNT OF LINKS NOT VALIDATED
+        # if Vars.notValidated in linksetStats and linksetStats[Vars.notValidated] > -1:
+        #     stats.write(preVal(VoidPlus.unchecked_ttl, Rsc.literal_resource(linksetStats[Vars.notValidated])))
+
+        has_validation = Vars.notValidated in linksetStats and linksetStats[Vars.notValidated] < linksetStats[Vars.triples]
+
+        if validationGraph:
+            stats.write(F"\n{space}### ABOUT VALIDATIONS\n")
+
+            # THE TOTAL AMOUNT OF CONTRADICTING LINKS
+            if Vars.mixed in linksetStats and linksetStats[Vars.mixed] > -1:
+                stats.write(preVal(VoidPlus.contradictions_ttl, Rsc.literal_resource(linksetStats[Vars.mixed])))
+
+            if has_validation is True:
+                stats.write(preVal(VoidPlus.has_validationset_ttl, validationGraph))
+            stats.write("\n")
 
         return stats.getvalue()
 
     # Generic description of a linkset/les
-    def genericDes(job_id: str, linksetSpecs: dict):
+    def genericDes(job_id: str, linksetSpecs: dict, validationGraph: str):
 
         g_meta = Buffer()
-        g_meta.write(header('GENERIC METADATA', lines=2))
+        g_meta.write(header('LINKSET GENERIC METADATA', lines=2))
 
         # 1. The LINKSET'S NAME OR ID
         # linkset_id = linksetSpecs[Vars.id]
@@ -680,10 +1427,10 @@ def unboxingLinksetSpecs(specs: dict, prefixes: dict, triples: bool = True):
             g_meta.write(preVal(Sns.DCterms.creator_ttl, Literal(linksetSpecs["creator"]).n3()))
 
         if "publisher" in linksetSpecs and len(linksetSpecs["publisher"].strip()) > 0:
-            g_meta.write(preVal(Sns.DCterms.creator_ttl, Literal(linksetSpecs["publisher"]).n3()))
+            g_meta.write(preVal(Sns.DCterms.publisher_ttl, Literal(linksetSpecs["publisher"]).n3()))
 
         # LINKSET LINK-TYPE
-        g_meta.write(preVal(Sns.VoID.linkPredicate_tt, linksetSpecs[Vars.linkType]))
+        g_meta.write(preVal(Sns.VoID.linkPredicate_tt, linksetSpecs[Vars.linkType][Vars.short]))
 
         # 2. USER'S LABEL
         if len(Literal(linksetSpecs[Vars.label].strip())) > 0:
@@ -696,7 +1443,7 @@ def unboxingLinksetSpecs(specs: dict, prefixes: dict, triples: bool = True):
             g_meta.write("\n")
 
         # LINKSET STATS
-        g_meta.write(genericStats(specs[Vars.linksetStats]))
+        g_meta.write(genericStats(specs[Vars.linksetStats], validationGraph))
 
         # 4. SELECTED ENTITY AT THE SOURCE
         g_meta.write(F"{space}### SOURCE ENTITY TYPE SELECTION(S)\n")
@@ -720,12 +1467,12 @@ def unboxingLinksetSpecs(specs: dict, prefixes: dict, triples: bool = True):
     def resourceSelection(linksetSpecs):
 
         entity_constraints = Buffer()
-        entity_constraints.write(F"{header('RESOURCE SELECTIONS')}")
+        entity_constraints.write(F"{header('LINKSET RESOURCE SELECTIONS')}")
 
         # AT THE SOURCE OR TARGET, THERE CAN EXIST MORE THAN ONE SELECTED RESOURCE
         for logic_box in linksetSpecs[Vars.sources]:
 
-            filter_triples = unboxingFilterBox(job_code, logic_box, checker)
+            filter_triples = unboxingFilterBox(job_code, logic_box, checker, prefixes)
             if filter_triples not in checker:
                 checker[filter_triples] = "in"
                 entity_constraints.write(filter_triples)
@@ -733,7 +1480,7 @@ def unboxingLinksetSpecs(specs: dict, prefixes: dict, triples: bool = True):
         # Source selected at the target
         if linksetSpecs[Vars.sources] != linksetSpecs[Vars.targets]:
             for logic_box in linksetSpecs[Vars.targets]:
-                filter_triples = unboxingFilterBox(job_code, logic_box, checker)
+                filter_triples = unboxingFilterBox(job_code, logic_box, checker, prefixes)
                 if filter_triples not in checker:
                     checker[filter_triples] = "in"
                     entity_constraints.write(F"{filter_triples}")
@@ -743,7 +1490,7 @@ def unboxingLinksetSpecs(specs: dict, prefixes: dict, triples: bool = True):
     # ### METHOD SPECIFICATIONS --- ### SOURCE
     # ADDRESSING EACH ALGORITHM IN THE METHOD
     def unboxingAlgorithm(job_id: str, method: dict):
-
+        
         # print(method['list_matching'])
         algor_writer = Buffer()
         p_sel_writer = Buffer()
@@ -778,9 +1525,18 @@ def unboxingLinksetSpecs(specs: dict, prefixes: dict, triples: bool = True):
         if algor_name not in checker:
             checker[algor_name] = 'i'
             methods_descriptions.write(F"\n\n### ALGORITHM : {algor_name}")
-            methods_descriptions.write(F"\n{Rsc.ga_resource_ttl(algor_name)}\n\n")
+            methods_descriptions.write(F"\n{Rsc.ga_resource_ttl(algor_name)}\n")
             methods_descriptions.write(preVal('a', VoidPlus.MatchingAlgorithm_ttl))
-            methods_descriptions.write(preVal(Sns.DCterms.description_ttl, Algorithm.illustration(algor_name), end=True))
+
+            methods_descriptions.write(
+                preVal(Sns.DCterms.description_ttl,
+                       Algorithm.short_illustration(algor_name.lower()), end=False))
+
+            # SEE ALSO
+            methods_descriptions.write(
+                preVal(Sns.RDFS.seeAlso_ttl,
+                       F" ,\n{' ' * (Vars.PRED_SIZE + 4)}".join(
+                           Rsc.ga_resource_ttl(link) for link in Algorithm.seeAlso(algor_name)), end=True))
 
         algor_writer.write(F"\n\n### METHOD SPECIFICATIONS {algor_name}\n")
         algor_writer.write(F"{Rsc.ga_resource_ttl(seq_code)}\n\n")
@@ -806,7 +1562,8 @@ def unboxingLinksetSpecs(specs: dict, prefixes: dict, triples: bool = True):
 
         # THRESHOLD RANGE OF THE EXACT METHOD
         if algor_name.lower() == "exact":
-            algor_writer.write(preVal(VoidPlus.thresholdRange_ttl, Literal(Algorithm.range(algor_name)).n3(MANAGER)))
+            algor_writer.write(
+                preVal(VoidPlus.thresholdRange_ttl, Literal(Algorithm.range(algor_name.lower())).n3(MANAGER)))
 
         # IN CASE OF MULTIPLE PROPERTIES SELECTED FOR A MATCHING ALGORITHM, THE USER CAN ASSIGN AN S-NORM THRESHOLD
         if 'threshold' in method and method['threshold'] > 0 and algor_name.lower() != "exact":
@@ -848,7 +1605,9 @@ def unboxingLinksetSpecs(specs: dict, prefixes: dict, triples: bool = True):
 
                 algor_writer.write(preVal(Sns.Time.unitType_ttl, unit))
 
-                prefixes[Sns.Time.time] = "time"
+                # ADDING THE TIME NAMESPACE
+                if Sns.Time.time not in prefixes:
+                    prefixes[Sns.Time.time] = "time"
 
         # THIS IS A SEQUENCE OF ALGORITHMS FOR THIS METHOD
         else:
@@ -1009,8 +1768,6 @@ def unboxingLinksetSpecs(specs: dict, prefixes: dict, triples: bool = True):
                                 'predicates': [
                                     {
                                         'property': str(src_sequence[0]),
-                                        # 'stop_lang': stop_word_dictionary,
-                                        # 'stop_add': stop_word_additional,
                                         'transformer': transformer
                                     }
                                 ]
@@ -1020,8 +1777,6 @@ def unboxingLinksetSpecs(specs: dict, prefixes: dict, triples: bool = True):
                             group_check[ent_sel_id]['predicates'].append(
                                 {
                                     'property': str(src_sequence[0]),
-                                    # 'stop_lang': stop_word_dictionary,
-                                    # 'stop_add': stop_word_additional,
                                     'transformer': transformer
                                 }
                             )
@@ -1041,8 +1796,6 @@ def unboxingLinksetSpecs(specs: dict, prefixes: dict, triples: bool = True):
                                     {
                                         'property': item[Vars.property][0] if 'short_properties' not in item else
                                             item['short_properties'][0],
-                                        # 'stop_lang': stop_word_dictionary,
-                                        # 'stop_add': stop_word_additional,
                                         'transformer': transformer
                                     }
                                 ]
@@ -1192,7 +1945,8 @@ def unboxingLinksetSpecs(specs: dict, prefixes: dict, triples: bool = True):
                                                 iso369 = language_code.get_iso369_1_ttl_uri(
                                                     Country.iso_639_1[language] if language in Country.iso_639_1 else language)
 
-                                                prefixes[Sns.ISO.iso3166_1] = Sns.ISO.prefix_code
+                                                if Sns.ISO.iso3166_1 not in prefixes:
+                                                    prefixes[Sns.ISO.iso3166_1] = Sns.ISO.prefix_code
                                                 stopwords_buffer.write(
                                                     preVal(Sns.DC.language_ttl,
                                                            iso369 if iso369 else Literal(language).n3(), end=False))
@@ -1201,7 +1955,8 @@ def unboxingLinksetSpecs(specs: dict, prefixes: dict, triples: bool = True):
                                                     preVal("voidPlus:stopWordsList", stopwords, end=True))
 
                                                 # UPDATE THE USE OF A NEW NAMESPACE
-                                                prefixes[Sns.DC.dc] = "dc"
+                                                if Sns.DC.dc not in prefixes:
+                                                    prefixes[Sns.DC.dc] = "dc"
 
                                         # ADDITIONAL STOPWORDS
                                         if transform['parameters']['additional']:
@@ -1413,6 +2168,7 @@ def unboxingLinksetSpecs(specs: dict, prefixes: dict, triples: bool = True):
         if 'intermediate' in algor_name.lower():
 
             codes = intermediateSelections(method_config)
+            # print(codes)
 
             # intermediate_selection_id = method['method_config']['entity_type_selection']
             # intermediate_properties = method['method_config']['intermediate_source'] + method['method_config'][
@@ -1422,7 +2178,9 @@ def unboxingLinksetSpecs(specs: dict, prefixes: dict, triples: bool = True):
                 # sel_code = Grl.deterministicHash(F"{intermediate_selection_id}{intermediate_properties}")
                 algor_writer.write(F"\n{space}### {key.upper()} PREDICATE(S) CONFIGURATION OF THE INTERMEDIATE DATASET \n")
                 algor_writer.write(
-                    preVal(VoidPlus.intermediateEntitySelection_ttl, Rsc.ga_resource_ttl(F"ResourceSelection-{code}")))
+                    preVal(VoidPlus.intermediateSubjEntitySelection_ttl if key == "source"
+                           else VoidPlus.intermediateObjEntitySelection_ttl,
+                           Rsc.ga_resource_ttl(F"ResourceSelection-{code}")))
 
         # #########################################################
         #       MORE INFO ON THE SET MATCHING CONFIGURATION       #
@@ -1476,7 +2234,7 @@ def unboxingLinksetSpecs(specs: dict, prefixes: dict, triples: bool = True):
                 cur_threshold = "" if t_value == 0 else (
                     F"[with sim ≥ {t_value}]" if t_value < 1 else F"[with sim = {t_value}]")
 
-                # THE ROOT TRE NODE
+                # THE ROOT NODE OF THE TREE
                 root = Node(F"{GET_LOGIC_OPERATOR(mtdBox['type'])} {cur_threshold}")
 
                 # Generating the method formula tree
@@ -1532,14 +2290,20 @@ def unboxingLinksetSpecs(specs: dict, prefixes: dict, triples: bool = True):
     # #####################################################################################################
     # 2. LINKSET GENERIC AND STATS METADATA DESCRIPTION
     # #####################################################################################################
-    linkset_buffer.write(genericDes(job_code, specs[Vars.linksetSpecs]))
+    validation_graphs = validationGraphs(linkset_id, specs['validations'])
+    linkset_buffer.write(
+        genericDes(
+            job_code,
+            specs[Vars.linksetSpecs],
+            validation_graphs
+        ))
 
     # #####################################################################################################
     # 3. THE LINKSET LOGIC EXPRESSION
     # #####################################################################################################
     linkset_buffer.write(header("LINKSET LOGIC EXPRESSION", lines=2))
     linkset_buffer.write(F"\n\n{Rsc.ga_resource_ttl(formula_uri_place_holder)}\n\n")
-    linkset_buffer.write(preVal('a', VoidPlus.LogicFormulation_ttl))
+    linkset_buffer.write(preVal('a', VoidPlus.LinksetLogicFormulation_ttl))
     linkset_buffer.write(F"### EXPRESSION PARTS ###\n")
 
     # NEW LINE INSIDE THE EXPRESSION FOR Literal TO WRITE IT AS """###LOGIC \n EXPRESSION###"""@en
@@ -1576,3 +2340,477 @@ def unboxingLinksetSpecs(specs: dict, prefixes: dict, triples: bool = True):
     linkset_buffer.write(method_description)
 
     return linkset_buffer.getvalue()
+
+
+# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+#            FUNCTIONS FOR DEALING WITH LENS            #
+# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+def default_fuzzy(set_operator):
+
+    set_operator = set_operator.lower()
+
+    if set_operator.startswith('union'):
+        return 'OR [Maximum s-norm (⊥max)]'
+
+    if set_operator.startswith('intersection'):
+        return 'AND [Minimum t-norm (⊤min)]'
+
+    if set_operator.__contains__('difference'):
+        return ''
+
+    return 'an unknown operator'
+
+
+def operator_message(operation, limit, hazy):
+
+    tester = operation.lower().__contains__('difference')
+    # print(F"{operation} {limit} {tester}")
+
+    if limit > 0:
+        text = F"{operation}{' using' if tester else ' using'} " \
+               F"{FuzzyNorms.LogicOperations.operator_format.get(hazy.lower(), default_fuzzy(operation))}" \
+               F" with{'' if tester else ' combination'} sim ≥ {limit}"
+    else:
+        text = F"{operation}{'' if tester else ' using'} " \
+               F"{FuzzyNorms.LogicOperations.operator_format.get(hazy.lower(), default_fuzzy(operation))}" \
+               # F" {'' if tester else 'with no threshold restriction'}"
+
+    return text
+
+
+def lensFormulaExpression(job_id, operator, threshold, fuzzy, operands, position=1, detail=None, root=None, parts=None):
+
+    # PARTS IS A COLLECTION OF LEAFS WHICH ARE IN OTHER WORDS ONLY LINKSETS.
+    if parts is None:
+        parts = set()
+
+    # THE ROOT NODE OF THE TREE
+    if root is None:
+        root = Node(F"{operator_message(operation=operator, limit=threshold, hazy=fuzzy)}")
+        detail = []
+
+    for i, operand in enumerate(operands):
+        # print("\n", operand_data)
+        # operand = operand_data[0]
+        # DEALING WITH A LENS
+        if operand.startswith('lens'):
+
+            id = F"{position}.{chr(i+97)}"
+            detail.append(F"({id}): created as {operand}")
+
+            # GET THE LENS ID
+            lens_id = operand.split('-')[1]
+
+            # FETCH THE SPECS OF THE CURRENT LENS
+            lens_specs = getLensSpecs(lensId=lens_id, job=job_id, printSpec=False)
+
+            # THE OPERANDS OF THE CURRENT LENS
+            new_operands = [
+                Rsc.lens_ttl(F"{lens_specs['job_id']}-{lens['id']}") if lens['type'].lower() == 'lens'
+                else Rsc.linkset_ttl(F"{lens_specs['job_id']}-{lens['id']}") for lens in lens_specs['specs']['elements']]
+
+            # GENERATING A NEW TREE NODE
+            new_threshold = lens_specs['specs']['threshold']
+            new_fuzzy = lens_specs['specs']['t_conorm']
+            parent = Node(
+                operator_message(operation=F"{lens_specs['specs']['type']} ({id})", limit=new_threshold, hazy=new_fuzzy),
+                parent=root)
+
+            # RECURSIVE CALL WITH THE NEW NODE
+            lensFormulaExpression(
+                job_id=job_id, operator=lens_specs['specs']['type'], fuzzy=new_fuzzy,
+                threshold=new_threshold, operands=new_operands, position=position+1, detail=detail, root=parent, parts=parts)
+
+        # WE HAVE REACHED THE LEAF (LINKSET)
+        else:
+            Node(operand, parent=root)
+            parts.add(operand)
+
+    detail.sort()
+    return root, parts, detail
+
+
+def getLensSpecs(lensId: int, job: str, printSpec: bool = True):
+    """
+    :param lensId           : An integer parameter denoting the ID of the linkset to convert into an RDF documentation.
+    :param job              : A string parameter indicating the IF of job from which to find the selected linkset.
+    :param printSpec        : A boolean parameter for displaying the specification object if needed.
+    :return:
+    """
+    job_specs = None
+    lens_specs = None
+    home = "https://recon.diginfra.net"
+
+    # ###############################################################################
+    # 1. FETCH THE LIST OF JOBS                                                     #
+    # ###############################################################################
+    try:
+        # JOBS: dict_keys([
+        #   'created_at',
+        #   'entity_type_selections',
+        #   'job_description',
+        #   'job_id',
+        #   'job_link',
+        #   'job_title',
+        #   'lens_specs',
+        #   'linkset_specs',
+        #   'updated_at',
+        #   'views'])
+
+        job_specs = requests.get(F"{home}/job/{job}").json()
+
+    except ValueError as err:
+        print("\nTHE JOB REQUEST CAN N0T BE PLACED")
+        print(
+            Grl.ERROR(
+                page='SpecsBuilder',
+                function='lensSpecsDataItr',
+                location='FETCH THE LIST OF JOBS',
+                message=F'Fetching the list of jobs run under the job id: {job}'
+            ))
+
+    # ###############################################################################
+    # 3. FETCH THE RIGHT LENS SPECS FROM THE LIST OF JOBS                           #
+    # ###############################################################################
+    try:
+        found = False
+        for counter, spec in enumerate(job_specs['lens_specs']):
+            if spec['id'] == int(lensId):
+                found, lens_specs = True, spec
+                break
+
+        if found is False:
+            print(F"\nTHE LENS WITH ID: [{lensId}] COULD NOT BE FOUND IN THE JOB: {job}")
+            return
+
+        else:
+            # 3. MISSING SETTINGS
+            lens_id = lens_specs['id']
+            lens_specs["job_id"] = job
+            lens_specs["linkType"] = {
+                'prefix': 'owl',
+                'namespace': LinkPredicates.owl.__str__(),
+                'long': LinkPredicates.sameAs,
+                'short': LinkPredicates.sameAs_tt,
+            }
+            lens_specs["creator"] = "AL IDRISSOU"
+            lens_specs["publisher"] = "GoldenAgents"
+
+    except IndexError as err:
+        print(F"\n-> THE LINKSET [{lensId}] CAN NOT BE FOUND DUE TO INDEX OUT OF RANGE ERROR")
+        return
+
+    # printSpecs(lens_specs)
+    # # printSpecs(stats_specs)
+
+    if printSpec:
+        printSpecs(lens_specs, tab=1)
+
+    return lens_specs
+
+
+def unboxingLensSpecs(specs: dict, prefixes: dict, isValidated: bool = False, isClustered: bool = False):
+
+    lens_writer = Buffer()
+    lens_specs = specs['lensSpecs']
+    lens_stats = specs['lensStats']
+    operator = lens_specs['specs']['type']
+    lens_id = lens_specs['id']
+    lens_name = F"{lens_specs['job_id']}-{lens_id}"
+    targets = []
+    operators = []
+    legend = []
+    parts = set()
+
+    def getTargets(operation_box, stem, position=0):
+
+        # 1. This code primarily is to fetch targets (operands) in the lens operation.
+        # This allows for collecting the metadata of all linksets in the target list.
+        # 2. While executing this the tree structure of the logic box is (simple) is extracted.
+        # In the event that the lens is not simple or contains one or more intermediate lenses,
+        # this tree is discarded and a new one that contains in depth detail is generated.
+        # 3. Finally, the list list of operators helps detecting a complex lens. A lens is
+        # deemed complex if it is composed of at least one lens or more than one operators.
+
+        def leaf(job_id, child, parent, idx):
+
+            infant = Rsc.lens_ttl(F"{job_id}-{child['id']}") \
+                if child['type'].lower() == 'lens' \
+                else Rsc.linkset_ttl(F"{job_id}-{child['id']}")
+
+            if child['type'].lower() == 'lens':
+                id = F"{position}.{chr(idx + 97)}"
+                legend.append(F"({id}): created as {infant}")
+
+                # GET THE LENS ID
+                lens_identifier = infant.split('-')[1]
+
+                # FETCH THE SPECS OF THE CURRENT LENS
+                lens_specifications = getLensSpecs(lensId=lens_identifier, job=job_id, printSpec=False)
+
+                # GENERATING A NEW TREE NODE
+                new_threshold = lens_specifications['specs']['threshold']
+                new_fuzzy = lens_specifications['specs']['t_conorm']
+                parent = Node(
+                    operator_message(operation=F"{lens_specifications['specs']['type']} ({id})", limit=new_threshold,
+                                     hazy=new_fuzzy),
+                    parent=parent)
+
+                # RECURSIVE CALL WITH THE NEW NODE
+                getTargets(lens_specifications['specs'], parent, position+1)
+                # lensFormulaExpression(
+                #     job_id=job_id, operator=lens_specs['specs']['type'], fuzzy=new_fuzzy,
+                #     threshold=new_threshold, operands=new_operands, position=position + 1, detail=detail, root=parent,
+                #     parts=parts)
+
+            else:
+                Node(infant, parent=parent)
+                parts.add(infant)
+
+            return infant
+
+        if 'elements' in operation_box:
+            operation, operands = operation_box['type'], operation_box['elements']
+            threshold = operation_box['threshold'] if 'threshold' in operation_box else None
+            logic_combination = operation_box['t_conorm'] if 't_conorm' in operation_box else None
+            # APPEND THE CURRENT OPERATOR. THIS WILL LATER HELP CHECKING WHETHER THE LENS IS COMPLEX OR SIMPLE
+            operators.append(operation)
+
+            # CREATE THE ROOT OF THE TREE
+            if stem is None:
+                stem = Node(operator_message(operation, threshold, logic_combination))
+
+            # CHECKING THE ELEMENTS IN THE OPERATION BOX
+            for index, new_box in enumerate(operands):
+                # print(F"L2605 {new_box}")
+                # THERE EXIST A NEW LOGIC BOX
+                if 'elements' in new_box:
+                    operation, operands = new_box['type'], new_box['elements']
+                    threshold = new_box['threshold'] if 'threshold' in new_box else None
+                    logic_combination = new_box['t_conorm'] if 't_conorm' in new_box else None
+                    node = Node(operator_message(operation, threshold, logic_combination), parent=stem)
+                    getTargets(new_box, stem=node, position=position+1)
+
+                # WE HAVE REACHED THE LEAF
+                else:
+                    targets.append(leaf(job_id=lens_specs['job_id'], child=new_box, parent=stem, idx=index))
+
+        # TODO: CHECK WHETHER THE LAST CONDITION IS NECESSARY
+        else:
+            targets.append(leaf(job_id=lens_specs['job_id'], child=operation_box, parent=stem, idx=position))
+
+        return stem
+
+    # EXTRACT THE TREE, TARGETS AND OPERATORS OF A POTENTIALLY SIMPLE LENS
+    root = getTargets(lens_specs['specs'], stem=None)
+
+    # print(parts)
+    # USING PARTS, COLLECT THE METADATA OF LINKSETS INVOLVED IN THE CREATION OF THE CURRENT LENS
+    print("\t\t- Gathering the metadata of the linksets composing the lens.")
+    for linkset in parts:
+        linkset_id = linkset.split('-')[1]
+        print(F"\t\t\t• {linkset}")
+        linkset_specs = getLinksetSpecs(linksetId=linkset_id, job=lens_specs['job_id'], prefixes=prefixes, printSpec=False)
+        metadata = unboxingLinksetSpecs(specs=linkset_specs, prefixes=prefixes)
+        CUMMULATED_METADATA.write(F"{metadata}\n\n")
+
+    # REMOVE SHARED PREFIXES ENDING UP IN AUTOMATED PREFIXES
+    for key in [Sns.CC.cc, Sns.RDF.rdf, Sns.RDFS.rdfs, Sns.DCterms.dcterms,
+                Sns.Formats.formats, Sns.VoID.void, Sns.XSD.xsd]:
+
+        if key in prefixes:
+            del prefixes[key]
+
+    # -------------------------------------------
+    # NAMESPACES USED IN THE ANNOTATION OF A LENS
+    # -------------------------------------------
+    lens_writer.write(mainHeader("NAMESPACES", 2))
+    lens_writer.write(
+        F"\n{space}### PREDEFINED SHARED NAMESPACES"
+        F"\n{space}{Sns.CC.prefix}"
+        F"\n{space}{Sns.DCterms.prefix}"
+        F"\n{space}{Sns.Formats.prefix}"
+        # F"\n{space}{Sns.OWL.prefix}"
+        F"\n{space}{Sns.RDF.prefix}"
+        F"\n{space}{Sns.RDFS.prefix}"
+        F"\n{space}{Sns.VoID.prefix}"
+        F"\n{space}{Sns.XSD.prefix}"
+        
+        F"\n\n{space}### PREDEFINED SPECIFIC NAMESPACES"
+        F"\n{space}{VoidPlus.Cluster_prefix if isClustered else ''}"
+        F"\n{space}{VoidPlus.Clusterset_prefix if isClustered else ''}"
+        F"\n{space}{VoidPlus.Lens_prefix}"
+        F"\n{space}{VoidPlus.Linkset_prefix}"
+        F"\n{space}{VoidPlus.LensOperator_prefix}" 
+        F"\n{space}{Rsc.resource_prefix}"
+        F"\n{space}{VoidPlus.Validation_prefix if isValidated else ''}"
+        F"\n{space}{VoidPlus.Validationset_prefix if isValidated else ''}"
+        F"\n{space}{VoidPlus.ontology_prefix}"
+    )
+
+    if prefixes:
+        lens_writer.write(F"\n\n{space}### AUTOMATED / EXTRACTED NAMESPACES")
+        for count, (namespace, prefix) in enumerate(prefixes.items()):
+            lens_writer.write(F"{'    ' if count > 0 else ''}"
+                              F"\n{space}@prefix {prefix:>{Vars.PREF_SIZE}}: {URIRef(namespace).n3(MANAGER)} .")
+
+    lens_writer.write(subHeader("LENS METADATA", 2, 2))
+
+    # --------------
+    # LENS OPERATORS
+    # --------------
+    import ll.org.Export.Scripts.LensOperator as Operator
+    operators_rsc = []
+    for operator in set(operators):
+
+        operator_rsc = Operator.resource_ttl(operator)
+        operators_rsc.append(operator_rsc)
+        lens_writer.write("### LENS OPERATOR\n")
+
+        # OPERATOR RESOURCE
+        lens_writer.write(F"{operator_rsc}\n")
+
+        # OPERATOR TYPE
+        lens_writer.write(preVal('a', VoidPlus.LensOperator_ttl))
+
+        # OPERATOR LABEL
+        lens_writer.write(preVal(Sns.RDFS.label_ttl, Literal(Operator.label(operator)).n3()))
+
+        # OPERATOR DESCRIPTION
+        lens_writer.write(preVal(Sns.DCterms.description_ttl, Literal(
+            Operator.description(operator), lang='en').n3(), end=True))
+
+        lens_writer.write("\n")
+
+    # -----------------------------
+    # GENERIC DESCRIPTION OF A LENS
+    # -----------------------------
+
+    lens_writer.write("\n### LENS RESOURCE DESCRIPTION\n")
+
+    # LENS NAME
+    lens_writer.write(F"{Rsc.lens_ttl(lens_name)}\n")
+
+    # TYPE: lens
+    lens_writer.write(preVal('a', VoidPlus.Lens_ttl))
+
+    # FEATURE: Turtle and Trig
+    lens_writer.write(preVal(Sns.VoID.feature_ttl, F"{Sns.Formats.turtle_ttl}, {Sns.Formats.triG_ttl}"))
+
+    # ATTRIBUTION: LenticularLens
+    lens_writer.write(preVal(Sns.CC.attributionName_ttl, Literal('LenticularLens', 'en').n3()))
+
+    # LICENCE OF THE LL
+    lens_writer.write(preVal(Sns.CC.license_ttl, Rsc.uri_resource(Vars.LICENCE)))
+
+    # LINKSET TIMESTAMP
+    lens_writer.write(preVal(Sns.DCterms.created_ttl, Grl.getXSDTimestamp()))
+
+    if "creator" in lens_specs and len(lens_specs["creator"].strip()) > 0:
+        lens_writer.write(preVal(Sns.DCterms.creator_ttl, Literal(lens_specs["creator"]).n3()))
+
+    if "publisher" in lens_specs and len(lens_specs["publisher"].strip()) > 0:
+        lens_writer.write(preVal(Sns.DCterms.publisher_ttl, Literal(lens_specs["publisher"]).n3()))
+
+    # UNIQUE LINK-TYPE ACROSS ALL LENSES OR LNKSETS IN THE CURRENT LENS
+    lens_writer.write(preVal(Sns.VoID.linkPredicate_tt, lens_specs[Vars.linkType]['short']))
+
+    # USER'S LABEL
+    if len(Literal(lens_specs[Vars.label].strip())) > 0:
+        lens_writer.write(preVal(Sns.RDFS.label_ttl, Literal(lens_specs[Vars.label]).n3()))
+
+    # LINKSET DESCRIPTION
+    if Vars.description in lens_specs and len(Literal(lens_specs[Vars.description].strip())) > 0:
+        lens_writer.write(preVal(
+            Sns.DCterms.description_ttl, Literal(lens_specs[Vars.description]).n3()))
+        lens_writer.write("\n")
+
+    # OPERATOR FUNCTION
+    lens_writer.write("\n")
+    lens_writer.write(preVal(VoidPlus.hasOperator_ttl, objectList(operators_rsc)))
+    if len(operators_rsc) > 1:
+        lens_writer.write("\n")
+
+    lens_writer.write(
+        preVal(VoidPlus.hasOperand_ttl, objectList(set(targets), padding=1)))
+
+    # COMBINATION THRESHOLD
+    if lens_specs['specs']['threshold'] > 0:
+        lens_writer.write(preVal(VoidPlus.combiThreshold_ttl, lens_specs['specs']['threshold']))
+
+    # -------------------------------
+    # NUMERICAL DESCRIPTION OF A LENS
+    # -------------------------------
+
+    if len(lens_stats) > 0 and 'result' not in lens_stats:
+
+        # TRIPLES
+        lens_writer.write("\n")
+        lens_writer.write(preVal(Sns.VoID.triples_ttl, Literal(lens_stats[Vars.triples]).n3(MANAGER)))
+
+        # CLUSTERS
+        if Vars.clusters in lens_stats and lens_stats[Vars.clusters] > -1:
+            lens_writer.write("\n")
+
+            # THE NUMBER OF CLUSTERS IF AVAILABLE
+            lens_writer.write(preVal(VoidPlus.clusters_ttl, Literal(lens_stats[Vars.clusters]).n3(MANAGER)))
+
+            # THE CLUSTER SET
+            lens_writer.write(preVal(
+                VoidPlus.clusterset_ttl,
+                F"{Rsc.clusterset_ttl(Grl.deterministicHash(specs['clusters']))}-{lens_id}"))
+
+        # ABOUT VALIDATION
+        has_validation = Vars.notValidated in lens_stats and lens_stats[Vars.notValidated] < lens_stats[Vars.triples]
+        if has_validation is True:
+            lens_writer.write("\n")
+
+            # THE TOTAL AMOUNT OF CONTRADICTING LINKS
+            if Vars.mixed in lens_stats and lens_stats[Vars.mixed] > -1:
+                lens_writer.write(preVal(VoidPlus.contradictions_ttl, Rsc.literal_resource(lens_stats[Vars.mixed])))
+
+            # THE VALIDATION SET
+            lens_writer.write(preVal(VoidPlus.has_validationset_ttl, validationGraphs(lens_id, specs['validations'])))
+
+        # THE TOTAL NUMBER OF ENTITIES
+        if Vars.distinctLinkedEntities in lens_stats and lens_stats[Vars.distinctLinkedEntities] > -1:
+            lens_writer.write(preVal(Sns.VoID.entities_ttl, Rsc.literal_resource(lens_stats[Vars.distinctLinkedEntities])))
+
+    # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+    # LOGIC FORMULATION
+    # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+    print("\t\t- Building the lens formulation expression and tree.")
+    # EXTRACTING THE FORMULATION'S EXPRESSION AND TREE
+    # ONLY UPDATE THE TREE IF WE ARE DEALING WITH A COMPLEX LENS
+    # if len(operators) == 1 or True in [elt.__contains__('lens') for elt in targets]:
+    exp, tree = getExpressionAndTree(root)
+    legend = '\n\n\t\tLegend:\n\t\t\t' + '\n\t\t\t'.join(line for line in legend) if legend else ''
+    tree = F"{tree}{legend}"
+    exp = F"{exp}{legend}"
+    print(F"\n\t{'=-=-='*23}\n{tree}\n\t{'=-=-='*22}\n")
+
+    # FORMULATION RESOURCE
+    formulation_rsc = F"LinksetFormulation-{lens_specs['job_id']}-{lens_id}"
+
+    lens_writer.write(F"\n")
+    lens_writer.write(preVal(VoidPlus.formulation_ttl, Rsc.ga_resource_ttl(formulation_rsc), end=True))
+
+    lens_writer.write(subHeader('LENS LOGIC EXPRESSION', 1, 3))
+    lens_writer.write(F"{Rsc.ga_resource_ttl(formulation_rsc)}\n")
+    lens_writer.write(preVal('a', VoidPlus.LensOperator_ttl))
+    # lens_writer.write("".join(preVal(VoidPlus.part_ttl, part) for part in parts))
+    lens_writer.write(preVal(VoidPlus.part_ttl, objectList(parts)))
+
+    # NEW LINE INSIDE THE EXPRESSION FOR Literal TO WRITE IT AS """###LOGIC \n EXPRESSION###"""@en
+    lens_writer.write(preVal(VoidPlus.formulaDescription_ttl, Literal(exp).n3(MANAGER), end=False))
+    lens_writer.write(F"\n")
+    lens_writer.write(preVal(VoidPlus.formulaTree_ttl, Literal(F'\n{space}{tree}\n{space}').n3(MANAGER), end=True))
+    lens_writer.write("\n")
+
+    lens_writer.write("\n\n")
+    lens_writer.write(mainHeader(F"METADATA OF THE LINKSETS COMPOSING lens:{lens_name}", linesAfter=3))
+    # print(lens_writer.getvalue())
+    lens_writer.write(CUMMULATED_METADATA.getvalue())
+
+    return lens_writer.getvalue()

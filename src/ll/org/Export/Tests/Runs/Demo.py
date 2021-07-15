@@ -1,8 +1,9 @@
 
 
-from ll.org.Export.Scripts.SpecsBuilder import linksetSpecsData, linksetSpecsDataItr
+from ll.org.Export.Scripts.SpecsBuilder import linksetSpecsData, lensSpecsDataItr, linksetSpecsDataItr, getLinks
 from ll.org.Export.Tests.TestData import DATA_DIR as DIR
 from csv import reader as csv_reader
+from ll.org.Export.Tests.TestData import DATA_DIR as DIR
 from os.path import join
 
 # PREFIX.CC
@@ -63,7 +64,6 @@ jobs = ['demo', 'a7a63e74db5ffc0ff3d487a55e4ef89c']
         2. 
         3. None
 """
-1
 
 # Apply list configuration
 #     It is no longer possible to set the values of "minimum match" and "unique value"
@@ -106,14 +106,46 @@ jobs = ['demo', 'a7a63e74db5ffc0ff3d487a55e4ef89c']
 #     linksetId=14, job='demo', filePath=join(DIR, csv), starReification=False, save_in=save_in, printSpec=False)
 
 # USING ITERATOR
-used_csv = 1
+used_csv = 0
 used_job = 0
-linkset = 15
-loop = 0
+loop = 12
 
-with open(csv[2]) as file_data:
-    data = csv_reader(file_data)
+
+LINKSET = True
+
+if LINKSET:
+
+    linkset = 15
+    links = getLinks(job_id=jobs[used_job], set_id=linkset, isLinkset=True)
+
+    for line in links:
+        for key, item in line.items():
+            print("\t", key, item)
+        break
+
     linksetSpecsDataItr(
-        linksetId=linkset, job=jobs[used_job], lst_result=data,
+        linksetId=linkset, job=jobs[used_job], lst_result=links,
         starReification=True, save_in=save_in, printSpec=False
     )
+
+else:
+    lens_id = 4
+    csv_links = getLinks(job_id=jobs[used_job], set_id=lens_id, isLinkset=False)
+
+    for line in csv_links:
+        for key, item in line.items():
+            print("\t", key, item)
+        break
+
+    lensSpecsDataItr(
+        lensId=lens_id, job=jobs[used_job], lens_result=csv_links,
+        starReification=True, save_in=save_in, printSpec=False)
+
+# from ll.org.Export.Scripts.AnnotatedLinkset_Generic import standardLinkGenerator2
+#
+# with open(join(DIR, csv[used_csv])) as file_data:
+#     data = csv_reader(file_data)
+#
+#     for item in standardLinkGenerator2("http:testing/voila/owl", data, {}):
+#         print(item)
+#         continue

@@ -1,8 +1,11 @@
 from rdflib import URIRef, Literal
-from ll.org.Export.Scripts.Variables import PREF_SIZE, LL
+from ll.org.Export.Scripts.Variables import LL, PREF_SIZE
 
 scale = {}
+seeAlso = {}
+also_ttl = {}
 descriptions = {}
+short_descriptions = {}
 
 # SCRIPT OVERVIEW ######################################################################################################
 #                                                                                                                      #
@@ -41,12 +44,26 @@ class Algorithm:
     complex = F"{algorithm}Complex"
     complex_ttl = "resource:Complex"
 
+    see_also = "https://lenticularlens.github.io/04.Algorithms/#{}"
+    see_also_ttl = "algorithm:{}"
+    see_also_prefix = F"@prefix {'algorithm':>{PREF_SIZE}}: <https://lenticularlens.github.io/04.Algorithms/#> ."
+
     # algorithm_prefix = F"@prefix {'ll_algorithm':>{PREF_SIZE}}: <{algorithm}> ."
 
     # METHOD 1: UNKNOWN
     unknown = F"{algorithm}Unknown"
     unknown_ttl = "resource:Unknown"
-    unknown_description = "The method used to generate the current link is unknown."
+    unknown_short_description = unknown_description = "A resource used to denote that the method used to generate the " \
+                                                      "current set of links is unknown."
+    unknown_see_also = [see_also.format("unknown")]
+    unknown_see_also_ttl = [see_also_ttl.format("unknown")]
+
+    simple_clustering = F"{algorithm}SimpleClustering"
+    simple_clustering_ttl = "resource:SimpleClustering"
+    simple_clustering_short_description = simple_clustering_ttl_description = """
+            A Collection of clusters of resources where each cluster is obtained by the transitivity of links.
+            In case these links are identity links, the clustered resources could be seen as CO-REFERENTS and
+            the network formed from the CO-REFERENTS resources is an IDENTITY (LINK) NETWORK."""
 
     # ---------------------------------------------- #
     # EXACT SEARCH                                   #
@@ -58,6 +75,9 @@ class Algorithm:
     exact_range = "1"
     exact_description = """
         Aligns source and target’s IRIs whenever their respective user selected property values are identical."""
+    exact_short_description = exact_description
+    exact_see_also = [see_also.format("exact")]
+    exact_see_also_ttl = [see_also_ttl.format("exact")]
 
     # ---------------------------------------------- #
     # MAPPING                                        #
@@ -71,6 +91,9 @@ class Algorithm:
         the liking property, i.e. property of the source that holds the identifier of the target. The inconvenience 
         in generating a linkset in such way is that the real mechanism used to create the existing alignment is not 
         explicitly provided by the source dataset."""
+    embedded_short_description = embedded_description
+    embedded_see_also = [see_also.format("embedded")]
+    embedded_see_also_ttl = [see_also_ttl.format("embedded")]
 
     # ---------------------------------------------- #
     # CHANGE / EDIT                                  #
@@ -133,11 +156,30 @@ class Algorithm:
            TRANSPOSITIONS        : t = 0
            STRENGTH              : s = 1/3 * ( 8/9 + 8/10 + (8 - 0/2)/8) = 0.8963
         """
+    jaro_short_description = """
+        This  method is used to align source and target's IRIs whenever the similarity score of their respective user 
+        selected property values are above a given threshold in the range ]0, 1]​.
+        
+        Jaro distance is a measure of similarity between two strings. The higher the Jaro distance for two strings is, 
+        the more similar the strings are. The score is normalised such that 0 equates to no similarity and 1 is an exact 
+        match.
+        
+        Given two strings S1 and S2, the method consists in finding common characters (xi = yj) xi of S1 and yj of S2 
+        such that xi and yj are not more than d characters away from each other. The acceptable matching distance d is 
+        half the longest input string.
+    """
+    jaro_see_also = [see_also.format("jaro"), "https://rosettacode.org/wiki/Jaro_distance"]
+    jaro_see_also_ttl = [see_also_ttl.format("jaro"), "https://rosettacode.org/wiki/Jaro_distance"]
 
     # METHOD 5: JARO WINKLER
     jaro_winkler = F"{algorithm}Jaro_Winkler"
     jaro_winkler_ttl = "resource:Jaro_Winkler"
     jaro_winkler_description = """
+        It aligns source and target's IRIs whenever the similarity score of their respective user 
+        selected property values are above a given threshold in the range ]0, 1]​.
+        
+        The similarity score is computed as follows:
+        
         Given two strings s1 and s2, the Winkler similarity equation boosts up the Jaro algorithm’s result dj by 
         increasing it whenever the compared strings share a prefix of a maximum of four characters. In this shared 
         prefix scenario, the boost is computed as:
@@ -153,19 +195,39 @@ class Algorithm:
     
         The Jaro Winkler is computed as: d_jw = dj + w
         """
+    jaro_winkler_short_description = """
+        It aligns source and target's IRIs whenever the similarity score of their respective user selected property 
+        values are above a given threshold in the range ]0, 1]​.
+        
+        Given two strings s1 and s2, the Winkler similarity score is computed such that the winkler equation boosts up 
+        the Jaro algorithm’s result dj by increasing it whenever the compared strings share a prefix of a maximum of 
+        four characters.
+    """
+    jaro_winkler_see_also = [see_also.format("jaro-winkler"),
+                             "https://www.geeksforgeeks.org/jaro-and-jaro-winkler-similarity/"]
+    jaro_winkler_see_also_ttl = [see_also_ttl.format("jaro-winkler"),
+                             "https://www.geeksforgeeks.org/jaro-and-jaro-winkler-similarity/"]
 
     # METHOD 6: EDIT DISTANCE
     normalisedEditDistance = F"{algorithm}Normalised-EditDistance"
     normalisedEditDistance_ttl = "resource:Normalised-EditDistance"
-    NormalisedEditDistance_description = """
+    normalisedEditDistance_description = """
         This ​method is used to align ​​source a​nd ​​target’s IRIs whenever the similarity score of their respective 
         user selected property values are ​​above a given ​Levenshtein (edit) Distance threshold​. 
-        Edit distance is a way of quantifying how ​dissimilar two strings (e.g., words) are to one another by 
-        counting the minimum number of operations ​ε ​(​removal, insertion, or substitution of a character in the 
-        string)​ required to transform one string into the other. For example, ​the ​Levenshtein distance between 
-        kitten and sitting is ​ε ​= 3 as it requires a two substitutions (s for k and i for e) and one insertion  
-        of g at the end [https://en.wikipedia.org/wiki/Edit_distance]​.
+        Edit distance is a way of quantifying how ​dissimilar two strings (e.g., words) are to one another by counting 
+        the minimum number of operations ​ε (​removal, insertion, or substitution of a character in the string)​ required 
+        to transform one string into the other. For example, ​the ​Levenshtein distance between kitten and sitting is ​
+        ε ​= 3 as it requires a two substitutions (s for k and i for e) and one insertion  of g at the end​. 
+        The normalisation is obtained by dividing the computed distance by the length of the longest string and then 
+        inverting the result such that 0 indicates no similarity 1 indicates exact similarity and any score in between
+        indicates various degree of similarity. 
+        For more information the reader is advised to read [https://en.wikipedia.org/wiki/Edit_distance].
         """
+    normalisedEditDistance_short_description = normalisedEditDistance_description
+    normalisedEditDistance_see_also = [see_also.format("levenshtein"),
+                                       "https://en.wikipedia.org/wiki/Edit_distance"]
+    normalisedEditDistance_see_also_ttl = [see_also_ttl.format("levenshtein"),
+                                           "https://en.wikipedia.org/wiki/Edit_distance"]
 
     # METHOD 7: EDIT DISTANCE
     editDistance = F"{algorithm}Edit-Distance"
@@ -177,66 +239,42 @@ class Algorithm:
         counting the minimum number of operations ​ε ​(​removal, insertion, or substitution of a character in the 
         string)​ required to transform one string into the other. For example, ​the ​Levenshtein distance between 
         kitten and sitting is ​ε ​= 3 as it requires a two substitutions (s for k and i for e) and one insertion  
-        of g at the end [https://en.wikipedia.org/wiki/Edit_distance]​.
+        of g at the end​.
+        For more information the reader is advised to read [https://en.wikipedia.org/wiki/Edit_distance].
         """
+    editDistance_short_description = editDistance_description
+    editDistance_see_also = [see_also.format("levenshtein"),
+                                       "https://en.wikipedia.org/wiki/Edit_distance"]
+    editDistance_see_also_ttl = [see_also_ttl.format("levenshtein"),
+                             "https://en.wikipedia.org/wiki/Edit_distance"]
 
     # METHOD 8: TRIGRAM
     trigram = F"{algorithm}trigram"
     trigram_ttl = "resource:Trigram"
     trigram_description = """
         Trigrams are a special case of the n-gram, where n is 3. It is a contiguous sequence of three items from a 
-        given sample. 
-
-        To be mre concrete, In the case of string similarity, where an application of NAME is a sample and a 
-        CHARACTER is an item, we obtain a sequence of 4 trigrams { mar art rth tha } from the sample “martha”. 
-
-        If we consider a WORD as an item in the sample "the quick red fox jumps over the lazy brown dog", 
-        we then obtain a sequence of 8 WORD-LEVEL TRIGRAMS { the quick red | quick red fox | red fox jumps | 
-        fox jumps over | jumps over the | over the lazy | the lazy brown | lazy brown dog }. 
+        given sample. To be more concrete, In the case of string similarity, where an application of NAME is a sample 
+        and a CHARACTER is an item, we obtain a sequence of 4 trigrams { mar art rth tha } from the sample “martha”. If 
+        we consider a WORD as an item in the sample "the quick red fox jumps over the lazy brown dog", we then obtain a 
+        sequence of 8 WORD-LEVEL TRIGRAMS { the quick red | quick red fox | red fox jumps | fox jumps over | jumps over 
+        the | over the lazy | the lazy brown | lazy brown dog }. 
 
         N-grams can be used for approximate matching by comparing two trigram sequences using metrics such as 
         cosine distance, z-scores or g-test.
 
         see [https://en.wikipedia.org/wiki/Trigram], [https://en.wikipedia.org/wiki/N-gram] for more information. 
         """
+    trigram_short_description = trigram_description
+    trigram_see_also = [see_also.format("trigram"),
+                             "https://en.wikipedia.org/wiki/Trigram", "https://en.wikipedia.org/wiki/N-gram"]
+    trigram_see_also_ttl = [see_also_ttl.format("trigram"),
+                        "https://en.wikipedia.org/wiki/Trigram", "https://en.wikipedia.org/wiki/N-gram"]
 
     # ---------------------------------------------- #
     # PHONETIC                                       #
     # ---------------------------------------------- #
 
     # METHOD 9: SOUNDEX
-    normalisedSoundex = F"{algorithm}Normalised-Soundex"
-    normalisedSoundex_ttl = "resource:Normalised-Soundex"
-    normalisedSoundex_description = """
-        "Soundex is a phonetic algorithm for indexing names by sound, as pronounced in English. The goal is for ho-
-        mophones to be encoded to the same representation so that they can be matched despite minor differences in
-        spelling. The algorithm mainly encodes consonants; a vowel will not be encoded unless it is the first let-
-        ter” [https://en.wikipedia.org/wiki/Soundex]. 
-        In the Lenticular Lens, Soundex is used as a normaliser in the sense that an edit distance is run over the 
-        soundex code version of a name. For example, the in the table below, the normalisation of both Louijs Roc-
-        ourt and `Lowis Ricourt becomes L200 R263 leading to an edit distance of 0 and a relative strength of 1. 
-        However, computing the same names using directly an edit distance results in an edit distance of 3 and a 
-        relative matching strength of 0. 79.
-
-        --------------
-        -- Example -- THE USE OF SOUNDEX CODE FOR STRING APPROXIMATION
-        --------------
-        The example below shows the implementation of Soundex Distance 
-        in the Lenticular Lens and how it compares with Edit Distance
-        over the original names (no soundex-based normalisation).
-
-        ------------------------------------------------------------------------------------------------------------------------------------------------------
-        Source                      Target                     E. Dist  Rel. distance  Source soundex       Target  soundex       Code E. Dist  Code Rel. Dist
-        ------------------------------------------------------------------------------------------------------------------------------------------------------
-        Jasper Cornelisz. Lodder    Jaspar Cornelisz Lodder          2           0.92  J216 C654 L360       J216 C654 L360                   0             1.0
-        Barent Teunis               Barent Teunisz gen. Drent       12           0.52  B653 T520            B653 T520 G500 D653             10            0.47
-        Louijs Rocourt              Louys Rocourt                    2           0.86  L200 R263            L200 R263                        0             1.0
-        Louijs Rocourt              Lowis Ricourt                    3           0.79  L200 R263            L200 R263                        0             1.0
-        Louys Rocourt               Lowis Ricourt                    3           0.77  L200 R263            L200 R263                        0             1.0
-        Cornelis Dircksz. Clapmus   Cornelis Clapmuts               10            0.6  C654 D620 C415       C654 C415                        5            0.64
-        Geertruydt van den Breemde  Geertruijd van den Bremde        4           0.85  G636 V500 D500 B653  G636 V500 D500 B653  
-        """
-
     soundexDistance = F"{algorithm}SoundexDistance"
     soundexDistance_ttl = "resource:SoundexDistance"
     soundexDistance_description = """
@@ -245,7 +283,7 @@ class Algorithm:
         spelling. The algorithm mainly encodes consonants; a vowel will not be encoded unless it is the first let-
         ter” [https://en.wikipedia.org/wiki/Soundex]. 
         In the Lenticular Lens, Soundex is used as a normaliser in the sense that an edit distance is run over the 
-        soundex code version of a name. For example, the in the table below, the normalisation of both Louijs Roc-
+        soundex code version of a name. For example, in the table below, the normalisation of both Louijs Roc-
         ourt and `Lowis Ricourt becomes L200 R263 leading to an edit distance of 0 and a relative strength of 1. 
         However, computing the same names using directly an edit distance results in an edit distance of 3 and a 
         relative matching strength of 0. 79.
@@ -268,24 +306,119 @@ class Algorithm:
         Cornelis Dircksz. Clapmus   Cornelis Clapmuts               10            0.6  C654 D620 C415       C654 C415                        5            0.64
         Geertruydt van den Breemde  Geertruijd van den Bremde        4           0.85  G636 V500 D500 B653  G636 V500 D500 B653  
         """
+    soundexDistance_short_description = """
+        "Soundex is a phonetic algorithm for indexing names by sound, as pronounced in English. The goal is for homophones 
+        to be encoded to the same representation so that they can be matched despite minor differences in spelling. The 
+        algorithm mainly encodes consonants; a vowel will not be encoded unless it is the first letter.” 
+        [https://en.wikipedia.org/wiki/Soundex]
+        In the Lenticular Lens, Soundex is used in two other matching approaches:
+            1. As a normaliser in the sense that a second scalar matching metric such as an edit distance, trigram... is 
+            run over the soundex code version of a name. For example, the normalisation of both Louijs Rocourt and Lowis 
+            Ricourt becomes L200 R263 leading to an edit distance of 0 and a relative strength of 1. 
+            2. As a blocking strategy, in the sens that a second scalar matching metric is run the non encoded property 
+            values only when those values share the same encoding. Here, computing the same names Louijs Rocourt and Lowis 
+            Ricourt as they share the same encoding results in an edit distance of 3 and a relative matching strength of 
+            0.79.
+        For similarity score generated not in the interval ]0,1] a normalisation is applied such that it falls back in 
+        the interval ]0,1] where 0 indicates no similarity, 1 indicates exact similarity and any score in between
+        indicates various degree of similarity.
+        """
+    soundexDistance_see_also = [see_also.format("soundex"),
+                                see_also.format("soundex-approximation"),
+                                see_also.format("approx-over-same-soundex"),
+                                "https://en.wikipedia.org/wiki/Soundex"]
+    soundexDistance_see_also_ttl = [see_also_ttl.format("soundex"),
+                                    see_also_ttl.format("soundex-approximation"),
+                                    see_also_ttl.format("approx-over-same-soundex"),
+                                    "https://en.wikipedia.org/wiki/Soundex"]
+
+    normalisedSoundex = F"{algorithm}Normalised-Soundex"
+    normalisedSoundex_ttl = "resource:Normalised-Soundex"
+    normalisedSoundex_description = """
+        "Soundex is a phonetic algorithm for indexing names by sound, as pronounced in English. The goal is for homophones 
+        to be encoded to the same representation so that they can be matched despite minor differences in spelling. 
+        The algorithm mainly encodes consonants; a vowel will not be encoded unless it is the first letter.” 
+        [https://en.wikipedia.org/wiki/Soundex] 
+        In the Lenticular Lens, Soundex is used as a normaliser in the sense that an approximation algorithm such as edit 
+        distance, trigram... is run over the soundex code version of a name. For example, the encoding of both Louijs 
+        Rocourt and Lowis Ricourt becomes L200 R263 leading to an edit distance of 0 and a relative strength of 1. 
+        However, computing the same names using directly an edit distance results in an edit distance of 3 and a relative 
+        matching strength of 0.79.
+
+        --------------
+        -- Example -- THE USE OF SOUNDEX CODE FOR STRING APPROXIMATION
+        --------------
+        The example below shows the implementation of Soundex Distance 
+        in the Lenticular Lens and how it compares with Edit Distance
+        over the original names (no soundex-based normalisation).
+
+        ------------------------------------------------------------------------------------------------------------------------------------------------------
+        Source                      Target                     E. Dist  Rel. distance  Source soundex       Target  soundex       Code E. Dist  Code Rel. Dist
+        ------------------------------------------------------------------------------------------------------------------------------------------------------
+        Jasper Cornelisz. Lodder    Jaspar Cornelisz Lodder          2           0.92  J216 C654 L360       J216 C654 L360                   0             1.0
+        Barent Teunis               Barent Teunisz gen. Drent       12           0.52  B653 T520            B653 T520 G500 D653             10            0.47
+        Louijs Rocourt              Louys Rocourt                    2           0.86  L200 R263            L200 R263                        0             1.0
+        Louijs Rocourt              Lowis Ricourt                    3           0.79  L200 R263            L200 R263                        0             1.0
+        Louys Rocourt               Lowis Ricourt                    3           0.77  L200 R263            L200 R263                        0             1.0
+        Cornelis Dircksz. Clapmus   Cornelis Clapmuts               10            0.6  C654 D620 C415       C654 C415                        5            0.64
+        Geertruydt van den Breemde  Geertruijd van den Bremde        4           0.85  G636 V500 D500 B653  G636 V500 D500 B653  
+        """
+    normalisedSoundex_short_description = """
+    "Soundex is a phonetic algorithm for indexing names by sound, as pronounced in English. The goal is for homophones 
+        to be encoded to the same representation so that they can be matched despite minor differences in spelling. The 
+        algorithm mainly encodes consonants; a vowel will not be encoded unless it is the first letter.” 
+        [https://en.wikipedia.org/wiki/Soundex]
+        In the Lenticular Lens, Soundex is used in two other matching approaches:
+            1. As a normaliser in the sense that a second scalar matching metric such as an edit distance, trigram... is 
+            run over the soundex code version of a name. For example, the normalisation of both Louijs Rocourt and Lowis 
+            Ricourt becomes L200 R263 leading to an edit distance of 0 and a relative strength of 1. 
+            2. As a blocking strategy, in the sens that a second scalar matching metric is run over the not encoded 
+            property values of interest ONLY when those values share the same encoding. For example, computing the 
+            similarity score for Louijs Rocourt and Lowis Ricourt (as they share the same encoding) using an edit 
+            distance metric results in an edit distance of 3 and a relative matching strength of 0.79.
+        For similarity score generated not in the interval ]0,1] a normalisation is applied such that it falls back in 
+        the interval ]0,1] where 0 indicates no similarity, 1 indicates exact similarity and any score in between
+        indicates various degree of similarity."""
+    normalisedSoundex_see_also = [see_also.format("soundex"),
+                                  see_also.format("soundex-approximation"),
+                                  see_also.format("approx-over-same-soundex"),
+                                  "https://en.wikipedia.org/wiki/Soundex"]
+    normalisedSoundex_see_also_ttl = [see_also_ttl.format("soundex"),
+                                      see_also_ttl.format("soundex-approximation"),
+                                      see_also_ttl.format("approx-over-same-soundex"),
+                                      "https://en.wikipedia.org/wiki/Soundex"]
 
     # METHOD 10: METAPHONE
     metaphone = F"{algorithm}Metaphone"
     metaphone_ttl = "resource:Metaphone"
-    metaphone_description = """
+    metaphone_short_description = metaphone_description = """
         Designed by Lawrence Philips in 1990, it is a phonetic algorithm for a more accurate encoding of words by sound 
         (as compared to SOUNDEX) as pronounced in English. In this algorithm as with SOUNDEX, similar-sounding words
         should share the same encoding key which is an approximate phonetic representation of the original word.
         For more accuracy, consider the use of DOUBLE METAPHONE as it is an improvement of the Original Metaphone. 
         In turn, for an even better improved accuracy consider the use of METAPHONE 3. 
-        
         See [https://en.wikipedia.org/wiki/Metaphone] for mor information.
+        
+        In the Lenticular Lens, Metaphone is used in two other matching approaches:
+            1. As a normaliser in the sense that a second scalar matching metric such as an edit distance, trigram... is 
+            run over the soundex code version of a name. For example, the normalisation of both Louijs Rocourt and Lowis 
+            Ricourt becomes L200 R263 leading to an edit distance of 0 and a relative strength of 1. 
+            2. As a blocking strategy, in the sens that a second scalar matching metric is run the non encoded property 
+            values only when those values share the same encoding. Here, computing the same names Louijs Rocourt and Lowis 
+            Ricourt as they share the same encoding results in an edit distance of 3 and a relative matching strength of 
+            0.79.
+        For similarity score generated not in the interval ]0,1] a normalisation is applied such that it falls back in 
+        the interval ]0,1] where 0 indicates no similarity, 1 indicates exact similarity and any score in between
+        indicates various degree of similarity.
         """
+
+    metaphone_see_also = [see_also.format("metaphone"), "https://en.wikipedia.org/wiki/Metaphone"]
+    metaphone_see_also_ttl = [see_also_ttl.format("metaphone"), "https://en.wikipedia.org/wiki/Metaphone"]
 
     # METHOD 11: DOUBLE METAPHONE
     doubleMetaphone = F"{algorithm}DoubleMetaphone"
     doubleMetaphone_ttl = "resource:DoubleMetaphone"
-    doubleMetaphone_description = """
+    doubleMetaphone_short_description = doubleMetaphone_description = """
         it is a third generation phonetic algorithm improvement after SOUNDEX and METAPHONE for an accurately encoding  
         words by sound as pronounced in English. For more accuracy, consider the use of METAPHONE 3 as it is an 
         improvement of the DOUBLE METAPHONE.
@@ -301,12 +434,28 @@ class Algorithm:
         C alone.
         
         See [https://en.wikipedia.org/wiki/Metaphone] for mor information.
+        
+        In the Lenticular Lens, Metaphone is used in two other matching approaches:
+            1. As a normaliser in the sense that a second scalar matching metric such as an edit distance, trigram... is 
+            run over the soundex code version of a name. For example, the normalisation of both Louijs Rocourt and Lowis 
+            Ricourt becomes L200 R263 leading to an edit distance of 0 and a relative strength of 1. 
+            2. As a blocking strategy, in the sens that a second scalar matching metric is run the non encoded property 
+            values only when those values share the same encoding. Here, computing the same names Louijs Rocourt and Lowis 
+            Ricourt as they share the same encoding results in an edit distance of 3 and a relative matching strength of 
+            0.79.
+        For similarity score generated not in the interval ]0,1] a normalisation is applied such that it falls back in 
+        the interval ]0,1] where 0 indicates no similarity, 1 indicates exact similarity and any score in between
+        indicates various degree of similarity.
         """
+    doubleMetaphone_see_also = [see_also.format("double-metaphone"), "https://en.wikipedia.org/wiki/Metaphone"]
+    doubleMetaphone_see_also_ttl = [see_also_ttl.format("double-metaphone"), "https://en.wikipedia.org/wiki/Metaphone"]
 
     # METHOD 12: BLOOTHOOFT
     bloothooft = F"{algorithm}Bloothooft"
     bloothooft_ttl = "resource:Bloothooft"
     bloothooft_range = "]0, 1]"
+    bloothooft_see_also = [see_also.format("bloothooft")]
+    bloothooft_see_also_ttl = [see_also_ttl.format("bloothooft")]
 
     # ---------------------------------------------- #
     # HYBRID                                         #
@@ -383,6 +532,14 @@ class Algorithm:
             }
 
         """
+    intermediate_short_description = """
+        The method aligns the source and the target’s IRIs via an intermediate database by using properties that 
+        potentially present different descriptions of the same entity, such as country name and country code. This 
+        is possible by providing an intermediate dataset that binds the two alternative descriptions to the very 
+        same identifier.
+    """
+    intermediate_see_also = [see_also.format("intermediate")]
+    intermediate_see_also_ttl = [see_also_ttl.format("intermediate")]
 
     # METHOD 14: WORLD INTERSECTION
     wordIntersection = F"{algorithm}Word-Intersection"
@@ -406,11 +563,17 @@ class Algorithm:
             Den x. may: 1535. Treur-spel.]
         regardless of the words' order.
     """
+    wordIntersection_short_description = """
+    This approximation method is originally designed to find a subset of words within a larger text. However, it 
+    could also be used for any pair of strings regardless of the strings sizes.
+    """
+    wordIntersection_see_also = [see_also.format("word-intersection")]
+    wordIntersection_see_also_ttl = [see_also_ttl.format("word-intersection")]
 
     # METHOD 15: TeAM
     TeAM = F"{algorithm}TeAM"
     TeAM_ttl = "resource:TeAM"
-    TeAM_description = """
+    TeAM_short_description = TeAM_description = """
         The Amsterdam’s city archives (SAA) possesses physical handwritten inventories records where a record may 
         be for example an inventory of goods (paintings, prints, sculpture, furniture, porcelain, etc.) owned by 
         an Amsterdamer and mentioned in a last will. Interested in documenting the ownership of paintings from 
@@ -421,6 +584,8 @@ class Algorithm:
         ries. This problem can be generically reformulated as, given a source-segment database (e.g. Montias DB) 
         and a target-segment database (e.g. SAA), find the best similar target segment for each source segment.
         """
+    TeAM_see_also = [see_also.format("team"), "https://team-algo.github.io/"]
+    TeAM_see_also_ttl = [see_also_ttl.format("team"), "https://team-algo.github.io/"]
 
     # ---------------------------------------------- #
     # NUMERICAL                                      #
@@ -429,18 +594,20 @@ class Algorithm:
     # METHOD 16: NUMBERS
     numbers = F"{algorithm}Numbers"
     numbers_ttl = "resource:Numbers"
-    numbers_description = """
+    numbers_short_description = numbers_description = """
         Numbers. The method is used to align the source and the target by approximating the match of the (number/
         date) values of the selected properties according to a delta. For example, if two entities have been ali-
         gned based on the similarity of their names but an extra check is to be investigated based on their res-
         pective year of birth, setting the delta to 1 will ensure that the two entities are born within the same 
         year, give or take a year.
         """
+    numbers_see_also = [see_also.format("numbers")]
+    numbers_see_also_ttl = [see_also_ttl.format("numbers")]
 
     # METHOD 17: TIME DELTA
     time_delta = F"{algorithm}Time-Delta"
     time_delta_ttl = "resource:Time-Delta"
-    time_delta_description = """
+    time_delta_short_description = time_delta_description = """
         Time Delta. This function allows for finding co-referent entities on the basis of a minimum time dif-
         ference between the times reported by the source and the target entities. For example, if the value zero is 
         assigned to the time difference parameter, then, for a matched to be found, the time of the target and the 
@@ -448,18 +615,25 @@ class Algorithm:
         pair of entities to be co-referent if the real entities are born lambda days, months or years apart among 
         other-things (similar name, place..).
         """
+    time_delta_see_also = [see_also.format("time-delta")]
+    time_delta_see_also_ttl = [see_also_ttl.format("time-delta")]
 
     # METHOD 18: TIME DELTA
     same_year_month = F"{algorithm}same_year_month"
     same_year_month_ttl = "resource:same_year_month"
-    same_year_month_description = """
-        AN exact match of the year and month from the dates inputs. 
+    same_year_month_short_description = same_year_month_description = """
+        This option is used to align source and target’s IRIs whenever an exact match of
+        the year or year and month is observed between source and target's input dates. 
     """
+    same_year_month_see_also = [see_also.format("same-year-month")]
+    same_year_month_see_also_ttl = [see_also_ttl.format("same-year-month")]
 
-    bloothooftReduct= """To come"""
+    bloothooftReduction = """To come"""
 
     global scale
     scale = {
+
+        'unknown': "undefined",
 
         'interval': interval,
 
@@ -571,6 +745,8 @@ class Algorithm:
     global descriptions
     descriptions = {
 
+        'unknown': Literal(unknown_description, lang="en").n3(),
+
         'same_year_month': Literal(exact_description, lang="en").n3(),
 
         "=": Literal(exact_description, lang="en").n3(),
@@ -588,19 +764,19 @@ class Algorithm:
         URIRef(intermediate.lower()).n3(): Literal(intermediate_description, lang="en").n3(),
         intermediate_ttl.lower(): Literal(intermediate_description, lang="en").n3(),
 
-        'levenshtein': Literal(NormalisedEditDistance_description, lang="en").n3(),
-        'levenshtein_distance': Literal(NormalisedEditDistance_description, lang="en").n3(),
-        'levenshtein_normalized': Literal(NormalisedEditDistance_description, lang="en").n3(),
-        URIRef(editDistance.lower()).n3(): Literal(NormalisedEditDistance_description, lang="en").n3(),
-        editDistance_ttl.lower(): Literal(NormalisedEditDistance_description, lang="en").n3(),
+        'levenshtein': Literal(normalisedEditDistance_description, lang="en").n3(),
+        'levenshtein_distance': Literal(normalisedEditDistance_description, lang="en").n3(),
+        'levenshtein_normalized': Literal(normalisedEditDistance_description, lang="en").n3(),
+        URIRef(editDistance.lower()).n3(): Literal(normalisedEditDistance_description, lang="en").n3(),
+        editDistance_ttl.lower(): Literal(normalisedEditDistance_description, lang="en").n3(),
 
         'trigram': Literal(trigram_description, lang="en").n3(),
         'jaro': Literal(jaro_description, lang="en").n3(),
         'jaro_winkler': Literal(jaro_winkler_description, lang="en").n3(),
 
-        'levenshtein_approx': Literal(NormalisedEditDistance_description, lang="en").n3(),
-        URIRef(normalisedEditDistance.lower()).n3(): Literal(NormalisedEditDistance_description, lang="en").n3(),
-        normalisedEditDistance_ttl.lower(): Literal(NormalisedEditDistance_description, lang="en").n3(),
+        'levenshtein_approx': Literal(normalisedEditDistance_description, lang="en").n3(),
+        URIRef(normalisedEditDistance.lower()).n3(): Literal(normalisedEditDistance_description, lang="en").n3(),
+        normalisedEditDistance_ttl.lower(): Literal(normalisedEditDistance_description, lang="en").n3(),
 
         URIRef(soundexDistance.lower()).n3(): Literal(normalisedSoundex_description, lang="en").n3(),
         soundexDistance_ttl.lower(): Literal(normalisedSoundex_description, lang="en").n3(),
@@ -633,15 +809,241 @@ class Algorithm:
         URIRef(time_delta.lower()).n3(): Literal(time_delta_description, lang="en").n3(),
         time_delta_ttl.lower(): Literal(time_delta_description, lang="en").n3(),
 
-        "bloothooft": Literal(bloothooftReduct, lang="en").n3(),
-        "bloothooft_reduct": Literal(bloothooftReduct, lang="en").n3(),
+        "bloothooft": Literal(bloothooftReduction, lang="en").n3(),
+        "bloothooft_reduct": Literal(bloothooftReduction, lang="en").n3(),
     }
 
+    global short_descriptions
+    short_descriptions = {
+
+        'unknown': Literal(unknown_short_description, lang="en").n3(),
+        URIRef(unknown.lower()).n3(): Literal(unknown_short_description, lang="en").n3(),
+        unknown_ttl.lower(): Literal(unknown_short_description, lang="en").n3(),
+
+        'same_year_month': Literal(exact_short_description, lang="en").n3(),
+
+        "=": Literal(exact_short_description, lang="en").n3(),
+        "exact": Literal(exact_short_description, lang="en").n3(),
+        URIRef(exact.lower()).n3(): Literal(exact_short_description, lang="en").n3(),
+        exact_ttl.lower(): Literal(exact_short_description, lang="en").n3(),
+
+        URIRef(embedded.lower()).n3(): Literal(embedded_short_description, lang="en").n3(),
+        embedded_ttl.lower(): Literal(embedded_short_description, lang="en").n3(),
+
+        'intermediate': Literal(intermediate_short_description, lang="en").n3(),
+        URIRef(intermediate.lower()).n3(): Literal(intermediate_short_description, lang="en").n3(),
+        intermediate_ttl.lower(): Literal(intermediate_short_description, lang="en").n3(),
+
+        'levenshtein': Literal(normalisedEditDistance_short_description, lang="en").n3(),
+        'levenshtein_distance': Literal(normalisedEditDistance_short_description, lang="en").n3(),
+        'levenshtein_normalized': Literal(normalisedEditDistance_short_description, lang="en").n3(),
+        URIRef(editDistance.lower()).n3(): Literal(normalisedEditDistance_short_description, lang="en").n3(),
+        editDistance_ttl.lower(): Literal(normalisedEditDistance_short_description, lang="en").n3(),
+
+        'trigram': Literal(trigram_short_description, lang="en").n3(),
+        'jaro': Literal(jaro_short_description, lang="en").n3(),
+        'jaro_winkler': Literal(jaro_winkler_short_description, lang="en").n3(),
+
+        'levenshtein_approx': Literal(normalisedEditDistance_short_description, lang="en").n3(),
+        URIRef(normalisedEditDistance.lower()).n3(): Literal(normalisedEditDistance_short_description, lang="en").n3(),
+        normalisedEditDistance_ttl.lower(): Literal(normalisedEditDistance_short_description, lang="en").n3(),
+
+        URIRef(soundexDistance.lower()).n3(): Literal(normalisedSoundex_short_description, lang="en").n3(),
+        soundexDistance_ttl.lower(): Literal(normalisedSoundex_short_description, lang="en").n3(),
+
+        'soundex': Literal(normalisedSoundex_short_description, lang="en").n3(),
+        'll_soundex': Literal(normalisedSoundex_short_description, lang="en").n3(),
+        URIRef(normalisedSoundex.lower()).n3(): Literal(normalisedSoundex_short_description, lang="en").n3(),
+        normalisedSoundex_ttl.lower(): Literal(normalisedSoundex_short_description, lang="en").n3(),
+
+        "metaphone": Literal(metaphone_short_description, lang="en").n3(),
+        URIRef(metaphone.lower()).n3(): Literal(metaphone_short_description, lang="en").n3(),
+        metaphone_ttl.lower(): Literal(metaphone_short_description, lang="en").n3(),
+
+        "dmetaphone": Literal(doubleMetaphone_short_description, lang="en").n3(),
+        URIRef(doubleMetaphone.lower()).n3(): Literal(doubleMetaphone_short_description, lang="en").n3(),
+        doubleMetaphone_ttl.lower(): Literal(doubleMetaphone_short_description, lang="en").n3(),
+
+        "word_intersection": Literal(wordIntersection_short_description, lang="en").n3(),
+        URIRef(wordIntersection.lower()).n3(): Literal(wordIntersection_short_description, lang="en").n3(),
+        wordIntersection_ttl.lower(): Literal(wordIntersection_short_description, lang="en").n3(),
+
+        'numbers_delta': Literal(numbers_short_description, lang="en").n3(),
+        URIRef(numbers.lower()).n3(): Literal(numbers_short_description, lang="en").n3(),
+        numbers_ttl.lower(): Literal(numbers_short_description, lang="en").n3(),
+
+        URIRef(TeAM.lower()).n3(): Literal(TeAM_short_description, lang="en").n3(),
+        TeAM_ttl.lower(): Literal(TeAM_short_description, lang="en").n3(),
+
+        "time_delta": Literal(time_delta_short_description, lang="en").n3(),
+        URIRef(time_delta.lower()).n3(): Literal(time_delta_short_description, lang="en").n3(),
+        time_delta_ttl.lower(): Literal(time_delta_short_description, lang="en").n3(),
+
+        "bloothooft": Literal(bloothooftReduction, lang="en").n3(),
+        "bloothooft_reduct": Literal(bloothooftReduction, lang="en").n3(),
+    }
+
+    global also
+    also = {
+
+        'unknown': unknown_see_also,
+
+        'same_year_month': same_year_month_see_also,
+
+        "=": exact_see_also,
+        "exact": exact_see_also,
+        URIRef(exact.lower()).n3(): exact_see_also,
+        exact_ttl.lower(): exact_see_also,
+
+        URIRef(unknown.lower()).n3(): Literal(unknown_description, lang="en").n3(),
+        unknown_ttl.lower(): Literal(unknown_description, lang="en").n3(),
+
+        URIRef(embedded.lower()).n3(): embedded_see_also,
+        embedded_ttl.lower(): embedded_see_also,
+
+        'intermediate':  intermediate_see_also,
+        URIRef(intermediate.lower()).n3(): intermediate_see_also,
+        intermediate_ttl.lower(): intermediate_see_also,
+
+        'levenshtein': editDistance_see_also,
+        'levenshtein_distance': editDistance_see_also,
+        'levenshtein_normalized': normalisedEditDistance_see_also,
+        URIRef(editDistance.lower()).n3(): editDistance_see_also,
+        editDistance_ttl.lower(): editDistance_see_also,
+
+        'trigram': trigram_see_also,
+        'jaro': jaro_see_also,
+        'jaro_winkler': jaro_winkler_see_also,
+
+        'levenshtein_approx': normalisedEditDistance_see_also,
+        URIRef(normalisedEditDistance.lower()).n3(): normalisedEditDistance_see_also,
+        normalisedEditDistance_ttl.lower(): normalisedEditDistance_see_also,
+
+        URIRef(soundexDistance.lower()).n3(): normalisedSoundex_see_also,
+        soundexDistance_ttl.lower(): normalisedSoundex_see_also,
+
+        'soundex': normalisedSoundex_see_also,
+        'll_soundex': normalisedSoundex_see_also,
+        URIRef(normalisedSoundex.lower()).n3(): normalisedSoundex_see_also,
+        normalisedSoundex_ttl.lower(): normalisedSoundex_see_also,
+
+        "metaphone": metaphone_see_also,
+        URIRef(metaphone.lower()).n3(): metaphone_see_also,
+        metaphone_ttl.lower(): metaphone_see_also,
+
+        "dmetaphone": doubleMetaphone_see_also,
+        URIRef(doubleMetaphone.lower()).n3(): doubleMetaphone_see_also,
+        doubleMetaphone_ttl.lower(): doubleMetaphone_see_also,
+
+        "word_intersection": wordIntersection_see_also,
+        URIRef(wordIntersection.lower()).n3(): wordIntersection_see_also,
+        wordIntersection_ttl.lower(): wordIntersection_see_also,
+
+        'numbers_delta': numbers_see_also,
+        URIRef(numbers.lower()).n3(): numbers_see_also,
+        numbers_ttl.lower(): numbers_see_also,
+
+        URIRef(TeAM.lower()).n3(): TeAM_see_also,
+        TeAM_ttl.lower(): TeAM_see_also,
+
+        "time_delta": time_delta_see_also,
+        URIRef(time_delta.lower()).n3(): time_delta_see_also,
+        time_delta_ttl.lower(): time_delta_see_also,
+
+        "bloothooft": bloothooft_see_also,
+        "bloothooft_reduct": bloothooft_see_also,
+        "bloothooft_reduction": bloothooft_see_also,
+    }
+
+    global also_ttl
+    also_ttl = {
+
+        'unknown': unknown_see_also_ttl,
+
+        'same_year_month': same_year_month_see_also_ttl,
+
+        "=": exact_see_also_ttl,
+        "exact": exact_see_also_ttl,
+        URIRef(exact.lower()).n3(): exact_see_also_ttl,
+        exact_ttl.lower(): exact_see_also_ttl,
+
+        URIRef(unknown.lower()).n3(): Literal(unknown_description, lang="en").n3(),
+        unknown_ttl.lower(): Literal(unknown_description, lang="en").n3(),
+
+        URIRef(embedded.lower()).n3(): embedded_see_also_ttl,
+        embedded_ttl.lower(): embedded_see_also_ttl,
+
+        'intermediate': intermediate_see_also_ttl,
+        URIRef(intermediate.lower()).n3(): intermediate_see_also_ttl,
+        intermediate_ttl.lower(): intermediate_see_also_ttl,
+
+        'levenshtein': editDistance_see_also_ttl,
+        'levenshtein_distance': editDistance_see_also_ttl,
+        'levenshtein_normalized': normalisedEditDistance_see_also_ttl,
+        URIRef(editDistance.lower()).n3(): editDistance_see_also_ttl,
+        editDistance_ttl.lower(): editDistance_see_also_ttl,
+
+        'trigram': trigram_see_also_ttl,
+        'jaro': jaro_see_also_ttl,
+        'jaro_winkler': jaro_winkler_see_also_ttl,
+
+        'levenshtein_approx': normalisedEditDistance_see_also_ttl,
+        URIRef(normalisedEditDistance.lower()).n3(): normalisedEditDistance_see_also_ttl,
+        normalisedEditDistance_ttl.lower(): normalisedEditDistance_see_also_ttl,
+
+        URIRef(soundexDistance.lower()).n3(): normalisedSoundex_see_also_ttl,
+        soundexDistance_ttl.lower(): normalisedSoundex_see_also_ttl,
+
+        'soundex': normalisedSoundex_see_also_ttl,
+        'll_soundex': normalisedSoundex_see_also_ttl,
+        URIRef(normalisedSoundex.lower()).n3(): normalisedSoundex_see_also_ttl,
+        normalisedSoundex_ttl.lower(): normalisedSoundex_see_also_ttl,
+
+        "metaphone": metaphone_see_also_ttl,
+        URIRef(metaphone.lower()).n3(): metaphone_see_also_ttl,
+        metaphone_ttl.lower(): metaphone_see_also_ttl,
+
+        "dmetaphone": doubleMetaphone_see_also_ttl,
+        URIRef(doubleMetaphone.lower()).n3(): doubleMetaphone_see_also_ttl,
+        doubleMetaphone_ttl.lower(): doubleMetaphone_see_also_ttl,
+
+        "word_intersection": wordIntersection_see_also_ttl,
+        URIRef(wordIntersection.lower()).n3(): wordIntersection_see_also_ttl,
+        wordIntersection_ttl.lower(): wordIntersection_see_also_ttl,
+
+        'numbers_delta': numbers_see_also_ttl,
+        URIRef(numbers.lower()).n3(): numbers_see_also_ttl,
+        numbers_ttl.lower(): numbers_see_also_ttl,
+
+        URIRef(TeAM.lower()).n3(): TeAM_see_also_ttl,
+        TeAM_ttl.lower(): TeAM_see_also_ttl,
+
+        "time_delta": time_delta_see_also_ttl,
+        URIRef(time_delta.lower()).n3(): time_delta_see_also_ttl,
+        time_delta_ttl.lower(): time_delta_see_also_ttl,
+
+        "bloothooft": bloothooft_see_also_ttl,
+        "bloothooft_reduct": bloothooft_see_also_ttl,
+        "bloothooft_reduction": bloothooft_see_also_ttl,
+    }
 
     @staticmethod
     def illustration(key):
         global descriptions
         return descriptions[key.lower()]
+
+    @staticmethod
+    def short_illustration(key):
+        global short_descriptions
+        return short_descriptions[key.lower()]
+
+    @staticmethod
+    def seeAlso(key):
+        return also[key.lower()]
+
+    @staticmethod
+    def seeAlso_ttl(key):
+        return also_ttl[key.lower()]
 
     @staticmethod
     def range(key):

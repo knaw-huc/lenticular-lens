@@ -18,7 +18,7 @@ from time import time
 from os import remove as remove_file
 
 CSV_HEADERS = {
-    "Valid": VoidPlus.link_validation_tt,
+    "Valid": VoidPlus.has_validation_status_ttl,
     "Strength": VoidPlus.strength_ttl,
     "Cluster ID": VoidPlus.cluster_ID_ttl
 }

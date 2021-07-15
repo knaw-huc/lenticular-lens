@@ -1,6 +1,7 @@
 
 from functools import reduce
 from typing import List
+from collections import defaultdict
 import random
 from itertools import combinations
 from math import factorial, ceil
@@ -30,7 +31,7 @@ class LogicOperations:
                    11: 'OR [Nilpotent Maximum (⊥nM)]',
                    12: 'OR [Einstein Sum (⊥D)]'}
 
-    operator_format = {
+    operator_format = defaultdict(str, {
 
         'and': translation[1],
         'min': translation[1],
@@ -54,7 +55,7 @@ class LogicOperations:
         'drastic t norm': translation[6],
         'drastic_t_norm': translation[6],
 
-        # -------------------------------------------------------- #
+        # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- #
 
         'or': translation[7],
         'max': translation[7],
@@ -80,7 +81,62 @@ class LogicOperations:
         'einstein': translation[12],
         'einstein sum': translation[12],
         'einstein_sum': translation[12],
-    }
+    })
+
+    t_operator_format = defaultdict(str, {
+
+        'and': translation[1],
+        'min': translation[1],
+        'minimum': translation[1],
+        'minimum_t_norm': translation[1],
+
+        'hamacher': translation[2],
+        'hamacher_product': translation[2],
+
+        'prod': translation[3],
+        'product': translation[3],
+        'product_t_norm': translation[3],
+
+        'nil min': translation[4],
+        'nilpotent minimum': translation[4],
+        'nilpotent_minimum': translation[4],
+
+        'luk': translation[5],
+        'lukasiewicz_t_norm': translation[5],
+
+        'drastic t norm': translation[6],
+        'drastic_t_norm': translation[6],
+    })
+
+    t_operator_format.setdefault(lambda : translation[1])
+
+    s_operator_format = defaultdict(str, {
+
+        'or': translation[7],
+        'max': translation[7],
+        'maximum': translation[7],
+        'maximum_t_conorm': translation[7],
+
+        'prob': translation[8],
+        "probabilistic": translation[8],
+        "probabilistic_sum": translation[8],
+
+        'bounded': translation[9],
+        'bounded sum': translation[9],
+        'bounded_sum': translation[9],
+
+        'drastic t conorm': translation[10],
+        'drastic_t_conorm': translation[10],
+
+        'nilpotent max': 'Nilpotent Maximum (⊥nM)',
+        'nil max': translation[11],
+        'nilpotent maximum': translation[11],
+        'nilpotent_maximum': translation[11],
+
+        'einstein': translation[12],
+        'einstein sum': translation[12],
+        'einstein_sum': translation[12],
+    })
 
     norms = {
 

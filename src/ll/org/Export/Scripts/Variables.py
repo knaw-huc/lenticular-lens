@@ -14,20 +14,26 @@ job_id = "job_id"
 #        LINKSET STATISTICS        #
 # ##################################
 linksetStats = 'linksetStats'
+lensStats = 'lensStats'
 triples = 'links_count'
 
-entities = 'entities'
+distinctLinkedEntities = 'linkset_entities_count'
+distinctSub = 'linkset_sources_count'
+distinctObj = 'linkset_targets_count'
 
-distinctSub = 'distinct_linkset_sources_count'
-distinctObj = 'distinct_linkset_targets_count'
+distinctSourceEntities = 'sources_count'
+distinctTargetEntities = 'targets_count'
+distinctSrcTrgEntities = 'entities_count'
 
 clusters = 'clusters_count'
 
 accepted = 'accepted'
 rejected = 'rejected'
-
+mixed = 'mixed'
+notValidated = 'not_validated'
 remains = 'remains'
 validations = 'validations'
+not_sure = 'not_sure'
 
 contradictions = 'contradictions'
 
@@ -37,6 +43,7 @@ dataset = 'dataset'
 #       LINKSET SPECIFICATIONS     #
 # ##################################
 linksetSpecs = 'linksetSpecs'
+lensSpecs = 'lensSpecs'
 id = 'id'
 label = "label"
 linkType = 'linkType'
@@ -45,6 +52,8 @@ sources = 'sources'
 targets = 'targets'
 methods = 'methods'
 properties = 'properties'
+short = 'short'
+long = 'long'
 
 # ##################################
 #   ENTITY FILTER SPECIFICATIONS   #
@@ -126,7 +135,7 @@ DOMAIN_NAME = "lenticularlens.org"
 
 
 # THe Golden Agent Lenticular Lens namespace
-LL = F"http://{DOMAIN_NAME}/"
+LL = F"https://{DOMAIN_NAME}/"
 
 
 RESOURCE = F"{LL}resource/"

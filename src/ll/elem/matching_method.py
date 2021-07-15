@@ -244,9 +244,14 @@ class MatchingMethod:
                 target_fields_sqls.append('target.{field_name_norm}')
                 target_alias_sqls.append('trg_norm')
 
-            list_threshold_template = '{list_threshold}'
+            list_threshold_match_template = '{list_threshold}'
+            list_threshold_similarity_template = '{list_threshold}'
             if self.list_is_percentage:
-                list_threshold_template = 'array_perc_size(source.{field_name}, target.{field_name}, {list_threshold})'
+                list_threshold_match_template = \
+                    'array_perc_size(source.{field_name}, target.{field_name}, {list_threshold})'
+                list_threshold_similarity_template = \
+                    'array_perc_size(max(source.{field_name}), max(target.{field_name}), ' \
+                    '{list_threshold})'
 
             new_match_template = cleandoc(f'''	
                 match_array_meets_size(ARRAY(
@@ -254,7 +259,7 @@ class MatchingMethod:
                     FROM unnest({','.join(source_fields_sqls)}) WITH ORDINALITY AS src({','.join(source_alias_sqls)}, src_idx)
                     JOIN unnest({','.join(target_fields_sqls)}) WITH ORDINALITY AS trg({','.join(target_alias_sqls)}, trg_idx)
                     ON {match_template}
-                ), {list_threshold_template})
+                ), {list_threshold_match_template})
             ''')
 
             new_similarity_template = cleandoc(f'''	
@@ -263,7 +268,7 @@ class MatchingMethod:
                     FROM unnest({','.join([f'array_agg({field_sql})' for field_sql in source_fields_sqls])}) AS src({','.join(source_alias_sqls)})
                     JOIN unnest({','.join([f'array_agg({field_sql})' for field_sql in target_fields_sqls])}) AS trg({','.join(target_alias_sqls)})
                     ON {match_template}
-                ), 'size', {list_threshold_template})
+                ), 'size', {list_threshold_similarity_template})
             ''')
         else:
             new_similarity_template = f'array_agg(DISTINCT {new_similarity_template})'
