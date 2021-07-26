@@ -23,6 +23,19 @@ class Lens:
         return self._data['description'].strip()
 
     @property
+    def threshold(self):
+        return self._data['specs']['threshold'] if 0 < self._data['specs']['threshold'] < 1 else None
+
+    @property
+    def operators(self):
+        lens_operators = set()
+        self.with_lenses_recursive(
+            lambda left, right, type, t_conorm, threshold, only_left: lens_operators.add(type),
+            lambda spec, id, type: lens_operators.update(spec.operators) if type == 'lens' else set()
+        )
+        return lens_operators
+
+    @property
     def linksets(self):
         return set(self.with_lenses_recursive(
             lambda left, right, type, t_conorm, threshold, only_left: flatten([left, right]),
@@ -33,7 +46,7 @@ class Lens:
     def lenses(self):
         return set(self.with_lenses_recursive(
             lambda left, right, type, t_conorm, threshold, only_left: flatten([left, right]),
-            lambda spec, id, type: list(spec) + spec.lenses if type == 'lens' else None
+            lambda spec, id, type: [spec] + list(spec.lenses) if type == 'lens' else None
         ))
 
     @property

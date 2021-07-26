@@ -1,8 +1,9 @@
 from psycopg2 import sql
 from rdflib import URIRef
 
+from ll.util.helpers import get_string_from_sql
+from ll.util.n3_helpers import TAB, pred_val, rdfs_sequence
 from ll.util.hasher import hash_string_min, column_name_hash
-from ll.util.helpers import get_string_from_sql, n3_pred_val
 
 from ll.namespaces.void_plus import VoidPlus
 from ll.namespaces.shared_ontologies import Namespaces as NS
@@ -98,30 +99,25 @@ class PropertyField:
 
         return property_prefix_mappings
 
-    def n3(self, ns_manager, end=False, line=True):
+    def n3(self, ns_manager, end=False, line=True, tabs=1):
         if len(self._data) == 1:
             property = self._collection.columns[self.prop_label]['uri'] \
                 if self.prop_label != 'uri' else f'{VoidPlus.resource}uri'
-            return n3_pred_val(NS.VoID.property_ttl, URIRef(property).n3(ns_manager), end=end, line=line)
+            value = URIRef(property).n3(ns_manager)
+        else:
+            urirefs = []
+            for prop_in_path in self._intermediate_property_path:
+                urirefs.append(URIRef(prop_in_path['from_collection'].columns[prop_in_path['property']]['uri']
+                                      if prop_in_path['property'] != 'uri'
+                                      else f'{VoidPlus.resource}uri').n3(ns_manager))
+                urirefs.append(URIRef(prop_in_path['to_collection'].table_data['collection_uri']).n3(ns_manager))
 
-        tab = '    '
-        new_line = '\n' if line else ''
+            urirefs.append(URIRef(self._property_collection.columns[self.prop_label]['uri']
+                                  if self.prop_label != 'uri' else f'{VoidPlus.resource}uri').n3(ns_manager))
 
-        urirefs = []
-        for prop_in_path in self._intermediate_property_path:
-            urirefs.append(URIRef(prop_in_path['from_collection']
-                                  .columns[prop_in_path['property']]['uri']
-                                  if prop_in_path['property'] != 'uri' else f'{VoidPlus.resource}uri').n3(ns_manager))
-            urirefs.append(URIRef(prop_in_path['to_collection'].table_data['collection_uri']).n3(ns_manager))
+            value = rdfs_sequence(urirefs, tabs=tabs)
 
-        urirefs.append(URIRef(self._property_collection.columns[self.prop_label]['uri']
-                              if self.prop_label != 'uri' else f'{VoidPlus.resource}uri').n3(ns_manager))
-
-        seq = f"{n3_pred_val('a', NS.RDFS.sequence_ttl, tabs=3)}"
-        for idx, uriref in enumerate(urirefs):
-            seq += f"{tab * 3}{f'rdf:_{idx + 1}':{47}} {uriref} {';' if idx + 1 < len(urirefs) else ''}\n"
-
-        return f"{tab}{NS.VoID.property_ttl}\n{tab * 2}[\n{seq}{tab * 2}] {'.' if end else ';'}{new_line}"
+        return pred_val(NS.VoID.property_ttl, value, end=end, line=line, tabs=tabs)
 
     def add_joins(self, joins):
         cur_resource = self._alias

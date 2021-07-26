@@ -73,6 +73,7 @@ class LensSql:
             """ ALTER TABLE lenses.{lens}
                 ADD PRIMARY KEY (source_uri, target_uri),
                 ADD COLUMN cluster_id integer,
+                ADD COLUMN cluster_hash_id char(15),
                 ADD COLUMN motivation text;
 
                 ALTER TABLE lenses.{lens} ADD COLUMN sort_order serial;

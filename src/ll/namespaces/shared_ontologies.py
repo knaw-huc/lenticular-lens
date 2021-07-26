@@ -34,6 +34,9 @@ class Namespaces:
         comment = F"{rdfs}comment"
         comment_ttl = F"rdfs:comment"
 
+        seeAlso = F"{rdfs}seeAlso"
+        seeAlso_ttl = F"rdfs:seeAlso"
+
     class XSD:
         # xsd = "http://www.w3.org/2001/XMLSchema#"
         xsd = ns.XSD

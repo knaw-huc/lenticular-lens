@@ -20,8 +20,8 @@ from flask_pyoidc.provider_configuration import ProviderConfiguration, ClientMet
 
 from werkzeug.routing import BaseConverter, ValidationError
 
-from ll.job.export import Export
 from ll.job.job import Job, Validation
+from ll.job.export import CsvExport, RdfExport
 
 from ll.util.hasher import hash_string
 from ll.util.stopwords import get_stopwords
@@ -495,10 +495,10 @@ def get_cluster_graph_data(job, type, id, cluster_id):
 @with_job
 @with_spec
 def export_to_csv(job, type, id):
-    export = Export(job, type, id)
+    export = CsvExport(job, type, id)
 
     validation_filter = Validation.get(request.values.getlist('valid'))
-    export_generator = export.csv_export_generator(validation_filter)
+    export_generator = export.create_generator(validation_filter)
 
     return Response(export_generator, mimetype='text/csv',
                     headers={'Content-Disposition': 'attachment; filename=' + type + '_' + str(id) + '.csv'})
@@ -509,7 +509,7 @@ def export_to_csv(job, type, id):
 @with_job
 @with_spec
 def export_to_rdf(job, type, id):
-    export = Export(job, type, id)
+    export = RdfExport(job, type, id)
 
     export_linkset = request.values.get('export_linkset', default=True) == 'true'
     export_metadata = request.values.get('export_metadata', default=True) == 'true'
@@ -524,11 +524,10 @@ def export_to_rdf(job, type, id):
     link_pred_shortname = request.values.get('link_pred_shortname')
 
     creator = request.values.get('creator')
-    publisher = request.values.get('publisher')
 
-    export_generator = export.rdf_export_generator(
+    export_generator = export.create_generator(
         link_pred_namespace, link_pred_shortname, export_linkset, export_metadata,
-        export_validation_set, export_cluster_set, reification, creator, publisher, validation_filter)
+        export_validation_set, export_cluster_set, reification, creator, validation_filter)
 
     use_graphs = export_linkset and not export_metadata
     mimetype = 'application/trig' if use_graphs else 'text/turtle'
@@ -551,7 +550,7 @@ def get_data_retrieval_params(whitelist):
     if 'with_view_filters' in whitelist:
         data_retrieval_params['with_view_filters'] = request.values.get('apply_filters', default=True) == 'true'
     if 'with_view_properties' in whitelist:
-        data_retrieval_params['with_view_properties'] = request.values.get('with_view_properties', default='multiple')
+        data_retrieval_params['with_view_properties'] = request.values.get('with_properties', default='multiple')
         if data_retrieval_params['with_view_properties'] not in ['none', 'single', 'multiple']:
             data_retrieval_params['with_view_properties'] = 'multiple'
     if 'include_nodes' in whitelist:

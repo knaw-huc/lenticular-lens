@@ -2,6 +2,9 @@
   "EXACT": {
     "label": "Exact match",
     "description": "Aligns source and target’s IRIs whenever their respective user selected property values are identical.",
+    "see_also": [
+      "https://lenticularlens.github.io/04.Algorithms/#exact"
+    ],
     "threshold_range": "{0, 1}",
     "match": "{source} = {target}",
     "accepts_similarity_method": false,
@@ -11,6 +14,9 @@
   "INTERMEDIATE": {
     "label": "Intermediate dataset",
     "description": "The method aligns the source and the target’s IRIs via an intermediate database by using properties that potentially present different descriptions of the same entity, such as country name and country code. This is possible by providing an intermediate dataset that binds the two alternative descriptions to the very same identifier.",
+    "see_also": [
+      "https://lenticularlens.github.io/04.Algorithms/#intermediate"
+    ],
     "threshold_range": "{0, 1}",
     "match": "{source_intermediate} = {target_intermediate}",
     "accepts_similarity_method": false,
@@ -45,6 +51,10 @@
   "LEVENSHTEIN_DISTANCE": {
     "label": "Levenshtein distance",
     "description": "This method is used to align source and target’s IRIs whenever the distance of their respective user selected property values are above a given Levenshtein edit distance threshold. Edit distance is a way of quantifying how dissimilar two strings (e.g., words) are to one another by counting the minimum number of operations ε (removal, insertion, or substitution of a character in the string) required to transform one string into the other.",
+    "see_also": [
+      "https://lenticularlens.github.io/04.Algorithms/#levenshtein",
+      "https://en.wikipedia.org/wiki/Edit_distance"
+    ],
     "threshold_range": "ℕ",
     "match": "levenshtein({source}, {target}, {max_distance})",
     "similarity": "similarity({source}, {target}, levenshtein({source}, {target}, {max_distance}))",
@@ -69,6 +79,10 @@
   "LEVENSHTEIN_NORMALIZED": {
     "label": "Levenshtein normalized",
     "description": "This method is used to align source and target’s IRIs whenever the similarity score of their respective user selected property values are above a given Levenshtein threshold. Edit distance is a way of quantifying how dissimilar two strings (e.g., words) are to one another by counting the minimum number of operations ε (removal, insertion, or substitution of a character in the string) required to transform one string into the other.",
+    "see_also": [
+      "https://lenticularlens.github.io/04.Algorithms/#levenshtein",
+      "https://en.wikipedia.org/wiki/Edit_distance"
+    ],
     "threshold_range": "]0, 1]",
     "similarity": "similarity({source}, {target}, levenshtein({source}, {target}, -1))",
     "condition": "{similarity} >= {threshold}",
@@ -83,7 +97,7 @@
         "min_excl_value": 0,
         "max_excl_value": 1,
         "rdf": {
-          "predicate": "http://lenticularlens.org/void+/hasThresholdAcceptanceOperator",
+          "predicate": "http://lenticularlens.org/void+/similarityThreshold",
           "prefix": "voidPlus",
           "uri": "http://lenticularlens.org/void+/"
         }
@@ -93,6 +107,10 @@
   "SOUNDEX": {
     "label": "Soundex",
     "description": "Soundex is a phonetic algorithm for indexing names by sound, as pronounced in English. The goal is for homophones to be encoded to the same representation so that they can be matched despite minor differences in spelling. The algorithm mainly encodes consonants; a vowel will not be encoded unless it is the first letter.",
+    "see_also": [
+      "https://lenticularlens.github.io/04.Algorithms/#soundex",
+      "https://en.wikipedia.org/wiki/Soundex"
+    ],
     "threshold_range": "{0, 1}",
     "field": "soundex({property}, {size})",
     "accepts_similarity_method": true,
@@ -116,6 +134,9 @@
   "BLOOTHOOFT": {
     "label": "Gerrit Bloothooft",
     "description": "Gerrit Bloothooft description",
+    "see_also": [
+      "https://lenticularlens.github.io/04.Algorithms/#bloothooft"
+    ],
     "threshold_range": "{0, 1}",
     "field": "bloothooft({property}, {name_type})",
     "accepts_similarity_method": true,
@@ -139,6 +160,9 @@
   "WORD_INTERSECTION": {
     "label": "Word Intersection",
     "description": "The word intersection approximation method is originally designed to find a subset of words within a larger text. However, it could also be used for any pair of strings regardless of the strings sizes.",
+    "see_also": [
+      "https://lenticularlens.github.io/04.Algorithms/#word-intersection"
+    ],
     "threshold_range": "]0, 1]",
     "similarity": "word_intersection({source}, {target}, {ordered}, {approximate}, {stop_symbols})",
     "condition": "{similarity} >= {threshold}",
@@ -168,7 +192,7 @@
         "min_excl_value": 0,
         "max_excl_value": 1,
         "rdf": {
-          "predicate": "http://lenticularlens.org/void+/hasThresholdAcceptanceOperator",
+          "predicate": "http://lenticularlens.org/void+/similarityThreshold",
           "prefix": "voidPlus",
           "uri": "http://lenticularlens.org/void+/"
         }
@@ -177,7 +201,11 @@
   },
   "METAPHONE": {
     "label": "Metaphone",
-    "description": "Metaphone description",
+    "description": "Metaphone is a phonetic algorithm for a more accurate encoding of words by sound (as compared to Soundex) as pronounced in English. In this algorithm as with Soundex, similar-sounding words should share the same encoding key which is an approximate phonetic representation of the original word.",
+    "see_also": [
+      "https://lenticularlens.github.io/04.Algorithms/#metaphone",
+      "https://en.wikipedia.org/wiki/Metaphone"
+    ],
     "threshold_range": "{0, 1}",
     "field": "metaphone({property}, {max})",
     "accepts_similarity_method": true,
@@ -195,7 +223,11 @@
   },
   "DMETAPHONE": {
     "label": "Double Metaphone",
-    "description": "Double Metaphone description",
+    "description": "Double metaphone is a third generation phonetic algorithm improvement after Soundex and Metaphone for an accurately encoding words by sound as pronounced in English. It is called \"Double\" because it can return both a primary and a secondary code for a string; this accounts for some ambiguous cases as well as for multiple variants of surnames with common ancestry.",
+    "see_also": [
+      "https://lenticularlens.github.io/04.Algorithms/#double-metaphone",
+      "https://en.wikipedia.org/wiki/Metaphone"
+    ],
     "threshold_range": "{0, 1}",
     "field": "dmetaphone({property})",
     "accepts_similarity_method": true,
@@ -203,7 +235,12 @@
   },
   "TRIGRAM": {
     "label": "Trigram",
-    "description": "Trigram description",
+    "description": "Trigrams are a special case of the n-gram, where n is 3. It is a contiguous sequence of three items from a given sample.",
+    "see_also": [
+      "https://lenticularlens.github.io/04.Algorithms/#trigram",
+      "https://en.wikipedia.org/wiki/Trigram",
+      "https://en.wikipedia.org/wiki/N-gram"
+    ],
     "threshold_range": "]0, 1]",
     "match": "{source} % {target}",
     "similarity": "similarity({source}, {target})",
@@ -220,7 +257,7 @@
         "min_excl_value": 0,
         "max_excl_value": 1,
         "rdf": {
-          "predicate": "http://lenticularlens.org/void+/hasThresholdAcceptanceOperator",
+          "predicate": "http://lenticularlens.org/void+/similarityThreshold",
           "prefix": "voidPlus",
           "uri": "http://lenticularlens.org/void+/"
         }
@@ -230,6 +267,9 @@
   "NUMBERS_DELTA": {
     "label": "Numbers Delta",
     "description": "The numbers delta is used to align the source and the target by approximating the match of the numeric values of the selected properties according to a delta.",
+    "see_also": [
+      "https://lenticularlens.github.io/04.Algorithms/#numbers"
+    ],
     "threshold_range": "ℕ",
     "match": "delta({type}, {source}, {target}, {distance_start}, {distance_end})",
     "field_type": "number",
@@ -260,6 +300,9 @@
   "TIME_DELTA": {
     "label": "Time Delta",
     "description": "The time delta is used to align the source and the target by approximating the match of the date values of the selected properties according to a delta.",
+    "see_also": [
+      "https://lenticularlens.github.io/04.Algorithms/#time-delta"
+    ],
     "threshold_range": "ℕ",
     "match": "delta({type}, {source}, {target}, {days} + ({months} * 30) + ({years} * 365))",
     "field_type": "date",
@@ -300,7 +343,10 @@
   },
   "SAME_YEAR_MONTH": {
     "label": "Same Year/Month",
-    "description": "An exact match of the year and/or month from the dates inputs.",
+    "description": "Same Year/Month is used to align source and target’s IRIs whenever an exact match of the year or year and month is observed between source and target's input dates.",
+    "see_also": [
+      "https://lenticularlens.github.io/04.Algorithms/#same-year-month"
+    ],
     "threshold_range": "{0, 1}",
     "field": "get_date_part({date_part}, {property})",
     "accepts_similarity_method": false,
@@ -352,7 +398,11 @@
   },
   "JARO": {
     "label": "Jaro",
-    "description": "Jaro description",
+    "description": "Jaro distance is a measure of similarity between two strings. The higher the Jaro distance for two strings is, the more similar the strings are. The score is normalised such that 0 equates to no similarity and 1 is an exact match.",
+    "see_also": [
+      "https://lenticularlens.github.io/04.Algorithms/#jaro",
+      "https://rosettacode.org/wiki/Jaro_distance"
+    ],
     "threshold_range": "]0, 1]",
     "similarity": "jaro({source}, {target})",
     "condition": "{similarity} >= {threshold}",
@@ -367,7 +417,7 @@
         "min_excl_value": 0,
         "max_excl_value": 1,
         "rdf": {
-          "predicate": "http://lenticularlens.org/void+/hasThresholdAcceptanceOperator",
+          "predicate": "http://lenticularlens.org/void+/similarityThreshold",
           "prefix": "voidPlus",
           "uri": "http://lenticularlens.org/void+/"
         }
@@ -376,7 +426,11 @@
   },
   "JARO_WINKLER": {
     "label": "Jaro-Winkler",
-    "description": "Jaro-Winkler description",
+    "description": "Jaro-Winkler boosts up the Jaro algorithm’s result by increasing it whenever the compared strings share a prefix of a maximum of four characters.",
+    "see_also": [
+      "https://lenticularlens.github.io/04.Algorithms/#jaro-winkler",
+      "https://www.geeksforgeeks.org/jaro-and-jaro-winkler-similarity"
+    ],
     "threshold_range": "]0, 1]",
     "similarity": "jaro_winkler({source}, {target}, {prefix_weight})",
     "condition": "{similarity} >= {threshold}",
@@ -391,7 +445,7 @@
         "min_excl_value": 0,
         "max_excl_value": 1,
         "rdf": {
-          "predicate": "http://lenticularlens.org/void+/hasThresholdAcceptanceOperator",
+          "predicate": "http://lenticularlens.org/void+/similarityThreshold",
           "prefix": "voidPlus",
           "uri": "http://lenticularlens.org/void+/"
         }

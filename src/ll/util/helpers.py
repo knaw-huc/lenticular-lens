@@ -1,3 +1,4 @@
+import os
 import re
 import json
 import datetime
@@ -7,6 +8,10 @@ from collections import OrderedDict
 from os.path import join, dirname, realpath
 
 from ll.util.config_db import db_conn
+
+
+def get_publisher():
+    return os.environ.get('PUBLISHER', 'Lenticular Lens')
 
 
 def flatten(i, filter=True):
@@ -29,13 +34,6 @@ def get_json_from_file(filename):
 def get_string_from_sql(sql):
     with db_conn() as conn:
         return sql.as_string(conn)
-
-
-def n3_pred_val(predicate, value, end=False, line=True, tabs=1):
-    new_line = '\n' if line else ''
-    tab = ('    ' * tabs) if line else ''
-    pred_size = 55 - (4 * (tabs-1))
-    return f"{tab}{predicate:{pred_size}} {value} {'.' if end else ';'}{new_line}"
 
 
 def get_id_of_uri(uri):
@@ -67,3 +65,13 @@ def get_sql_empty(sql_insert, flag=True, prefix=None, suffix=None, add_new_line=
 
 def get_pagination_sql(limit=None, offset=0):
     return ('LIMIT ' + str(limit) + ' ' if limit else '') + ('OFFSET ' + str(offset) if offset > 0 else '')
+
+
+def get_from_buffer(buffer):
+    buffer.seek(0)
+    text = buffer.read()
+
+    buffer.truncate(0)
+    buffer.seek(0)
+
+    return text

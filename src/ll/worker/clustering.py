@@ -33,11 +33,11 @@ class ClusteringJob(WorkerJob):
             schema = 'linksets' if self._type == 'linkset' else 'lenses'
             linkset_table_name = self._job.table_name(self._id)
             clusters_table_name = linkset_table_name + '_clusters'
+            cluster_hashes_table_name = linkset_table_name + '_cluster_hashes'
             linkset_index_name = linkset_table_name + '_cluster_id_idx'
 
             with self._db_conn.cursor() as cur:
                 cur.execute(sql.SQL('SET search_path TO {}').format(sql.Identifier(schema)))
-
                 cur.execute(sql.SQL('DROP INDEX IF EXISTS {}').format(sql.Identifier(linkset_index_name)))
 
                 cur.execute(sql.SQL('''
@@ -49,11 +49,27 @@ class ClusteringJob(WorkerJob):
                 cur.copy_from(data, clusters_table_name)
 
                 cur.execute(sql.SQL('''
+                    CREATE TEMPORARY TABLE IF NOT EXISTS {} ON COMMIT DROP AS
+                    SELECT id, substring(md5(array_to_string(ARRAY(
+                                   SELECT DISTINCT unnest(array_agg(node)) AS x ORDER BY x
+                               ), '')) FOR 15) AS hash_id
+                    FROM {}
+                    GROUP BY id 
+                ''').format(sql.Identifier(cluster_hashes_table_name), sql.Identifier(clusters_table_name)))
+
+                cur.execute(sql.SQL('''
                     UPDATE {} AS linkset
                     SET cluster_id = clusters.id
                     FROM {} AS clusters
                     WHERE linkset.source_uri = clusters.node
                 ''').format(sql.Identifier(linkset_table_name), sql.Identifier(clusters_table_name)))
+
+                cur.execute(sql.SQL('''
+                    UPDATE {} AS linkset
+                    SET cluster_hash_id = cluster_hashes.hash_id
+                    FROM {} AS cluster_hashes
+                    WHERE linkset.cluster_id = cluster_hashes.id
+                ''').format(sql.Identifier(linkset_table_name), sql.Identifier(cluster_hashes_table_name)))
 
                 cur.execute(sql.SQL('CREATE INDEX ON {} USING btree (cluster_id); ANALYZE {};')
                             .format(sql.Identifier(linkset_table_name), sql.Identifier(linkset_table_name)))
@@ -90,7 +106,10 @@ class ClusteringJob(WorkerJob):
 
         with db_conn() as conn, conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
             cur.execute(sql.SQL('''
-                SELECT (SELECT size FROM (
+                SELECT (SELECT count(DISTINCT uri) AS size
+                        FROM {schema}.{table_name}, 
+                        LATERAL (VALUES (source_uri), (target_uri)) AS nodes(uri)) AS resources_size,
+                       (SELECT size FROM (
                           SELECT count(DISTINCT uri) AS size
                           FROM {schema}.{table_name}, LATERAL (VALUES (source_uri), (target_uri)) AS nodes(uri)
                           GROUP BY cluster_id
@@ -118,9 +137,9 @@ class ClusteringJob(WorkerJob):
             result = cur.fetchone()
             cur.execute('''
                 UPDATE clusterings
-                SET links_count = %s, clusters_count = %s, smallest_size = %s, largest_size = %s,
+                SET links_count = %s, clusters_count = %s, resources_size = %s, smallest_size = %s, largest_size = %s,
                     smallest_count = %s, largest_count = %s, status = %s, status_message = NULL, finished_at = now()
                 WHERE job_id = %s AND spec_id = %s AND spec_type = %s
-            ''', (self._worker.links_processed, len(self._worker.clusters),
+            ''', (self._worker.links_processed, len(self._worker.clusters), result['resources_size'],
                   result['smallest_size'], result['largest_size'], result['smallest_count'], result['largest_count'],
                   'done', self._job_id, self._id, self._type))

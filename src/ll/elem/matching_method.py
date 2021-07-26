@@ -3,6 +3,7 @@ import re
 from psycopg2 import sql
 from inspect import cleandoc
 
+from ll.util.hasher import hash_string_min
 from ll.util.helpers import get_json_from_file
 from ll.elem.matching_method_property import MatchingMethodProperty
 
@@ -50,6 +51,10 @@ class MatchingMethod:
     @property
     def sql(self):
         return self._sql(self._full_matching_template, self._similarity_template, match_sql=True)
+
+    @property
+    def config_hash(self):
+        return hash_string_min(self._data)
 
     @property
     def similarity_sql(self):

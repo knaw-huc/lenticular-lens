@@ -109,6 +109,7 @@ CREATE TABLE IF NOT EXISTS clusterings
     finished_at      timestamp,
     links_count      bigint,
     clusters_count   bigint,
+    resources_size   bigint,
     extended_count   int,
     cycles_count     int,
     smallest_size    bigint,

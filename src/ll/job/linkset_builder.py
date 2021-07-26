@@ -91,7 +91,7 @@ class LinksetBuilder:
 
         group_by_sql = get_sql_empty(sql.SQL(
             'GROUP BY source_uri, target_uri, link_order, source_collections, target_collections, '
-            'source_intermediates, target_intermediates, cluster_id, valid, similarity, motivation'),
+            'source_intermediates, target_intermediates, cluster_id, cluster_hash_id, valid, similarity, motivation'),
             flag=use_properties, add_new_line=False)
 
         with db_conn() as conn, conn.cursor(name=uuid4().hex, cursor_factory=extras.RealDictCursor) as cur:
@@ -99,7 +99,8 @@ class LinksetBuilder:
                 {linkset_cte}
                 
                 SELECT source_uri, target_uri, link_order, source_collections, target_collections, 
-                       source_intermediates, target_intermediates, cluster_id, valid, similarity, motivation 
+                       source_intermediates, target_intermediates, cluster_id, cluster_hash_id, 
+                       valid, similarity, motivation 
                        {selection_sql}
                 FROM linkset
                 {props_joins_sql}
@@ -127,6 +128,7 @@ class LinksetBuilder:
                     'target_values': self._get_values(link, check_key='target_uri',
                                                       is_single_value=is_single_value) if use_properties else None,
                     'cluster_id': link['cluster_id'],
+                    'cluster_hash_id': link['cluster_hash_id'],
                     'valid': link['valid'],
                     'similarity': link['similarity'],
                     'motivation': link['motivation']
@@ -159,21 +161,23 @@ class LinksetBuilder:
             cur.execute(sql.SQL('''
                 {linkset_cte}
                 
-                SELECT cluster_id, size, links {selection_sql} 
+                SELECT cluster_id, cluster_hash_id, size, links {selection_sql} 
                 FROM (
-                    SELECT cluster_id, array_agg(DISTINCT nodes) AS all_nodes, count(DISTINCT nodes) AS size, 
+                    SELECT cluster_id, cluster_hash_id, 
+                           array_agg(DISTINCT nodes) AS all_nodes, count(DISTINCT nodes) AS size, 
                            jsonb_object_agg(valid, valid_count) AS links, sum(valid_count) AS total_links
                     FROM (
-                        SELECT cluster_id, array_agg(nodes.uri) AS all_nodes, valid, count(valid) / 2 AS valid_count
+                        SELECT cluster_id, cluster_hash_id, 
+                               array_agg(nodes.uri) AS all_nodes, valid, count(valid) / 2 AS valid_count
                         FROM linkset, LATERAL (VALUES (linkset.source_uri), (linkset.target_uri)) AS nodes(uri)
-                        GROUP BY cluster_id, valid
+                        GROUP BY cluster_id, cluster_hash_id, valid
                     ) AS x, unnest(all_nodes) AS nodes
-                    GROUP BY cluster_id
+                    GROUP BY cluster_id, cluster_hash_id
                     {having_sql}
                     {sort_sql} {limit_offset}
                 ) AS clusters
                 {props_joins_sql}
-                GROUP BY cluster_id, all_nodes, size, links, total_links
+                GROUP BY cluster_id, cluster_hash_id, all_nodes, size, links, total_links
                 {sort_sql}
             ''').format(
                 linkset_cte=self.get_linkset_cte_sql(with_view_filters=with_view_filters, apply_paging=False),
@@ -187,6 +191,7 @@ class LinksetBuilder:
             for cluster in fetch_many(cur):
                 yield {
                     'id': cluster['cluster_id'],
+                    'hash_id': cluster['cluster_hash_id'],
                     'size': cluster['size'],
                     'links': {
                         'accepted': 0,
@@ -227,7 +232,8 @@ class LinksetBuilder:
         return sql.SQL('''
             WITH linkset AS (
                 SELECT source_uri, target_uri, link_order, source_collections, target_collections, 
-                       source_intermediates, target_intermediates, cluster_id, valid, similarity, motivation
+                       source_intermediates, target_intermediates, cluster_id, cluster_hash_id, 
+                       valid, similarity, motivation
                 FROM {schema}.{view_name} AS linkset
                 {filter_joins_sql}
                 {where_sql} 
