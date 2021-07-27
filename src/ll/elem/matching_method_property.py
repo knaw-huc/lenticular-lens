@@ -98,8 +98,12 @@ class MatchingMethodProperty:
 
         return field_transformers
 
+    @property
+    def hash(self):
+        return self.prop_original.hash
+
     def __eq__(self, other):
         return isinstance(other, MatchingMethodProperty) and self.prop_original == other.prop_original
 
     def __hash__(self):
-        return hash(self.prop_original.hash)
+        return hash(self.hash)

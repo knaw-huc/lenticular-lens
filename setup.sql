@@ -255,27 +255,54 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION notify_alignment_update() RETURNS trigger AS $$
+CREATE OR REPLACE FUNCTION notify_linkset_update() RETURNS trigger AS $$
 DECLARE
     notification json;
 BEGIN
     IF NEW IS NULL THEN
         notification = json_build_object(
             'job_id', OLD.job_id,
-            'spec_type', CASE WHEN TG_TABLE_NAME = 'linksets' THEN 'linkset' ELSE 'lens' END,
+            'spec_type', 'linkset',
             'spec_id', OLD.spec_id
         );
 
         PERFORM pg_notify('alignment_delete', notification::text);
-    ELSIF OLD IS NULL OR NEW.status != OLD.status OR
-       (TG_TABLE_NAME = 'linksets' AND NEW.links_progress != OLD.links_progress) THEN
+    ELSIF OLD IS NULL OR NEW.status != OLD.status OR NEW.links_progress != OLD.links_progress THEN
         notification = json_build_object(
             'job_id', NEW.job_id,
-            'spec_type', CASE WHEN TG_TABLE_NAME = 'linksets' THEN 'linkset' ELSE 'lens' END,
+            'spec_type', 'linkset',
             'spec_id', NEW.spec_id,
             'status', NEW.status,
             'status_message', NEW.status_message,
-            'links_progress', CASE WHEN TG_TABLE_NAME = 'linksets' THEN NEW.links_progress END
+            'links_progress', NEW.links_progress
+        );
+
+        PERFORM pg_notify('alignment_update', notification::text);
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION notify_lens_update() RETURNS trigger AS $$
+DECLARE
+    notification json;
+BEGIN
+    IF NEW IS NULL THEN
+        notification = json_build_object(
+            'job_id', OLD.job_id,
+            'spec_type', 'lens',
+            'spec_id', OLD.spec_id
+        );
+
+        PERFORM pg_notify('alignment_delete', notification::text);
+    ELSIF OLD IS NULL OR NEW.status != OLD.status THEN
+        notification = json_build_object(
+            'job_id', NEW.job_id,
+            'spec_type', 'lens',
+            'spec_id', NEW.spec_id,
+            'status', NEW.status,
+            'status_message', NEW.status_message
         );
 
         PERFORM pg_notify('alignment_update', notification::text);
@@ -325,10 +352,10 @@ CREATE TRIGGER timbuctoo_notify AFTER INSERT OR UPDATE OR DELETE ON timbuctoo_ta
 FOR EACH ROW EXECUTE PROCEDURE notify_timbuctoo_update();
 
 CREATE TRIGGER linkset_notify AFTER INSERT OR UPDATE OR DELETE ON linksets
-FOR EACH ROW EXECUTE PROCEDURE notify_alignment_update();
+FOR EACH ROW EXECUTE PROCEDURE notify_linkset_update();
 
 CREATE TRIGGER lens_notify AFTER INSERT OR UPDATE OR DELETE ON lenses
-FOR EACH ROW EXECUTE PROCEDURE notify_alignment_update();
+FOR EACH ROW EXECUTE PROCEDURE notify_lens_update();
 
 CREATE TRIGGER clustering_notify AFTER INSERT OR UPDATE OR DELETE ON clusterings
 FOR EACH ROW EXECUTE PROCEDURE notify_clustering_update();

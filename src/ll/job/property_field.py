@@ -117,7 +117,7 @@ class PropertyField:
 
             value = rdfs_sequence(urirefs, tabs=tabs)
 
-        return pred_val(NS.VoID.property_ttl, value, end=end, line=line, tabs=tabs)
+        return pred_val(NS.VoID.property, value, end=end, line=line, tabs=tabs)
 
     def add_joins(self, joins):
         cur_resource = self._alias

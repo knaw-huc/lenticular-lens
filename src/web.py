@@ -529,7 +529,8 @@ def export_to_rdf(job, type, id):
         link_pred_namespace, link_pred_shortname, export_linkset, export_metadata,
         export_validation_set, export_cluster_set, reification, creator, validation_filter)
 
-    use_graphs = export_linkset and not export_metadata
+    use_graphs = (export_linkset and export_metadata or export_validation_set or export_cluster_set) \
+                 or export_validation_set or export_cluster_set
     mimetype = 'application/trig' if use_graphs else 'text/turtle'
     extension = '.trig' if use_graphs else '.ttl'
 

@@ -246,8 +246,12 @@ class Collection:
 
         return collections
 
+    @property
+    def hash(self):
+        return hash_string_min((self.graphql_endpoint, self.dataset_id, self.collection_id))
+
     def __eq__(self, other):
         return isinstance(other, Collection) and hash(self) == hash(other)
 
     def __hash__(self):
-        return hash(self.graphql_endpoint) ^ hash(self.dataset_id) ^ hash(self.collection_id)
+        return hash(self.hash)

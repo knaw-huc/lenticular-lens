@@ -62,6 +62,13 @@ class EntityTypeSelection:
             lambda filter_func: filter_func.sql
         )
 
+    @property
+    def hash(self):
+        return hash_string_min((self.collection.hash, self.with_filters_recursive(
+            lambda children_nodes, type: hash_string_min((children_nodes, type)),
+            lambda filter_func: filter_func.hash
+        )))
+
     def properties_for_matching(self, linkset_spec):
         return self.filter_properties.union(
             matching_method_prop.prop_original for matching_method_prop in self.get_fields(linkset_spec))

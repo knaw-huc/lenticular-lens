@@ -69,7 +69,7 @@
         "step": 1,
         "min_excl_value": 0,
         "rdf": {
-          "predicate": "http://lenticularlens.org/void+/maxDistance",
+          "predicate": "https://lenticularlens.org/voidPlus/maxDistance",
           "prefix": "",
           "uri": ""
         }
@@ -97,9 +97,9 @@
         "min_excl_value": 0,
         "max_excl_value": 1,
         "rdf": {
-          "predicate": "http://lenticularlens.org/void+/similarityThreshold",
+          "predicate": "https://lenticularlens.org/voidPlus/similarityThreshold",
           "prefix": "voidPlus",
-          "uri": "http://lenticularlens.org/void+/"
+          "uri": "https://lenticularlens.org/voidPlus/"
         }
       }
     }
@@ -124,9 +124,9 @@
         "min_value": 1,
         "max_value": 5,
         "rdf": {
-          "predicate": "http://lenticularlens.org/void+/soundexSize",
+          "predicate": "https://lenticularlens.org/voidPlus/soundexSize",
           "prefix": "voidPlus",
-          "uri": "http://lenticularlens.org/void+/"
+          "uri": "https://lenticularlens.org/voidPlus/"
         }
       }
     }
@@ -150,9 +150,9 @@
           "family_name": "Family name"
         },
         "rdf": {
-          "predicate": "http://lenticularlens.org/void+/BloothooftNameType",
+          "predicate": "https://lenticularlens.org/voidPlus/BloothooftNameType",
           "prefix": "voidPlus",
-          "uri": "http://lenticularlens.org/void+/"
+          "uri": "https://lenticularlens.org/voidPlus/"
         }
       }
     }
@@ -192,9 +192,9 @@
         "min_excl_value": 0,
         "max_excl_value": 1,
         "rdf": {
-          "predicate": "http://lenticularlens.org/void+/similarityThreshold",
+          "predicate": "https://lenticularlens.org/voidPlus/similarityThreshold",
           "prefix": "voidPlus",
-          "uri": "http://lenticularlens.org/void+/"
+          "uri": "https://lenticularlens.org/voidPlus/"
         }
       }
     }
@@ -257,9 +257,9 @@
         "min_excl_value": 0,
         "max_excl_value": 1,
         "rdf": {
-          "predicate": "http://lenticularlens.org/void+/similarityThreshold",
+          "predicate": "https://lenticularlens.org/voidPlus/similarityThreshold",
           "prefix": "voidPlus",
-          "uri": "http://lenticularlens.org/void+/"
+          "uri": "https://lenticularlens.org/voidPlus/"
         }
       }
     }
@@ -417,9 +417,9 @@
         "min_excl_value": 0,
         "max_excl_value": 1,
         "rdf": {
-          "predicate": "http://lenticularlens.org/void+/similarityThreshold",
+          "predicate": "https://lenticularlens.org/voidPlus/similarityThreshold",
           "prefix": "voidPlus",
-          "uri": "http://lenticularlens.org/void+/"
+          "uri": "https://lenticularlens.org/voidPlus/"
         }
       }
     }
@@ -445,9 +445,9 @@
         "min_excl_value": 0,
         "max_excl_value": 1,
         "rdf": {
-          "predicate": "http://lenticularlens.org/void+/similarityThreshold",
+          "predicate": "https://lenticularlens.org/voidPlus/similarityThreshold",
           "prefix": "voidPlus",
-          "uri": "http://lenticularlens.org/void+/"
+          "uri": "https://lenticularlens.org/voidPlus/"
         }
       },
       "prefix_weight": {
@@ -458,9 +458,9 @@
         "min_value": 0.1,
         "max_value": 0.25,
         "rdf": {
-          "predicate": "http://lenticularlens.org/void+/jaroWinklerPrefixWeight",
+          "predicate": "https://lenticularlens.org/voidPlus/jaroWinklerPrefixWeight",
           "prefix": "voidPlus",
-          "uri": "http://lenticularlens.org/void+/"
+          "uri": "https://lenticularlens.org/voidPlus/"
         }
       }
     }

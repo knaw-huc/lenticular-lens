@@ -4,7 +4,7 @@ from psycopg2 import sql
 from inspect import cleandoc
 
 from ll.util.hasher import hash_string_min
-from ll.util.helpers import get_json_from_file
+from ll.util.helpers import get_json_from_file, flatten
 from ll.elem.matching_method_property import MatchingMethodProperty
 
 
@@ -151,6 +151,38 @@ class MatchingMethod:
         return self._intermediates
 
     @property
+    def sources_props(self):
+        return set(flatten(list(self.sources.values())))
+
+    @property
+    def targets_props(self):
+        return set(flatten(list(self.targets.values())))
+
+    @property
+    def source_intermediates_props(self):
+        return set(flatten([x['source'] for x in self.intermediates.values()]))
+
+    @property
+    def target_intermediates_props(self):
+        return set(flatten([x['target'] for x in self.intermediates.values()]))
+
+    @property
+    def sources_hash(self):
+        return hash_string_min((self.config_hash, sorted([prop.hash for prop in self.sources_props])))
+
+    @property
+    def targets_hash(self):
+        return hash_string_min((self.config_hash, sorted([prop.hash for prop in self.targets_props])))
+
+    @property
+    def source_intermediates_hash(self):
+        return hash_string_min((self.config_hash, sorted([prop.hash for prop in self.source_intermediates_props])))
+
+    @property
+    def target_intermediates_hash(self):
+        return hash_string_min((self.config_hash, sorted([prop.hash for prop in self.target_intermediates_props])))
+
+    @property
     def _match_template(self):
         if 'match' in self.method_info:
             template = self.method_info['match']
@@ -214,6 +246,12 @@ class MatchingMethod:
 
     def transformers(self, key):
         return self._data[key].get('transformers', [])
+
+    def props(self, key):
+        return self.sources_props if key == 'sources' else self.targets_props
+
+    def intermediates_props(self, key):
+        return self.source_intermediates_props if key == 'sources' else self.target_intermediates_props
 
     def _update_template_fields(self, template):
         if self.is_list_match:
