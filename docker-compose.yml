@@ -2,13 +2,11 @@ version: '3.7'
 
 services:
   postgres:
-    build:
-      context: .
-      dockerfile: Dockerfile.postgres
-    image: knawhuc/lenticular-lens-postgres:latest
+    image: knawhuc/lenticular-lens-postgresql:latest
     shm_size: 1g
     volumes:
       - ./pgdata:/pgdata
+      - ./setup.sql:/docker-entrypoint-initdb.d/setup.sql
     environment:
       - PGDATA=/pgdata
       - POSTGRES_PASSWORD=postgres
