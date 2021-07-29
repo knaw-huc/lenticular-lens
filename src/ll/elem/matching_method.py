@@ -33,7 +33,9 @@ class MatchingMethod:
 
         self.t_norm = data['fuzzy']['t_norm']
         self.t_conorm = data['fuzzy']['t_conorm']
-        self.threshold = data['fuzzy']['threshold']
+        self.threshold = data['fuzzy']['threshold'] \
+            if self.method_info['is_similarity_method'] or \
+               ('is_similarity_method' in self.method_sim_info and self.method_sim_info['is_similarity_method']) else 0
 
         self.list_threshold = data['list_matching']['threshold']
         self.list_is_percentage = data['list_matching']['is_percentage']
@@ -333,7 +335,7 @@ class MatchingMethod:
         field_type = self.method_info.get('field_type')
         field_type_info = {
             'type': field_type,
-            'parameters': {'format': self.method_config['format'] if field_type == 'date' else {}}
+            'parameters': {'format': self.method_config.get('format', 'YYYY-MM-DD') if field_type == 'date' else {}}
         }
 
         property = field if property_only else field['property']

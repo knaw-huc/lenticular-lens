@@ -121,6 +121,9 @@ class VoidPlus:
     stopWordsList = F'{ontology_prefix}:stopWordsList'
     hasTransformationFunction = F'{ontology_prefix}:hasTransformationFunction'
     hasTransformationParameters = F'{ontology_prefix}:hasTransformationParameters'
+    hasListConfiguration = F'{ontology_prefix}:hasListConfiguration'
+    listThreshold = F'{ontology_prefix}:listThreshold'
+    appreciation = F'{ontology_prefix}:appreciation'
 
     # ##############################################################################
     #                        DATASET AND ENTITY SELECTIONS                         #

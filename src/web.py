@@ -235,9 +235,11 @@ def methods():
     return jsonify(
         filter_functions=filter_functions_info,
         filter_functions_order=list(filter_functions_info.keys()),
-        matching_methods=matching_methods_info,
+        matching_methods={key: {**mm_info, 'items_order': list(mm_info['items'].keys())}
+                          for key, mm_info in matching_methods_info.items()},
         matching_methods_order=list(matching_methods_info.keys()),
-        transformers={key: transformers_info[key] for key in transformers_info.keys()
+        transformers={key: {**transformer_info, 'items_order': list(transformer_info['items'].keys())}
+                      for key, transformer_info in transformers_info.items()
                       if not transformers_info[key].get('internal', False)},
         transformers_order=list([key for key, item in transformers_info.items() if not item.get('internal', False)]),
     )

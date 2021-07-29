@@ -70,8 +70,8 @@
         "min_excl_value": 0,
         "rdf": {
           "predicate": "https://lenticularlens.org/voidPlus/maxDistance",
-          "prefix": "",
-          "uri": ""
+          "prefix": "voidPlus",
+          "uri": "https://lenticularlens.org/voidPlus/"
         }
       }
     }
@@ -231,7 +231,8 @@
     "threshold_range": "{0, 1}",
     "field": "dmetaphone({property})",
     "accepts_similarity_method": true,
-    "is_similarity_method": false
+    "is_similarity_method": false,
+    "items": {}
   },
   "TRIGRAM": {
     "label": "Trigram",
@@ -338,6 +339,11 @@
         "default_value": 0,
         "step": 1,
         "min_value": 0
+      },
+      "format": {
+        "label": "Date format",
+        "type": "string",
+        "default_value": "YYYY-MM-DD"
       }
     }
   },
@@ -386,7 +392,7 @@
                 "uri": "http://www.w3.org/2006/time#"
               },
               {
-                "predicate": "http://www.w3.org/2006/time#unitYear",
+                "predicate": "http://www.w3.org/2006/time#unitMonth",
                 "prefix": "time",
                 "uri": "http://www.w3.org/2006/time#"
               }

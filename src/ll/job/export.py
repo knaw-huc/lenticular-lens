@@ -587,29 +587,24 @@ class RdfExport:
                 else:
                     buffer.write(pred_val(VoidPlus.hasAlgorithm, F"resource:{matching_method.method_name}"))
 
-                if matching_method.threshold:
-                    buffer.write(pred_val(VoidPlus.similarityThreshold,
-                                          Literal(matching_method.threshold).n3(ns_manager)))
-                    buffer.write(pred_val(VoidPlus.similarityThresholdRange, Literal("]0, 1]").n3(ns_manager)))
-
                 if not matching_method.method_sim_name:
                     for (pred, val) in write_algorithm(matching_method.method_config, matching_method.method_info):
                         buffer.write(pred_val(pred, val))
 
-                buffer.write("\n")
                 if matching_method.is_list_match:
                     if matching_method.list_is_percentage:
                         has_list_matching_relative = True
                     else:
                         has_list_matching_absolute = True
 
-                    buffer.write(pred_val('voidPlus:hasListConfiguration', blank_node([
-                        ('voidPlus:listThreshold', Literal(matching_method.list_threshold).n3(ns_manager)),
-                        ('voidPlus:appreciation',
+                    buffer.write("\n")
+                    buffer.write(pred_val(VoidPlus.hasListConfiguration, blank_node([
+                        (VoidPlus.listThreshold, Literal(matching_method.list_threshold).n3(ns_manager)),
+                        (VoidPlus.appreciation,
                          "resource:" + ("RelativeCount" if matching_method.list_is_percentage else "AbsoluteCount"))
                     ])))
 
-                buffer.write(F"{TAB}### SOURCE PREDICATE(S) CONFIGURATION\n")
+                buffer.write(F"\n{TAB}### SOURCE PREDICATE(S) CONFIGURATION\n")
                 buffer.write(pred_val(VoidPlus.hasSubjResourceSelection,
                                       F"resource:ResourcePartition-{matching_method.sources_hash}"))
 
@@ -619,17 +614,14 @@ class RdfExport:
                                       end=(not matching_method.is_intermediate)))
 
                 if matching_method.is_intermediate:
-                    buffer.write(pred_val(VoidPlus.hasInterSubjResourceSelection, multiple_val({
-                        F"resource:ResourcePartition-{prop.prop_original.hash}"
-                        for ets, props_ets in matching_method.intermediates.items()
-                        for prop in props_ets['source']
-                    })))
+                    buffer.write(F"\n{TAB}### SOURCE PREDICATE(S) CONFIGURATION OF THE INTERMEDIATE DATASET\n")
+                    buffer.write(pred_val(VoidPlus.hasInterSubjResourceSelection,
+                                          F"resource:ResourcePartition-{matching_method.source_intermediates_hash}"))
 
-                    buffer.write(pred_val(VoidPlus.hasInterObjResourceSelection, multiple_val({
-                        F"resource:ResourcePartition-{prop.prop_original.hash}"
-                        for ets, props_ets in matching_method.intermediates.items()
-                        for prop in props_ets['target']
-                    }), end=True))
+                    buffer.write(F"\n{TAB}### TARGET PREDICATE(S) CONFIGURATION OF THE INTERMEDIATE DATASET\n")
+                    buffer.write(pred_val(VoidPlus.hasInterObjResourceSelection,
+                                          F"resource:ResourcePartition-{matching_method.target_intermediates_hash}",
+                                          end=True))
 
                 if matching_method.method_sim_name:
                     buffer.write(F"\nresource:AlgorithmSequence-{matching_method.method_name}-{key}\n")
@@ -720,7 +712,7 @@ class RdfExport:
                 resources = [F"resource:PropertyPartition-{prop.hash}" for prop in props]
                 buffer.write(pred_val(VoidPlus.hasItem, multiple_val(resources)))
 
-                root = Node(F"OR [{fuzzy_txt}] {threshold_txt}".strip())
+                root = Node(F"OR [{fuzzy_txt}] {threshold_txt}".strip()) if not is_intermediate else Node("OR")
                 for resource in resources:
                     Node(resource, parent=root)
 
