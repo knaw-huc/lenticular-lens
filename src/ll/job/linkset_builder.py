@@ -66,7 +66,7 @@ class LinksetBuilder:
         return fetch_one(sql.SQL('''
             {linkset_cte}
             
-            SELECT count(*) AS total
+            SELECT count(cluster_id) AS total, array_agg(cluster_id) AS cluster_ids
             FROM (
                 SELECT cluster_id
                 FROM linkset, LATERAL (VALUES (linkset.source_uri), (linkset.target_uri)) AS nodes(uri)

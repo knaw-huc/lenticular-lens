@@ -17,6 +17,6 @@
   },
   "mixed": {
     "label": "Disputed",
-    "description": "A validation process that results in the link under scrutiny being flagged as DISPUTED. This, with the intent of notifying that the link has undergone MULTIPLE user-defined set of checks which result in a contradiction. In other words, the same link has been flagged with contradicting labels such as for example ACCEPTED, REJECTED, UNSURE AND UNCHECKED"
+    "description": "A validation process that results in the link under scrutiny being flagged as DISPUTED. This, with the intent of notifying that the link has undergone MULTIPLE user-defined set of checks which result in a contradiction. In other words, the same link has been flagged with contradicting labels such as for example ACCEPTED, REJECTED, UNCERTAIN AND UNCHECKED"
   }
 }
