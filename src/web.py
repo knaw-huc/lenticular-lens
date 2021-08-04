@@ -87,7 +87,8 @@ auth = OIDCAuthentication({'default': ProviderConfiguration(
     issuer=os.environ['OIDC_SERVER'],
     client_metadata=ClientMetadata(
         client_id=os.environ['OIDC_CLIENT_ID'],
-        client_secret=os.environ['OIDC_CLIENT_SECRET'])
+        client_secret=os.environ['OIDC_CLIENT_SECRET']),
+    auth_request_params={'scope': ['openid', 'email', 'profile']},
 )}, app) if 'OIDC_SERVER' in os.environ and len(os.environ['OIDC_SERVER']) > 0 else None
 
 socketio = SocketIO(app, cors_allowed_origins='*')
@@ -95,12 +96,16 @@ socketio.start_background_task(emit_database_events)
 
 
 def authenticated(func):
-    if auth:
-        user_session = UserSession(session)
-        if not user_session or 'sub' not in user_session.id_token or not user_session.id_token['sub']:
-            return jsonify(result='not_authenticated', error='Please login!'), 401
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        if auth:
+            user_session = UserSession(session, 'default')
+            if user_session.last_authenticated is None:
+                return jsonify(result='not_authenticated', error='Please login!'), 401
 
-    return func
+        return func(*args, **kwargs)
+
+    return wrapper
 
 
 def with_job(func):
@@ -156,16 +161,21 @@ def index():
 
 if auth:
     @app.get('/login')
-    @auth.oidc_auth('default')
     def login():
-        return redirect(request.values.get('redirect-uri', default='/'))
+        def do_redirect():
+            return redirect(request.values.get('redirect-uri', default=session.get('redirect-uri', default='/')))
+
+        if 'redirect-uri' in request.values:
+            session['redirect-uri'] = request.values['redirect-uri']
+
+        return auth.oidc_auth('default')(do_redirect)()
 
 
     @app.get('/user_info')
     @authenticated
     def user_info():
-        user_session = UserSession(session)
-        return jsonify(id=user_session.id_token['sub'], user_info=user_session.userinfo)
+        user_session = UserSession(session, 'default')
+        return jsonify(user_session.userinfo)
 
 
 @app.get('/datasets')
@@ -526,6 +536,10 @@ def export_to_rdf(job, type, id):
     link_pred_shortname = request.values.get('link_pred_shortname')
 
     creator = request.values.get('creator')
+    if auth:
+        user_session = UserSession(session, 'default')
+        if user_session.last_authenticated is None and user_session.userinfo and 'nickname' in user_session.userinfo:
+            creator = user_session.userinfo['nickname']
 
     export_generator = export.create_generator(
         link_pred_namespace, link_pred_shortname, export_linkset, export_metadata,
