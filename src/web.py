@@ -8,7 +8,7 @@ import psycopg2
 import eventlet
 import functools
 
-from flask import Flask, Response, jsonify, session, request, redirect
+from flask import Flask, Response, jsonify, session, request
 from flask_cors import CORS
 from flask.json import JSONEncoder
 from flask_compress import Compress
@@ -23,6 +23,7 @@ from werkzeug.routing import BaseConverter, ValidationError
 from ll.job.job import Job, Validation
 from ll.job.export import CsvExport, RdfExport
 
+from ll.util.oidc import oidc_auth
 from ll.util.hasher import hash_string
 from ll.util.stopwords import get_stopwords
 from ll.util.helpers import get_json_from_file
@@ -162,13 +163,7 @@ def index():
 if auth:
     @app.get('/login')
     def login():
-        def do_redirect():
-            return redirect(request.values.get('redirect-uri', default=session.get('redirect-uri', default='/')))
-
-        if 'redirect-uri' in request.values:
-            session['redirect-uri'] = request.values['redirect-uri']
-
-        return auth.oidc_auth('default')(do_redirect)()
+        return oidc_auth(auth, 'default', destination=request.values.get('redirect-uri', default='/'))
 
 
     @app.get('/user_info')
