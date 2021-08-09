@@ -12,7 +12,6 @@ CMD ["python", "/app/worker.py"]
 
 FROM worker AS web
 
-ENV FLASK_APP=/app/web_server/app.py
 ENV FLASK_ENV=production
 
 EXPOSE 8000

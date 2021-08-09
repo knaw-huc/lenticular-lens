@@ -533,7 +533,8 @@ def export_to_rdf(job, type, id):
     creator = request.values.get('creator')
     if auth:
         user_session = UserSession(session, 'default')
-        if user_session.last_authenticated is None and user_session.userinfo and 'nickname' in user_session.userinfo:
+        if user_session.last_authenticated is not None and \
+                user_session.userinfo and 'nickname' in user_session.userinfo:
             creator = user_session.userinfo['nickname']
 
     export_generator = export.create_generator(
