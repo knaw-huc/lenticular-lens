@@ -4,7 +4,7 @@ flask-compress==1.10.1
 flask-pyoidc==3.7.0
 flask-socketio==5.1.1
 gunicorn==20.1.0
-eventlet==0.30.2
+eventlet==0.31.0
 schema==0.7.4
 kitchen==1.2.6
 psycopg2-binary==2.9.1
