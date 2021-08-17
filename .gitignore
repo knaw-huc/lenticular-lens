@@ -1,8 +1,6 @@
 docker
 venv
 pgdata
-src/static
 .idea
 *.iml
-**/node_modules
 **/__pycache__/**

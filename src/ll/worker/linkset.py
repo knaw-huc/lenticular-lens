@@ -33,6 +33,7 @@ class LinksetJob(WorkerJob):
                 download_status_set = True
 
             time.sleep(1)
+            self.watch_kill()
             self.reset()
 
         super().run()
@@ -199,5 +200,5 @@ class LinksetJob(WorkerJob):
 
     def cleanup(self):
         with db_conn() as conn, conn.cursor() as cur:
-            cur.execute(sql.SQL('DROP SCHEMA {} CASCADE')
+            cur.execute(sql.SQL('DROP SCHEMA IF EXISTS {} CASCADE')
                         .format(sql.Identifier(self._job.schema_name(self._id))))

@@ -114,9 +114,10 @@ class Collection:
                        for col_name, col_info in collection['properties'].items()}
 
             with db_conn() as conn, conn.cursor() as cur:
-                cur.execute(sql.SQL('CREATE TABLE timbuctoo.{} ({})').format(
-                    sql.Identifier(self.table_name),
-                    self.columns_sql(columns),
+                cur.execute(sql.SQL('DROP TABLE IF EXISTS timbuctoo.{name}; '
+                                    'CREATE TABLE timbuctoo.{name} ({columns_sql})').format(
+                    name=sql.Identifier(self.table_name),
+                    columns_sql=self.columns_sql(columns),
                 ))
 
                 cur.execute('''
@@ -126,10 +127,13 @@ class Collection:
                         collection_uri, collection_title, collection_shortened_uri, 
                         total, columns, prefix_mappings, create_time)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, now())
+                    ON CONFLICT DO NOTHING
                 ''', (self.table_name, self.graphql_endpoint, self.dataset_id, self.collection_id,
                       dataset['uri'], dataset['name'], dataset['title'], dataset['description'],
                       collection['uri'], collection['title'], collection['shortenedUri'],
                       collection['total'], dumps(columns), dumps(dataset['prefixMappings'])))
+
+            self._dataset_table_data = None
 
     def update(self):
         (dataset, collection) = self.timbuctoo_dataset_and_collection
