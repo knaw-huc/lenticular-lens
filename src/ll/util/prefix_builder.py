@@ -1,6 +1,7 @@
 from re import findall
-from ll.util.hasher import hash_string
+
 from ll.util.sparql import SPARQL
+from ll.util.hasher import hash_string
 
 registered_namespaces = dict()
 

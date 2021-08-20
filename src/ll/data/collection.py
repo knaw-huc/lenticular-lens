@@ -19,13 +19,11 @@ class Collection:
 
     @property
     def dataset_table_data(self):
-        if self._dataset_table_data:
-            return self._dataset_table_data
-
-        with db_conn() as conn, conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
-            cur.execute('SELECT * FROM timbuctoo_tables WHERE graphql_endpoint = %s AND dataset_id = %s',
-                        (self.graphql_endpoint, self.dataset_id))
-            self._dataset_table_data = {table_data['collection_id']: table_data for table_data in cur.fetchall()}
+        if not self._dataset_table_data:
+            with db_conn() as conn, conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
+                cur.execute('SELECT * FROM timbuctoo_tables WHERE graphql_endpoint = %s AND dataset_id = %s',
+                            (self.graphql_endpoint, self.dataset_id))
+                self._dataset_table_data = {table_data['collection_id']: table_data for table_data in cur.fetchall()}
 
         return self._dataset_table_data
 
@@ -127,7 +125,6 @@ class Collection:
                         collection_uri, collection_title, collection_shortened_uri, 
                         total, columns, prefix_mappings, create_time)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, now())
-                    ON CONFLICT DO NOTHING
                 ''', (self.table_name, self.graphql_endpoint, self.dataset_id, self.collection_id,
                       dataset['uri'], dataset['name'], dataset['title'], dataset['description'],
                       collection['uri'], collection['title'], collection['shortenedUri'],
@@ -153,7 +150,6 @@ class Collection:
 
     def determine_prefix_mappings(self):
         from uuid import uuid4
-        from os.path import commonprefix
 
         from ll.util.config_db import fetch_many
         from ll.util.prefix_builder import get_uri_local_name, get_namespace_prefix
@@ -174,30 +170,7 @@ class Collection:
                         break
 
                 if not mapping_found:
-                    prefix_found = False
-                    for ns in uri_prefixes.copy():
-                        common_prefix = commonprefix([uri[0], ns])
-
-                        prefix_allowed = common_prefix not in ['', 'http', 'BlankNode']
-                        if common_prefix.startswith('http://') or common_prefix.startswith('https://'):
-                            domain = common_prefix.replace('http://', '').replace('https://', '')
-                            prefix_allowed = '/' in domain
-
-                        if prefix_allowed:
-                            prefix_found = True
-
-                            if not common_prefix.endswith('/') and not common_prefix.endswith('#'):
-                                idx = [common_prefix.rfind('/'), common_prefix.rfind('#')]
-                                if max(idx) > -1:
-                                    common_prefix = common_prefix[:max(idx) + 1]
-
-                            if ns != common_prefix and ns.startswith(common_prefix):
-                                uri_prefixes.remove(ns)
-                            if ns != common_prefix:
-                                uri_prefixes.add(common_prefix)
-
-                    if not prefix_found:
-                        uri_prefixes.add(uri[0].replace(get_uri_local_name(uri[0]), ''))
+                    uri_prefixes.add(uri[0].replace(get_uri_local_name(uri[0]), ''))
 
             conn.cursor().execute('UPDATE timbuctoo_tables '
                                   'SET uri_prefix_mappings = %s, dynamic_uri_prefix_mappings = %s '

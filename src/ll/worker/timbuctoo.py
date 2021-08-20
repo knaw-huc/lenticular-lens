@@ -170,30 +170,7 @@ class TimbuctooJob(WorkerJob):
                         break
 
                 if not mapping_found:
-                    prefix_found = False
-                    for ns in self._uri_prefixes:
-                        common_prefix = commonprefix([uri[0], ns])
-
-                        prefix_allowed = common_prefix not in ['', 'http', 'BlankNode']
-                        if common_prefix.startswith('http://') or common_prefix.startswith('https://'):
-                            domain = common_prefix.replace('http://', '').replace('https://', '')
-                            prefix_allowed = '/' in domain
-
-                        if prefix_allowed:
-                            prefix_found = True
-
-                            if not common_prefix.endswith('/') and not common_prefix.endswith('#'):
-                                idx = [common_prefix.rfind('/'), common_prefix.rfind('#')]
-                                if max(idx) > -1:
-                                    common_prefix = common_prefix[:max(idx) + 1]
-
-                            if ns != common_prefix and ns.startswith(common_prefix):
-                                self._uri_prefixes.remove(ns)
-                            if ns != common_prefix:
-                                self._uri_prefixes.add(common_prefix)
-
-                    if not prefix_found:
-                        self._uri_prefixes.add(uri[0].replace(get_uri_local_name(uri[0]), ''))
+                    self._uri_prefixes.add(uri[0].replace(get_uri_local_name(uri[0]), ''))
 
     def on_finish(self):
         if self._cursor is None:

@@ -1,7 +1,7 @@
 import os
-import uuid
-
 import json
+import uuid
+import logging
 import decimal
 import datetime
 import psycopg2
@@ -62,9 +62,11 @@ def emit_database_events():
         notify = q.get()
         ns = '' if notify.channel.startswith('timbuctoo_') else json.loads(notify.payload)['job_id']
         socketio.emit(notify.channel, notify.payload, namespace=f'/{ns}')
+        log.debug(f'WebSocket emit on /{ns}: {notify.channel} = {notify.payload}')
 
 
 config_logger()
+log = logging.getLogger(__name__)
 
 filter_functions_info = get_json_from_file('filter_functions.json')
 matching_methods_info = get_json_from_file('matching_methods.json')
