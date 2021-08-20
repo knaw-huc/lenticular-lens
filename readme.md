@@ -5,23 +5,26 @@ so called data-alignment or reconciliation). Lenticular Lens tracks the configur
 alignment and is also able to report on manual corrections and the amount of manual validation done.
 
 1. [Installation with Docker](#installation-with-docker)
-1. [Definition of terms](#definition-of-terms)
-1. [API](#api)
+2. [Definition of terms](#definition-of-terms)
+3. [API](#api)
     1. [Default](#default)
-    1. [Authentication and authorization](#authentication-and-authorization)
-    1. [Job creation and updates](#job-creation-and-updates)
-    1. [Job processes](#job-processes)
-    1. [Data retrieval](#data-retrieval)
-    1. [Linksets interaction](#linksets-interaction)
-    1. [Export](#export)
-1. [Job configuration with JSON](#job-configuration-with-json)
+    2. [Authentication and authorization](#authentication-and-authorization)
+    3. [Job creation and updates](#job-creation-and-updates)
+    4. [Job processes](#job-processes)
+    5. [Data retrieval](#data-retrieval)
+    6. [Linksets interaction](#linksets-interaction)
+    7. [Export](#export)
+4. [Websocket](#websocket)
+    1. [Default namespace](#default-namespace)
+    2. [Job namespace](#job-namespace)
+5. [Job configuration with JSON](#job-configuration-with-json)
     1. [Entity-type selections](#entity-type-selections)
-    1. [Linkset specs](#linkset-specs)
-    1. [Lens specs](#lens-specs)
-    1. [Views](#views)
-    1. [Logic boxes](#logic-boxes)
-    1. [Property paths](#property-paths)
-    1. [Fuzzy logic](#fuzzy-logic)
+    2. [Linkset specs](#linkset-specs)
+    3. [Lens specs](#lens-specs)
+    4. [Views](#views)
+    5. [Logic boxes](#logic-boxes)
+    6. [Property paths](#property-paths)
+    7. [Fuzzy logic](#fuzzy-logic)
 
 ## Installation with Docker
 
@@ -41,6 +44,7 @@ Misc. configuration:
 - `APP_DOMAIN`: The application domain; defaults to `http://localhost`
 - `SECRET_KEY`: The secret key used for session signing
 - `LOG_LEVEL`: The logging level; defaults to `INFO`
+- `PUBLISHER`: The publisher to be registered in the RDF export; defaults to `Lenticular Lens`
 - `WORKER_TYPE`: For a worker instance, the type of the worker to run:
     - `TIMBUCTOO`
     - `LINKSET`
@@ -443,7 +447,167 @@ be included in the RDF export.
 
 Specify `use_graphs` to determine the RDF format to use.
 
-Optionally specify `creator` and/or `publisher` to include extra metadata.
+Optionally specify `creator` to include extra metadata. If authentication is enabled, the `creator` is obtained from the
+authentication provider.
+
+## WebSocket
+
+Lenticular Lens pushes events using the [Socket.IO library](https://socket.io) using WebSockets.
+
+There is a default namespace on `/` and a namespace for messages on a specific job on `/<job_id>`.
+
+### Default namespace
+
+**Event**: `timbuctoo_update`
+
+Emits download progress on Timbuctoo datasets.
+
+```json5
+{
+  // The GraphQL interface of the Timbuctoo instance
+  "graphql_endpoint": "https://repository.goldenagents.org/v5/graphql",
+  // The identifier of the dataset
+  "dataset_id": "ufab7d657a250e3461361c982ce9b38f3816e0c4b__ecartico_20190805",
+  // The identifier of the collection from this dataset
+  "collection_id": "foaf_Person",
+  // The total number of entities to be downloaded
+  "total": 1000,
+  // The total number of entities currently downloaded
+  "rows_count": 400,
+}
+```
+
+---
+
+**Event**: `timbuctoo_delete`
+
+Emits removal of a Timbuctoo dataset collection from the database.
+
+```json5
+{
+  // The GraphQL interface of the Timbuctoo instance
+  "graphql_endpoint": "https://repository.goldenagents.org/v5/graphql",
+  // The identifier of the dataset
+  "dataset_id": "ufab7d657a250e3461361c982ce9b38f3816e0c4b__ecartico_20190805",
+  // The identifier of the collection from this dataset
+  "collection_id": "foaf_Person",
+}
+```
+
+### Job namespace
+
+**Event**: `job_update`
+
+Emits when the job has been updated.
+
+```json5
+{
+  // The job identifier
+  "job_id": "d697ea3869422ce3c7cc1889264d03c7",
+  // The timestamp of the update
+  "updated_at": "2021-01-01T12:00:00.01234",
+  // Was the title updated?
+  "is_title_update": true,
+  // Was the description updated?
+  "is_description_update": true,
+  // Was the link updated?
+  "is_link_update": true,
+  // Were any entity-type selections updated?
+  "is_entity_type_selections_update": false,
+  // Were any linkset specifications updated?
+  "is_linkset_specs_update": false,
+  // Were any lens specifications updated?
+  "is_lens_specs_update": false,
+  // Were any views updated?
+  "is_views_update": false,
+}
+```
+
+---
+
+**Event**: `alignment_update`
+
+Emits linkset or lens matching progress.
+
+```json5
+{
+  // The job identifier
+  "job_id": "d697ea3869422ce3c7cc1889264d03c7",
+  // The specification type: a linkset or a lens
+  "spec_type": 'linkset',
+  // The specification identifier
+  "spec_id": 1,
+  // The matching status
+  "status": "running",
+  // A human-readable status message
+  "status_message": "Matching",
+  // If links progressing is enabled, the number of links found so far
+  "links_progress": 23,
+}
+```
+
+---
+
+**Event**: `alignment_delete`
+
+Emits removal of a linkset or lens.
+
+```json5
+{
+  // The job identifier
+  "job_id": "d697ea3869422ce3c7cc1889264d03c7",
+  // The specification type: a linkset or a lens
+  "spec_type": 'linkset',
+  // The specification identifier
+  "spec_id": 1,
+}
+```
+
+---
+
+**Event**: `clustering_update`
+
+Emits clustering progress.
+
+```json5
+{
+  // The job identifier
+  "job_id": "d697ea3869422ce3c7cc1889264d03c7",
+  // The specification type: a linkset or a lens
+  "spec_type": 'linkset',
+  // The specification identifier
+  "spec_id": 1,
+  // The type of clustering performed
+  "clustering_type": "default",
+  // The matching status
+  "status": "running",
+  // A human-readable status message
+  "status_message": "Clustering",
+  // The number of links clustered so far
+  "links_count": 452,
+  // The number of clusters found so far
+  "clusters_count": 5,
+}
+```
+
+---
+
+**Event**: `clustering_delete`
+
+Emits removal of a clustering.
+
+```json5
+{
+  // The job identifier
+  "job_id": "d697ea3869422ce3c7cc1889264d03c7",
+  // The specification type: a linkset or a lens
+  "spec_type": 'linkset',
+  // The specification identifier
+  "spec_id": 1,
+  // The type of clustering performed
+  "clustering_type": "default",
+}
+```
 
 ## Job configuration with JSON
 
