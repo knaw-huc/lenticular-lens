@@ -13,16 +13,16 @@ save_in, csv, leon = "/Users/al/Downloads/", "Accepted.csv", "Leon-38.txt"
 #   02. fb1cb1d40b5af63fe92fac088e21738f : NO PROBLEM OBSERVED
 # ################################################################################################################
 
-jobs = ["306ff87eccb2ef66dfe9d4521f90fcc4", "fb1cb1d40b5af63fe92fac088e21738f", ""]
-USED_JOB = 1
+jobs = ["306ff87eccb2ef66dfe9d4521f90fcc4", "fb1cb1d40b5af63fe92fac088e21738f", "261f2367696e8d2c01656ca2711bd51d"]
+USED_JOB = 2
 LIST_1 = [0, 1, 2, 5, 6, 7, 17, 18]
 LIST_2 = [0, 1, 2, 4, 5, 10, 12, 14, 15, 18, 20, 21, 22, 24, 25, 24,  28, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 47]
 
 
-LINKSET = False
+LINKSET = True
 
 if LINKSET:
-    for i in [41]:
+    for i in [35]:
         # with open(join(DIR, leon)) as file_data:
         #     data = csv_reader(file_data)
         csv = getLinks(job_id=jobs[USED_JOB], set_id=i, isLinkset=True)

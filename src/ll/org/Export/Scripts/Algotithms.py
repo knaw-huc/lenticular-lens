@@ -4,6 +4,8 @@ from ll.org.Export.Scripts.Variables import LL, PREF_SIZE
 scale = {}
 seeAlso = {}
 also_ttl = {}
+algorithm_lbl = {}
+algorithm_ttl = {}
 descriptions = {}
 short_descriptions = {}
 
@@ -209,8 +211,8 @@ class Algorithm:
                              "https://www.geeksforgeeks.org/jaro-and-jaro-winkler-similarity/"]
 
     # METHOD 6: EDIT DISTANCE
-    normalisedEditDistance = F"{algorithm}Normalised-EditDistance"
-    normalisedEditDistance_ttl = "resource:Normalised-EditDistance"
+    normalisedEditDistance = F"{algorithm}Normalised-Edit-Distance"
+    normalisedEditDistance_ttl = "resource:Normalised-Edit-Distance"
     normalisedEditDistance_description = """
         This ​method is used to align ​​source a​nd ​​target’s IRIs whenever the similarity score of their respective 
         user selected property values are ​​above a given ​Levenshtein (edit) Distance threshold​. 
@@ -275,8 +277,8 @@ class Algorithm:
     # ---------------------------------------------- #
 
     # METHOD 9: SOUNDEX
-    soundexDistance = F"{algorithm}SoundexDistance"
-    soundexDistance_ttl = "resource:SoundexDistance"
+    soundexDistance = F"{algorithm}Soundex-Distance"
+    soundexDistance_ttl = "resource:Soundex-Distance"
     soundexDistance_description = """
         "Soundex is a phonetic algorithm for indexing names by sound, as pronounced in English. The goal is for ho-
         mophones to be encoded to the same representation so that they can be matched despite minor differences in
@@ -611,8 +613,8 @@ class Algorithm:
         Time Delta. This function allows for finding co-referent entities on the basis of a minimum time dif-
         ference between the times reported by the source and the target entities. For example, if the value zero is 
         assigned to the time difference parameter, then, for a matched to be found, the time of the target and the 
-        one of the source are to be the exact same times. While accounting for margins of error, one may consider a 
-        pair of entities to be co-referent if the real entities are born lambda days, months or years apart among 
+        one of the source are to be the exact same time. While accounting for margins of error, one may consider a 
+        pair of entities to be co-referent if the referred date-times occur delta days, months or years apart among 
         other-things (similar name, place..).
         """
     time_delta_see_also = [see_also.format("time-delta")]
@@ -629,6 +631,154 @@ class Algorithm:
     same_year_month_see_also_ttl = [see_also_ttl.format("same-year-month")]
 
     bloothooftReduction = """To come"""
+
+    global algorithm_lbl
+    algorithm_lbl = {
+
+        'unknown': "Unknown",
+        URIRef(unknown.lower()).n3(): "Unknown",
+        unknown_ttl.lower(): "Unknown",
+
+        URIRef(embedded.lower()).n3(): "Embedded",
+        embedded_ttl.lower(): "Embedded",
+
+        'same_year_month': "Same_Year_Month",
+
+        "=": "Exact",
+        "exact": "Exact",
+        URIRef(exact.lower()).n3(): "Exact",
+        exact_ttl.lower(): "Exact",
+
+        'intermediate': "Intermediate",
+        URIRef(intermediate.lower()).n3(): "Intermediate",
+        intermediate_ttl.lower(): "Intermediate",
+
+        'levenshtein': "Levenshtein",
+        'levenshtein_distance': "Levenshtein",
+        URIRef(editDistance.lower()).n3(): "Levenshtein",
+        editDistance_ttl.lower(): "Levenshtein",
+
+        'levenshtein_approx': "Levenshtein_Normalised",
+        'levenshtein_normalised': "Levenshtein_Normalised",
+        'levenshtein_normalized': "Levenshtein_Normalised",
+        URIRef(normalisedEditDistance.lower()).n3(): "Levenshtein_Normalised",
+        normalisedEditDistance_ttl.lower(): "Levenshtein_Normalised",
+
+        'trigram': "Trigram",
+
+        'jaro': "Jaro",
+        'jaro_winkler': "Jaro_Winkler",
+
+        'soundex': "Soundex",
+        URIRef(soundexDistance.lower()).n3(): "Soundex",
+        soundexDistance_ttl.lower(): "Soundex",
+
+        'll_soundex': "Soundex_Normalised",
+        URIRef(normalisedSoundex.lower()).n3(): "Soundex_Normalised",
+        normalisedSoundex_ttl.lower(): "Soundex_Normalised",
+
+        "metaphone": "Metaphone",
+        URIRef(metaphone.lower()).n3(): "Metaphone",
+        metaphone_ttl.lower(): "Metaphone",
+
+        "dmetaphone": "DoubleMetaphone",
+        "doublemetaphone": "DoubleMetaphone",
+        URIRef(doubleMetaphone.lower()).n3(): "DoubleMetaphone",
+        doubleMetaphone_ttl.lower(): "DoubleMetaphone",
+
+        "word_intersection": "Word_Intersection",
+        URIRef(wordIntersection.lower()).n3(): "Word_Intersection",
+        wordIntersection_ttl.lower(): "Word_Intersection",
+
+        'numbers': "Numbers",
+        'numbers_delta': "Numbers",
+        URIRef(numbers.lower()).n3(): "Numbers",
+        numbers_ttl.lower(): "Numbers",
+
+        URIRef(TeAM.lower()).n3(): "TeAM",
+        TeAM_ttl.lower(): "TeAM",
+
+        "time_delta": "Time_Delta",
+        URIRef(time_delta.lower()).n3(): "Time_Delta",
+        time_delta_ttl.lower(): "Time_Delta",
+
+        "bloothooft": "Bloothooft",
+        "bloothooft_reduct": "Bloothooft",
+    }
+
+    global algorithm_ttl
+    algorithm_ttl = {
+
+        'unknown': unknown_ttl,
+        URIRef(unknown.lower()).n3(): unknown_ttl,
+        unknown_ttl.lower(): unknown_ttl,
+
+        URIRef(embedded.lower()).n3(): embedded_ttl,
+        embedded_ttl.lower(): embedded_ttl,
+
+        'same_year_month': same_year_month_ttl,
+
+        "=": exact_ttl,
+        "exact": exact_ttl,
+        URIRef(exact.lower()).n3(): exact_ttl,
+        exact_ttl.lower(): exact_ttl,
+
+        'intermediate': intermediate_ttl,
+        URIRef(intermediate.lower()).n3(): intermediate_ttl,
+        intermediate_ttl.lower(): intermediate_ttl,
+
+        'levenshtein': editDistance_ttl,
+        'levenshtein_distance': editDistance_ttl,
+        URIRef(editDistance.lower()).n3(): editDistance_ttl,
+        editDistance_ttl.lower(): editDistance_ttl,
+
+        'levenshtein_approx': normalisedEditDistance_ttl,
+        "levenshtein_normalised": normalisedEditDistance_ttl,
+        'levenshtein_normalized': normalisedEditDistance_ttl,
+        URIRef(normalisedEditDistance.lower()).n3(): normalisedEditDistance_ttl,
+        normalisedEditDistance_ttl.lower(): normalisedEditDistance_ttl,
+
+        'trigram': trigram_ttl,
+
+        'jaro': jaro_ttl,
+        'jaro_winkler': jaro_winkler_ttl,
+
+        'soundex': soundexDistance_ttl,
+        URIRef(soundexDistance.lower()).n3(): soundexDistance_ttl,
+        soundexDistance_ttl.lower(): soundexDistance_ttl,
+
+        'll_soundex': normalisedSoundex_ttl,
+        URIRef(normalisedSoundex.lower()).n3(): normalisedSoundex_ttl,
+        normalisedSoundex_ttl.lower(): normalisedSoundex_ttl,
+
+
+        "metaphone": metaphone_ttl,
+        URIRef(metaphone.lower()).n3(): metaphone_ttl,
+        metaphone_ttl.lower(): metaphone_ttl,
+
+        "dmetaphone": doubleMetaphone_ttl,
+        "doublemetaphone": doubleMetaphone_ttl,
+        URIRef(doubleMetaphone.lower()).n3(): doubleMetaphone_ttl,
+        doubleMetaphone_ttl.lower(): doubleMetaphone_ttl,
+
+        "word_intersection": wordIntersection_ttl,
+        URIRef(wordIntersection.lower()).n3(): wordIntersection_ttl,
+        wordIntersection_ttl.lower(): wordIntersection_ttl,
+
+        'numbers_delta': numbers_ttl,
+        URIRef(numbers.lower()).n3(): numbers_ttl,
+        numbers_ttl.lower(): numbers_ttl,
+
+        URIRef(TeAM.lower()).n3(): TeAM_ttl,
+        TeAM_ttl.lower(): TeAM_ttl,
+
+        "time_delta": time_delta_ttl,
+        URIRef(time_delta.lower()).n3(): time_delta_ttl,
+        time_delta_ttl.lower(): time_delta_ttl,
+
+        "bloothooft": bloothooft_ttl,
+        "bloothooft_reduct": bloothooft_ttl,
+    }
 
     global scale
     scale = {
@@ -666,6 +816,7 @@ class Algorithm:
         'normalised edit distance': interval,
         "normalised levenshtein distance": interval,
         'levenshtein_normalized': interval,
+        'levenshtein_normalised': interval,
         normalisedEditDistance.lower(): interval,
         normalisedEditDistance_ttl.lower(): interval,
         URIRef(normalisedEditDistance.lower()).n3(): interval,
@@ -696,6 +847,7 @@ class Algorithm:
         URIRef(metaphone.lower()).n3(): natural,
 
         "dmetaphone": natural,
+        "doublemetaphone": natural,
         doubleMetaphone.lower(): natural,
         doubleMetaphone_ttl.lower(): natural,
         URIRef(doubleMetaphone.lower()).n3(): natural,
@@ -706,8 +858,8 @@ class Algorithm:
         URIRef(trigram.lower()).n3(): interval,
 
         "word_intersection":  interval,
-        wordIntersection.lower():  interval,
         'wordIntersection': interval,
+        wordIntersection.lower():  interval,
         wordIntersection_ttl.lower(): interval,
         URIRef(wordIntersection.lower()).n3(): interval,
 
@@ -716,6 +868,7 @@ class Algorithm:
         time_delta_ttl.lower(): natural,
         URIRef(time_delta.lower()).n3(): natural,
 
+        'numbers': natural,
         'numbers_delta': natural,
         numbers.lower(): natural,
         numbers_ttl.lower(): natural,
@@ -767,6 +920,7 @@ class Algorithm:
         'levenshtein': Literal(normalisedEditDistance_description, lang="en").n3(),
         'levenshtein_distance': Literal(normalisedEditDistance_description, lang="en").n3(),
         'levenshtein_normalized': Literal(normalisedEditDistance_description, lang="en").n3(),
+        'levenshtein_normalised': Literal(normalisedEditDistance_description, lang="en").n3(),
         URIRef(editDistance.lower()).n3(): Literal(normalisedEditDistance_description, lang="en").n3(),
         editDistance_ttl.lower(): Literal(normalisedEditDistance_description, lang="en").n3(),
 
@@ -791,6 +945,7 @@ class Algorithm:
         metaphone_ttl.lower(): Literal(metaphone_description, lang="en").n3(),
 
         "dmetaphone": Literal(doubleMetaphone_description, lang="en").n3(),
+        "doublemetaphone": Literal(doubleMetaphone_description, lang="en").n3(),
         URIRef(doubleMetaphone.lower()).n3(): Literal(doubleMetaphone_description, lang="en").n3(),
         doubleMetaphone_ttl.lower(): Literal(doubleMetaphone_description, lang="en").n3(),
 
@@ -798,6 +953,7 @@ class Algorithm:
         URIRef(wordIntersection.lower()).n3(): Literal(wordIntersection_description, lang="en").n3(),
         wordIntersection_ttl.lower(): Literal(wordIntersection_description, lang="en").n3(),
 
+        'numbers': Literal(numbers_description, lang="en").n3(),
         'numbers_delta': Literal(numbers_description, lang="en").n3(),
         URIRef(numbers.lower()).n3(): Literal(numbers_description, lang="en").n3(),
         numbers_ttl.lower(): Literal(numbers_description, lang="en").n3(),
@@ -837,6 +993,7 @@ class Algorithm:
         'levenshtein': Literal(normalisedEditDistance_short_description, lang="en").n3(),
         'levenshtein_distance': Literal(normalisedEditDistance_short_description, lang="en").n3(),
         'levenshtein_normalized': Literal(normalisedEditDistance_short_description, lang="en").n3(),
+        'levenshtein_normalised': Literal(normalisedEditDistance_short_description, lang="en").n3(),
         URIRef(editDistance.lower()).n3(): Literal(normalisedEditDistance_short_description, lang="en").n3(),
         editDistance_ttl.lower(): Literal(normalisedEditDistance_short_description, lang="en").n3(),
 
@@ -861,6 +1018,7 @@ class Algorithm:
         metaphone_ttl.lower(): Literal(metaphone_short_description, lang="en").n3(),
 
         "dmetaphone": Literal(doubleMetaphone_short_description, lang="en").n3(),
+        "doublemetaphone": Literal(doubleMetaphone_short_description, lang="en").n3(),
         URIRef(doubleMetaphone.lower()).n3(): Literal(doubleMetaphone_short_description, lang="en").n3(),
         doubleMetaphone_ttl.lower(): Literal(doubleMetaphone_short_description, lang="en").n3(),
 
@@ -868,6 +1026,7 @@ class Algorithm:
         URIRef(wordIntersection.lower()).n3(): Literal(wordIntersection_short_description, lang="en").n3(),
         wordIntersection_ttl.lower(): Literal(wordIntersection_short_description, lang="en").n3(),
 
+        'numbers': Literal(numbers_short_description, lang="en").n3(),
         'numbers_delta': Literal(numbers_short_description, lang="en").n3(),
         URIRef(numbers.lower()).n3(): Literal(numbers_short_description, lang="en").n3(),
         numbers_ttl.lower(): Literal(numbers_short_description, lang="en").n3(),
@@ -908,6 +1067,7 @@ class Algorithm:
         'levenshtein': editDistance_see_also,
         'levenshtein_distance': editDistance_see_also,
         'levenshtein_normalized': normalisedEditDistance_see_also,
+        'levenshtein_normalised': normalisedEditDistance_see_also,
         URIRef(editDistance.lower()).n3(): editDistance_see_also,
         editDistance_ttl.lower(): editDistance_see_also,
 
@@ -932,6 +1092,7 @@ class Algorithm:
         metaphone_ttl.lower(): metaphone_see_also,
 
         "dmetaphone": doubleMetaphone_see_also,
+        "doublemetaphone": doubleMetaphone_see_also,
         URIRef(doubleMetaphone.lower()).n3(): doubleMetaphone_see_also,
         doubleMetaphone_ttl.lower(): doubleMetaphone_see_also,
 
@@ -939,6 +1100,7 @@ class Algorithm:
         URIRef(wordIntersection.lower()).n3(): wordIntersection_see_also,
         wordIntersection_ttl.lower(): wordIntersection_see_also,
 
+        'numbers': numbers_see_also,
         'numbers_delta': numbers_see_also,
         URIRef(numbers.lower()).n3(): numbers_see_also,
         numbers_ttl.lower(): numbers_see_also,
@@ -980,6 +1142,7 @@ class Algorithm:
         'levenshtein': editDistance_see_also_ttl,
         'levenshtein_distance': editDistance_see_also_ttl,
         'levenshtein_normalized': normalisedEditDistance_see_also_ttl,
+        'Levenshtein_Normalized': normalisedEditDistance_see_also_ttl,
         URIRef(editDistance.lower()).n3(): editDistance_see_also_ttl,
         editDistance_ttl.lower(): editDistance_see_also_ttl,
 
@@ -1004,6 +1167,7 @@ class Algorithm:
         metaphone_ttl.lower(): metaphone_see_also_ttl,
 
         "dmetaphone": doubleMetaphone_see_also_ttl,
+        "doublemetaphone": doubleMetaphone_see_also_ttl,
         URIRef(doubleMetaphone.lower()).n3(): doubleMetaphone_see_also_ttl,
         doubleMetaphone_ttl.lower(): doubleMetaphone_see_also_ttl,
 
@@ -1011,6 +1175,7 @@ class Algorithm:
         URIRef(wordIntersection.lower()).n3(): wordIntersection_see_also_ttl,
         wordIntersection_ttl.lower(): wordIntersection_see_also_ttl,
 
+        'numbers': numbers_see_also_ttl,
         'numbers_delta': numbers_see_also_ttl,
         URIRef(numbers.lower()).n3(): numbers_see_also_ttl,
         numbers_ttl.lower(): numbers_see_also_ttl,
@@ -1026,6 +1191,14 @@ class Algorithm:
         "bloothooft_reduct": bloothooft_see_also_ttl,
         "bloothooft_reduction": bloothooft_see_also_ttl,
     }
+
+    @staticmethod
+    def algorithm_name(key):
+        return algorithm_lbl.get(key.lower(), algorithm_lbl['unknown'])
+
+    @staticmethod
+    def algorithm_rsc(key):
+        return algorithm_ttl.get(key.lower(), algorithm_ttl['unknown'])
 
     @staticmethod
     def illustration(key):

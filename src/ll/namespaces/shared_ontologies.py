@@ -86,7 +86,7 @@ class Namespaces:
         language = F"{prefix}:language"
 
     class DCterms:
-        dcterms = "http://purl.org/dc/terms"
+        dcterms = "http://purl.org/dc/terms/"
         prefix = 'dcterms'
 
         description = F"{prefix}:description"

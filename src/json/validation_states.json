@@ -7,15 +7,15 @@
     "label": "Rejected",
     "description": "A validation process that results in the link under scrutiny being flagged as REJECTED. This, with the intent of notifying that the link has undergone and FAILED a user-defined set of checks which gives ground to REFUTE the creation of the context dependent link."
   },
-  "not_sure": {
+  "uncertain": {
     "label": "Uncertain",
     "description": "A validation process that results in the link under scrutiny being flagged as UNCERTAIN. This flag reveals the lack of confidence in confirming or refuting the creation of the context dependent link."
   },
-  "not_validated": {
+  "unchecked": {
     "label": "Unchecked",
     "description": "Flagging a link as UNCHECKED literally highlights that it has not undergone any user-defined scrutiny such that it could be flagged as ACCEPTED, REJECTED or UNCERTAIN"
   },
-  "mixed": {
+  "disputed": {
     "label": "Disputed",
     "description": "A validation process that results in the link under scrutiny being flagged as DISPUTED. This, with the intent of notifying that the link has undergone MULTIPLE user-defined set of checks which result in a contradiction. In other words, the same link has been flagged with contradicting labels such as for example ACCEPTED, REJECTED, UNCERTAIN AND UNCHECKED"
   }

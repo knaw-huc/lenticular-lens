@@ -100,7 +100,7 @@ class LinksetValidator:
             )
 
             # If links in a linkset are updated, then also update the same links from lenses based on this linkset
-            # However, if the same link yield different validations among the linksets, then use 'mixed'
+            # However, if the same link yield different validations among the linksets, then use 'disputed'
             for lens_spec in self._job.lens_specs:
                 lens = self._job.lens(lens_spec.id)
 
@@ -125,7 +125,7 @@ class LinksetValidator:
                         FROM (
                             SELECT source_uri, target_uri, 
                                    CASE WHEN count(DISTINCT valid) > 1 
-                                        THEN 'mixed'::link_validity 
+                                        THEN 'disputed'::link_validity 
                                         ELSE min(valid) END AS valid
                             FROM ({validaties_select}) AS x
                             GROUP BY source_uri, target_uri

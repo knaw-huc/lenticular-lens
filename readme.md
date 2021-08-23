@@ -348,10 +348,10 @@ and `offset` for paging.
 
 Specify `with_properties` with 'none' to return no property values, 'single' to only return a single property value or '
 multiple' to return multiple property values. Specify `apply_filters` to apply the filters specified by the user.
-Specify `valid` with `accepted`, `declined`, `not_sure` and/or `not_validated` to only return from the specified
-validity types. Specify `uri` to only return links with the specified URIs. Specify `cluster_id` to only return the
-links of specific clusters. Specify `min` and/or `max` to only return links with a similarity score within the specified
-minimum and maximum score. Specify `sort` if you want to enable sorting on similarity score using `asc` or `desc`.
+Specify `valid` with `accepted`, `rejected`, `uncertain` and/or `unchecked` to only return from the specified validity
+types. Specify `uri` to only return links with the specified URIs. Specify `cluster_id` to only return the links of
+specific clusters. Specify `min` and/or `max` to only return links with a similarity score within the specified minimum
+and maximum score. Specify `sort` if you want to enable sorting on similarity score using `asc` or `desc`.
 
 _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/links/linkset/0`_
 
@@ -385,13 +385,12 @@ _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/clusters/0`_
 Validate a link of `type` (`linkset` or `lens`) for the linkset/lens with `id` of the given `job_id`.
 
 Specify the uris of the `source` and `target` to identify the link to be validated. Or filter the links by
-specifying `apply_filters` to apply the filters specified by the user. Specify `valid` with `accepted`, `declined`,
-`not_sure` and/or `not_validated` to only return from the specified validity types. Specify `uri` to only return links
-with the specified URIs. Specify `cluster_id` to only return the links of specific clusters. Specify `min` and/or `max`
+specifying `apply_filters` to apply the filters specified by the user. Specify `valid` with `accepted`, `rejected`,
+`uncertain` and/or `unchecked` to only return from the specified validity types. Specify `uri` to only return links with
+the specified URIs. Specify `cluster_id` to only return the links of specific clusters. Specify `min` and/or `max`
 to only return links with a similarity score within the specified minimum and maximum score.
 
-Provide `validation` with either `accepted`, `declined` or `not_sure` to validate the link or use `not_validated` to
-reset.
+Provide `validation` with either `accepted`, `rejected` or `uncertain` to validate the link or use `unchecked` to reset.
 
 ---
 
@@ -402,9 +401,9 @@ reset.
 Motivate using `motivation` of `type` (`linkset` or `lens`) for the linkset/lens with `id` of the given `job_id`.
 
 Specify the uris of the `source` and `target` to identify the link to be motivated. Or filter the links by
-specifying `apply_filters` to apply the filters specified by the user. Specify `valid` with `accepted`, `declined`,
-`not_sure` and/or `not_validated` to only return from the specified validity types. Specify `uri` to only return links
-with the specified URIs. Specify `cluster_id` to only return the links of specific clusters. Specify `min` and/or `max`
+specifying `apply_filters` to apply the filters specified by the user. Specify `valid` with `accepted`, `rejected`,
+`uncertain` and/or `unchecked` to only return from the specified validity types. Specify `uri` to only return links with
+the specified URIs. Specify `cluster_id` to only return the links of specific clusters. Specify `min` and/or `max`
 to only return links with a similarity score within the specified minimum and maximum score.
 
 ---
@@ -423,8 +422,8 @@ for the linkset/lens with `id` of the given `job_id`.
 
 Get a CSV export of `type` (`linkset` or `lens`) for the linkset/lens with `id` the given `job_id`.
 
-Specify `valid` with `accepted`, `declined`, `not_sure` and/or `not_validated` to only export from the specified
-validity types.
+Specify `valid` with `accepted`, `rejected`, `uncertain` and/or `unchecked` to only export from the specified validity
+types.
 
 ---
 
@@ -435,8 +434,8 @@ validity types.
 
 Get a RDF export of `type` (`linkset` or `lens`) for the linkset/lens with `id` the given `job_id`.
 
-Specify `valid` with `accepted`, `declined`, `not_sure` and/or `not_validated` to only export from the specified
-validity types.
+Specify `valid` with `accepted`, `rejected`, `uncertain` and/or `unchecked` to only export from the specified validity
+types.
 
 Specify `link_pred_namespace` and `link_pred_shortname` to configure the predicate to use for the links.
 
@@ -635,8 +634,8 @@ to use for a particular job.
   },
   // The filter configuration to obtain only a subset of the data from Timbuctoo; optional field
   "filter": {
-    // Whether ALL conditions in this group should match ('AND') or AT LEAST ONE condition in this group has to match ('OR')
-    "type": "AND",
+    // Whether ALL conditions in this group should match ('and') or AT LEAST ONE condition in this group has to match ('or')
+    "type": "and",
     // The filter is composed of a logic box
     "conditions": [
       {
@@ -705,8 +704,8 @@ Linkset specs is a list of JSON objects that contain the configuration of the li
   ],
   // The matching configuration for finding links; requires at least one condition
   "methods": {
-    // Whether ALL conditions in this group should match ('AND') or AT LEAST ONE condition in this group has to match ('OR'); T-norms and t-conorms are also allowed: see table below for allowed values
-    "type": "AND",
+    // Whether ALL conditions in this group should match ('and') or AT LEAST ONE condition in this group has to match ('or'); T-norms and s-norms are also allowed: see table below for allowed values
+    "type": "and",
     // The threshold to apply on the similarity score; optional field, defaults to '0' which means it does not apply
     "threshold": 0.8,
     // The matching configuration is composed of a logic box
@@ -715,14 +714,14 @@ Linkset specs is a list of JSON objects that contain the configuration of the li
         // The main matching method to apply
         "method": {
           // The type of matching to apply; see table below for allowed values
-          "name": "SOUNDEX",
+          "name": "soundex",
           // Some types of matching methods require extra configuration
           "config": {}
         },
         // The similarity matching to apply; see table below for allowed values; optional field
         "sim_method": {
           // The type of similarity matching to apply; see table below for allowed values
-          "name": "SOUNDEX",
+          "name": "soundex",
           // Some types of similarity matching methods require extra configuration
           "config": {},
           // Whether to apply the similarity matching method on the normalized value; optional field, defaults to 'false'
@@ -730,8 +729,8 @@ Linkset specs is a list of JSON objects that contain the configuration of the li
         },
         // Fuzzy matching configuration; optional field
         "fuzzy": {
-          // The t-conorm to apply on the values of this condition; see table below for allowed values; optional field, defaults to 'MAXIMUM_T_CONORM'
-          "t_conorm": "MAXIMUM_T_CONORM",
+          // The s-norm to apply on the values of this condition; see table below for allowed values; optional field, defaults to 'MAXIMUM_S_NorM'
+          "s_norm": "maximum_s_norm",
           // The threshold to apply on the similarity score; optional field, defaults to '0' which means it does not apply
           "threshold": 0
         },
@@ -757,7 +756,7 @@ Linkset specs is a list of JSON objects that contain the configuration of the li
                 // The transformers to apply to transform the value before matching; see table below for allowed values
                 "transformers": [
                   {
-                    "name": "PARSE_DATE",
+                    "name": "parse_date",
                     "parameters": {
                       "format": "YYYY-MM-DD"
                     }
@@ -794,30 +793,30 @@ Linkset specs is a list of JSON objects that contain the configuration of the li
 
 | Matching method        | Key                      | Accepts a similarity method | Is a similarity method | Values                                                                                                     |
 | :--------------------- | :----------------------- | :-------------------------- | :--------------------- | :--------------------------------------------------------------------------------------------------------- | 
-| Exact match            | `EXACT`                  | No                          | No                     |                                                                                                            |
-| Intermediate dataset   | `INTERMEDIATE`           | No                          | No                     | `entity_type_selection`, `intermediate_source`, `intermediate_target` (Property paths)                     |
-| Levenshtein distance   | `LEVENSHTEIN_DISTANCE`   | No                          | Yes                    | `max_distance`                                                                                             |
-| Levenshtein normalized | `LEVENSHTEIN_NORMALIZED` | No                          | Yes                    | `threshold`                                                                                                |
-| Soundex                | `SOUNDEX`                | Yes                         | No                     | `size`                                                                                                     |
-| Gerrit Bloothooft      | `BLOOTHOOFT`             | Yes                         | No                     | `name_type` (First or last name: `first_name`, `family_name`)                                              |
-| Word Intersection      | `WORD_INTERSECTION`      | No                          | Yes                    | `ordered`, `approximate`, `stop_symbols`, `threshold`                                                      |
-| Metaphone              | `METAPHONE`              | Yes                         | No                     | `max`                                                                                                      |
-| Double Metaphone       | `DMETAPHONE`             | Yes                         | No                     |                                                                                                            |
-| Trigram                | `TRIGRAM`                | No                          | Yes                    | `threshold`                                                                                                |
-| Numbers Delta          | `NUMBERS_DELTA`          | No                          | No                     | `type` (Irrelevant, Source < Target, Target < Source: `<>`, `<`, `>`), `start`, `end`                      |
-| Time Delta             | `TIME_DELTA`             | No                          | No                     | `type` (Irrelevant, Source < Target, Target < Source: `<>`, `<`, `>`), `years`, `months`, `days`, `format` |
-| Same Year/Month        | `SAME_YEAR_MONTH`        | No                          | No                     | `date_part` (Year, month, or both: `year`, `month`, `year_month`)                                          |
-| Jaro                   | `JARO`                   | No                          | Yes                    | `threshold`                                                                                                |
-| Jaro-Winkler           | `JARO_WINKLER`           | No                          | Yes                    | `threshold`, `prefix_weight`                                                                               |
+| Exact match            | `exact`                  | No                          | No                     |                                                                                                            |
+| Intermediate dataset   | `intermediate`           | No                          | No                     | `entity_type_selection`, `intermediate_source`, `intermediate_target` (Property paths)                     |
+| Levenshtein distance   | `levenshtein_distance`   | No                          | Yes                    | `max_distance`                                                                                             |
+| Levenshtein normalized | `levenshtein_normalized` | No                          | Yes                    | `threshold`                                                                                                |
+| Soundex                | `soundex`                | Yes                         | No                     | `size`                                                                                                     |
+| Gerrit Bloothooft      | `bloothooft`             | Yes                         | No                     | `name_type` (First or last name: `first_name`, `family_name`)                                              |
+| Word Intersection      | `word_intersection`      | No                          | Yes                    | `ordered`, `approximate`, `stop_symbols`, `threshold`                                                      |
+| Metaphone              | `metaphone`              | Yes                         | No                     | `max`                                                                                                      |
+| Double Metaphone       | `dmetaphone`             | Yes                         | No                     |                                                                                                            |
+| Trigram                | `trigram`                | No                          | Yes                    | `threshold`                                                                                                |
+| Numbers Delta          | `numbers_delta`          | No                          | No                     | `type` (Irrelevant, Source < Target, Target < Source: `<>`, `<`, `>`), `start`, `end`                      |
+| Time Delta             | `time_delta`             | No                          | No                     | `type` (Irrelevant, Source < Target, Target < Source: `<>`, `<`, `>`), `years`, `months`, `days`, `format` |
+| Same Year/Month        | `same_year_month`        | No                          | No                     | `date_part` (Year, month, or both: `year`, `month`, `year_month`)                                          |
+| Jaro                   | `jaro`                   | No                          | Yes                    | `threshold`                                                                                                |
+| Jaro-Winkler           | `jaro_winkler`           | No                          | Yes                    | `threshold`, `prefix_weight`                                                                               |
 
 | Transformer                        | Key                          | Values                            |
 | :--------------------------------- | :--------------------------- | :-------------------------------- | 
-| Transform 'last name first' format | `TRANSFORM_LAST_NAME_FORMAT` | `infix`                           |
-| Prefix                             | `PREFIX`                     | `prefix`                          |
-| Suffix                             | `SUFFIX`                     | `suffix`                          |
-| Replace                            | `REPLACE`                    | `from`, `to`                      |
-| Unaccent                           | `UNACCENT`                   |                                   |
-| Regular expression replace         | `REGEXP_REPLACE`             | `pattern`, `replacement`, `flags` |
+| Transform 'last name first' format | `transform_last_name_format` | `infix`                           |
+| Prefix                             | `prefix`                     | `prefix`                          |
+| Suffix                             | `suffix`                     | `suffix`                          |
+| Replace                            | `replace`                    | `from`, `to`                      |
+| Unaccent                           | `unaccent`                   |                                   |
+| Regular expression replace         | `regexp_replace`             | `pattern`, `replacement`, `flags` |
 
 ### Lens specs
 
@@ -834,9 +833,9 @@ Lens specs is a list of JSON objects that contain the configuration of the lense
   // The lens configuration; requires groups consisting of two elements
   "specs": {
     // Lens type to apply; see table below for allowed values
-    "type": "UNION",
-    // The t-conorm to apply on the values of this element; see table below for allowed values; optional field, defaults to 'MAXIMUM_T_CONORM'
-    "t_conorm": "",
+    "type": "union",
+    // The s-norm to apply on the values of this element; see table below for allowed values; optional field, defaults to 'MAXIMUM_S_NorM'
+    "s_norm": "",
     // The threshold to apply on the similarity score; optional field, defaults to '0' which means it does not apply
     "threshold": 0.8,
     // The lens configuration is composed of a logic box
@@ -854,14 +853,14 @@ Lens specs is a list of JSON objects that contain the configuration of the lense
 
 | Lens type      | Description                       |
 | :------------- | :-------------------------------- |
-| UNION          | Union (A ∪ B)                     |
-| INTERSECTION   | Intersection (A ∩ B)              |
-| DIFFERENCE     | Difference (A - B)                |
-| SYM_DIFFERENCE | Symmetric difference (A ∆ B)      |
-| IN_SET_AND     | Source and target resources match |
-| IN_SET_OR      | Source or target resources match  |
-| IN_SET_SOURCE  | Source resources match            |
-| IN_SET_TARGET  | Target resources match            |
+| union          | Union (A ∪ B)                     |
+| intersection   | Intersection (A ∩ B)              |
+| difference     | Difference (A - B)                |
+| sym_difference | Symmetric difference (A ∆ B)      |
+| in_set_and     | Source and target resources match |
+| in_set_or      | Source or target resources match  |
+| in_set_source  | Source resources match            |
+| in_set_target  | Target resources match            |
 
 ### Views
 
@@ -901,8 +900,8 @@ and the lens specs (using the elements) all apply a logic box to allow the user 
 
 ```json5
 {
-  // The type that combines these elements (usually AND/OR, but can be of any type)
-  "type": "AND",
+  // The type that combines these elements (usually and/or, but can be of any type)
+  "type": "and",
   // The list of elements; may contain other logic boxes (can have any JSON key)
   "elements": []
 }
@@ -912,10 +911,10 @@ As logic boxes may contain other logic boxes, complex conditions can be expresse
 
 ```json5
 {
-  "type": "AND",
+  "type": "and",
   "conditions": [
     {
-      "type": "OR",
+      "type": "or",
       "conditions": [
         {},
         {},
@@ -923,10 +922,10 @@ As logic boxes may contain other logic boxes, complex conditions can be expresse
       ]
     },
     {
-      "type": "OR",
+      "type": "or",
       "conditions": [
         {
-          "type": "AND",
+          "type": "and",
           "conditions": [
             {}
           ]
@@ -989,23 +988,23 @@ value `__value__` that you can use.
 
 ### Fuzzy logic
 
-The configuration mentions both t-norms (conjuction / AND) and t-conorms (disjunction / OR) that can be used to
-configure how the similarity score is computed:
+The configuration mentions both t-norms (conjuction / and) and s-norms (disjunction / or) that can be used to configure
+how the similarity score is computed:
 
 | T-norm                    | Key                  |
 | :------------------------ | :------------------- |
-| Minimum t-norm (⊤min)     | `MINIMUM_T_NORM`     |
-| Product t-norm (⊤prod)    | `PRODUCT_T_NORM`     |
-| Łukasiewicz t-norm (⊤Luk) | `LUKASIEWICZ_T_NORM` |
-| Drastic t-norm (⊤D)       | `DRASTIC_T_NORM`     |
-| Nilpotent minimum (⊤nM)   | `NILPOTENT_MINIMUM`  |
-| Hamacher product (⊤H0)    | `HAMACHER_PRODUCT`   |
+| Minimum t-norm (⊤min)     | `minimum_t_norm`     |
+| Product t-norm (⊤prod)    | `product_t_norm`     |
+| Łukasiewicz t-norm (⊤Luk) | `lukasiewicz_t_norm` |
+| Drastic t-norm (⊤D)       | `drastic_t_norm`     |
+| Nilpotent minimum (⊤nM)   | `nilpotent_minimum`  |
+| Hamacher product (⊤H0)    | `hamacher_product`   |
 
-| T-conorm                 | Key                 |
+| S-norm                   | Key                 |
 | :----------------------- | :------------------ |
-| Maximum t-conorm (⊥max)  | `MAXIMUM_T_CONORM`  |
-| Probabilistic sum (⊥sum) | `PROBABILISTIC_SUM` |
-| Bounded sum (⊥Luk)       | `BOUNDED_SUM`       |
-| Drastic t-conorm (⊥D)    | `DRASTIC_T_CONORM`  |
-| Nilpotent maximum (⊥nM)  | `NILPOTENT_MAXIMUM` |
-| Einstein sum (⊥H2)       | `EINSTEIN_SUM`      |
+| Maximum s-norm (⊥max)    | `maximum_s_norm`    |
+| Probabilistic sum (⊥sum) | `probabilistic_sum` |
+| Bounded sum (⊥Luk)       | `bounded_sum`       |
+| Drastic s-norm (⊥D)      | `drastic_s_norm`    |
+| Nilpotent maximum (⊥nM)  | `nilpotent_maximum` |
+| Einstein sum (⊥H2)       | `einstein_sum`      |

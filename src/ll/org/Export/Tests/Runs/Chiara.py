@@ -21,19 +21,20 @@ chiara_csv = ["ef3849ec51b1aaee68cbca751ddcb652-6.csv", "Accepted.csv", 'linkset
 #   10. c52a1b1d91d541549f23bab5fe94e91b : NO PROBLEM OBSERVED
 # ################################################################################################################
 
-jobs = [("8c46acd48ea393c447a7ccb9f0aaea2b", [7]), ("8c46acd48ea393c447a7ccb9f0aaea2b", [6]),
+jobs = [("8c46acd48ea393c447a7ccb9f0aaea2b", [15]), ("8c46acd48ea393c447a7ccb9f0aaea2b", [6]),
         ("01492c5d3a4870e63145287108c881cf", [5]), ("d37dcb8ab91c197600d6462bdedda307", [4]),
+        ('8c46acd48ea393c447a7ccb9f0aaea2b', [6]),
     "ac8e16d756d8a901e65b8ca06b55166d", "ef3849ec51b1aaee68cbca751ddcb652", "b402109b65d40e83ca9d4ed500c48f80",
     "e11534a1baeb545c3d32159b6d9659bf", "a6433528a993389afa2c946ddc860182", "7f63b5e6bea5224c11f7f939d132bf0e",
     "e149fc93e2c172d9fc6784f996eb1400", "8c46acd48ea393c447a7ccb9f0aaea2b", "01492c5d3a4870e63145287108c881cf",
     "c52a1b1d91d541549f23bab5fe94e91b"]
 
 
-LINKSET = False
+LINKSET = True
 
 if LINKSET:
 
-    job_idx = 3
+    job_idx = 0
     linkset = jobs[job_idx][1]
     used_job = jobs[job_idx][0]
 
@@ -51,9 +52,10 @@ else:
     lens_jobs = [
         ('8c46acd48ea393c447a7ccb9f0aaea2b', [0, 1, 2, 3, 4, 5, 6]),
         ('01492c5d3a4870e63145287108c881cf', [0, 1, 2]),
-        ('d37dcb8ab91c197600d6462bdedda307', [1])]
+        ('d37dcb8ab91c197600d6462bdedda307', [1]),
+        ]
 
-    job_idx, lens_idx = 2, 0
+    job_idx, lens_idx = 0, 5
     used_job = lens_jobs[job_idx][0]
     lens = lens_jobs[job_idx][1][lens_idx]
     csv = getLinks(job_id=used_job, set_id=lens, isLinkset=False)

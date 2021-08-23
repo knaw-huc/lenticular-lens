@@ -35,7 +35,7 @@ class LensSql:
             )
 
         lens_sql = self._lens.with_lenses_recursive(
-            lambda left, right, type, t_conorm, threshold, only_left: self._lens_sql(
+            lambda left, right, type, s_norm, threshold, only_left: self._lens_sql(
                 type, only_left, sql.SQL('(\n{sql}\n)').format(sql=left), sql.SQL('(\n{sql}\n)').format(sql=right)),
             lambda spec, id, type: spec_select_sql(id, type)
         )
@@ -125,7 +125,7 @@ class LensSql:
                 CASE WHEN l.valid = r.valid THEN l.valid 
                      WHEN l.valid IS NULL THEN r.valid 
                      WHEN r.valid IS NULL THEN l.valid
-                     ELSE 'mixed'::link_validity END AS valid
+                     ELSE 'disputed'::link_validity END AS valid
         '''), left_sql, right_sql)
 
     @staticmethod

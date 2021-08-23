@@ -1,5 +1,5 @@
 {
-  "EXACT": {
+  "exact": {
     "label": "Exact match",
     "description": "Aligns source and target’s IRIs whenever their respective user selected property values are identical.",
     "see_also": [
@@ -11,7 +11,7 @@
     "is_similarity_method": false,
     "items": {}
   },
-  "INTERMEDIATE": {
+  "intermediate": {
     "label": "Intermediate dataset",
     "description": "The method aligns the source and the target’s IRIs via an intermediate database by using properties that potentially present different descriptions of the same entity, such as country name and country code. This is possible by providing an intermediate dataset that binds the two alternative descriptions to the very same identifier.",
     "see_also": [
@@ -48,7 +48,7 @@
       }
     }
   },
-  "LEVENSHTEIN_DISTANCE": {
+  "levenshtein_distance": {
     "label": "Levenshtein distance",
     "description": "This method is used to align source and target’s IRIs whenever the distance of their respective user selected property values are above a given Levenshtein edit distance threshold. Edit distance is a way of quantifying how dissimilar two strings (e.g., words) are to one another by counting the minimum number of operations ε (removal, insertion, or substitution of a character in the string) required to transform one string into the other.",
     "see_also": [
@@ -76,7 +76,7 @@
       }
     }
   },
-  "LEVENSHTEIN_NORMALIZED": {
+  "levenshtein_normalized": {
     "label": "Levenshtein normalized",
     "description": "This method is used to align source and target’s IRIs whenever the similarity score of their respective user selected property values are above a given Levenshtein threshold. Edit distance is a way of quantifying how dissimilar two strings (e.g., words) are to one another by counting the minimum number of operations ε (removal, insertion, or substitution of a character in the string) required to transform one string into the other.",
     "see_also": [
@@ -104,7 +104,7 @@
       }
     }
   },
-  "SOUNDEX": {
+  "soundex": {
     "label": "Soundex",
     "description": "Soundex is a phonetic algorithm for indexing names by sound, as pronounced in English. The goal is for homophones to be encoded to the same representation so that they can be matched despite minor differences in spelling. The algorithm mainly encodes consonants; a vowel will not be encoded unless it is the first letter.",
     "see_also": [
@@ -131,7 +131,7 @@
       }
     }
   },
-  "BLOOTHOOFT": {
+  "bloothooft": {
     "label": "Gerrit Bloothooft",
     "description": "Gerrit Bloothooft description",
     "see_also": [
@@ -157,7 +157,7 @@
       }
     }
   },
-  "WORD_INTERSECTION": {
+  "word_intersection": {
     "label": "Word Intersection",
     "description": "The word intersection approximation method is originally designed to find a subset of words within a larger text. However, it could also be used for any pair of strings regardless of the strings sizes.",
     "see_also": [
@@ -199,7 +199,7 @@
       }
     }
   },
-  "METAPHONE": {
+  "metaphone": {
     "label": "Metaphone",
     "description": "Metaphone is a phonetic algorithm for a more accurate encoding of words by sound (as compared to Soundex) as pronounced in English. In this algorithm as with Soundex, similar-sounding words should share the same encoding key which is an approximate phonetic representation of the original word.",
     "see_also": [
@@ -221,7 +221,7 @@
       }
     }
   },
-  "DMETAPHONE": {
+  "dmetaphone": {
     "label": "Double Metaphone",
     "description": "Double metaphone is a third generation phonetic algorithm improvement after Soundex and Metaphone for an accurately encoding words by sound as pronounced in English. It is called \"Double\" because it can return both a primary and a secondary code for a string; this accounts for some ambiguous cases as well as for multiple variants of surnames with common ancestry.",
     "see_also": [
@@ -234,7 +234,7 @@
     "is_similarity_method": false,
     "items": {}
   },
-  "TRIGRAM": {
+  "trigram": {
     "label": "Trigram",
     "description": "Trigrams are a special case of the n-gram, where n is 3. It is a contiguous sequence of three items from a given sample.",
     "see_also": [
@@ -265,7 +265,7 @@
       }
     }
   },
-  "NUMBERS_DELTA": {
+  "numbers_delta": {
     "label": "Numbers Delta",
     "description": "The numbers delta is used to align the source and the target by approximating the match of the numeric values of the selected properties according to a delta.",
     "see_also": [
@@ -298,7 +298,7 @@
       }
     }
   },
-  "TIME_DELTA": {
+  "time_delta": {
     "label": "Time Delta",
     "description": "The time delta is used to align the source and the target by approximating the match of the date values of the selected properties according to a delta.",
     "see_also": [
@@ -347,7 +347,7 @@
       }
     }
   },
-  "SAME_YEAR_MONTH": {
+  "same_year_month": {
     "label": "Same Year/Month",
     "description": "Same Year/Month is used to align source and target’s IRIs whenever an exact match of the year or year and month is observed between source and target's input dates.",
     "see_also": [
@@ -402,7 +402,7 @@
       }
     }
   },
-  "JARO": {
+  "jaro": {
     "label": "Jaro",
     "description": "Jaro distance is a measure of similarity between two strings. The higher the Jaro distance for two strings is, the more similar the strings are. The score is normalised such that 0 equates to no similarity and 1 is an exact match.",
     "see_also": [
@@ -430,7 +430,7 @@
       }
     }
   },
-  "JARO_WINKLER": {
+  "jaro_winkler": {
     "label": "Jaro-Winkler",
     "description": "Jaro-Winkler boosts up the Jaro algorithm’s result by increasing it whenever the compared strings share a prefix of a maximum of four characters.",
     "see_also": [

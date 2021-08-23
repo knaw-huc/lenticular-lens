@@ -56,9 +56,9 @@ class LinksetBuilder:
             return {
                 'accepted': 0,
                 'rejected': 0,
-                'not_sure': 0,
-                'not_validated': 0,
-                'mixed': 0,
+                'uncertain': 0,
+                'unchecked': 0,
+                'disputed': 0,
                 **{row[0]: row[1] for row in cur.fetchall()}
             }
 
@@ -202,9 +202,9 @@ class LinksetBuilder:
                     'links': {
                         'accepted': 0,
                         'rejected': 0,
-                        'not_sure': 0,
-                        'not_validated': 0,
-                        'mixed': 0,
+                        'uncertain': 0,
+                        'unchecked': 0,
+                        'disputed': 0,
                         **cluster['links']
                     },
                     'reconciled': False,

@@ -10,7 +10,7 @@ import ll.org.Export.Scripts.General as Grl
 from ll.org.Export.Scripts import FuzzyNorms
 from collections import defaultdict, deque
 from io import StringIO as Buffer
-from rdflib import URIRef, Literal
+from rdflib import URIRef, Literal, XSD
 from ll.org.Export.Scripts.Algotithms import Algorithm
 from ll.org.Export.Scripts.Resources import Resource as Rsc
 from ll.org.Export.Scripts.VoidPlus import VoidPlus
@@ -132,16 +132,26 @@ def expression_generator(postOrder):
 # RETURN (1) AN RDF SEQUENCE AND (2) PREFIX:NAME IF A PROPERTY PATH IS PROVIDED
 def rdfSequence(sequence: list, auto=True, only=False):
 
+    if '__value__' in sequence:
+        sequence.remove('__value__')
+        print("\n", sequence)
+
     if len(sequence) == 0:
         return None, None
 
     if len(sequence) == 1 and auto is True:
         # SEQUENCE TYPE
-        triples = preVal('a', VoidPlus.PropertyPartition_ttl)
-        # triples = preVal(Sns.VoID.property_tt, Rsc.uri_resource(sequence[0]), line=True)
-        triples += preVal(Sns.VoID.property_ttl, Rsc.ga_resource_ttl(sequence[0] if sequence[0] else '...........'), line=True)
-        code = Rsc.ga_resource_ttl(F"PropertyPartition-{Grl.deterministicHash(triples)}")
-        triples = F"{code}\n{triples}"
+
+        # STAND ALONE
+        if only is False:
+            triples = preVal('a', VoidPlus.PropertyPartition_ttl)
+            triples += preVal(Sns.VoID.property_ttl, Rsc.ga_resource_ttl(sequence[0]), True)
+            code = Rsc.ga_resource_ttl(F"PropertyPartition-{Grl.deterministicHash(triples)}")
+            triples = F"{code}\n{triples}"
+
+        else:
+            triples = Rsc.ga_resource_ttl(sequence[0])
+            code = Rsc.ga_resource_ttl(F"PropertyPartition-{Grl.deterministicHash(triples)}")
 
     else:
 
@@ -272,10 +282,10 @@ def uri2ttl(uri, auto_prefixes):
     # except Exception as err:
     #     print(F">>> [ERROR FROM uri_2_turtle] URI: \n{space}{uri:30}\n{space}{err}\n")
 
-uri2ttl('http://www.vondel.humanities.uva.nl/ecartico/persons/4706', {})
-uri2ttl('http://www.humanities.uva.nl/dataset/persons/4706', {})
-uri2ttl('http://purl.org/vocab/bio/0.1/example-1', {})
-uri2ttl('http://purl.org/vocab/bios/0.1/example-1', {})
+# uri2ttl('http://www.vondel.humanities.uva.nl/ecartico/persons/4706', {})
+# uri2ttl('http://www.humanities.uva.nl/dataset/persons/4706', {})
+# uri2ttl('http://purl.org/vocab/bio/0.1/example-1', {})
+# uri2ttl('http://purl.org/vocab/bios/0.1/example-1', {})
 # Given a turtle format such as owl:sameAs or skos:exactMatch,
 # reconstruct it as http://www.w3.org/2004/02/skos/core#exactMatch and
 # http://www.w3.org/2002/07/owl#
@@ -318,8 +328,11 @@ def preVal(predicate, value, end=False, line=True, position=1):
     return F"{tab}{predicate:{Vars.PRED_SIZE}}{value} {'.' if end is True else ';'}{new_line}"
 
 
-def objectList(objects, padding=1):
-    return F" ,\n{space * padding}{' ' * Vars.PRED_SIZE}".join(Rsc.ga_resource_ttl(elt) for elt in objects)
+def objectList(objects, padding=1, newLine=True):
+    if newLine:
+        return F" ,\n{space * padding}{' ' * Vars.PRED_SIZE}".join(Rsc.ga_resource_ttl(elt) for elt in objects)
+    else:
+        return F", ".join(Rsc.ga_resource_ttl(elt) for elt in objects)
 
 
 def validationGraphs(set_id, validations):
@@ -1006,7 +1019,7 @@ def getLinksetSpecs(linksetId: int, job: str, prefixes: dict, printSpec: bool = 
             lst_specs["job_id"] = job
             lst_specs["linkType"] = {
                 'prefix': 'owl',
-                'namespace': LinkPredicates.owl.__str__(),
+                'namespace': "http://www.w3.org/2002/07/owl#",
                 'long': LinkPredicates.sameAs,
                 'short': LinkPredicates.sameAs_tt,
             }
@@ -1329,25 +1342,27 @@ def unboxingLinksetSpecs(specs: dict, prefixes: dict, triples: bool = True):
         stats.write(F"\n{space}### VOID LINKSET STATS\n")
 
         # TOTAL LINKS COUNT
-        if Vars.triples in linksetStats and linksetStats[Vars.triples] > -1:
+        if Vars.triples in linksetStats and linksetStats[Vars.triples] and linksetStats[Vars.triples] > -1:
             stats.write(preVal(Sns.VoID.triples_ttl, Rsc.literal_resource(linksetStats[Vars.triples])))
 
         # THE TOTAL NUMBER OF ENTITIES
-        if Vars.distinctLinkedEntities in linksetStats and linksetStats[Vars.distinctLinkedEntities] > -1:
+        if Vars.distinctLinkedEntities in linksetStats and linksetStats[Vars.distinctLinkedEntities] and \
+                linksetStats[Vars.distinctLinkedEntities] > -1:
             stats.write(preVal(Sns.VoID.entities_ttl, Rsc.literal_resource(linksetStats[Vars.distinctLinkedEntities])))
 
         # NUMBER OF DISTINCT SUBJECT RESOURCES IN THE LINKSET
-        if Vars.distinctSub in linksetStats and linksetStats[Vars.distinctSub] > -1:
+        if Vars.distinctSub in linksetStats and linksetStats[Vars.distinctSub] and  linksetStats[Vars.distinctSub] > -1:
             stats.write(preVal(Sns.VoID.distinctSubjects_ttl, Rsc.literal_resource(linksetStats[Vars.distinctSub])))
 
         # NUMBER OF DISTINCT OBJECT RESOURCES IN THE LINKSET
-        if Vars.distinctObj in linksetStats and linksetStats[Vars.distinctObj] > -1:
+        if Vars.distinctObj in linksetStats and linksetStats[Vars.distinctObj] and linksetStats[Vars.distinctObj] > -1:
             stats.write(preVal(Sns.VoID.distinctObjects_ttl, Rsc.literal_resource(linksetStats[Vars.distinctObj])))
 
         stats.write(F"\n{space}### SOURCE AND TARGET DATASETS STATS\n")
 
         # NUMBER OF DISTINCT RESOURCES IN THE SOURCE AND TARGET DATASETS
-        if Vars.distinctSrcTrgEntities in linksetStats and linksetStats[Vars.distinctSrcTrgEntities] > -1:
+        if Vars.distinctSrcTrgEntities in linksetStats and linksetStats[Vars.distinctSrcTrgEntities] and \
+                linksetStats[Vars.distinctSrcTrgEntities] > -1:
             stats.write(preVal(VoidPlus.srcTrgEntities_ttl, Rsc.literal_resource(linksetStats[Vars.distinctSrcTrgEntities])))
 
         # NUMBER OF DISTINCT RESOURCES IN THE TARGET DATASETS
@@ -1384,15 +1399,15 @@ def unboxingLinksetSpecs(specs: dict, prefixes: dict, triples: bool = True):
 
         has_validation = Vars.notValidated in linksetStats and linksetStats[Vars.notValidated] < linksetStats[Vars.triples]
 
-        if validationGraph:
+        if validationGraph and has_validation is True:
             stats.write(F"\n{space}### ABOUT VALIDATIONS\n")
 
             # THE TOTAL AMOUNT OF CONTRADICTING LINKS
             if Vars.mixed in linksetStats and linksetStats[Vars.mixed] > -1:
                 stats.write(preVal(VoidPlus.contradictions_ttl, Rsc.literal_resource(linksetStats[Vars.mixed])))
 
-            if has_validation is True:
-                stats.write(preVal(VoidPlus.has_validationset_ttl, validationGraph))
+            # if has_validation is True:
+            stats.write(preVal(VoidPlus.has_validationset_ttl, validationGraph))
             stats.write("\n")
 
         return stats.getvalue()
@@ -1420,8 +1435,11 @@ def unboxingLinksetSpecs(specs: dict, prefixes: dict, triples: bool = True):
         # LICENCE OF THE LL
         g_meta.write(preVal(Sns.CC.license_ttl, Rsc.uri_resource(Vars.LICENCE)))
 
-        # LINKSET TIMESTAMP
-        g_meta.write(preVal(Sns.DCterms.created_ttl, Grl.getXSDTimestamp()))
+        # LINKSET CREATED TIMESTAMP
+        g_meta.write(preVal(Sns.DCterms.created_ttl, Literal(linksetSpecs['created'], datatype=XSD.dateTi).n3(MANAGER)))
+
+        # LINKSET EXPORT TIMESTAMP
+        g_meta.write(preVal(VoidPlus.exportDate_ttl, Grl.getXSDTimestamp()))
 
         if "creator" in linksetSpecs and len(linksetSpecs["creator"].strip()) > 0:
             g_meta.write(preVal(Sns.DCterms.creator_ttl, Literal(linksetSpecs["creator"]).n3()))
@@ -1490,7 +1508,7 @@ def unboxingLinksetSpecs(specs: dict, prefixes: dict, triples: bool = True):
     # ### METHOD SPECIFICATIONS --- ### SOURCE
     # ADDRESSING EACH ALGORITHM IN THE METHOD
     def unboxingAlgorithm(job_id: str, method: dict):
-        
+
         # print(method['list_matching'])
         algor_writer = Buffer()
         p_sel_writer = Buffer()
@@ -1513,7 +1531,8 @@ def unboxingLinksetSpecs(specs: dict, prefixes: dict, triples: bool = True):
         method_config = method['method']
 
         # NAME COMPATIBILITY
-        algor_name = Algorithm.exact_ttl if algor_name == "=" else algor_name
+        # algor_name = Algorithm.exact_ttl if algor_name == "=" else algor_name
+        algor_name = Algorithm.algorithm_name(algor_name)
 
         tad_algor = algor_name.split(":")
 
@@ -1573,34 +1592,85 @@ def unboxingLinksetSpecs(specs: dict, prefixes: dict, triples: bool = True):
 
         if method_config and not sim_name:
 
+            configuration = method_config['config']
+
             # Threshold for Levenshtein Normalised - Jaro - Winkler - Trigram
             # ALGORITHM THRESHOLD RANGE
-            if 'threshold' in method_config['config']:
+            if 'threshold' in configuration:
                 # Jaro Winkler prefix weight
-                if 'prefix_weight' in method_config['config']:
+                if 'prefix_weight' in configuration:
                     algor_writer.write(
                         preVal("voidPlus:jaroWinklerPrefixWeight",
-                               Literal(method_config['config'][Vars.prefix_weight]).n3(Graph().namespace_manager)))
-                algor_writer.write(preVal(VoidPlus.simThreshold_ttl, Literal(method_config['config'][Vars.threshold]).n3(MANAGER)))
+                               Literal(configuration[Vars.prefix_weight]).n3(Graph().namespace_manager)))
+                algor_writer.write(preVal(VoidPlus.simThreshold_ttl, Literal(configuration[Vars.threshold]).n3(MANAGER)))
                 algor_writer.write(preVal(VoidPlus.thresholdRange_ttl, Literal(Algorithm.range(algor_name)).n3(MANAGER)))
 
             # Levenshtein distance max size
-            if 'max_distance' in method_config['config']:
+            if 'max_distance' in configuration:
                 algor_writer.write(
-                    preVal("voidPlus:maxDistance", Literal(method_config['config'][Vars.max_distance]).n3(MANAGER)))
+                    preVal("voidPlus:maxDistance", Literal(configuration[Vars.max_distance]).n3(MANAGER)))
                 algor_writer.write(preVal(VoidPlus.thresholdRange_ttl, Literal(Algorithm.range(algor_name)).n3(MANAGER)))
 
-            if 'size' in method_config['config']:
+            if 'size' in configuration:
                 algor_writer.write(
-                    preVal("voidPlus:soundexSize", Literal(method_config['config'][Vars.soundex_size]).n3(MANAGER)))
+                    preVal("voidPlus:soundexSize", Literal(configuration[Vars.soundex_size]).n3(MANAGER)))
 
-            if 'name_type' in method_config['config']:
+            if 'name_type' in configuration:
                 algor_writer.write(preVal("voidPlus:BloothooftNameType",
-                                          Literal(method_config['config'][Vars.Bloothooft_name_type]).n3(MANAGER)))
+                                          Literal(configuration[Vars.Bloothooft_name_type]).n3(MANAGER)))
 
-            if 'date_part' in method_config['config']:
-                unit = Sns.Time.get_uri_ttl(method_config['config']['date_part']) \
-                    if method_config['config']['date_part'].lower() != 'year_month' \
+            if {'days', 'months', 'years'}.issubset(set(configuration.keys())):
+
+                sign = None
+                unit = []
+
+                direction = configuration['type']
+                if direction == '>':
+                    sign = "+"
+                    operator = '≤'
+
+                elif direction == '<':
+                    sign = '-'
+                    operator = '≥'
+
+                elif direction == '<>':
+                    sign = "±"
+                    operator = '≤ OR ≥'
+
+                # if sign:
+                #     algor_writer.write(preVal(VoidPlus.deltaSign_ttl, Literal(sign).n3()))
+
+                algor_writer.write(preVal(VoidPlus.hasOperator_ttl, Literal(operator).n3(MANAGER)))
+
+                if configuration['days'] > 0:
+                    # algor_writer.write(preVal(Sns.Time.days_ttl, Literal(configuration['days']).n3(MANAGER)))
+                    unit.append(Sns.Time.get_uri_ttl('days'))
+                    algor_writer.write(preVal(VoidPlus.deltaThreshold_ttl, Literal(F"{sign}{configuration['days']}").n3(MANAGER)))
+
+                if configuration['months'] > 0:
+                    # algor_writer.write(preVal(Sns.Time.months_ttl, Literal(configuration['months']).n3(MANAGER)))
+                    unit.append(Sns.Time.get_uri_ttl('months'))
+                    algor_writer.write(preVal(VoidPlus.deltaThreshold_ttl, Literal(F"{sign}{configuration['months']}").n3(MANAGER)))
+
+                if configuration['years'] > 0:
+                    # algor_writer.write(preVal(Sns.Time.years_ttl, Literal(configuration['years']).n3(MANAGER)))
+                    unit.append(Sns.Time.get_uri_ttl('years'))
+                    algor_writer.write(preVal(VoidPlus.deltaThreshold_ttl, Literal(F"{sign}{configuration['years']}").n3(MANAGER)))
+
+                if len(unit) > 0:
+                    algor_writer.write(preVal(Sns.Time.unitType_ttl, objectList(unit, newLine=False)))
+
+
+
+
+
+                # ADDING THE TIME NAMESPACE
+                if Sns.Time.time not in prefixes:
+                    prefixes[Sns.Time.time] = "time"
+
+            if 'date_part' in configuration:
+                unit = Sns.Time.get_uri_ttl(configuration['date_part']) \
+                    if configuration['date_part'].lower() != 'year_month' \
                     else F"{Sns.Time.get_uri_ttl('month')}, {Sns.Time.get_uri_ttl('year')}"
 
                 algor_writer.write(preVal(Sns.Time.unitType_ttl, unit))
@@ -1879,7 +1949,7 @@ def unboxingLinksetSpecs(specs: dict, prefixes: dict, triples: bool = True):
                         # PROPERTY PARTITION FORMULATION HAS ITEM
                         property_sel_formulation.write(preVal(VoidPlus.hasItem_ttl, Rsc.ga_resource_ttl(part_code)))
 
-                        # APPENDING TO TGHE ROOT TYREE
+                        # APPENDING TO THE ROOT TYREE
                         Node(Rsc.ga_resource_ttl(part_code), parent=root)
 
                         if part_code not in checker:
@@ -1898,7 +1968,7 @@ def unboxingLinksetSpecs(specs: dict, prefixes: dict, triples: bool = True):
                                 if 'VoidPlus:PropertyPartition' not in feature else '')
 
                             buffer.write(
-                                preVal(VoidPlus.subset_of_ttl, Rsc.ga_resource_ttl(F"ResourceSelection-{ent_sel_id}")))
+                                preVal(VoidPlus.subset_of_ttl, Rsc.ga_resource_ttl(F"ResourceSelection-{job_id}-{ent_sel_id}")))
 
                             stopwords_buffer = Buffer()
                             if transformers:
@@ -1908,7 +1978,7 @@ def unboxingLinksetSpecs(specs: dict, prefixes: dict, triples: bool = True):
                                     if transform['name'].lower() != "stopwords":
                                         buffer.write(
                                             preVal("voidPlus:hasTransformationFunction",
-                                                   Literal(transform['name'], lang='en').n3(MANAGER), end=False))
+                                                   Literal(transform['name'].lower(), lang='en').n3(MANAGER), end=False))
 
                                         if transform['parameters']:
                                             buffer.write(preVal("voidPlus:hasTransformationParameters",
@@ -1974,8 +2044,8 @@ def unboxingLinksetSpecs(specs: dict, prefixes: dict, triples: bool = True):
                                                 stopwords_buffer.write(
                                                     preVal("voidPlus:stopWordsList", stopwords, end=True))
 
-                            # THE PREDICATE
-                            buffer.write(preVal(Sns.VoID.property_ttl, feature, end=True))
+                            # THE PROPERTY PARTITION PREDICATE
+                            buffer.write(preVal(Sns.VoID.property_ttl, Rsc.ga_resource_ttl(feature), end=True))
 
                             # THE STOPWORDS
                             buffer.write(stopwords_buffer.getvalue())
@@ -2140,7 +2210,7 @@ def unboxingLinksetSpecs(specs: dict, prefixes: dict, triples: bool = True):
                                     if 'VoidPlus:PropertyPartition' not in predicate else '')
 
                                 buffer.write(
-                                    preVal(VoidPlus.subset_of_ttl, Rsc.ga_resource_ttl(F"ResourceSelection-{ent_sel_id}")))
+                                    preVal(VoidPlus.subset_of_ttl, Rsc.ga_resource_ttl(F"ResourceSelection-{job_id}-{ent_sel_id}")))
                                 buffer.write(preVal(Sns.VoID.property_ttl, predicate, end=True))
                                 buffer.write("\n\n")
 
@@ -2180,7 +2250,7 @@ def unboxingLinksetSpecs(specs: dict, prefixes: dict, triples: bool = True):
                 algor_writer.write(
                     preVal(VoidPlus.intermediateSubjEntitySelection_ttl if key == "source"
                            else VoidPlus.intermediateObjEntitySelection_ttl,
-                           Rsc.ga_resource_ttl(F"ResourceSelection-{code}")))
+                           Rsc.ga_resource_ttl(F"ResourceSelection-{job_id}-{code}")))
 
         # #########################################################
         #       MORE INFO ON THE SET MATCHING CONFIGURATION       #
@@ -2490,7 +2560,7 @@ def getLensSpecs(lensId: int, job: str, printSpec: bool = True):
             lens_specs["job_id"] = job
             lens_specs["linkType"] = {
                 'prefix': 'owl',
-                'namespace': LinkPredicates.owl.__str__(),
+                'namespace': "http://www.w3.org/2002/07/owl#",
                 'long': LinkPredicates.sameAs,
                 'short': LinkPredicates.sameAs_tt,
             }
@@ -2699,13 +2769,16 @@ def unboxingLensSpecs(specs: dict, prefixes: dict, isValidated: bool = False, is
     lens_writer.write(preVal(Sns.VoID.feature_ttl, F"{Sns.Formats.turtle_ttl}, {Sns.Formats.triG_ttl}"))
 
     # ATTRIBUTION: LenticularLens
-    lens_writer.write(preVal(Sns.CC.attributionName_ttl, Literal('LenticularLens', 'en').n3()))
+    lens_writer.write(preVal(Sns.CC.attributionName_ttl, Literal('LenticularLens', 'en').n3(MANAGER)))
 
     # LICENCE OF THE LL
     lens_writer.write(preVal(Sns.CC.license_ttl, Rsc.uri_resource(Vars.LICENCE)))
 
-    # LINKSET TIMESTAMP
-    lens_writer.write(preVal(Sns.DCterms.created_ttl, Grl.getXSDTimestamp()))
+    # LENS CREATED TIMESTAMP
+    lens_writer.write(preVal(Sns.DCterms.created_ttl, Literal(lens_specs['created'], datatype=XSD.dateTi).n3(MANAGER)))
+
+    # LENS EXPORT TIMESTAMP
+    lens_writer.write(preVal(VoidPlus.exportDate_ttl, Grl.getXSDTimestamp()))
 
     if "creator" in lens_specs and len(lens_specs["creator"].strip()) > 0:
         lens_writer.write(preVal(Sns.DCterms.creator_ttl, Literal(lens_specs["creator"]).n3()))
@@ -2791,14 +2864,14 @@ def unboxingLensSpecs(specs: dict, prefixes: dict, isValidated: bool = False, is
     print(F"\n\t{'=-=-='*23}\n{tree}\n\t{'=-=-='*22}\n")
 
     # FORMULATION RESOURCE
-    formulation_rsc = F"LinksetFormulation-{lens_specs['job_id']}-{lens_id}"
+    formulation_rsc = F"LensFormulation-{lens_specs['job_id']}-{lens_id}"
 
     lens_writer.write(F"\n")
     lens_writer.write(preVal(VoidPlus.formulation_ttl, Rsc.ga_resource_ttl(formulation_rsc), end=True))
 
     lens_writer.write(subHeader('LENS LOGIC EXPRESSION', 1, 3))
     lens_writer.write(F"{Rsc.ga_resource_ttl(formulation_rsc)}\n")
-    lens_writer.write(preVal('a', VoidPlus.LensOperator_ttl))
+    lens_writer.write(preVal('a', VoidPlus.LensFormulation_ttl))
     # lens_writer.write("".join(preVal(VoidPlus.part_ttl, part) for part in parts))
     lens_writer.write(preVal(VoidPlus.part_ttl, objectList(parts)))
 

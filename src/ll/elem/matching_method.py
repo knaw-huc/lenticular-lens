@@ -32,7 +32,7 @@ class MatchingMethod:
             if self.method_sim_name in self._matching_methods else {}
 
         self.t_norm = data['fuzzy']['t_norm']
-        self.t_conorm = data['fuzzy']['t_conorm']
+        self.s_norm = data['fuzzy']['s_norm']
         self.threshold = data['fuzzy']['threshold'] \
             if self.method_info['is_similarity_method'] or \
                ('is_similarity_method' in self.method_sim_info and self.method_sim_info['is_similarity_method']) else 0
@@ -44,7 +44,7 @@ class MatchingMethod:
 
     @property
     def is_intermediate(self):
-        return self.method_name == 'INTERMEDIATE'
+        return self.method_name == 'intermediate'
 
     @property
     def is_list_match(self):
@@ -72,9 +72,9 @@ class MatchingMethod:
                                'FROM combinations({target}.scores, {target}.size) AS c, unnest(c) AS x ' \
                                'GROUP BY c) AS scores(x)'
 
-            return sql.SQL(f'(SELECT {{t_conorm_func}}(x) FROM {sub_template})').format(
+            return sql.SQL(f'(SELECT {{s_norm_func}}(x) FROM {sub_template})').format(
                 t_norm_func=sql.SQL(self._logic_ops[self.t_norm]['sql_agg']),
-                t_conorm_func=sql.SQL(self._logic_ops[self.t_conorm]['sql_agg']),
+                s_norm_func=sql.SQL(self._logic_ops[self.s_norm]['sql_agg']),
                 target=sql.Identifier(('sim_' + self.field_name) if self.is_list_match else 'sim'),
                 field=sql.Identifier(self.field_name)
             )

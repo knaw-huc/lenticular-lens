@@ -423,23 +423,33 @@ class Job:
 
     @staticmethod
     def _include_prefix_mappings_in_results(results, specs):
-        return [{
-            **result,
-            **{
-                'prefix_mappings': {
-                    prefix: uri
-                    for (ets, prop) in next(x for x in specs if x.id == result['spec_id']).all_props
-                    for prefix, uri in prop.prefix_mappings.items()
-                },
-                'uri_prefix_mappings': {
-                    prefix: uri
-                    for ets in next(x for x in specs if x.id == result['spec_id']).all_entity_type_selections
-                    for prefix, uri in ets.collection.uri_prefix_mappings.items()
-                },
-                'dynamic_uri_prefix_mappings': {
-                    prefix: uri
-                    for ets in next(x for x in specs if x.id == result['spec_id']).all_entity_type_selections
-                    for prefix, uri in ets.collection.dynamic_uri_prefix_mappings.items()
+        try:
+            return [{
+                **result,
+                **{
+                    'prefix_mappings': {
+                        prefix: uri
+                        for (ets, prop) in next(x for x in specs if x.id == result['spec_id']).all_props
+                        for prefix, uri in prop.prefix_mappings.items()
+                    },
+                    'uri_prefix_mappings': {
+                        prefix: uri
+                        for ets in next(x for x in specs if x.id == result['spec_id']).all_entity_type_selections
+                        for prefix, uri in ets.collection.uri_prefix_mappings.items()
+                    },
+                    'dynamic_uri_prefix_mappings': {
+                        prefix: uri
+                        for ets in next(x for x in specs if x.id == result['spec_id']).all_entity_type_selections
+                        for prefix, uri in ets.collection.dynamic_uri_prefix_mappings.items()
+                    }
                 }
-            }
-        } for result in results]
+            } for result in results]
+        except:
+            return [{
+                **result,
+                **{
+                    'prefix_mappings': {},
+                    'uri_prefix_mappings': {},
+                    'dynamic_uri_prefix_mappings': {}
+                }
+            } for result in results]

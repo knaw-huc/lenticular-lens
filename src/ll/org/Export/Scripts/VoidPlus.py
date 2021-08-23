@@ -104,7 +104,6 @@ class VoidPlus:
     LensOperator = F'{ontology}LensOperator'
     LensOperator_ttl = F'{genericPrefix}:LensOperator'
 
-
     # ###############################################################################
     #                            PREDEFINED RESOURCES                               #
     # ###############################################################################
@@ -144,6 +143,10 @@ class VoidPlus:
     # 	  ll_val:has-accepted                      3 ;
     # 	  ll_val:has-rejected                      6 ;
     # 	  ll_val:has-remaining                     1683 .
+
+    exportDate = F"{ontology}exportDate"
+    exportDate_prefix = F"@prefix {F'{genericPrefix}':>{PREF_SIZE}}: <{ontology}> ."
+    exportDate_ttl = F"{genericPrefix}:exportDate"
 
     clusters = F"{ontology}clusters"
     clusters_prefix = F"@prefix {F'{genericPrefix}':>{PREF_SIZE}}: <{ontology}> ."
@@ -187,6 +190,9 @@ class VoidPlus:
     # ###############################################################################
 
     id_ttl = F"{genericPrefix}:id"
+    intID_ttl = F"{genericPrefix}:intID"
+    hashID_ttl = F"{genericPrefix}:hashID"
+    # network_ID_ttl = F"{genericPrefix}:networkID"
     size_ttl = F"{genericPrefix}:nodes"
     links_ttl = F"{genericPrefix}:links"
     extended_ttl = F"{genericPrefix}:isExtended"
@@ -255,6 +261,10 @@ class VoidPlus:
     simThreshold = F"{ontology}similarityThreshold"
     simThreshold_prefix = F"@prefix {F'{genericPrefix}':>{PREF_SIZE}}: <{ontology}> ."
     simThreshold_ttl = F'{genericPrefix}:similarityThreshold'
+
+    deltaThreshold = F"{ontology}deltaThreshold"
+    deltaThreshold_prefix = F"@prefix {F'{genericPrefix}':>{PREF_SIZE}}: <{ontology}> ."
+    deltaThreshold_ttl = F'{genericPrefix}:deltaThreshold'
 
     combiThreshold = F"{ontology}combinationThreshold"
     combiThreshold_prefix = F"@prefix {F'{genericPrefix}':>{PREF_SIZE}}: <{ontology}> ."
@@ -352,8 +362,6 @@ class VoidPlus:
     filterFormat_prefix = F"@prefix {F'{genericPrefix}':>{PREF_SIZE}}: <{ontology}> ."
     filterFormat_ttl = F'{genericPrefix}:hasFormatFunction'
 
-
-
     # ##############################################################################
     #                             PREDICATE SELECTIONS                             #
     # ##############################################################################
@@ -396,6 +404,9 @@ class VoidPlus:
     composition_prefix = F"@prefix {'operator':>{PREF_SIZE}}: <{operator}> ."
     composition_ttl = F"operator:composition"
 
+    deltaSign = F"{ontology}deltaSign"
+    deltaSign_ttl = F'{genericPrefix}:deltaSign'
+
     # ##############################################################################
     #                             ...................                             #
     # ##############################################################################
@@ -415,6 +426,14 @@ class VoidPlus:
     cluster_ID = F"{ontology}hasClusterID"
     cluster_ID_prefix = F"@prefix {F'{genericPrefix}':>{PREF_SIZE}}: <{ontology}> ."
     cluster_ID_ttl = F"{genericPrefix}:hasClusterID"
+
+    cluster_Int_ID = F"{ontology}clusterIntID"
+    cluster_Int_ID_prefix = F"@prefix {F'{genericPrefix}':>{PREF_SIZE}}: <{ontology}> ."
+    cluster_Int_ID_ttl = F"{genericPrefix}:clusterIntID"
+
+    network_ID = F"{ontology}networkID"
+    network_ID_prefix = F"@prefix {F'{genericPrefix}':>{PREF_SIZE}}: <{ontology}> ."
+    network_ID_ttl = F"{genericPrefix}:networkID"
 
     cluster_size = F"{ontology}hasClusterSize"
     cluster_size_prefix = F"@prefix {F'{genericPrefix}':>{PREF_SIZE}}: <{ontology}> ."

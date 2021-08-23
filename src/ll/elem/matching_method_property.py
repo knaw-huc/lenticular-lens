@@ -53,7 +53,7 @@ class MatchingMethodProperty:
                 ),
             )
             for transformer in self._transformers
-            if transformer['name'] == 'STOPWORDS'
+            if transformer['name'] == 'stopwords'
         ]
 
         if prepare_sqls:
@@ -67,7 +67,7 @@ class MatchingMethodProperty:
             if transformer['name'] in self._transformers_info:
                 transformer['sql_template'] = self._transformers_info[transformer['name']]['sql_template']
 
-                if transformer['name'] == 'STOPWORDS':
+                if transformer['name'] == 'stopwords':
                     transformer['parameters']['key'] = hash_string_min((transformer['parameters']['dictionary'],
                                                                         transformer['parameters']['additional']))
             else:
@@ -75,18 +75,18 @@ class MatchingMethodProperty:
 
         if not self._field_type_info['type']:
             field_transformers.insert(0, {
-                'sql_template': self._transformers_info['LOWERCASE']['sql_template'],
+                'sql_template': self._transformers_info['lowercase']['sql_template'],
                 'parameters': {}
             })
 
         if self._field_type_info['type'] == 'number':
             field_transformers.append({
-                'sql_template': self._transformers_info['TO_NUMERIC_IMMUTABLE']['sql_template'],
+                'sql_template': self._transformers_info['to_numeric_immutable']['sql_template'],
                 'parameters': {}
             })
         elif self._field_type_info['type'] == 'date':
             field_transformers.append({
-                'sql_template': self._transformers_info['TO_DATE_IMMUTABLE']['sql_template'],
+                'sql_template': self._transformers_info['to_date_immutable']['sql_template'],
                 'parameters': {'format': self._field_type_info['parameters']['format']}
             })
 

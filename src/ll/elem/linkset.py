@@ -113,11 +113,11 @@ class Linkset:
     def _r_matching_methods(self, methods_obj, with_conditions, with_matching_method, id=''):
         if 'type' in methods_obj:
             type = methods_obj['type']
-            operator = type if type == 'AND' or type == 'OR' else \
-                'AND' if type in ['MINIMUM_T_NORM', 'PRODUCT_T_NORM', 'LUKASIEWICZ_T_NORM',
-                                  'DRASTIC_T_NORM', 'NILPOTENT_MINIMUM', 'HAMACHER_PRODUCT'] else 'OR'
-            fuzzy = type if type != 'AND' and type != 'OR' else \
-                'MINIMUM_T_NORM' if type == 'AND' else 'MAXIMUM_T_CONORM'
+            operator = type if type == 'and' or type == 'or' else \
+                'and' if type in ['minimum_t_norm', 'product_t_norm', 'lukasiewicz_t_norm',
+                                  'drastic_t_norm', 'nilpotent_minimum', 'hamacher_product'] else 'or'
+            fuzzy = type if type != 'and' and type != 'or' else \
+                'minimum_t_norm' if type == 'and' else 'maximum_s_norm'
 
             threshold = methods_obj['threshold']
             conditions = [self._r_matching_methods(condition, with_conditions, with_matching_method, id + str(idx))

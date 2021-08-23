@@ -132,12 +132,12 @@ class LinksFilter:
                 validation_filter_sqls.append(sql.Literal('accepted'))
             if Validation.REJECTED in self._validation_filter:
                 validation_filter_sqls.append(sql.Literal('rejected'))
-            if Validation.NOT_SURE in self._validation_filter:
-                validation_filter_sqls.append(sql.Literal('not_sure'))
-            if Validation.NOT_VALIDATED in self._validation_filter:
-                validation_filter_sqls.append(sql.Literal('not_validated'))
-            if Validation.MIXED in self._validation_filter:
-                validation_filter_sqls.append(sql.Literal('mixed'))
+            if Validation.UNCERTAIN in self._validation_filter:
+                validation_filter_sqls.append(sql.Literal('uncertain'))
+            if Validation.UNCHECKED in self._validation_filter:
+                validation_filter_sqls.append(sql.Literal('unchecked'))
+            if Validation.DISPUTED in self._validation_filter:
+                validation_filter_sqls.append(sql.Literal('disputed'))
 
             return sql.SQL('{alias}valid IN ({states})').format(
                 alias=self._alias_sql,

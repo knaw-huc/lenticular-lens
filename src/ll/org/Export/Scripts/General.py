@@ -1,6 +1,5 @@
 
-from datetime import datetime
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from hashlib import md5, blake2b
 from kitchen.text.converters import to_bytes
 from os import remove, stat
@@ -54,7 +53,7 @@ def getTimestamp():
 def getXSDTimestamp():
 
     # print(Literal(Literal(datetime.utcnow(), datatype=XSD.dateTime)).n3())
-    return Literal(Literal(datetime.utcnow(), datatype=XSD.dateTime)).n3(Graph().namespace_manager)
+    return Literal(Literal(datetime.now(timezone.utc), datatype=XSD.dateTime)).n3(Graph().namespace_manager)
 
 
 def getDate():

@@ -17,7 +17,8 @@ from ll.namespaces.shared_ontologies import Namespaces as NS
 from ll.util.hasher import hash_string_min
 from ll.util.stopwords import get_stopwords, get_iso_639_1_code
 from ll.util.n3_helpers import TAB, pred_val, multiple_val, blank_node
-from ll.util.helpers import flatten, get_json_from_file, get_publisher, get_from_buffer
+from ll.util.helpers import flatten, get_json_from_file, get_publisher, get_from_buffer, \
+    snake_case_to_camel_case_capitalize_first as create_id
 
 
 class CsvExport:
@@ -177,7 +178,7 @@ class RdfExport:
                 [mm.transformers('sources') + mm.transformers('targets') for mm in self._matching_methods] +
                 [prop.property_transformers for ets_id, prop in self._matching_methods_props])
             for transformer in transformers:
-                if transformer['name'] == 'STOPWORDS':
+                if transformer['name'] == 'stopwords':
                     predefined_prefix_mappings[NS.DC.prefix] = NS.DC.dc
                     predefined_prefix_mappings[NS.ISO.prefix] = NS.ISO.iso
 
@@ -290,11 +291,11 @@ class RdfExport:
                 buffer.write(pred_val(VoidPlus.hasClusterset, F"clusterset:{self._job.job_id}-lens-{self._id}"))
 
             link_totals = self._job.get_links_totals(self._id, 'lens')
-            if link_totals and link_totals['not_validated'] < lens['links_count']:
+            if link_totals and link_totals['unchecked'] < lens['links_count']:
                 buffer.write("\n")
 
-                if link_totals['mixed'] > 0:
-                    buffer.write(pred_val(VoidPlus.contradictions, Literal(link_totals['mixed']).n3(ns_manager)))
+                if link_totals['disputed'] > 0:
+                    buffer.write(pred_val(VoidPlus.contradictions, Literal(link_totals['disputed']).n3(ns_manager)))
 
                 buffer.write(pred_val(VoidPlus.hasValidationSet, F"validationset:{self._job.job_id}-lens-{self._id}"))
 
@@ -303,7 +304,7 @@ class RdfExport:
                                   F"resource:LensFormulation-{self._job.job_id}-{self._spec.id}", end=True))
 
         def lens_logic_expression():
-            def write_node(left, right, type, t_conorm, threshold, only_left, lens_id=None):
+            def write_node(left, right, type, s_norm, threshold, only_left, lens_id=None):
                 id = F'(lens.{lens_id})' if lens_id else ''
                 if lens_id:
                     legend[lens_id] = F'{id}: created as lens:{self._job.job_id}-{lens_id}'
@@ -311,7 +312,7 @@ class RdfExport:
                 if only_left:
                     return Node(F"{type.upper()}{id}".strip(), children=[left, right])
 
-                logic_ops_info = self._logic_ops_info[t_conorm]
+                logic_ops_info = self._logic_ops_info[s_norm]
                 label_txt = F"{type.upper()} {id}".strip()
                 fuzzy_txt = F"{logic_ops_info['label']} ({logic_ops_info['short']})"
                 threshold_txt = F"[with sim ≥ {threshold}]" if 0 < threshold < 1 else ''
@@ -412,11 +413,11 @@ class RdfExport:
                                           F"clusterset:{self._job.job_id}-linkset-{spec.id}"))
 
                 link_totals = self._job.get_links_totals(spec.id, 'linkset')
-                if link_totals and link_totals['not_validated'] < linkset['links_count']:
+                if link_totals and link_totals['unchecked'] < linkset['links_count']:
                     buffer.write(F"\n{TAB}### ABOUT VALIDATIONS\n")
 
-                    if link_totals['mixed'] > 0:
-                        buffer.write(pred_val(VoidPlus.contradictions, Literal(link_totals['mixed']).n3(ns_manager)))
+                    if link_totals['disputed'] > 0:
+                        buffer.write(pred_val(VoidPlus.contradictions, Literal(link_totals['disputed']).n3(ns_manager)))
 
                     buffer.write(pred_val(VoidPlus.hasValidationSet,
                                           F"validationset:{self._job.job_id}-linkset-{self._id}"))
@@ -451,14 +452,14 @@ class RdfExport:
             for idx, linkset in enumerate(self._linkset_specs):
                 root = linkset.with_matching_methods_recursive(
                     write_node,
-                    lambda mm: Node(F"resource:{mm.method_name}-{mm.config_hash}")
+                    lambda mm: Node(F"resource:{create_id(mm.method_name)}-{mm.config_hash}")
                 )
 
                 buffer.write(F"resource:LinksetFormulation-{self._job.job_id}-{linkset.id}\n")
                 buffer.write(pred_val('a', VoidPlus.LinksetFormulation))
 
                 buffer.write(pred_val(VoidPlus.hasItem, multiple_val(
-                    [F"resource:{matching_method.method_name}-{matching_method.config_hash}"
+                    [F"resource:{create_id(matching_method.method_name)}-{matching_method.config_hash}"
                      for matching_method in linkset.matching_methods])))
                 buffer.write("\n")
 
@@ -578,14 +579,14 @@ class RdfExport:
             matching_methods_hashed = {mm.config_hash: mm for mm in self._matching_methods}
 
             for idx, (key, matching_method) in enumerate(matching_methods_hashed.items()):
-                buffer.write(F"resource:{matching_method.method_name}-{key}\n")
+                buffer.write(F"resource:{create_id(matching_method.method_name)}-{key}\n")
                 buffer.write(pred_val('a', VoidPlus.MatchingMethod))
 
                 if matching_method.method_sim_name:
                     buffer.write(pred_val(VoidPlus.hasAlgorithmSequence,
-                                          F"resource:AlgorithmSequence-{matching_method.method_name}-{key}"))
+                                          F"resource:AlgorithmSequence-{create_id(matching_method.method_name)}-{key}"))
                 else:
-                    buffer.write(pred_val(VoidPlus.hasAlgorithm, F"resource:{matching_method.method_name}"))
+                    buffer.write(pred_val(VoidPlus.hasAlgorithm, F"resource:{create_id(matching_method.method_name)}"))
 
                 if not matching_method.method_sim_name:
                     for (pred, val) in write_algorithm(matching_method.method_config, matching_method.method_info):
@@ -624,14 +625,14 @@ class RdfExport:
                                           end=True))
 
                 if matching_method.method_sim_name:
-                    buffer.write(F"\nresource:AlgorithmSequence-{matching_method.method_name}-{key}\n")
+                    buffer.write(F"\nresource:AlgorithmSequence-{create_id(matching_method.method_name)}-{key}\n")
                     buffer.write(pred_val('a', NS.RDFS.sequence))
 
-                    pred_vals = [(VoidPlus.hasAlgorithm, F"resource:{matching_method.method_name}")] + \
+                    pred_vals = [(VoidPlus.hasAlgorithm, F"resource:{create_id(matching_method.method_name)}")] + \
                                 write_algorithm(matching_method.method_config, matching_method.method_info)
                     buffer.write(pred_val('rdf:_1', blank_node(pred_vals)))
 
-                    pred_vals = [(VoidPlus.hasAlgorithm, F"resource:{matching_method.method_sim_name}"),
+                    pred_vals = [(VoidPlus.hasAlgorithm, F"resource:{create_id(matching_method.method_sim_name)}"),
                                  (VoidPlus.isAppliedOnEncodedValues,
                                   Literal(matching_method.method_sim_normalized).n3(ns_manager))] + \
                                 write_algorithm(matching_method.method_sim_config, matching_method.method_sim_info)
@@ -656,7 +657,7 @@ class RdfExport:
 
         def methods_predicate_selections():
             def write_transformer(transformer, tabs=1):
-                if transformer['name'] == 'STOPWORDS':
+                if transformer['name'] == 'stopwords':
                     dictionary = transformer['parameters']['dictionary']
                     additional = transformer['parameters']['additional']
 
@@ -693,7 +694,7 @@ class RdfExport:
                     for mm in self._matching_methods if mm.is_intermediate}}
 
             for hash, (matching_method, props, transformers, is_intermediate) in matching_method_props.items():
-                logic_ops_info = self._logic_ops_info[matching_method.t_conorm]
+                logic_ops_info = self._logic_ops_info[matching_method.s_norm]
                 fuzzy_txt = F"{logic_ops_info['label']} ({logic_ops_info['short']})"
                 threshold_txt = (F"[with sim ≥ {matching_method.threshold}]"
                                  if 0 < matching_method.threshold < 1 else '')
@@ -758,7 +759,7 @@ class RdfExport:
             for idx, method_name in enumerate(method_infos):
                 method_info = self._matching_methods_info[method_name]
 
-                buffer.write(F"resource:{method_name}\n")
+                buffer.write(F"resource:{create_id(method_name)}\n")
                 buffer.write(pred_val('a', VoidPlus.MatchingAlgorithm))
                 buffer.write(pred_val(NS.RDFS.label, Literal(method_info['label'], lang='en').n3(ns_manager)))
                 buffer.write(pred_val(NS.DCterms.description,
@@ -886,11 +887,11 @@ class RdfExport:
             if link_totals['rejected'] > 0:
                 buffer.write(pred_val(VoidPlus.rejected, Literal(link_totals['rejected']).n3(ns_manager)))
 
-            if link_totals['not_sure'] > 0:
-                buffer.write(pred_val(VoidPlus.uncertain, Literal(link_totals['not_sure']).n3(ns_manager)))
+            if link_totals['uncertain'] > 0:
+                buffer.write(pred_val(VoidPlus.uncertain, Literal(link_totals['uncertain']).n3(ns_manager)))
 
-            if link_totals['not_validated'] > 0:
-                buffer.write(pred_val(VoidPlus.unchecked, Literal(link_totals['not_validated']).n3(ns_manager)))
+            if link_totals['unchecked'] > 0:
+                buffer.write(pred_val(VoidPlus.unchecked, Literal(link_totals['unchecked']).n3(ns_manager)))
 
             buffer.write("\n")
             buffer.write(pred_val(NS.DCterms.description, Literal(

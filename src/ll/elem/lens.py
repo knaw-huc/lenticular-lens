@@ -30,7 +30,7 @@ class Lens:
     def operators(self):
         lens_operators = set()
         self.with_lenses_recursive(
-            lambda left, right, type, t_conorm, threshold, only_left: lens_operators.add(type),
+            lambda left, right, type, s_norm, threshold, only_left: lens_operators.add(type),
             lambda spec, id, type: lens_operators.update(spec.operators) if type == 'lens' else set()
         )
         return lens_operators
@@ -38,14 +38,14 @@ class Lens:
     @property
     def linksets(self):
         return set(self.with_lenses_recursive(
-            lambda left, right, type, t_conorm, threshold, only_left: flatten([left, right]),
+            lambda left, right, type, s_norm, threshold, only_left: flatten([left, right]),
             lambda spec, id, type: spec if type == 'linkset' else list(spec.linksets)
         ))
 
     @property
     def lenses(self):
         return set(self.with_lenses_recursive(
-            lambda left, right, type, t_conorm, threshold, only_left: flatten([left, right]),
+            lambda left, right, type, s_norm, threshold, only_left: flatten([left, right]),
             lambda spec, id, type: [spec] + list(spec.lenses) if type == 'lens' else None
         ))
 
@@ -68,15 +68,15 @@ class Lens:
     @property
     def similarity_logic_ops_sql(self):
         return self.with_lenses_recursive(
-            lambda left, right, type, t_conorm, threshold, only_left: self._logic_ops_for_condition(
-                left, right, only_left, t_conorm),
+            lambda left, right, type, s_norm, threshold, only_left: self._logic_ops_for_condition(
+                left, right, only_left, s_norm),
             lambda spec, id, type: spec.similarity_logic_ops_sql
         )
 
     @property
     def similarity_logic_ops_sql_per_threshold(self):
-        def with_logic_ops(threshold, left, right, only_left, t_conorm):
-            logic_ops = self._logic_ops_for_condition(left, right, only_left, t_conorm)
+        def with_logic_ops(threshold, left, right, only_left, s_norm):
+            logic_ops = self._logic_ops_for_condition(left, right, only_left, s_norm)
             if threshold:
                 per_threshold.append((threshold, logic_ops))
 
@@ -84,8 +84,8 @@ class Lens:
 
         per_threshold = []
         self.with_lenses_recursive(
-            lambda left, right, type, t_conorm, threshold, only_left: with_logic_ops(
-                threshold, left, right, only_left, t_conorm),
+            lambda left, right, type, s_norm, threshold, only_left: with_logic_ops(
+                threshold, left, right, only_left, s_norm),
             lambda spec, id, type: spec.similarity_logic_ops_sql
         )
 
@@ -97,14 +97,14 @@ class Lens:
     def _r_lenses(self, lens_obj, with_conditions, with_spec):
         if 'type' in lens_obj and 'elements' in lens_obj:
             type = lens_obj['type'].lower()
-            t_conorm = 'MAXIMUM_T_CONORM' if lens_obj['t_conorm'] == '' else lens_obj['t_conorm']
-            threshold = lens_obj['threshold'] if lens_obj['t_conorm'] != '' else 0
+            s_norm = 'maximum_s_norm' if lens_obj['s_norm'] == '' else lens_obj['s_norm']
+            threshold = lens_obj['threshold'] if lens_obj['s_norm'] != '' else 0
             only_left = type == 'difference' or type.startswith('in_set')
 
             left = self._r_lenses(lens_obj['elements'][0], with_conditions, with_spec)
             right = self._r_lenses(lens_obj['elements'][1], with_conditions, with_spec)
 
-            return with_conditions(left, right, type, t_conorm, threshold, only_left)
+            return with_conditions(left, right, type, s_norm, threshold, only_left)
 
         id = lens_obj['id']
         type = lens_obj['type']
@@ -112,7 +112,7 @@ class Lens:
         return with_spec(spec, id, type) if with_spec else spec
 
     @staticmethod
-    def _logic_ops_for_condition(left, right, only_left, t_conorm):
+    def _logic_ops_for_condition(left, right, only_left, s_norm):
         if only_left or right == sql.SQL('NULL'):
             return left
 
@@ -120,7 +120,7 @@ class Lens:
             return right
 
         return sql.SQL('{function}({a}, {b})').format(
-            function=sql.SQL(Lens._logic_ops[t_conorm]['sql']),
+            function=sql.SQL(Lens._logic_ops[s_norm]['sql']),
             a=left,
             b=right
         )

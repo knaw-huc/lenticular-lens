@@ -110,32 +110,63 @@ used_csv = 0
 used_job = 0
 loop = 12
 
+# import ll.org.Export.Scripts.General as Grl
+# hash = Grl.deterministicHash
+# print(Grl.deterministicHash("owl:sameAs abcd"))
+#
+# data = ["=[(a, b), (c, a), (d, a), (d, c)]. "]
+#
+# hash_list = [hash(link) for link in ["ab", "ad", "ac"]]
+# print(hash_list)
+# hash_list.sort()
+# print(hash_list)
+# print(hash(F"owl:sameAs{hash_list}"))
+# print("\n\n")
+#
+# def networkCode(linkPredicate, links):
+#
+#     linx = [{'source': link[0], 'target': link[1]} for link in links]
+#     print(linx)
+#     codes = [
+#         Grl.deterministicHash(
+#             F"{edge['source']}{edge['target']}" if edge["source"] <= edge["target"]
+#             else F"{edge['target']}{edge['source']}") for edge in linx]
+#     print(codes)
+#     codes.sort()
+#     print(codes)
+#     # print("==>",  Grl.deterministicHash(codes))
+#     return Grl.deterministicHash(F"{linkPredicate}{codes}")
+#
+# n1 = [('a', 'b'), ('d', 'a'), ('c', 'a')]
+# n2 = [('a', 'b'), ('d', 'a'), ('c', 'a'), ('d', 'c')]
+# print(networkCode(linkPredicate="owl:sameAs", links=n2))
+# exit()
 
 LINKSET = True
 
 if LINKSET:
 
-    linkset = 15
+    linkset = 20
     links = getLinks(job_id=jobs[used_job], set_id=linkset, isLinkset=True)
 
-    for line in links:
-        for key, item in line.items():
-            print("\t", key, item)
-        break
+    # for line in links:
+    #     for key, item in line.items():
+    #         print("\t", key, item)
+    #     break
 
     linksetSpecsDataItr(
         linksetId=linkset, job=jobs[used_job], lst_result=links,
-        starReification=True, save_in=save_in, printSpec=False
+        starReification=False, save_in=save_in, printSpec=False
     )
 
 else:
-    lens_id = 4
+    lens_id = 6
     csv_links = getLinks(job_id=jobs[used_job], set_id=lens_id, isLinkset=False)
 
-    for line in csv_links:
-        for key, item in line.items():
-            print("\t", key, item)
-        break
+    # for line in csv_links:
+    #     for key, item in line.items():
+    #         print("\t", key, item)
+    #     break
 
     lensSpecsDataItr(
         lensId=lens_id, job=jobs[used_job], lens_result=csv_links,

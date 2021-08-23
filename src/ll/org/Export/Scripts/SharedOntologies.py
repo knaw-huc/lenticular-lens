@@ -30,7 +30,7 @@ class Namespaces:
     class RDF:
 
         # rdf = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-        rdf = ns.RDF.__str__()
+        rdf = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
         prefix = F"@prefix {'rdf':>{PREF_SIZE}}: <{rdf}> ."
 
         type = F"{rdf}type"
@@ -42,7 +42,7 @@ class Namespaces:
     class RDFS:
 
         # rdfs = "http://www.w3.org/2000/01/rdf-schema#"
-        rdfs = ns.RDFS.__str__()
+        rdfs = "http://www.w3.org/2000/01/rdf-schema#"
         prefix = F"@prefix {'rdfs':>{PREF_SIZE}}: <{rdfs}> ."
 
         resource = F"{rdfs}Resource"
@@ -63,13 +63,13 @@ class Namespaces:
     class XSD:
 
         # xsd = 'http://www.w3.org/2001/XMLSchema#'
-        xsd = ns.XSD.__str__()
+        xsd = "http://www.w3.org/2001/XMLSchema#"
         prefix = F"@prefix {'xsd':>{PREF_SIZE}}: <{xsd}> ."
 
     class OWL:
 
         # owl = "http://www.w3.org/2002/07/owl#"
-        owl = ns.OWL.__str__()
+        owl = "http://www.w3.org/2002/07/owl#"
         prefix = F"@prefix {'owl':>{PREF_SIZE}}: <{owl}> ."
 
         sameAs = F"{owl}sameAs"
@@ -118,7 +118,7 @@ class Namespaces:
     class VoID:
 
         # void = "http://rdfs.org/ns/void#"
-        void = ns.VOID.__str__()
+        void = "http://rdfs.org/ns/void#"
         prefix = F"@prefix {'void':>{PREF_SIZE}}: <{void}> ."
 
         # A collection of RDF links between two void:Datasets.
@@ -190,7 +190,7 @@ class Namespaces:
         # https://www.w3.org/TR/2008/WD-skos-reference-20080829/skos.html
 
         # skos = "http://www.w3.org/2004/02/skos/core#"
-        skos = ns.SKOS.__str__()
+        skos = "http://www.w3.org/2004/02/skos/core#"
         prefix = F"@prefix {'skos':>{PREF_SIZE}}: <{skos}> ."
 
         # -------------------------------------------------- #
@@ -215,7 +215,7 @@ class Namespaces:
     class PROV:
 
         # prov = "http://www.w3.org/ns/prov#"
-        prov = ns.PROV.__str__()
+        prov = "http://www.w3.org/ns/prov#"
         prefix = F"@prefix {'prov':>{PREF_SIZE}}: <{prov}> ."
 
         wasDerivedFrom = F"{prov}wasDerivedFrom"
@@ -231,7 +231,7 @@ class Namespaces:
 
     class DC:
 
-        dc = ns.DC.__str__()
+        dc = "http://purl.org/dc/elements/1.1/"
         prefix = F"@prefix {'dc':>{PREF_SIZE}}: <{dc}> ."
 
         language = F"{dc}language"
@@ -239,8 +239,8 @@ class Namespaces:
 
     class DCterms:
 
-        # dcterms = "http://purl.org/dc/terms"
-        dcterms = ns.DCTERMS.__str__()
+        # dcterms = "http://purl.org/dc/terms/"
+        dcterms = "http://purl.org/dc/terms/"
         prefix = F"@prefix {'dcterms':>{PREF_SIZE}}: <{dcterms}> ."
 
         description = F"{dcterms}description"
@@ -273,7 +273,7 @@ class Namespaces:
     class FOAF:
 
         # foaf = "http://xmlns.com/foaf/0.1/"
-        foaf = ns.FOAF.__str__()
+        foaf = "http://xmlns.com/foaf/0.1/"
         prefix = F"@prefix {'foaf':>{PREF_SIZE}}: <{foaf}> ."
 
     class Units:
@@ -411,6 +411,15 @@ class Namespaces:
 
         month = F"{time}unitMonth"
         month_ttl = "time:unitMonth"
+
+        days = F"{time}days"
+        days_ttl = "time:days"
+
+        months = F"{time}months"
+        months_ttl = "time:months"
+
+        years = F"{time}years"
+        years_ttl = "time:years"
 
         second = F"{time}unitSecond"
         second_ttl = "time:unitSecond"

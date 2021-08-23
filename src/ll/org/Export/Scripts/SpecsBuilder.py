@@ -7,6 +7,8 @@
 #                                                                                                         #
 # #########################################################################################################
 
+# ❌ ✅
+
 import requests
 import traceback
 
@@ -37,6 +39,21 @@ def ERROR(page, function, location, message):
            F"\t{'Whereabouts':15} : {location}\n"\
            F"\t{'Error Message':15} : {message}\n"\
            F"\t{'Error Stack':15} : \t{'' if not traceback.print_exc() else ''}"
+
+
+def networkCode(linkPredicate, url):
+    # return 1
+    # A LIST OF HASH OF SORTED LINKS
+    codes = [
+        Grl.deterministicHash(
+            F"{edge['source']}{edge['target']}" if edge["source"] <= edge["target"]
+            else F"{edge['target']}{edge['source']}") for edge in requests.get(url).json()]
+
+    # A SORTED LIST
+    codes.sort()
+
+    # RETURN THE A HASH OF THE LIST WITH THE LINK-PREDICATE
+    return Grl.deterministicHash(F"{linkPredicate}{codes}")
 
 
 def getLinks(job_id, set_id, isLinkset: bool):
@@ -223,6 +240,7 @@ def method_conditions(method_conditions_list, entity_type_selections, dataset_sp
 
                             # SINGLE PROPERTY HAS BEEN SELECTED
                             if len(choice) == 1:
+
                                 long_uri = dataset_specs[e_sel_id]['collections'][e_type]['properties'][
                                     choice[0]]['uri'] if choice[0] != 'uri' else Rsc.ga_resource_ttl('uri')
 
@@ -259,11 +277,20 @@ def method_conditions(method_conditions_list, entity_type_selections, dataset_sp
 
                                         else:
 
-                                            long_uri = dataset_specs[e_sel_id][
-                                                'collections'][e_type]['properties'][property_list_1]['uri']
+                                            try:
+                                                long_uri = dataset_specs[e_sel_id][
+                                                    'collections'][e_type]['properties'][property_list_1]['uri']
+                                            except KeyError:
+                                                long_uri = dataset_specs[e_sel_id][
+                                                    'collections'][e_type]['properties'][F"_inverse_{property_list_1}"]['uri']
 
-                                            short_uri = dataset_specs[e_sel_id][
-                                                'collections'][e_type]['properties'][property_list_1]['shortenedUri']
+                                            try:
+                                                short_uri = dataset_specs[e_sel_id][
+                                                    'collections'][e_type]['properties'][property_list_1]['shortenedUri']
+                                            except KeyError:
+                                                short_uri = dataset_specs[e_sel_id][
+                                                    'collections'][e_type]['properties'][F"_inverse_{property_list_1}"][
+                                                    'shortenedUri']
 
                                         # Collect namespaces
                                         if long_uri and short_uri and long_uri != short_uri:
@@ -667,6 +694,9 @@ def linksetSpecsDataItr(
     # CLUSTER URI
     clusters_uri = F"{home}/job/{job}/clusters/linkset/{linksetId}?"
 
+    # print(F"{home}/job/{job}/links_totals/linkset/{linksetId}?cluster_id=5")
+    # print(F"{home}/job/{job}/clusters_totals/linkset/{linksetId}?cluster_id=5")
+    # exit()
     print(F"\n{'':>16}{'-' * line:^{center}}\n{'|':>16}{'BUILDING THE SPECIFICATION':^{center}}|"
           F"\n{'|':>16}{F'JOB IDENTIFIER : {job}':^{center}}|\n"
           F"{'|':>16}{F'LINKSET INDEX : {linksetId}':^{center}}|\n{'':>16}{'-' * line:^{center}}\n")
@@ -724,7 +754,7 @@ def linksetSpecsDataItr(
             lst_specs["job_id"] = job
             lst_specs["linkType"] = {
                 'prefix': 'owl',
-                'namespace': LinkPredicates.owl.__str__(),
+                'namespace': "http://www.w3.org/2002/07/owl#",
                 'long': LinkPredicates.sameAs,
                 'short': LinkPredicates.sameAs_tt,
             }
@@ -760,6 +790,7 @@ def linksetSpecsDataItr(
             while True:
 
                 cluster_limit = F"\t{clusters_uri}with_properties=none&limit={limit}&offset={offset}&include_nodes=true"
+
                 print(F"\t{cluster_limit}")
                 clusters_data = requests.get(cluster_limit).json()
 
@@ -773,7 +804,11 @@ def linksetSpecsDataItr(
                         # Adding a set is better but will not work in the
                         # need of a deterministic hash output for the name of the cluster
                         # item['item'] = list()
-                        clusters[item['id']] = item
+                        clusters[item['hash_id']] = item
+                        clusters[item['hash_id']]['network_id'] = networkCode(
+                            linkPredicate=lst_specs["linkType"]['short'],
+                            url=F"{home}/job/{job}/links/linkset/{linksetId}?cluster_id={item['id']}")
+
                     print("\t\tThe linkset has been clustered.")
                 else:
                     clusters_data = {}
@@ -1026,7 +1061,7 @@ def linksetSpecsDataItr(
     validationset = {'creator': job, 'publisher': 'GoldenAgents', 'items': dict()}
     link_type = lst_specs['linkType']
     import ll.org.Export.Scripts.General as Grl
-    test = list(lst_result)
+    test = list(lst_result) if lst_result else []
     for count, link in enumerate(test):
         # print("====>", len(row), count, row)
         # if count > 0 and len(row) > 2:
@@ -1149,7 +1184,7 @@ def lensSpecsDataItr(
             lens_specs["job_id"] = job
             lens_specs["linkType"] = {
                 'prefix': 'owl',
-                'namespace': LinkPredicates.owl.__str__(),
+                'namespace': "http://www.w3.org/2002/07/owl#",
                 'long': LinkPredicates.sameAs,
                 'short': LinkPredicates.sameAs_tt,
             }
@@ -1242,7 +1277,8 @@ def lensSpecsDataItr(
                         # Adding a set is better but will not work in the
                         # need of a deterministic hash output for the name of the cluster
                         # item['item'] = list()
-                        clusters[item['id']] = item
+                        clusters[item['hash_id']] = item
+
                     print("\t\t--> THE LENS HAS BEEN CLUSTERED.")
                 else:
                     clusters_data = {}

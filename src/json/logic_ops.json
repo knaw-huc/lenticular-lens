@@ -1,74 +1,74 @@
 {
-  "MINIMUM_T_NORM": {
+  "minimum_t_norm": {
     "label": "Minimum t-norm",
     "short": "⊤min",
     "sql": "t_min",
     "sql_agg": "t_min_agg"
   },
-  "PRODUCT_T_NORM": {
+  "product_t_norm": {
     "label": "Product t-norm",
     "short": "⊤prod",
     "sql": "t_prod",
     "sql_agg": "t_prod_agg"
   },
-  "LUKASIEWICZ_T_NORM": {
+  "lukasiewicz_t_norm": {
     "label": "Łukasiewicz t-norm",
     "short": "⊤Luk",
     "sql": "t_luk",
     "sql_agg": "t_luk_agg"
   },
-  "DRASTIC_T_NORM": {
+  "drastic_t_norm": {
     "label": "Drastic t-norm",
     "short": "⊤D",
     "sql": "t_d",
     "sql_agg": "t_d_agg"
   },
-  "NILPOTENT_MINIMUM": {
-    "label": "Nilpotent t-norm",
+  "nilpotent_minimum": {
+    "label": "Nilpotent minimum",
     "short": "⊤nM",
     "sql": "t_nm",
     "sql_agg": "t_nm_agg"
   },
-  "HAMACHER_PRODUCT": {
-    "label": "Hamacher t-norm",
+  "hamacher_product": {
+    "label": "Hamacher product",
     "short": "⊤H0",
     "sql": "t_h0",
     "sql_agg": "t_h0_agg"
   },
-  "MAXIMUM_T_CONORM": {
-    "label": "Maximum t-conorm",
+  "maximum_s_norm": {
+    "label": "Maximum s-norm",
     "short": "⊥max",
-    "sql": "tc_max",
-    "sql_agg": "tc_max_agg"
+    "sql": "s_max",
+    "sql_agg": "s_max_agg"
   },
-  "PROBABILISTIC_SUM": {
-    "label": "Probabilistic t-conorm",
+  "probabilistic_sum": {
+    "label": "Probabilistic sum",
     "short": "⊥sum",
-    "sql": "tc_sum",
-    "sql_agg": "tc_sum_agg"
+    "sql": "s_sum",
+    "sql_agg": "s_sum_agg"
   },
-  "BOUNDED_SUM": {
-    "label": "Bounded t-conorm",
+  "bounded_sum": {
+    "label": "Bounded sum",
     "short": "⊥Luk",
-    "sql": "tc_luk",
-    "sql_agg": "tc_luk_agg"
+    "sql": "s_luk",
+    "sql_agg": "s_luk_agg"
   },
-  "DRASTIC_T_CONORM": {
-    "label": "Drastic t-conorm",
+  "drastic_s_norm": {
+    "label": "Drastic s-norm",
     "short": "⊥D",
-    "sql": "tc_d",
-    "sql_agg": "tc_d_agg"
+    "sql": "s_d",
+    "sql_agg": "s_d_agg"
   },
-  "NILPOTENT_MAXIMUM": {
-    "label": "Nilpotent t-conorm",
+  "nilpotent_maximum": {
+    "label": "Nilpotent maximum",
     "short": "⊥nM",
-    "sql": "tc_nm",
-    "sql_agg": "tc_nm_agg"
+    "sql": "s_nm",
+    "sql_agg": "s_nm_agg"
   },
-  "EINSTEIN_SUM": {
-    "label": "Einstein t-conorm",
+  "einstein_sum": {
+    "label": "Einstein sum",
     "short": "⊥H2",
-    "sql": "tc_h2",
-    "sql_agg": "tc_h2_agg"
+    "sql": "s_h2",
+    "sql_agg": "s_h2_agg"
   }
 }

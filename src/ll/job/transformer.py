@@ -27,7 +27,7 @@ class LogicBox:
             if self.elements_schema:
                 logicbox = self.elements_schema.validate(data)
 
-            logicbox['type'] = data['type'].upper()
+            logicbox['type'] = data['type']
             logicbox[self.name] = elements
 
             return logicbox
@@ -106,22 +106,22 @@ def get_linkset_spec_schema(ets_ids):
         'targets': [EntityTypeSelection(ets_ids)],
         'methods': And(LogicBox(Schema({
             'method': {
-                'name': And(str, Use(str.upper), lambda m: m in matching_methods.keys()),
+                'name': And(str, Use(str.lower), lambda m: m in matching_methods.keys()),
                 'config': And(dict, MatchingMethodConfig(ets_ids)),
             },
             Optional('sim_method', default={'name': None, 'config': {}, 'normalized': False}): {
                 Optional('name', default=None):
-                    Or(None, And(str, Use(str.upper), lambda m: m in matching_methods.keys())),
+                    Or(None, And(str, Use(str.lower), lambda m: m in matching_methods.keys())),
                 Optional('config', default={}): And(dict, MatchingMethodConfig(ets_ids)),
                 Optional('normalized', default=False): bool,
             },
-            Optional('fuzzy', default={'t_norm': 'MINIMUM_T_NORM', 't_conorm': 'MAXIMUM_T_CONORM', 'threshold': 0}): {
-                Optional('t_norm', default='MINIMUM_T_NORM'):
-                    lambda s: s in ('MINIMUM_T_NORM', 'PRODUCT_T_NORM', 'LUKASIEWICZ_T_NORM',
-                                    'DRASTIC_T_NORM', 'NILPOTENT_MINIMUM', 'HAMACHER_PRODUCT'),
-                Optional('t_conorm', default='MAXIMUM_T_CONORM'):
-                    lambda s: s in ('MAXIMUM_T_CONORM', 'PROBABILISTIC_SUM', 'BOUNDED_SUM',
-                                    'DRASTIC_T_CONORM', 'NILPOTENT_MAXIMUM', 'EINSTEIN_SUM'),
+            Optional('fuzzy', default={'t_norm': 'minimum_t_norm', 's_norm': 'maximum_s_norm', 'threshold': 0}): {
+                Optional('t_norm', default='minimum_t_norm'):
+                    lambda s: s in ('minimum_t_norm', 'product_t_norm', 'lukasiewicz_t_norm',
+                                    'drastic_t_norm', 'nilpotent_minimum', 'hamacher_product'),
+                Optional('s_norm', default='maximum_s_norm'):
+                    lambda s: s in ('maximum_s_norm', 'probabilistic_sum', 'bounded_sum',
+                                    'drastic_s_norm', 'nilpotent_maximum', 'einstein_sum'),
                 Optional('threshold', default=0): Or(float, Use(lambda t: 0)),
             },
             Optional('list_matching', default={'threshold': 0, 'is_percentage': False}): {
@@ -134,13 +134,13 @@ def get_linkset_spec_schema(ets_ids):
                         'property': And(Use(filter_property), len),
                         Optional('property_transformer_first', default=False): bool,
                         Optional('transformers', default=list): [{
-                            'name': And(str, Use(str.upper), lambda n: n in transformers.keys()),
+                            'name': And(str, Use(str.lower), lambda n: n in transformers.keys()),
                             'parameters': dict
                         }],
                     }]
                 },
                 Optional('transformers', default=list): [{
-                    'name': And(str, Use(str.upper), lambda n: n in transformers.keys()),
+                    'name': And(str, Use(str.lower), lambda n: n in transformers.keys()),
                     'parameters': dict
                 }],
             },
@@ -150,20 +150,20 @@ def get_linkset_spec_schema(ets_ids):
                         'property': And(Use(filter_property), len),
                         Optional('property_transformer_first', default=False): bool,
                         Optional('transformers', default=list): [{
-                            'name': And(str, Use(str.upper), lambda n: n in transformers.keys()),
+                            'name': And(str, Use(str.lower), lambda n: n in transformers.keys()),
                             'parameters': dict
                         }],
                     }]
                 },
                 Optional('transformers', default=list): [{
-                    'name': And(str, Use(str.upper), lambda n: n in transformers.keys()),
+                    'name': And(str, Use(str.lower), lambda n: n in transformers.keys()),
                     'parameters': dict
                 }],
             }
         }, ignore_extra_keys=True), name='conditions', types=(
             'and', 'or', 'minimum_t_norm', 'product_t_norm', 'lukasiewicz_t_norm', 'drastic_t_norm',
-            'nilpotent_minimum', 'hamacher_product', 'maximum_t_conorm', 'probabilistic_sum',
-            'bounded_sum', 'drastic_t_conorm', 'nilpotent_maximum', 'einstein_sum'
+            'nilpotent_minimum', 'hamacher_product', 'maximum_s_norm', 'probabilistic_sum',
+            'bounded_sum', 'drastic_s_norm', 'nilpotent_maximum', 'einstein_sum'
         ), elements_schema=Schema({
             'type': str,
             'conditions': list,
@@ -185,9 +185,9 @@ def get_lens_spec_schema():
         ), elements_schema=Schema({
             'type': str,
             'elements': list,
-            Optional('t_conorm', default=''):
-                lambda s: s in ('', 'MAXIMUM_T_CONORM', 'PROBABILISTIC_SUM', 'BOUNDED_SUM',
-                                'DRASTIC_T_CONORM', 'NILPOTENT_MAXIMUM', 'EINSTEIN_SUM'),
+            Optional('s_norm', default=''):
+                lambda s: s in ('', 'maximum_s_norm', 'probabilistic_sum', 'bounded_sum',
+                                'drastic_s_norm', 'nilpotent_maximum', 'einstein_sum'),
             Optional('threshold', default=0): Or(float, Use(lambda t: 0)),
         }, ignore_extra_keys=True)), dict),
     }, ignore_extra_keys=True)

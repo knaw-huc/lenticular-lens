@@ -79,7 +79,7 @@ class View:
         return filters
 
     def _r_filters(self, filter_obj, collection, with_conditions, with_filter_function=None):
-        if 'type' in filter_obj and filter_obj['type'] in ['AND', 'OR']:
+        if 'type' in filter_obj and filter_obj['type'] in ['and', 'or']:
             conditions = [self._r_filters(condition, collection, with_conditions, with_filter_function)
                           for condition in filter_obj['conditions']]
             return with_conditions(conditions, filter_obj['type']) if with_conditions else conditions

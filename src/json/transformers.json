@@ -1,5 +1,5 @@
 {
-  "TRANSFORM_LAST_NAME_FORMAT": {
+  "transform_last_name_format": {
     "label": "Transform 'last name first' format",
     "sql_template": "transform_last_name_format({property}, {infix})",
     "items": {
@@ -10,7 +10,7 @@
       }
     }
   },
-  "PREFIX": {
+  "prefix": {
     "label": "Prefix",
     "sql_template": "{prefix} || {property}",
     "items": {
@@ -23,7 +23,7 @@
       }
     }
   },
-  "SUFFIX": {
+  "suffix": {
     "label": "Suffix",
     "sql_template": "{property} || {suffix}",
     "items": {
@@ -36,7 +36,7 @@
       }
     }
   },
-  "REPLACE": {
+  "replace": {
     "label": "Replace",
     "sql_template": "replace({property}, {from}, {to})",
     "items": {
@@ -56,17 +56,17 @@
       }
     }
   },
-  "UNACCENT": {
+  "unaccent": {
     "label": "Unaccent",
     "sql_template": "unaccent({property})",
     "items": {}
   },
-  "NFKC_NORMALIZE": {
+  "nfkc_normalize": {
     "label": "Unicode equivalence normalization (NFKC)",
     "sql_template": "normalize({property}, nfkc)",
     "items": {}
   },
-  "REGEXP_REPLACE": {
+  "regexp_replace": {
     "label": "Regular expression replace",
     "sql_template": "regexp_replace({property}, {pattern}, {replacement}, {flags})",
     "items": {
@@ -91,7 +91,7 @@
       }
     }
   },
-  "STOPWORDS": {
+  "stopwords": {
     "label": "Stopwords",
     "sql_template": "remove_stopwords({key}, {property})",
     "items": {
@@ -134,15 +134,15 @@
       }
     }
   },
-  "LOWERCASE": {
+  "lowercase": {
     "internal": true,
     "sql_template": "lower({property})"
   },
-  "TO_NUMERIC_IMMUTABLE": {
+  "to_numeric_immutable": {
     "internal": true,
     "sql_template": "to_numeric_immutable({property})"
   },
-  "TO_DATE_IMMUTABLE": {
+  "to_date_immutable": {
     "internal": true,
     "sql_template": "to_date_immutable({property}, {format})"
   }

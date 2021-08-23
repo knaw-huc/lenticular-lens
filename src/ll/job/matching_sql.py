@@ -200,7 +200,7 @@ class MatchingSql:
                 ADD PRIMARY KEY (source_uri, target_uri),
                 ADD COLUMN cluster_id integer,
                 ADD COLUMN cluster_hash_id char(15),
-                ADD COLUMN valid link_validity DEFAULT 'not_validated' NOT NULL,
+                ADD COLUMN valid link_validity DEFAULT 'unchecked' NOT NULL,
                 ADD COLUMN motivation text;
 
                 ALTER TABLE linksets.{linkset} ADD COLUMN sort_order serial;

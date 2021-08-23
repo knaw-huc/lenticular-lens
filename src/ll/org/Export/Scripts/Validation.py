@@ -1,10 +1,19 @@
 from ll.org.Export.Scripts.Resources import Resource as Rsc
 from ll.org.Export.Scripts.Specs2Metadata import preVal, space
 from ll.org.Export.Scripts.SharedOntologies import Namespaces as Sns
-from rdflib import Literal
+from rdflib import Literal, Graph
 from ll.org.Export.Scripts.VoidPlus import VoidPlus
+import ll.org.Export.Scripts.Variables as Vars
+MANAGER = Graph().namespace_manager
 
 RSC_SPACE = 0
+
+
+def valueList(objects, padding=1, newLine=True):
+    if newLine:
+        return F" ,\n{space * padding}{' ' * Vars.PRED_SIZE}".join(Literal(elt).n3(MANAGER) for elt in objects)
+    else:
+        return F", ".join(Literal(elt).n3(MANAGER) for elt in objects)
 
 
 def header(message, lines=2):
@@ -17,7 +26,6 @@ class Validate:
     global RSC_SPACE
     TPL_SPACE = 2 + RSC_SPACE
     # header = F"\n\n{'#' * 110}\n#{'VALIDATION TERMINOLOGY':^108}#\n{'#' * 110}\n\n"
-
 
     # -------------------------------------- #
     # ACCEPTED
@@ -40,7 +48,7 @@ class Validate:
     # REJECTED
     # -------------------------------------- #
     rejected = Rsc.ga_resource_ttl('Rejected')
-    rejected_label = "Rejected"
+    rejected_label = ["Not Accepted", "Rejected"]
     rejected_desc = F"""
 {space * TPL_SPACE}A validation process that results in the link under scrutiny being flagged as REJECTED. 
 {space * TPL_SPACE}This, with the intent of notifying that the link has undergone and FAILED a user-defined 
@@ -49,15 +57,15 @@ class Validate:
 {space * RSC_SPACE}### VALIDATED AS REJECTED
 {space * RSC_SPACE}{rejected}
     {space * RSC_SPACE}{preVal('a', VoidPlus.ValidationFlag_ttl, line=False)}
-    {space * RSC_SPACE}{preVal(Sns.RDFS.label_ttl, Literal(rejected_label).n3(), line=False)}
+    {space * RSC_SPACE}{preVal(Sns.RDFS.label_ttl, valueList(rejected_label, newLine=False), line=False)}
     {space * RSC_SPACE}{preVal(Sns.DCterms.description_ttl, Literal(rejected_desc).n3(), line=False, end=True)}
     """
 
     # -------------------------------------- #
-    # UNCERTAIN
+    # UNCERTAIN - NOT SURE
     # -------------------------------------- #
     unsure = Rsc.ga_resource_ttl('Uncertain')
-    unsure_label = "Unsure OR Uncertain"
+    unsure_label = ["Not Sure", "Unsure", "Uncertain"]
     unsure_desc = F"""
 {space * TPL_SPACE}A validation process that results in the link under scrutiny being flagged as UNCERTAIN. 
 {space * TPL_SPACE}This flag reveals the lack of confidence in confirming or refuting the creation of
@@ -66,15 +74,15 @@ class Validate:
 {space * RSC_SPACE}### VALIDATED AS UNCERTAIN
 {space * RSC_SPACE}{unsure}
     {space * RSC_SPACE}{preVal('a', VoidPlus.ValidationFlag_ttl, line=False)}
-    {space * RSC_SPACE}{preVal(Sns.RDFS.label_ttl, Literal(unsure_label).n3(), line=False)}
+    {space * RSC_SPACE}{preVal(Sns.RDFS.label_ttl, valueList(unsure_label, newLine=False), line=False)}
     {space * RSC_SPACE}{preVal(Sns.DCterms.description_ttl, Literal(unsure_desc).n3(), line=False, end=True)}
     """
 
     # -------------------------------------- #
-    # UNCHECKED
+    # UNCHECKED - NOT VALIDATED
     # -------------------------------------- #
     unchecked = Rsc.ga_resource_ttl('Unchecked')
-    unchecked_label = "Unchecked"
+    unchecked_label = ["Not Validated", "Not Checked", "Unchecked"]
     unchecked_desc = F"""
 {space * TPL_SPACE}Flagging a link as UNCHECKED literally highlights that it has not undergone any user-defined scrutiny 
 {space * TPL_SPACE}such that it could be flagged as ACCEPTED, REJECTED or UNCERTAIN"""
@@ -82,15 +90,15 @@ class Validate:
 {space * RSC_SPACE}### VALIDATED AS UNCHECKED
 {space * RSC_SPACE}{unchecked}
     {space * RSC_SPACE}{preVal('a', VoidPlus.ValidationFlag_ttl, line=False)}
-    {space * RSC_SPACE}{preVal(Sns.RDFS.label_ttl, Literal(unchecked_label).n3(), line=False)}
+    {space * RSC_SPACE}{preVal(Sns.RDFS.label_ttl, valueList(unchecked_label, newLine=False), line=False)}
     {space * RSC_SPACE}{preVal(Sns.DCterms.description_ttl, Literal(unchecked_desc).n3(), line=False, end=True)}
     """
 
     # -------------------------------------- #
-    # MIXED
+    # MIXED - DISPUTED - CONTRADICTION
     # -------------------------------------- #
     mixed = Rsc.ga_resource_ttl('Disputed')
-    mixed_label = "Disputed"
+    mixed_label = ["Contradictory", "Disputed"]
     mixed_desc = F"""
 {space * TPL_SPACE}A validation process that results in the link under scrutiny being flagged as DISPUTED.  
 {space * TPL_SPACE}This, with the intent of notifying that the link has undergone MULTIPLE user-defined set of checks
@@ -100,7 +108,7 @@ class Validate:
 {space * RSC_SPACE}### VALIDATED AS DISPUTED
 {space * RSC_SPACE}{mixed}
     {space * RSC_SPACE}{preVal('a', VoidPlus.ValidationFlag_ttl, line=False)}
-    {space * RSC_SPACE}{preVal(Sns.RDFS.label_ttl, Literal(mixed_label).n3(), line=False)}
+    {space * RSC_SPACE}{preVal(Sns.RDFS.label_ttl, valueList(mixed_label, newLine=False), line=False)}
     {space * RSC_SPACE}{preVal(Sns.DCterms.description_ttl, Literal(mixed_desc).n3(), line=False, end=True)}
         """
 

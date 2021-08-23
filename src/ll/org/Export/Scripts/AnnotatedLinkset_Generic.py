@@ -7,7 +7,7 @@
 from os.path import join
 from time import time
 from datetime import timedelta
-from rdflib import URIRef, Literal, Graph
+from rdflib import URIRef, Literal, Graph, XSD
 import ll.org.Export.Scripts.Variables as Vars
 from collections import defaultdict
 import ll.org.Export.Scripts.General as Grl
@@ -32,14 +32,17 @@ CSV_HEADERS = {
     "Valid": VoidPlus.has_validation_ttl,
     "Max Strength": VoidPlus.strength_ttl,
     "Strength": VoidPlus.strength_ttl,
-    "Cluster ID": VoidPlus.cluster_ID_ttl,
+    "Cluster ID": VoidPlus.cluster_Int_ID_ttl,
+    "cluster_hash_id": VoidPlus.cluster_ID_ttl,
     "Source Intermediates": VoidPlus.hasSourceEvidence_ttl,
     "Target Intermediates": VoidPlus.hasTargetEvidence_ttl
 }
 JSON_HEADERS = {
     "valid": VoidPlus.has_validation_ttl,
     "similarity": VoidPlus.strength_ttl,
-    "cluster_id": VoidPlus.cluster_ID_ttl,
+    "cluster_id": VoidPlus.cluster_Int_ID_ttl,
+    "cluster_hash_id": VoidPlus.cluster_ID_ttl,
+    "network_id": VoidPlus.network_ID_ttl,
     "source_intermediates": VoidPlus.hasSourceEvidence_ttl,
     "target_intermediates": VoidPlus.hasTargetEvidence_ttl
 }
@@ -285,13 +288,16 @@ def rdfStarLinkGenerator(mappings: dict, link_predicate: str, result_batch, offs
                             key = Grl.deterministicHash(F"{small}{big}{link_predicate}")
                             triple_value = Rsc.validation_ttl(key) if key is not None else key
 
-                        # APPENDING THE CLUSTER ID AS A RESOURCE
+                        # NOT APPENDING THE CLUSTER INT ID
                         elif current_property == VoidPlus.cluster_ID_ttl:
-                            triple_value = Rsc.cluster_ttl(int(value)) if value is not None else value
+                            triple_value = Rsc.cluster_ttl(value) if value is not None else value
 
                         # APPENDING ANYTHING ELSE
                         else:
-                            if value is not None:
+                            if current_property == VoidPlus.cluster_Int_ID_ttl:
+                                triple_value = None
+
+                            elif value is not None:
                                 triple_value = Literal(round(float(value), 5)).n3(MANAGER) \
                                     if Grl.isDecimalLike(value) \
                                     else Literal(value).n3(MANAGER)
@@ -378,11 +384,19 @@ def standardLinkGenerator(mappings: dict, link_predicate: str, result_batch, off
 
                         # APPENDING THE CLUSTER ID AS A RESOURCE
                         elif cur_predicate == VoidPlus.cluster_ID_ttl:
-                            triple_value = Rsc.cluster_ttl(int(value)) if value is not None else value
+                            triple_value = Rsc.cluster_ttl(value) if value is not None else value
+                            # triple_value = None
+
+                        elif cur_predicate == VoidPlus.network_ID_ttl:
+                            print("++++++++++++++++++>>>>>>>>>>")
+                            triple_value = Literal(value).n3(MANAGER) if value is not None else value
 
                         # APPENDING ANYTHING ELSE
                         else:
-                            if value is not None:
+                            if cur_predicate == VoidPlus.cluster_Int_ID_ttl:
+                                triple_value = None
+
+                            elif value is not None:
                                 triple_value = Literal(round(float(value), 5)).n3(MANAGER) \
                                     if Grl.isDecimalLike(value) \
                                     else Literal(value).n3(MANAGER)
@@ -485,7 +499,7 @@ def standardLinkGenerator2(link_predicate: str, result_batch, namespace, cluster
             print(errors)
 
 
-def clusterGraphGenerator(clusters, stats, auto_prefixes, linksetGraph, linkset_id):
+def clusterGraphGenerator(clusters, stats, auto_prefixes, linksetGraph, created, linkset_id):
 
     node_count = 0
     validated = 0
@@ -498,16 +512,21 @@ def clusterGraphGenerator(clusters, stats, auto_prefixes, linksetGraph, linkset_
 
         writer = Buffer()
         predicate_map = {
+            # SET OF NODES
+            # "nodes": VoidPlus.size_ttl,
             "extended": VoidPlus.extended_ttl,
-            "id": VoidPlus.id_ttl,
-            "links": VoidPlus.links_ttl,
+            "id": VoidPlus.intID_ttl,
+            "hash_id": VoidPlus.hashID_ttl,
+            # VALIDATIONS
+            # "links": VoidPlus.links_ttl,
             "reconciled": VoidPlus.reconciled_ttl,
             "size": VoidPlus.size_ttl,
             "accepted": VoidPlus.accepted_ttl,
             "rejected": VoidPlus.rejected_ttl,
             "not_sure": VoidPlus.uncertain_ttl,
             "mixed": VoidPlus.contradictions_ttl,
-            "not_validated": VoidPlus.unchecked_ttl
+            "not_validated": VoidPlus.unchecked_ttl,
+            'network_id': VoidPlus.network_ID_ttl
         }
 
     # APPENDING ALL NAMESPACES
@@ -530,7 +549,10 @@ def clusterGraphGenerator(clusters, stats, auto_prefixes, linksetGraph, linkset_
 
     writer.write(preVal(VoidPlus.hasTarget_ttl, linksetGraph))
     writer.write(preVal(VoidPlus.method_ttl, Algorithm.simple_clustering_ttl))
-    writer.write(preVal(Sns.DCterms.created_ttl, Grl.getXSDTimestamp(), end=True))
+    # EXPORT TIMESTAMP
+    writer.write(preVal(VoidPlus.exportDate_ttl, Grl.getXSDTimestamp()))
+    # CREATED TIMESTAMP
+    writer.write(preVal(Sns.DCterms.created_ttl, Literal(created, datatype=XSD.dateTi).n3(MANAGER), end=True))
 
     # DESCRIPTION OF THE CLUSTERING ALGORITHM
     writer.write(F'\n\n{Algorithm.simple_clustering_ttl}\n')
@@ -542,7 +564,8 @@ def clusterGraphGenerator(clusters, stats, auto_prefixes, linksetGraph, linkset_
     writer.write(F'{header("ANNOTATED CO-REFERENT RESOURCES")}\n\n')
     writer.write(F"{clusterset_graph}\n{{\n")
     for cid, cluster_data in clusters.items():
-
+        # print(cluster_data.keys())
+        # exit()
         temp = Buffer()
 
         # A CLUSTER RESOURCE
@@ -553,8 +576,10 @@ def clusterGraphGenerator(clusters, stats, auto_prefixes, linksetGraph, linkset_
 
             # CLUSTERED RESOURCES
             if feature == 'nodes':
+
                 if value:
                     nodes = set(value)
+                    # temp.write(preVal(predicate_map[feature], Literal(len(nodes)).n3(MANAGER), position=2))
                     node_count += len(nodes)
                     temp.write(
                         preVal(
@@ -563,10 +588,13 @@ def clusterGraphGenerator(clusters, stats, auto_prefixes, linksetGraph, linkset_
                             position=2
                         )
                     )
+
             # VALIDATION FLAGS
             elif feature == "links":
+
                 if value and value['not_validated'] == 0:
                     validated += 1
+
                 for flag, integer in value.items():
                     temp.write(
                         preVal(
@@ -579,7 +607,7 @@ def clusterGraphGenerator(clusters, stats, auto_prefixes, linksetGraph, linkset_
             elif feature in ["values"]:
                 pass
 
-            # ABOUT THE CLUSTER
+            # ABOUT THE CLUSTER'S SIZE, Extension, Reconciliation, intID
             else:
                 temp.write(preVal(predicate_map[feature], Literal(value).n3(MANAGER), position=2))
 
@@ -590,7 +618,7 @@ def clusterGraphGenerator(clusters, stats, auto_prefixes, linksetGraph, linkset_
     return F"{result.replace('###VALIDATED', Literal(validated).n3(MANAGER))}}}"
 
 
-def validationGraphGenerator(validationset, linksetStats, auto_prefixes, setGraph, set_id, isLinkset: bool):
+def validationGraphGenerator(validationset, linksetStats, auto_prefixes, setGraph, set_id, created, isLinkset: bool):
 
     # THE LAST STATUS MUST ALWAYS HAVE A VALUE DO THAT IT DETERMINES THE LAST TRIPLE
     predicate_map = {
@@ -627,7 +655,12 @@ def validationGraphGenerator(validationset, linksetStats, auto_prefixes, setGrap
             writer.write(preVal(Sns.DCterms.creator_ttl, Literal(validationset["creator"]).n3()))
         if "publisher" in validationset and len(validationset["publisher"].strip()) > 0:
             writer.write(preVal(Sns.DCterms.publisher_ttl, Literal(validationset["publisher"]).n3()))
-        writer.write(preVal(Sns.DCterms.created_ttl, Grl.getXSDTimestamp()))
+
+        # CREATED
+        writer.write(preVal(Sns.DCterms.created_ttl, Literal(created, datatype=XSD.dateTi).n3(MANAGER)))
+
+        # EXPORT TIMESTAMP
+        writer.write(preVal(VoidPlus.exportDate_ttl, Grl.getXSDTimestamp()))
 
         # VALIDATION STATS
         # THE TOTAL AMOUNT OF LINKS ACCEPTED
@@ -660,7 +693,7 @@ def validationGraphGenerator(validationset, linksetStats, auto_prefixes, setGrap
 
         # VALIDATIONS
         for key, validation in validationset['items'].items():
-            print(validation)
+            # print(validation)
             writer.write(F'\n\t{Rsc.validation_ttl(key)}\n')
             writer.write(preVal('a', VoidPlus.Validation_ttl, position=2))
 
@@ -774,8 +807,12 @@ def toLinkset(specs: dict, save_in: str, linkset_result, rdfStarReification: Tru
     name = Grl.prep4Iri(linkset_specs[Vars.id])
 
     # USER DEFINED/SUGGESTED PREFIXES
-    mappings = {ns: prefix for prefix, ns in specs['linksetStats']['dynamic_uri_prefix_mappings'].items()}
-    auto_prefixes.update(mappings)
+    mappings = None
+
+    if specs['linksetStats'] and 'error' not in specs['linksetStats']:
+        if'dynamic_uri_prefix_mappings' in specs['linksetStats']:
+            mappings = {ns: prefix for prefix, ns in specs['linksetStats']['dynamic_uri_prefix_mappings'].items()}
+            auto_prefixes.update(mappings)
 
     # my_ttl = join(save_in, F"DocumentedLinks-job_{job_id}-id_{name}.trig")
     my_ttl = join(save_in, F"DL_{job_id}_{name}.trig")
@@ -860,11 +897,8 @@ def toLinkset(specs: dict, save_in: str, linkset_result, rdfStarReification: Tru
             with open(validation_graph, "w") as writer:
                 writer.write(
                     validationGraphGenerator(
-                        validationset,
-                        specs['linksetStats'],
-                        auto_prefixes,
-                        setGraph=linkset,
-                        set_id=name, isLinkset=True)
+                        validationset, specs['linksetStats'], auto_prefixes, setGraph=linkset,
+                        set_id=name, created=specs['linksetSpecs']['created'], isLinkset=True)
                 )
 
     # --------------------------------------------------------------#
@@ -879,8 +913,7 @@ def toLinkset(specs: dict, save_in: str, linkset_result, rdfStarReification: Tru
                 clusterGraphGenerator(
                     specs['linksetSpecs']['clusters'],
                     specs['linksetStats'],
-                    auto_prefixes,
-                    linkset, linkset_id=name)
+                    auto_prefixes, linkset, specs['linksetSpecs']['created'], linkset_id=name)
             )
 
     return my_ttl, cluster_graph, validation_graphs
@@ -979,8 +1012,11 @@ def toLens(specs: dict, save_in: str, linkset_result, rdfStarReification: True, 
     my_ttl = join(save_in, F"DLens_{job_id}_{name}.trig")
 
     # USER DEFINED/SUGGESTED PREFIXES
-    mappings = {ns: prefix for prefix, ns in specs['lensStats']['dynamic_uri_prefix_mappings'].items()}
-    auto_prefixes.update(mappings)
+    mappings = None
+
+    if specs['lensStats'] and 'error' not in specs['lensStats']:
+        mappings = {ns: prefix for prefix, ns in specs['lensStats']['dynamic_uri_prefix_mappings'].items()}
+        auto_prefixes.update(mappings)
 
     # Removing shared prefixes
     for key in SHARED:
@@ -1058,11 +1094,8 @@ def toLens(specs: dict, save_in: str, linkset_result, rdfStarReification: True, 
             with open(validation_graph, "w") as writer:
                 writer.write(
                     validationGraphGenerator(
-                        validationset,
-                        specs['lensStats'],
-                        auto_prefixes,
-                        setGraph=lens_rsc,
-                        set_id=name, isLinkset=False)
+                        validationset, specs['lensStats'], auto_prefixes,
+                        setGraph=lens_rsc, set_id=name, created=specs['lensSpecs']['created'], isLinkset=False)
                 )
 
     # --------------------------------------------------------------#
@@ -1075,10 +1108,8 @@ def toLens(specs: dict, save_in: str, linkset_result, rdfStarReification: True, 
             # WRITE A YIELDED CLUSTER
             writer.write(
                 clusterGraphGenerator(
-                    specs['clusters'],
-                    specs['lensStats'],
-                    auto_prefixes,
-                    lens_rsc, linkset_id=name)
+                    specs['clusters'], specs['lensStats'],
+                    auto_prefixes, lens_rsc, created=specs['lensSpecs']['created'], linkset_id=name)
             )
 
     return my_ttl, cluster_graph, validation_graphs
