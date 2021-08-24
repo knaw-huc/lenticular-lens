@@ -42,7 +42,7 @@ def get_registered_namespace(namespace):
                            vann:preferredNamespaceUri "{namespace}" .
                 }}
             }}
-        ''')
+        ''', timeout=10)
 
         if result is not None:
             registered_namespaces[namespace] = result[0]['output']['value'] if result else None

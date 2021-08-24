@@ -2,7 +2,6 @@ from io import StringIO
 from json import dumps
 from uuid import uuid4
 from psycopg2 import sql
-from os.path import commonprefix
 from unicodedata import normalize
 
 from ll.util.hasher import column_name_hash
@@ -170,19 +169,22 @@ class TimbuctooJob(WorkerJob):
                         break
 
                 if not mapping_found:
-                    self._uri_prefixes.add(uri[0].replace(get_uri_local_name(uri[0]), ''))
+                    uri_prefix = uri[0].replace(get_uri_local_name(uri[0]), '')
+                    if uri_prefix != 'urn:' and not get_uri_local_name(uri_prefix).isnumeric():
+                        self._uri_prefixes.add(uri_prefix)
 
     def on_finish(self):
         if self._cursor is None:
             with db_conn() as conn, conn.cursor() as cur:
                 cur.execute(sql.SQL('ANALYZE timbuctoo.{}').format(sql.Identifier(self._table_name)))
 
-                cur.execute('UPDATE timbuctoo_tables '
-                            'SET uri_prefix_mappings = %s, dynamic_uri_prefix_mappings = %s, update_finish_time = now() '
-                            'WHERE "table_name" = %s', (dumps(self._uri_prefix_mappings), dumps({
-                    get_namespace_prefix(namespace): namespace
-                    for namespace in self._uri_prefixes
-                }), self._table_name,))
+                cur.execute(
+                    'UPDATE timbuctoo_tables '
+                    'SET uri_prefix_mappings = %s, dynamic_uri_prefix_mappings = %s, update_finish_time = now() '
+                    'WHERE "table_name" = %s', (dumps(self._uri_prefix_mappings), dumps({
+                        get_namespace_prefix(namespace): namespace
+                        for namespace in self._uri_prefixes
+                    }), self._table_name,))
 
     def watch_process(self):
         pass

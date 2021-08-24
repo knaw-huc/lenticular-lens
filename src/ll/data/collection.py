@@ -170,7 +170,9 @@ class Collection:
                         break
 
                 if not mapping_found:
-                    uri_prefixes.add(uri[0].replace(get_uri_local_name(uri[0]), ''))
+                    uri_prefix = uri[0].replace(get_uri_local_name(uri[0]), '')
+                    if uri_prefix != 'urn:' and not get_uri_local_name(uri_prefix).isnumeric():
+                        uri_prefixes.add(uri_prefix)
 
             conn.cursor().execute('UPDATE timbuctoo_tables '
                                   'SET uri_prefix_mappings = %s, dynamic_uri_prefix_mappings = %s '

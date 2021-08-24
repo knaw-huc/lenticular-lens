@@ -8,9 +8,10 @@ class SPARQL:
     def __init__(self, endpoint):
         self._wrapper = SPARQLWrapper(endpoint)
 
-    def query(self, query):
+    def query(self, query, timeout=60):
         try:
             self._wrapper.setQuery(query)
+            self._wrapper.setTimeout(timeout)
             self._wrapper.setReturnFormat(JSON)
 
             result = self._wrapper.query().convert()
