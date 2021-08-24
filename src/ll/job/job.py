@@ -50,15 +50,16 @@ class Job:
     @property
     def linkset_specs(self):
         if not self._linkset_specs:
-            self._linkset_specs = list(
-                map(lambda linkset_spec: Linkset(linkset_spec, self), self.data['linkset_specs']))
+            raw_linkset_specs = self.data['linkset_specs'] if self.data['linkset_specs'] else []
+            self._linkset_specs = list(map(lambda linkset_spec: Linkset(linkset_spec, self), raw_linkset_specs))
 
         return self._linkset_specs
 
     @property
     def lens_specs(self):
         if not self._lens_specs:
-            self._lens_specs = list(map(lambda lens_spec: Lens(lens_spec, self), self.data['lens_specs']))
+            raw_lens_specs = self.data['lens_specs'] if self.data['lens_specs'] else []
+            self._lens_specs = list(map(lambda lens_spec: Lens(lens_spec, self), raw_lens_specs))
 
         return self._lens_specs
 
