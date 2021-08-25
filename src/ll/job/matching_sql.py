@@ -35,16 +35,18 @@ class MatchingSql:
             prepare_sqls = []
             matching_fields_sqls = [sql.SQL('{}.uri').format(sql.Identifier(entity_type_selection.alias))]
 
-            for matching_method_prop in entity_type_selection.get_fields(self._linkset):
+            matching_methods_props = entity_type_selection.get_fields(self._linkset)
+            for matching_method_prop in matching_methods_props:
                 if matching_method_prop.prepare_sql:
                     prepare_sqls.append(matching_method_prop.prepare_sql)
 
-                for property_field in [matching_method_prop.prop_original, matching_method_prop.prop_normalized]:
-                    if property_field:
-                        matching_fields_sqls.append(sql.SQL('{matching_field} AS {name}').format(
-                            matching_field=property_field.sql,
-                            name=sql.Identifier(property_field.hash)
-                        ))
+            for property_field in \
+                    {mm_prop.prop_original for mm_prop in matching_methods_props}.union(
+                        {mm_prop.prop_normalized for mm_prop in matching_methods_props if mm_prop.prop_normalized}):
+                matching_fields_sqls.append(sql.SQL('{matching_field} AS {name}').format(
+                    matching_field=property_field.sql,
+                    name=sql.Identifier(property_field.hash)
+                ))
 
             joins = Joins()
             joins.set_joins_for_props(entity_type_selection.properties_for_matching(self._linkset))

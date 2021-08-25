@@ -100,6 +100,9 @@ class MatchingMethodProperty:
 
     @property
     def hash(self):
+        if self.prop_normalized:
+            return hash_string_min((self.prop_original.hash, self.prop_normalized.hash))
+
         return self.prop_original.hash
 
     def __eq__(self, other):
