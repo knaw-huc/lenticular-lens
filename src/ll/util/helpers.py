@@ -48,8 +48,8 @@ def get_id_of_uri(uri):
     return uri
 
 
-def snake_case_to_camel_case_capitalize_first(text):
-    return ''.join(x.title() for x in text.split('_'))
+def snake_case_to_kebab_case_capitalize_first(text):
+    return '-'.join(x.title() for x in text.split('_'))
 
 
 def get_sql_empty(sql_insert, flag=True, prefix=None, suffix=None, add_new_line=True):

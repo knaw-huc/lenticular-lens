@@ -18,7 +18,7 @@ from ll.util.hasher import hash_string_min
 from ll.util.stopwords import get_stopwords, get_iso_639_1_code
 from ll.util.n3_helpers import TAB, pred_val, multiple_val, blank_node
 from ll.util.helpers import flatten, get_json_from_file, get_publisher, get_from_buffer, \
-    snake_case_to_camel_case_capitalize_first as create_id
+    snake_case_to_kebab_case_capitalize_first as create_id
 
 
 class CsvExport:
@@ -147,7 +147,8 @@ class RdfExport:
                 (export_metadata or export_validation_set or export_cluster_set)))
 
         if export_validation_set:
-            links_iter = self._job.get_links(self._id, self._type, validation_filter=validation_filter)
+            validation_set_filter = validation_filter & ~Validation.UNCHECKED
+            links_iter = self._job.get_links(self._id, self._type, validation_filter=validation_set_filter)
             generators.append(self._validations_export_generator(links_iter, ns_manager))
 
         if export_cluster_set:
@@ -230,12 +231,14 @@ class RdfExport:
             for lens_operator in self._spec.operators:
                 lens_operator_info = self._lens_operators_info[lens_operator]
 
-                buffer.write(F"operator:{lens_operator}\n")
+                buffer.write(F"operator:{create_id(lens_operator)}\n")
                 buffer.write(pred_val('a', VoidPlus.LensOperator))
                 buffer.write(pred_val(NS.RDFS.label, Literal(lens_operator_info['label']).n3()))
                 buffer.write(pred_val(NS.DCterms.description,
                                       Literal(lens_operator_info['description'], lang='en').n3(), end=True))
                 buffer.write("\n")
+
+            lens = self._job.lens(self._id)
 
             buffer.write(F"lens:{self._job.job_id}-{self._spec.id}\n")
             buffer.write(pred_val('a', VoidPlus.Lens))
@@ -243,7 +246,10 @@ class RdfExport:
             buffer.write(pred_val(NS.VoID.feature, F"{NS.Formats.turtle}, {NS.Formats.trig}"))
             buffer.write(pred_val(NS.CC.attribution_name, Literal('Lenticular Lens', 'en').n3(ns_manager)))
             buffer.write(pred_val(NS.CC.license, URIRef('http://purl.org/NET/rdflicense/W3C1.0').n3(ns_manager)))
+
             buffer.write(pred_val(NS.DCterms.created,
+                                  Literal(lens['finished_at'], datatype=XSD.dateTime).n3(ns_manager)))
+            buffer.write(pred_val(VoidPlus.exportDate,
                                   Literal(datetime.utcnow(), datatype=XSD.dateTime).n3(ns_manager)))
 
             if creator and len(creator.strip()) > 0:
@@ -258,7 +264,7 @@ class RdfExport:
             buffer.write("\n")
 
             buffer.write(pred_val(VoidPlus.hasOperator, multiple_val([
-                F"operator:{lens_operator}" for lens_operator in self._spec.operators])))
+                F"operator:{create_id(lens_operator)}" for lens_operator in self._spec.operators])))
             buffer.write("\n")
 
             buffer.write(pred_val(VoidPlus.hasOperand, multiple_val(
@@ -271,7 +277,6 @@ class RdfExport:
                 buffer.write(pred_val(VoidPlus.combinationThreshold, self._spec.threshold))
                 buffer.write("\n")
 
-            lens = self._job.lens(self._id)
             if lens['links_count'] > 0:
                 buffer.write(pred_val(NS.VoID.triples, Literal(lens['links_count']).n3(ns_manager)))
 
@@ -291,13 +296,12 @@ class RdfExport:
                 buffer.write(pred_val(VoidPlus.hasClusterset, F"clusterset:{self._job.job_id}-lens-{self._id}"))
 
             link_totals = self._job.get_links_totals(self._id, 'lens')
-            if link_totals and link_totals['unchecked'] < lens['links_count']:
-                buffer.write("\n")
+            buffer.write("\n")
 
-                if link_totals['disputed'] > 0:
-                    buffer.write(pred_val(VoidPlus.contradictions, Literal(link_totals['disputed']).n3(ns_manager)))
+            if link_totals['disputed'] > 0:
+                buffer.write(pred_val(VoidPlus.contradictions, Literal(link_totals['disputed']).n3(ns_manager)))
 
-                buffer.write(pred_val(VoidPlus.hasValidationSet, F"validationset:{self._job.job_id}-lens-{self._id}"))
+            buffer.write(pred_val(VoidPlus.hasValidationSet, F"validationset:{self._job.job_id}-lens-{self._id}"))
 
             buffer.write("\n")
             buffer.write(pred_val(VoidPlus.hasFormulation,
@@ -366,7 +370,10 @@ class RdfExport:
                 buffer.write(pred_val(NS.VoID.feature, F"{NS.Formats.turtle}, {NS.Formats.trig}"))
                 buffer.write(pred_val(NS.CC.attribution_name, Literal('Lenticular Lens', 'en').n3(ns_manager)))
                 buffer.write(pred_val(NS.CC.license, URIRef('http://purl.org/NET/rdflicense/W3C1.0').n3(ns_manager)))
+
                 buffer.write(pred_val(NS.DCterms.created,
+                                      Literal(linkset['finished_at'], datatype=XSD.dateTime).n3(ns_manager)))
+                buffer.write(pred_val(VoidPlus.exportDate,
                                       Literal(datetime.utcnow(), datatype=XSD.dateTime).n3(ns_manager)))
 
                 if creator and len(creator.strip()) > 0:
@@ -413,14 +420,14 @@ class RdfExport:
                                           F"clusterset:{self._job.job_id}-linkset-{spec.id}"))
 
                 link_totals = self._job.get_links_totals(spec.id, 'linkset')
-                if link_totals and link_totals['unchecked'] < linkset['links_count']:
-                    buffer.write(F"\n{TAB}### ABOUT VALIDATIONS\n")
 
-                    if link_totals['disputed'] > 0:
-                        buffer.write(pred_val(VoidPlus.contradictions, Literal(link_totals['disputed']).n3(ns_manager)))
+                buffer.write(F"\n{TAB}### ABOUT VALIDATIONS\n")
 
-                    buffer.write(pred_val(VoidPlus.hasValidationSet,
-                                          F"validationset:{self._job.job_id}-linkset-{self._id}"))
+                if link_totals['disputed'] > 0:
+                    buffer.write(pred_val(VoidPlus.contradictions, Literal(link_totals['disputed']).n3(ns_manager)))
+
+                buffer.write(pred_val(VoidPlus.hasValidationSet,
+                                      F"validationset:{self._job.job_id}-linkset-{self._id}"))
 
                 buffer.write(F"\n{TAB}### SOURCE ENTITY TYPE SELECTION(S)\n")
                 buffer.write(pred_val(VoidPlus.subjectsTarget,
@@ -445,7 +452,7 @@ class RdfExport:
                 fuzzy_txt = F"{logic_ops_info['label']} ({logic_ops_info['short']})"
                 threshold_txt = F"[with sim ≥ {threshold}]" if 0 < threshold < 1 else ''
 
-                return Node(F"{operator} [{fuzzy_txt}] {threshold_txt}".strip(), children=children_nodes)
+                return Node(F"{operator.upper()} [{fuzzy_txt}] {threshold_txt}".strip(), children=children_nodes)
 
             buffer.write(self._header("LINKSET LOGIC EXPRESSION"))
 
@@ -507,7 +514,7 @@ class RdfExport:
 
             for key, (class_partition_key, selection) in selection_formulations.items():
                 root = selection.with_filters_recursive(
-                    lambda children_nodes, type: Node(type, children=children_nodes),
+                    lambda children_nodes, type: Node(type.upper(), children=children_nodes),
                     lambda filter_func: Node(F"resource:PropertyPartition-{filter_func.hash}")
                 )
 
@@ -994,11 +1001,7 @@ class RdfExport:
                 buffer.write(F"{TAB}cluster:{cluster['hash_id']}\n")
                 buffer.write(pred_val('a', VoidPlus.Cluster, tabs=2))
 
-                buffer.write(pred_val(VoidPlus.links,
-                                      Literal(sum(cluster['links'].values())).n3(ns_manager), tabs=2))
                 buffer.write(pred_val(VoidPlus.nodes, Literal(cluster['size']).n3(ns_manager), tabs=2))
-                buffer.write(pred_val(VoidPlus.isExtended, Literal(cluster['extended']).n3(ns_manager), tabs=2))
-                buffer.write(pred_val(VoidPlus.isReconciled, Literal(cluster['reconciled']).n3(ns_manager), tabs=2))
                 buffer.write(pred_val(VoidPlus.hasItem, multiple_val([
                     URIRef(uri).n3(ns_manager) for uri in cluster['nodes']
                 ], tabs=2), tabs=2, end=True))

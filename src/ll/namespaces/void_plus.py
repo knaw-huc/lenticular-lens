@@ -53,6 +53,7 @@ class VoidPlus:
     #                                              GENERIC METADATA                                              #
     ##############################################################################################################
 
+    exportDate = F"{ontology_prefix}:exportDate"
     clusters = F"{ontology_prefix}:clusters"
     hasClusterset = F"{ontology_prefix}:hasClusterset"
     hasFormulation = F'{ontology_prefix}:hasFormulation'

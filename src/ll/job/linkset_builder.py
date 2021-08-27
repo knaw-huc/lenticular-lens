@@ -83,13 +83,11 @@ class LinksetBuilder:
         is_single_value = with_view_properties == 'single'
         use_properties = bool(with_view_properties != 'none' and self._view.properties_per_collection)
 
-        selection_sql = get_sql_empty(self._selection_props_sql(is_single_value, array_agg=True),
+        selection_sql = get_sql_empty(self._selection_props_sql(is_single_value),
                                       flag=use_properties, prefix=sql.SQL(', \n'), add_new_line=False)
 
-        props_lateral_sql, props_joins_sql = self._properties_join_sql(
-            sql.SQL('IN (linkset.source_uri, linkset.target_uri)'), is_single_value)
-        props_lateral_sql = get_sql_empty(props_lateral_sql, flag=use_properties)
-        props_joins_sql = get_sql_empty(props_joins_sql, flag=use_properties)
+        props_joins_sql = get_sql_empty(self._properties_join_sql(
+            sql.SQL('IN (linkset.source_uri, linkset.target_uri)'), is_single_value), flag=use_properties)
 
         group_by_sql = get_sql_empty(sql.SQL(
             'GROUP BY source_uri, target_uri, link_order, source_collections, target_collections, '
@@ -104,13 +102,12 @@ class LinksetBuilder:
                        source_intermediates, target_intermediates, cluster_id, cluster_hash_id, 
                        valid, similarity, motivation 
                        {selection_sql}
-                FROM linkset {props_lateral_sql}
+                FROM linkset
                 {props_joins_sql}
                 {group_by_sql}
             ''').format(
                 linkset_cte=self.get_linkset_cte_sql(with_view_filters=with_view_filters),
                 selection_sql=selection_sql,
-                props_lateral_sql=props_lateral_sql,
                 props_joins_sql=props_joins_sql,
                 group_by_sql=group_by_sql
             ))
@@ -146,10 +143,8 @@ class LinksetBuilder:
         if include_nodes:
             selection_sql = sql.Composed([selection_sql, sql.SQL(', all_nodes AS nodes')])
 
-        props_lateral_sql, props_joins_sql = self._properties_join_sql(
-            sql.SQL('= ANY (all_nodes[:50])'), single_value=is_single_value, include_unnest=True)
-        props_lateral_sql = get_sql_empty(props_lateral_sql, flag=use_properties)
-        props_joins_sql = get_sql_empty(props_joins_sql, flag=use_properties)
+        props_joins_sql = get_sql_empty(self._properties_join_sql(
+            sql.SQL('= ANY (all_nodes[:50])'), single_value=is_single_value, include_unnest=True), flag=use_properties)
 
         sort_sql = sql.SQL('ORDER BY cluster_id')
         if self._cluster_sort_type is not None:
@@ -180,7 +175,7 @@ class LinksetBuilder:
                     GROUP BY cluster_id, cluster_hash_id
                     {having_sql}
                     {sort_sql} {limit_offset}
-                ) AS clusters {props_lateral_sql}
+                ) AS clusters
                 {props_joins_sql}
                 GROUP BY cluster_id, cluster_hash_id, all_nodes, size, links, total_links
                 {sort_sql}
@@ -189,7 +184,6 @@ class LinksetBuilder:
                 selection_sql=selection_sql,
                 having_sql=self._clusters_filter.sql(),
                 limit_offset=sql.SQL(get_pagination_sql(self._limit, self._offset)),
-                props_lateral_sql=props_lateral_sql,
                 props_joins_sql=props_joins_sql,
                 sort_sql=sort_sql,
             ))
@@ -316,7 +310,7 @@ class LinksetBuilder:
 
         return sql.Composed(sqls)
 
-    def _selection_props_sql(self, single_value=True, array_agg=False):
+    def _selection_props_sql(self, single_value=True):
         prop_selection_sqls = [
             (sql.SQL('{}.{}').format(sql.Identifier(collection.alias), sql.Identifier(prop.hash)),
              sql.Identifier(collection.alias + '_' + prop.hash))
@@ -325,20 +319,21 @@ class LinksetBuilder:
             if not single_value or idx == 0
         ]
 
+        prop_selection_sqls = [sql.SQL('jsonb_agg({}) AS {}').format(selection_sql[0], selection_sql[1])
+                               for selection_sql in prop_selection_sqls]
+
         uri_selection_sqls = [
             (sql.SQL('{}.uri').format(sql.Identifier(collection.alias)),
              sql.Identifier(collection.alias + '_uri'))
             for collection in self._view.properties_per_collection
         ]
 
-        selection_sqls = [sql.SQL('array_agg({}) AS {}' if array_agg else '{} AS {}')
-                              .format(selection_sql[0], selection_sql[1])
-                          for selection_sql in (prop_selection_sqls + uri_selection_sqls)]
+        uri_selection_sqls = [sql.SQL('array_agg({}) AS {}').format(selection_sql[0], selection_sql[1])
+                              for selection_sql in uri_selection_sqls]
 
-        return sql.SQL(', \n').join(selection_sqls)
+        return sql.SQL(', \n').join(prop_selection_sqls + uri_selection_sqls)
 
     def _properties_join_sql(self, uri_match_sql, single_value=True, include_unnest=False):
-        laterals_sqls = []
         join_sqls = []
 
         for collection in self._collections:
@@ -350,10 +345,10 @@ class LinksetBuilder:
                     selection_properties=self._view.properties_per_collection[collection],
                     single_value=single_value)
 
-                laterals_sqls.append(sql.SQL('''
-                    , LATERAL (
+                join_sqls.append(sql.SQL('''
+                    LEFT JOIN LATERAL (
                         {resource_query}
-                    ) AS {resource}
+                    ) AS {resource} ON true
                 ''').format(resource_query=resource_query, resource=sql.Identifier(collection.alias)))
 
                 if include_unnest:
@@ -365,7 +360,7 @@ class LinksetBuilder:
                             extended_property=sql.Identifier(collection.alias + '_' + prop.hash + '_extended'),
                         ))
 
-        return sql.Composed(laterals_sqls), sql.Composed(join_sqls)
+        return sql.Composed(join_sqls)
 
     def _get_values(self, source, check_key=None, is_single_value=False, max_values=None):
         all_values = []

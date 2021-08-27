@@ -133,6 +133,11 @@ CREATE OR REPLACE FUNCTION array_distinct_merge(l anyarray, r anyarray) RETURNS 
 SELECT ARRAY(SELECT DISTINCT unnest(l || r));
 $$ LANGUAGE sql STRICT IMMUTABLE PARALLEL SAFE;
 
+CREATE AGGREGATE array_distinct_merge_agg(anyarray) (
+    sfunc = array_distinct_merge,
+    stype = anyarray
+);
+
 CREATE OR REPLACE FUNCTION jsonb_merge(l jsonb, r jsonb) RETURNS jsonb AS $$
 SELECT jsonb_object_agg(
     coalesce(left_set.key, right_set.key),

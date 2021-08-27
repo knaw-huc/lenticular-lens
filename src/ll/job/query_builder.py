@@ -129,9 +129,10 @@ class QueryBuilder:
 
     @staticmethod
     def get_selection_sqls(properties, single_value=False):
-        # TODO: FILTER (WHERE {prop} IS NOT NULL)
-        selection_sqls = [sql.SQL('array_agg(DISTINCT {}) AS {}').format(prop.sql, sql.Identifier(prop.hash))
-                          for prop in properties]
+        selection_sqls = [sql.SQL('array_agg(DISTINCT {prop_sql}) AS {id_sql}').format(
+            prop_sql=prop.sql,
+            id_sql=sql.Identifier(prop.hash)
+        ) for prop in properties]
 
         if not selection_sqls:
             return None

@@ -510,7 +510,7 @@ def export_to_csv(job, type, id):
     export_generator = export.create_generator(validation_filter)
 
     return Response(export_generator, mimetype='text/csv',
-                    headers={'Content-Disposition': 'attachment; filename=' + type + '_' + str(id) + '.csv'})
+                    headers={'Content-Disposition': f'attachment; filename={type}_{job.job_id}_{str(id)}.csv'})
 
 
 @app.get('/job/<job:job>/rdf/<type:type>/<int:id>')
@@ -546,10 +546,10 @@ def export_to_rdf(job, type, id):
     use_graphs = (export_linkset and export_metadata or export_validation_set or export_cluster_set) \
                  or export_validation_set or export_cluster_set
     mimetype = 'application/trig' if use_graphs else 'text/turtle'
-    extension = '.trig' if use_graphs else '.ttl'
+    extension = 'trig' if use_graphs else 'ttl'
 
     return Response(export_generator, mimetype=mimetype,
-                    headers={'Content-Disposition': 'attachment; filename=' + type + '_' + str(id) + extension})
+                    headers={'Content-Disposition': f'attachment; filename={type}_{job.job_id}_{str(id)}.{extension}'})
 
 
 def get_paging_params():
