@@ -15,6 +15,9 @@ class VoidPlus:
     lens = F"{resource}lens#"
     lens_prefix = 'lens'
 
+    operator = F"{resource}lensOperator#"
+    operator_prefix = 'operator'
+
     cluster = F"{resource}cluster#"
     cluster_prefix = 'cluster'
 

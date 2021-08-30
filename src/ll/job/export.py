@@ -72,6 +72,7 @@ class RdfExport:
         VoidPlus.resource_prefix: VoidPlus.resource,
         VoidPlus.linkset_prefix: VoidPlus.linkset,
         VoidPlus.lens_prefix: VoidPlus.lens,
+        VoidPlus.operator_prefix: VoidPlus.operator,
         VoidPlus.cluster_prefix: VoidPlus.cluster,
         VoidPlus.clusterset_prefix: VoidPlus.clusterset,
         VoidPlus.validation_prefix: VoidPlus.validation,
