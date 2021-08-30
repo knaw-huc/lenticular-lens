@@ -1,5 +1,7 @@
-from psycopg2 import sql, extras
+from inspect import cleandoc
 from collections import defaultdict
+
+from psycopg2 import sql, extras
 
 from ll.job.joins import Joins
 from ll.util.config_db import db_conn
@@ -86,7 +88,7 @@ class QueryBuilder:
             filter_joins.add_join(extra_join, 'extra')
 
         if limit or offset:
-            return sql.SQL('''
+            return sql.SQL(cleandoc('''
                 SELECT {resource}.uri AS uri {selection}
                 FROM timbuctoo.{table_name} AS {resource} 
                 {selection_joins}
@@ -100,7 +102,7 @@ class QueryBuilder:
                 )
                 GROUP BY {resource}.uri
                 ORDER BY {resource}.uri
-            ''').format(
+            ''')).format(
                 resource=sql.Identifier(resource),
                 selection=selection_sql,
                 table_name=sql.Identifier(target),

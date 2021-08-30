@@ -21,14 +21,16 @@ from flask_pyoidc.provider_configuration import ProviderConfiguration, ClientMet
 from werkzeug.routing import BaseConverter, ValidationError
 
 from ll.job.job import Job, Validation
+from ll.job.lens_sql import LensSql
+from ll.job.matching_sql import MatchingSql
 from ll.job.export import CsvExport, RdfExport
 
 from ll.util.oidc import oidc_auth
 from ll.util.hasher import hash_string
 from ll.util.stopwords import get_stopwords
-from ll.util.helpers import get_json_from_file
 from ll.util.config_db import listen_for_notify
 from ll.util.config_logging import config_logger
+from ll.util.helpers import get_json_from_file, get_string_from_sql
 
 from ll.data.collection import Collection
 from ll.data.timbuctoo_datasets import TimbuctooDatasets
@@ -373,10 +375,6 @@ def run_clustering(job, type, id):
 @with_job
 @with_spec
 def sql(job, type, id):
-    from flask import Response
-    from ll.job.matching_sql import MatchingSql
-    from ll.job.lens_sql import LensSql
-
     job_sql = MatchingSql(job, id) if type == 'linkset' else LensSql(job, id)
     return Response(job_sql.sql_string, mimetype='text/plain')
 
@@ -417,7 +415,13 @@ def delete(job, type, id):
 @with_job
 @with_entity_type_selection
 def entity_type_selection_total(job, id):
-    return jsonify(job.get_entity_type_selection_sample_total(id))
+    sql_only = request.values.get('sql', default=False) == 'true'
+    result = job.get_entity_type_selection_sample_total(id, sql_only=sql_only)
+
+    if sql_only:
+        return Response(get_string_from_sql(result), mimetype='text/plain')
+
+    return jsonify(result)
 
 
 @app.get('/job/<job:job>/links_totals/<type:type>/<int:id>')
@@ -425,8 +429,14 @@ def entity_type_selection_total(job, id):
 @with_job
 @with_spec
 def links_totals(job, type, id):
-    return jsonify(job.get_links_totals(id, type, **get_data_retrieval_params([
-        'with_view_filters', 'uris', 'cluster_ids', 'min_strength', 'max_strength'])))
+    params = get_data_retrieval_params(['sql', 'with_view_filters', 'uris',
+                                        'cluster_ids', 'min_strength', 'max_strength'])
+    result = job.get_links_totals(id, type, **params)
+
+    if params['sql_only']:
+        return Response(get_string_from_sql(result), mimetype='text/plain')
+
+    return jsonify(result)
 
 
 @app.get('/job/<job:job>/clusters_totals/<type:type>/<int:id>')
@@ -434,9 +444,15 @@ def links_totals(job, type, id):
 @with_job
 @with_spec
 def clusters_totals(job, type, id):
-    return jsonify(job.get_clusters_totals(id, type, **get_data_retrieval_params([
-        'with_view_filters', 'uris', 'cluster_ids', 'min_strength', 'max_strength',
-        'min_size', 'max_size', 'min_count', 'max_count'])))
+    params = get_data_retrieval_params([
+        'sql', 'with_view_filters', 'uris', 'cluster_ids', 'min_strength', 'max_strength',
+        'min_size', 'max_size', 'min_count', 'max_count'])
+    result = job.get_clusters_totals(id, type, **params)
+
+    if params['sql_only']:
+        return Response(get_string_from_sql(result), mimetype='text/plain')
+
+    return jsonify(result)
 
 
 @app.get('/job/<job:job>/entity_type_selection/<int:id>')
@@ -444,8 +460,14 @@ def clusters_totals(job, type, id):
 @with_job
 @with_entity_type_selection
 def entity_type_selection_sample(job, id):
-    return jsonify(job.get_entity_type_selection_sample(
-        id, invert=(request.values.get('invert', default=False) == 'true'), **get_paging_params()))
+    invert = request.values.get('invert', default=False) == 'true'
+    sql_only = request.values.get('sql', default=False) == 'true'
+    result = job.get_entity_type_selection_sample(id, invert=invert, sql_only=sql_only, **get_paging_params())
+
+    if sql_only:
+        return Response(get_string_from_sql(result), mimetype='text/plain')
+
+    return jsonify(result)
 
 
 @app.get('/job/<job:job>/links/<type:type>/<int:id>')
@@ -453,9 +475,15 @@ def entity_type_selection_sample(job, id):
 @with_job
 @with_spec
 def links(job, type, id):
-    return jsonify(list(job.get_links(id, type, **get_data_retrieval_params([
-        'with_view_filters', 'with_view_properties', 'validation_filter', 'uris', 'cluster_ids',
-        'min_strength', 'max_strength', 'sort']), **get_paging_params())))
+    params = get_data_retrieval_params([
+        'sql', 'with_view_filters', 'with_view_properties', 'validation_filter', 'uris',
+        'cluster_ids', 'min_strength', 'max_strength', 'sort'])
+    result = job.get_links(id, type, **params, **get_paging_params())
+
+    if params['sql_only']:
+        return Response(get_string_from_sql(result), mimetype='text/plain')
+
+    return jsonify(list(result))
 
 
 @app.get('/job/<job:job>/clusters/<type:type>/<int:id>')
@@ -463,10 +491,15 @@ def links(job, type, id):
 @with_job
 @with_spec
 def clusters(job, type, id):
-    return jsonify(list(job.get_clusters(id, type, **get_data_retrieval_params([
-        'with_view_filters', 'with_view_properties', 'include_nodes', 'uris', 'cluster_ids',
-        'min_strength', 'max_strength', 'min_size', 'max_size', 'min_count', 'max_count', 'sort'
-    ]), **get_paging_params())))
+    params = get_data_retrieval_params([
+        'sql', 'with_view_filters', 'with_view_properties', 'include_nodes', 'uris', 'cluster_ids',
+        'min_strength', 'max_strength', 'min_size', 'max_size', 'min_count', 'max_count', 'sort'])
+    result = job.get_clusters(id, type, **params, **get_paging_params())
+
+    if params['sql_only']:
+        return Response(get_string_from_sql(result), mimetype='text/plain')
+
+    return jsonify(list(result))
 
 
 @app.post('/job/<job:job>/validate/<type:type>/<int:id>')
@@ -561,6 +594,9 @@ def get_paging_params():
 
 def get_data_retrieval_params(whitelist):
     data_retrieval_params = dict()
+
+    if 'sql' in whitelist:
+        data_retrieval_params['sql_only'] = request.values.get('sql', default=False) == 'true'
 
     if 'with_view_filters' in whitelist:
         data_retrieval_params['with_view_filters'] = request.values.get('apply_filters', default=True) == 'true'

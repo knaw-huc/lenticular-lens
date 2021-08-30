@@ -1,4 +1,6 @@
 from uuid import uuid4
+from inspect import cleandoc
+
 from psycopg2 import sql, extras
 
 from ll.job.query_builder import QueryBuilder
@@ -42,16 +44,7 @@ class LinksetBuilder:
 
     def get_total_links(self, with_view_filters=False):
         with db_conn() as conn, conn.cursor() as cur:
-            cur.execute(sql.SQL('''
-                {linkset_cte}
-                
-                SELECT valid, count(*) AS valid_count 
-                FROM linkset
-                GROUP BY valid
-            ''').format(
-                linkset_cte=self.get_linkset_cte_sql(with_view_filters=with_view_filters,
-                                                     apply_paging=False, include_linkset_uris=False)
-            ))
+            cur.execute(self.get_total_links_sql(with_view_filters))
 
             return {
                 'accepted': 0,
@@ -62,8 +55,21 @@ class LinksetBuilder:
                 **{row[0]: row[1] for row in cur.fetchall()}
             }
 
+    def get_total_links_sql(self, with_view_filters=False):
+        return sql.SQL(cleandoc('''
+            {linkset_cte}
+            
+            SELECT valid, count(*) AS valid_count 
+            FROM linkset
+            GROUP BY valid
+        ''')).format(linkset_cte=self.get_linkset_cte_sql(with_view_filters=with_view_filters,
+                                                          apply_paging=False, include_linkset_uris=False))
+
     def get_total_clusters(self, with_view_filters=False):
-        return fetch_one(sql.SQL('''
+        return fetch_one(self.get_total_clusters_sql(with_view_filters), dict=True)
+
+    def get_total_clusters_sql(self, with_view_filters=False):
+        return sql.SQL(cleandoc('''
             {linkset_cte}
             
             SELECT count(cluster_id) AS total, array_agg(cluster_id) AS cluster_ids
@@ -73,44 +79,18 @@ class LinksetBuilder:
                 GROUP BY cluster_id
                 {having_sql}
             ) AS x
-        ''').format(
-            linkset_cte=self.get_linkset_cte_sql(
-                with_view_filters=with_view_filters, apply_paging=False, include_linkset_uris=False),
+        ''')).format(
+            linkset_cte=self.get_linkset_cte_sql(with_view_filters=with_view_filters,
+                                                 apply_paging=False, include_linkset_uris=False),
             having_sql=self._clusters_filter.sql()
-        ), dict=True)
+        )
 
     def get_links_generator(self, with_view_properties='none', with_view_filters=False):
         is_single_value = with_view_properties == 'single'
         use_properties = bool(with_view_properties != 'none' and self._view.properties_per_collection)
 
-        selection_sql = get_sql_empty(self._selection_props_sql(is_single_value),
-                                      flag=use_properties, prefix=sql.SQL(', \n'), add_new_line=False)
-
-        props_joins_sql = get_sql_empty(self._properties_join_sql(
-            sql.SQL('IN (linkset.source_uri, linkset.target_uri)'), is_single_value), flag=use_properties)
-
-        group_by_sql = get_sql_empty(sql.SQL(
-            'GROUP BY source_uri, target_uri, link_order, source_collections, target_collections, '
-            'source_intermediates, target_intermediates, cluster_id, cluster_hash_id, valid, similarity, motivation'),
-            flag=use_properties, add_new_line=False)
-
         with db_conn() as conn, conn.cursor(name=uuid4().hex, cursor_factory=extras.RealDictCursor) as cur:
-            cur.execute(sql.SQL('''
-                {linkset_cte}
-                
-                SELECT source_uri, target_uri, link_order, source_collections, target_collections, 
-                       source_intermediates, target_intermediates, cluster_id, cluster_hash_id, 
-                       valid, similarity, motivation 
-                       {selection_sql}
-                FROM linkset
-                {props_joins_sql}
-                {group_by_sql}
-            ''').format(
-                linkset_cte=self.get_linkset_cte_sql(with_view_filters=with_view_filters),
-                selection_sql=selection_sql,
-                props_joins_sql=props_joins_sql,
-                group_by_sql=group_by_sql
-            ))
+            cur.execute(self.get_links_generator_sql(with_view_properties, with_view_filters))
 
             for link in fetch_many(cur):
                 yield {
@@ -134,7 +114,66 @@ class LinksetBuilder:
                     'motivation': link['motivation']
                 }
 
+    def get_links_generator_sql(self, with_view_properties='none', with_view_filters=False):
+        is_single_value = with_view_properties == 'single'
+        use_properties = bool(with_view_properties != 'none' and self._view.properties_per_collection)
+
+        selection_sql = get_sql_empty(self._selection_props_sql(is_single_value),
+                                      flag=use_properties, prefix=sql.SQL(', \n'), add_new_line=False)
+
+        props_joins_sql = get_sql_empty(self._properties_join_sql(
+            sql.SQL('IN (linkset.source_uri, linkset.target_uri)'), is_single_value), flag=use_properties)
+
+        group_by_sql = get_sql_empty(sql.SQL(
+            'GROUP BY source_uri, target_uri, link_order, source_collections, target_collections, '
+            'source_intermediates, target_intermediates, cluster_id, cluster_hash_id, valid, similarity, motivation'),
+            flag=use_properties, add_new_line=False)
+
+        return sql.SQL(cleandoc('''
+            {linkset_cte}
+            
+            SELECT source_uri, target_uri, link_order, source_collections, target_collections, 
+                   source_intermediates, target_intermediates, cluster_id, cluster_hash_id, 
+                   valid, similarity, motivation 
+                   {selection_sql}
+            FROM linkset
+            {props_joins_sql}
+            {group_by_sql}
+        ''')).format(
+            linkset_cte=self.get_linkset_cte_sql(with_view_filters=with_view_filters),
+            selection_sql=selection_sql,
+            props_joins_sql=props_joins_sql,
+            group_by_sql=group_by_sql
+        )
+
     def get_clusters_generator(self, with_view_properties='none', with_view_filters=False, include_nodes=False):
+        is_single_value = with_view_properties == 'single'
+        use_properties = bool(with_view_properties != 'none' and self._view.properties_per_collection)
+
+        with db_conn() as conn, conn.cursor(name=uuid4().hex, cursor_factory=extras.RealDictCursor) as cur:
+            cur.execute(self.get_clusters_generator_sql(with_view_properties, with_view_filters, include_nodes))
+
+            for cluster in fetch_many(cur):
+                yield {
+                    'id': cluster['cluster_id'],
+                    'hash_id': cluster['cluster_hash_id'],
+                    'size': cluster['size'],
+                    'links': {
+                        'accepted': 0,
+                        'rejected': 0,
+                        'uncertain': 0,
+                        'unchecked': 0,
+                        'disputed': 0,
+                        **cluster['links']
+                    },
+                    'reconciled': False,
+                    'extended': False,
+                    'nodes': cluster['nodes'] if include_nodes else None,
+                    'values': self._get_values(cluster, is_single_value=is_single_value,
+                                               max_values=10) if use_properties else None
+                }
+
+    def get_clusters_generator_sql(self, with_view_properties='none', with_view_filters=False, include_nodes=False):
         is_single_value = with_view_properties == 'single'
         use_properties = bool(with_view_properties != 'none' and self._view.properties_per_collection)
 
@@ -157,56 +196,35 @@ class LinksetBuilder:
                     .format(sql.SQL('ASC') if self._cluster_sort_type == 'count_asc' else sql.SQL('DESC'),
                             sql.SQL('DESC') if self._cluster_sort_type == 'count_asc' else sql.SQL('ASC'))
 
-        with db_conn() as conn, conn.cursor(name=uuid4().hex, cursor_factory=extras.RealDictCursor) as cur:
-            cur.execute(sql.SQL('''
-                {linkset_cte}
-                
-                SELECT cluster_id, cluster_hash_id, size, links {selection_sql} 
+        return sql.SQL(cleandoc('''
+            {linkset_cte}
+            
+            SELECT cluster_id, cluster_hash_id, size, links {selection_sql} 
+            FROM (
+                SELECT cluster_id, cluster_hash_id, 
+                       array_agg(DISTINCT nodes) AS all_nodes, count(DISTINCT nodes) AS size, 
+                       jsonb_object_agg(valid, valid_count) AS links, sum(valid_count) AS total_links
                 FROM (
                     SELECT cluster_id, cluster_hash_id, 
-                           array_agg(DISTINCT nodes) AS all_nodes, count(DISTINCT nodes) AS size, 
-                           jsonb_object_agg(valid, valid_count) AS links, sum(valid_count) AS total_links
-                    FROM (
-                        SELECT cluster_id, cluster_hash_id, 
-                               array_agg(nodes.uri) AS all_nodes, valid, count(valid) / 2 AS valid_count
-                        FROM linkset, LATERAL (VALUES (linkset.source_uri), (linkset.target_uri)) AS nodes(uri)
-                        GROUP BY cluster_id, cluster_hash_id, valid
-                    ) AS x, unnest(all_nodes) AS nodes
-                    GROUP BY cluster_id, cluster_hash_id
-                    {having_sql}
-                    {sort_sql} {limit_offset}
-                ) AS clusters
-                {props_joins_sql}
-                GROUP BY cluster_id, cluster_hash_id, all_nodes, size, links, total_links
-                {sort_sql}
-            ''').format(
-                linkset_cte=self.get_linkset_cte_sql(with_view_filters=with_view_filters, apply_paging=False),
-                selection_sql=selection_sql,
-                having_sql=self._clusters_filter.sql(),
-                limit_offset=sql.SQL(get_pagination_sql(self._limit, self._offset)),
-                props_joins_sql=props_joins_sql,
-                sort_sql=sort_sql,
-            ))
-
-            for cluster in fetch_many(cur):
-                yield {
-                    'id': cluster['cluster_id'],
-                    'hash_id': cluster['cluster_hash_id'],
-                    'size': cluster['size'],
-                    'links': {
-                        'accepted': 0,
-                        'rejected': 0,
-                        'uncertain': 0,
-                        'unchecked': 0,
-                        'disputed': 0,
-                        **cluster['links']
-                    },
-                    'reconciled': False,
-                    'extended': False,
-                    'nodes': cluster['nodes'] if include_nodes else None,
-                    'values': self._get_values(cluster, is_single_value=is_single_value,
-                                               max_values=10) if use_properties else None
-                }
+                           array_agg(nodes.uri) AS all_nodes, valid, count(valid) / 2 AS valid_count
+                    FROM linkset, LATERAL (VALUES (linkset.source_uri), (linkset.target_uri)) AS nodes(uri)
+                    GROUP BY cluster_id, cluster_hash_id, valid
+                ) AS x, unnest(all_nodes) AS nodes
+                GROUP BY cluster_id, cluster_hash_id
+                {having_sql}
+                {sort_sql} {limit_offset}
+            ) AS clusters
+            {props_joins_sql}
+            GROUP BY cluster_id, cluster_hash_id, all_nodes, size, links, total_links
+            {sort_sql}
+        ''')).format(
+            linkset_cte=self.get_linkset_cte_sql(with_view_filters=with_view_filters, apply_paging=False),
+            selection_sql=selection_sql,
+            having_sql=self._clusters_filter.sql(),
+            limit_offset=sql.SQL(get_pagination_sql(self._limit, self._offset)),
+            props_joins_sql=props_joins_sql,
+            sort_sql=sort_sql,
+        )
 
     def get_linkset_cte_sql(self, with_view_filters=False, apply_paging=True,
                             apply_sorting=True, include_linkset_uris=True):
@@ -222,14 +240,14 @@ class LinksetBuilder:
 
         limit_offset_sql = get_sql_empty(sql.SQL(get_pagination_sql(self._limit, self._offset)), flag=apply_paging)
 
-        include_linkset_uris_sql = get_sql_empty(sql.SQL('''
+        include_linkset_uris_sql = get_sql_empty(sql.SQL(cleandoc('''
             , linkset_uris AS (
                 SELECT DISTINCT nodes.uri
                 FROM linkset, LATERAL (VALUES (linkset.source_uri), (linkset.target_uri)) AS nodes(uri)
             )
-        '''), flag=include_linkset_uris)
+        ''')), flag=include_linkset_uris)
 
-        return sql.SQL('''
+        return sql.SQL(cleandoc('''
             WITH linkset AS (
                 SELECT source_uri, target_uri, link_order, source_collections, target_collections, 
                        source_intermediates, target_intermediates, cluster_id, cluster_hash_id, 
@@ -239,7 +257,7 @@ class LinksetBuilder:
                 {where_sql} 
                 {sort_sql} {limit_offset_sql}
             ) {include_linkset_uris_sql} 
-        ''').format(
+        ''')).format(
             schema=sql.Identifier(self._schema),
             view_name=sql.Identifier(self._table_name),
             filter_joins_sql=filter_joins_sql,
@@ -287,12 +305,12 @@ class LinksetBuilder:
         sqls = []
         for collection in self._collections:
             if collection in self._view.filters_per_collection:
-                sqls.append(sql.SQL('''
+                sqls.append(sql.SQL(cleandoc('''
                     LEFT JOIN (
                         {resource_query}
                     ) AS {resource}
                     ON {resource}.uri IN (linkset.source_uri, linkset.target_uri)
-                ''').format(
+                ''')).format(
                     resource_query=QueryBuilder.create_query(
                         collection.alias, collection.table_name,
                         filter_properties=self._view.filters_properties_per_collection[collection],
@@ -300,10 +318,10 @@ class LinksetBuilder:
                     resource=sql.Identifier(collection.alias),
                 ))
             else:
-                sqls.append(sql.SQL('''
+                sqls.append(sql.SQL(cleandoc('''
                     LEFT JOIN timbuctoo.{table_name} AS {resource}
                     ON {resource}.uri IN (linkset.source_uri, linkset.target_uri)
-                ''').format(
+                ''')).format(
                     table_name=sql.Identifier(collection.table_name),
                     resource=sql.Identifier(collection.alias),
                 ))
@@ -345,11 +363,11 @@ class LinksetBuilder:
                     selection_properties=self._view.properties_per_collection[collection],
                     single_value=single_value)
 
-                join_sqls.append(sql.SQL('''
+                join_sqls.append(sql.SQL(cleandoc('''
                     LEFT JOIN LATERAL (
                         {resource_query}
                     ) AS {resource} ON true
-                ''').format(resource_query=resource_query, resource=sql.Identifier(collection.alias)))
+                ''')).format(resource_query=resource_query, resource=sql.Identifier(collection.alias)))
 
                 if include_unnest:
                     for prop in self._view.properties_per_collection.get(collection):
@@ -360,7 +378,7 @@ class LinksetBuilder:
                             extended_property=sql.Identifier(collection.alias + '_' + prop.hash + '_extended'),
                         ))
 
-        return sql.Composed(join_sqls)
+        return sql.SQL('\n').join(join_sqls)
 
     def _get_values(self, source, check_key=None, is_single_value=False, max_values=None):
         all_values = []

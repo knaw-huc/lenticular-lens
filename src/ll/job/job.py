@@ -1,4 +1,5 @@
 from json import dumps
+from inspect import cleandoc
 
 from psycopg2 import extras, sql
 from psycopg2.extensions import AsIs
@@ -313,7 +314,7 @@ class Job:
     def get_spec_by_id(self, id, type):
         return self.get_linkset_spec_by_id(id) if type == 'linkset' else self.get_lens_spec_by_id(id)
 
-    def get_entity_type_selection_sample(self, id, invert=False, limit=None, offset=0):
+    def get_entity_type_selection_sample(self, id, invert=False, limit=None, offset=0, sql_only=False):
         entity_type_selection = self.get_entity_type_selection_by_id(id)
         if not entity_type_selection or not entity_type_selection.collection.is_downloaded:
             return []
@@ -324,6 +325,12 @@ class Job:
 
         selection_properties = entity_type_selection.properties
 
+        if sql_only:
+            return QueryBuilder.create_query(
+                entity_type_selection.alias, entity_type_selection.collection.table_name, filter_properties,
+                selection_properties, condition=entity_type_selection.filters_sql,
+                invert=invert, limit=limit, offset=offset)
+
         query_builder = QueryBuilder()
         query_builder.add_query(
             entity_type_selection.graphql_endpoint, entity_type_selection.dataset_id,
@@ -333,7 +340,7 @@ class Job:
 
         return query_builder.run_queries(dict=False)
 
-    def get_entity_type_selection_sample_total(self, id):
+    def get_entity_type_selection_sample_total(self, id, sql_only=False):
         entity_type_selection = self.get_entity_type_selection_by_id(id)
         if not entity_type_selection or not entity_type_selection.collection.is_downloaded:
             return {'total': 0}
@@ -349,21 +356,26 @@ class Job:
         if where_sql:
             where_sql = sql.SQL('WHERE {}').format(where_sql)
 
-        return fetch_one(sql.SQL('''
+        query_sql = sql.SQL(cleandoc('''
             SELECT count({resource}.uri) AS total
             FROM timbuctoo.{table_name} AS {resource} 
             {joins}
             {condition}
-        ''').format(
+        ''')).format(
             resource=sql.Identifier(entity_type_selection.alias),
             table_name=sql.Identifier(entity_type_selection.collection.table_name),
             joins=joins.sql,
             condition=get_sql_empty(where_sql)
-        ), dict=True)
+        )
+
+        if sql_only:
+            return query_sql
+
+        return fetch_one(query_sql, dict=True)
 
     def get_links(self, id, type, validation_filter=Validation.ALL, cluster_ids=None, uris=None,
                   min_strength=0, max_strength=1, sort=None, limit=None, offset=0,
-                  with_view_properties='none', with_view_filters=False):
+                  with_view_properties='none', with_view_filters=False, sql_only=False):
         schema = 'lenses' if type == 'lens' else 'linksets'
         spec = self.get_spec_by_id(id, type)
         view = self.get_view_by_id(id, type)
@@ -373,10 +385,13 @@ class Job:
         linkset_builder = LinksetBuilder.create(schema, self.table_name(id), spec, view,
                                                 links_filter=links_filter, sort=sort, limit=limit, offset=offset)
 
+        if sql_only:
+            return linkset_builder.get_links_generator_sql(with_view_properties, with_view_filters)
+
         return linkset_builder.get_links_generator(with_view_properties, with_view_filters)
 
-    def get_links_totals(self, id, type, cluster_ids=None, uris=None,
-                         min_strength=0, max_strength=1, with_view_filters=False):
+    def get_links_totals(self, id, type, cluster_ids=None, uris=None, min_strength=0, max_strength=1,
+                         with_view_filters=False, sql_only=False):
         schema = 'lenses' if type == 'lens' else 'linksets'
         spec = self.get_spec_by_id(id, type)
         view = self.get_view_by_id(id, type)
@@ -385,11 +400,15 @@ class Job:
                                           min_strength=min_strength, max_strength=max_strength)
         linkset_builder = LinksetBuilder.create(schema, self.table_name(id), spec, view, links_filter=links_filter)
 
+        if sql_only:
+            return linkset_builder.get_total_links_sql(with_view_filters)
+
         return linkset_builder.get_total_links(with_view_filters)
 
     def get_clusters(self, id, type, cluster_ids=None, uris=None, min_strength=0, max_strength=1,
                      min_size=None, max_size=None, min_count=None, max_count=None, sort=None,
-                     limit=None, offset=0, with_view_properties='none', with_view_filters=False, include_nodes=False):
+                     limit=None, offset=0, with_view_properties='none',
+                     with_view_filters=False, include_nodes=False, sql_only=False):
         schema = 'lenses' if type == 'lens' else 'linksets'
         spec = self.get_spec_by_id(id, type)
         view = self.get_view_by_id(id, type)
@@ -402,10 +421,14 @@ class Job:
                                                 clusters_filter=clusters_filter, cluster_sort=sort,
                                                 limit=limit, offset=offset)
 
+        if sql_only:
+            return linkset_builder.get_clusters_generator_sql(with_view_properties, with_view_filters, include_nodes)
+
         return linkset_builder.get_clusters_generator(with_view_properties, with_view_filters, include_nodes)
 
     def get_clusters_totals(self, id, type, cluster_ids=None, uris=None, min_strength=0, max_strength=1,
-                            min_size=0, max_size=None, min_count=None, max_count=None, with_view_filters=False):
+                            min_size=0, max_size=None, min_count=None, max_count=None,
+                            with_view_filters=False, sql_only=False):
         schema = 'lenses' if type == 'lens' else 'linksets'
         spec = self.get_spec_by_id(id, type)
         view = self.get_view_by_id(id, type)
@@ -416,6 +439,9 @@ class Job:
                                                 min_count=min_count, max_count=max_count)
         linkset_builder = LinksetBuilder.create(schema, self.table_name(id), spec, view,
                                                 links_filter=links_filter, clusters_filter=clusters_filter)
+
+        if sql_only:
+            return linkset_builder.get_total_clusters_sql(with_view_filters)
 
         return linkset_builder.get_total_clusters(with_view_filters)
 
