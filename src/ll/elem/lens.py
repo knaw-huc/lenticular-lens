@@ -30,23 +30,23 @@ class Lens:
     def operators(self):
         lens_operators = set()
         self.with_lenses_recursive(
-            lambda left, right, type, s_norm, threshold, only_left: lens_operators.add(type),
-            lambda spec, id, type: lens_operators.update(spec.operators) if type == 'lens' else set()
+            lambda elem: lens_operators.add(elem['type']),
+            lambda spec: lens_operators.update(spec['spec'].operators) if spec['type'] == 'lens' else set()
         )
         return lens_operators
 
     @property
     def linksets(self):
         return set(self.with_lenses_recursive(
-            lambda left, right, type, s_norm, threshold, only_left: flatten([left, right]),
-            lambda spec, id, type: spec if type == 'linkset' else list(spec.linksets)
+            lambda elem: flatten([elem['left'], elem['right']]),
+            lambda spec: spec['spec'] if spec['type'] == 'linkset' else list(spec['spec'].linksets)
         ))
 
     @property
     def lenses(self):
         return set(self.with_lenses_recursive(
-            lambda left, right, type, s_norm, threshold, only_left: flatten([left, right]),
-            lambda spec, id, type: [spec] + list(spec.lenses) if type == 'lens' else None
+            lambda elem: flatten([elem['left'], elem['right']]),
+            lambda spec: [spec['spec']] + list(spec['spec'].lenses) if spec['type'] == 'lens' else None
         ))
 
     @property
@@ -68,59 +68,73 @@ class Lens:
     @property
     def similarity_logic_ops_sql(self):
         return self.with_lenses_recursive(
-            lambda left, right, type, s_norm, threshold, only_left: self._logic_ops_for_condition(
-                left, right, only_left, s_norm),
-            lambda spec, id, type: spec.similarity_logic_ops_sql
+            lambda elem: self._logic_ops_for_condition(elem),
+            lambda spec: spec['spec'].similarity_logic_ops_sql
         )
 
     @property
     def similarity_logic_ops_sql_per_threshold(self):
-        def with_logic_ops(threshold, left, right, only_left, s_norm):
-            logic_ops = self._logic_ops_for_condition(left, right, only_left, s_norm)
-            if threshold:
-                per_threshold.append((threshold, logic_ops))
+        def with_logic_ops(elem):
+            logic_ops = self._logic_ops_for_condition(elem)
+            if elem['threshold']:
+                per_threshold.append((elem['threshold'], logic_ops))
 
             return logic_ops
 
         per_threshold = []
         self.with_lenses_recursive(
-            lambda left, right, type, s_norm, threshold, only_left: with_logic_ops(
-                threshold, left, right, only_left, s_norm),
-            lambda spec, id, type: spec.similarity_logic_ops_sql
+            lambda elem: with_logic_ops(elem),
+            lambda spec: spec['spec'].similarity_logic_ops_sql
         )
 
         return per_threshold
 
-    def with_lenses_recursive(self, with_conditions, with_spec=None):
-        return self._r_lenses(self._data['specs'], with_conditions, with_spec)
+    def with_lenses_recursive(self, with_conditions, with_spec=None, depth=0, index=1):
+        return self._r_lenses(self._data['specs'], with_conditions, with_spec, depth, index)
 
-    def _r_lenses(self, lens_obj, with_conditions, with_spec):
+    def _r_lenses(self, lens_obj, with_conditions, with_spec, depth=0, index=1):
         if 'type' in lens_obj and 'elements' in lens_obj:
             type = lens_obj['type'].lower()
             s_norm = 'maximum_s_norm' if lens_obj['s_norm'] == '' else lens_obj['s_norm']
             threshold = lens_obj['threshold'] if lens_obj['s_norm'] != '' else 0
             only_left = type == 'difference' or type.startswith('in_set')
 
-            left = self._r_lenses(lens_obj['elements'][0], with_conditions, with_spec)
-            right = self._r_lenses(lens_obj['elements'][1], with_conditions, with_spec)
+            left = self._r_lenses(lens_obj['elements'][0], with_conditions, with_spec, depth + 1, 1)
+            right = self._r_lenses(lens_obj['elements'][1], with_conditions, with_spec, depth + 1, 2)
 
-            return with_conditions(left, right, type, s_norm, threshold, only_left)
+            return with_conditions({
+                'left': left,
+                'right': right,
+                'type': type,
+                's_norm': s_norm,
+                'threshold': threshold,
+                'only_left': only_left,
+                'depth': depth,
+                'index': index,
+            })
 
         id = lens_obj['id']
         type = lens_obj['type']
         spec = self._job.get_spec_by_id(id, type)
-        return with_spec(spec, id, type) if with_spec else spec
+
+        return with_spec({
+            'spec': spec,
+            'id': id,
+            'type': type,
+            'depth': depth,
+            'index': index
+        }) if with_spec else spec
 
     @staticmethod
-    def _logic_ops_for_condition(left, right, only_left, s_norm):
-        if only_left or right == sql.SQL('NULL'):
-            return left
+    def _logic_ops_for_condition(elem):
+        if elem['only_left'] or elem['right'] == sql.SQL('NULL'):
+            return elem['left']
 
-        if left == sql.SQL('NULL'):
-            return right
+        if elem['left'] == sql.SQL('NULL'):
+            return elem['right']
 
         return sql.SQL('{function}({a}, {b})').format(
-            function=sql.SQL(Lens._logic_ops[s_norm]['sql']),
-            a=left,
-            b=right
+            function=sql.SQL(Lens._logic_ops[elem['s_norm']]['sql']),
+            a=elem['left'],
+            b=elem['right']
         )

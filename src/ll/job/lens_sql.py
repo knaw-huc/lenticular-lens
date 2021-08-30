@@ -35,9 +35,10 @@ class LensSql:
             )
 
         lens_sql = self._lens.with_lenses_recursive(
-            lambda left, right, type, s_norm, threshold, only_left: self._lens_sql(
-                type, only_left, sql.SQL('(\n{sql}\n)').format(sql=left), sql.SQL('(\n{sql}\n)').format(sql=right)),
-            lambda spec, id, type: spec_select_sql(id, type)
+            lambda elem: self._lens_sql(elem['type'], elem['only_left'],
+                                        sql.SQL('(\n{sql}\n)').format(sql=elem['left']),
+                                        sql.SQL('(\n{sql}\n)').format(sql=elem['right'])),
+            lambda spec: spec_select_sql(spec['id'], spec['type'])
         )
 
         sim_fields_sqls = MatchingMethod.get_similarity_fields_sqls(self._lens.matching_methods)

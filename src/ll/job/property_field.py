@@ -1,8 +1,7 @@
 from psycopg2 import sql
 from rdflib import URIRef
 
-from ll.util.helpers import get_string_from_sql
-from ll.util.n3_helpers import TAB, pred_val, rdfs_sequence
+from ll.util.n3_helpers import pred_val, rdfs_sequence
 from ll.util.hasher import hash_string_min, column_name_hash
 
 from ll.namespaces.void_plus import VoidPlus
@@ -176,7 +175,9 @@ class PropertyField:
     @property
     def hash(self):
         if not self._hash:
-            self._hash = hash_string_min(get_string_from_sql(self.sql))
+            self._hash = \
+                hash_string_min((self.resource_label, self.prop_label, self._extend, self.is_list, self._transformers))
+
         return self._hash
 
     @property

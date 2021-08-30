@@ -136,8 +136,9 @@ class MatchingSql:
                             .format(sql.Literal(field_name), sql.Identifier(field_name + '_intermediate')))
 
         conditions_sql = self._linkset.with_matching_methods_recursive(
-            lambda sqls, operator, fuzzy, threshold: sql.SQL('({})').format(sql.SQL('\n%s ' % operator).join(sqls)),
-            lambda matching_method: matching_method.sql
+            lambda condition: sql.SQL('({})').format(sql.SQL(
+                '\n%s ' % condition['operator']).join(condition['children'])),
+            lambda mm: mm['matching_method'].sql
         )
 
         if self._linkset.use_counter:

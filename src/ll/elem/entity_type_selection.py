@@ -53,20 +53,20 @@ class EntityTypeSelection:
 
     @property
     def filters(self):
-        return self.with_filters_recursive(lambda c, type: flatten(c), default=[])
+        return self.with_filters_recursive(lambda condition: flatten(condition['children']), default=[])
 
     @property
     def filters_sql(self):
         return self.with_filters_recursive(
-            lambda conds, type: sql.SQL('({})').format(sql.SQL('\n%s ' % type).join(conds)),
-            lambda filter_func: filter_func.sql
+            lambda condition: sql.SQL('({})').format(sql.SQL('\n%s ' % condition['type']).join(condition['children'])),
+            lambda filter_func: filter_func['filter_function'].sql
         )
 
     @property
     def hash(self):
         return hash_string_min((self.collection.hash, self.with_filters_recursive(
-            lambda children_nodes, type: hash_string_min((children_nodes, type)),
-            lambda filter_func: filter_func.hash
+            lambda condition: hash_string_min((condition['children'], condition['type'])),
+            lambda filter_func: filter_func['filter_function'].hash
         )))
 
     def properties_for_matching(self, linkset_spec):
@@ -87,11 +87,18 @@ class EntityTypeSelection:
 
         return default
 
-    def _r_filters(self, filter_obj, with_conditions, with_filter_function):
+    def _r_filters(self, filter_obj, with_conditions, with_filter_function, depth=0, index=1):
         if 'type' in filter_obj and filter_obj['type'] in ['and', 'or']:
-            conditions = [self._r_filters(condition, with_conditions, with_filter_function)
-                          for condition in filter_obj['conditions']]
-            return with_conditions(conditions, filter_obj['type']) if with_conditions else conditions
+            conditions = [self._r_filters(condition, with_conditions, with_filter_function, depth + 1, idx + 1)
+                          for idx, condition in enumerate(filter_obj['conditions'])]
+            return with_conditions({
+                'children': conditions,
+                'type': filter_obj['type'],
+                'depth': depth,
+                'index': index
+            }) if with_conditions else conditions
 
         filter_function = FilterFunction(filter_obj, PropertyField(filter_obj['property'], entity_type_selection=self))
-        return with_filter_function(filter_function) if with_filter_function else filter_function
+        return with_filter_function({'filter_function': filter_function,
+                                     'depth': depth,
+                                     'index': index}) if with_filter_function else filter_function

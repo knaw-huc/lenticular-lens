@@ -52,6 +52,14 @@ def snake_case_to_kebab_case_capitalize_first(text):
     return '-'.join(x.title() for x in text.split('_'))
 
 
+def num_to_chars(n):
+    if n > 26:
+        n, r = divmod(n - 1, 26)
+        return num_to_chars(n) + chr(r + ord('a'))
+
+    return chr(n + ord('a') - 1)
+
+
 def get_sql_empty(sql_insert, flag=True, prefix=None, suffix=None, add_new_line=True):
     if not flag or not sql_insert or sql_insert == sql.SQL('') or sql_insert == sql.Composed([]):
         return sql.SQL('')

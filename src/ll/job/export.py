@@ -17,7 +17,7 @@ from ll.namespaces.shared_ontologies import Namespaces as NS
 from ll.util.hasher import hash_string_min
 from ll.util.stopwords import get_stopwords, get_iso_639_1_code
 from ll.util.n3_helpers import TAB, pred_val, multiple_val, blank_node
-from ll.util.helpers import flatten, get_json_from_file, get_publisher, get_from_buffer, \
+from ll.util.helpers import flatten, get_json_from_file, get_publisher, get_from_buffer, num_to_chars, \
     snake_case_to_kebab_case_capitalize_first as create_id
 
 
@@ -308,26 +308,30 @@ class RdfExport:
                                   F"resource:LensFormulation-{self._job.job_id}-{self._spec.id}", end=True))
 
         def lens_logic_expression():
-            def write_node(left, right, type, s_norm, threshold, only_left, lens_id=None):
-                id = F'(lens.{lens_id})' if lens_id else ''
-                if lens_id:
-                    legend[lens_id] = F'{id}: created as lens:{self._job.job_id}-{lens_id}'
+            def write_node(elem, lens_id=None):
+                id = F"{elem['depth']}.{num_to_chars(elem['index'])}" if lens_id else ''
+                id_txt = F'({id})' if lens_id else ''
 
-                if only_left:
-                    return Node(F"{type.upper()}{id}".strip(), children=[left, right])
+                if id:
+                    legend[id] = F'{id_txt}: created as lens:{self._job.job_id}-{lens_id}'
 
-                logic_ops_info = self._logic_ops_info[s_norm]
-                label_txt = F"{type.upper()} {id}".strip()
+                label_txt = F"{elem['type'].upper()} {id_txt}".strip()
+                if elem['only_left']:
+                    return Node(label_txt, children=[elem['left'], elem['right']])
+
+                logic_ops_info = self._logic_ops_info[elem['s_norm']]
                 fuzzy_txt = F"{logic_ops_info['label']} ({logic_ops_info['short']})"
-                threshold_txt = F"[with sim ≥ {threshold}]" if 0 < threshold < 1 else ''
+                threshold_txt = F"[with sim ≥ {elem['threshold']}]" if 0 < elem['threshold'] < 1 else ''
 
-                return Node(F"{label_txt} using OR [{fuzzy_txt}] {threshold_txt}".strip(), children=[left, right])
+                return Node(F"{label_txt} using OR [{fuzzy_txt}] {threshold_txt}".strip(),
+                            children=[elem['left'], elem['right']])
 
-            def write_spec(spec, id, type):
-                if type == 'linkset':
-                    return Node(F"linkset:{self._job.job_id}-{id}")
+            def write_spec(spec):
+                if spec['type'] == 'linkset':
+                    return Node(F"linkset:{self._job.job_id}-{spec['id']}")
 
-                return spec.with_lenses_recursive(lambda *args: write_node(*args, lens_id=id), write_spec)
+                return spec['spec'].with_lenses_recursive(lambda elem: write_node(elem, lens_id=spec['id']), write_spec,
+                                                          depth=spec['depth'], index=spec['index'])
 
             buffer.write(self._header("LENS LOGIC EXPRESSION"))
 
@@ -447,19 +451,21 @@ class RdfExport:
                     buffer.write("\n")
 
         def linkset_logic():
-            def write_node(children_nodes, operator, fuzzy, threshold):
-                logic_ops_info = self._logic_ops_info[fuzzy]
+            def write_node(condition):
+                logic_ops_info = self._logic_ops_info[condition['fuzzy']]
                 fuzzy_txt = F"{logic_ops_info['label']} ({logic_ops_info['short']})"
-                threshold_txt = F"[with sim ≥ {threshold}]" if 0 < threshold < 1 else ''
+                threshold_txt = F"[with sim ≥ {condition['threshold']}]" if 0 < condition['threshold'] < 1 else ''
 
-                return Node(F"{operator.upper()} [{fuzzy_txt}] {threshold_txt}".strip(), children=children_nodes)
+                return Node(F"{condition['operator'].upper()} [{fuzzy_txt}] {threshold_txt}".strip(),
+                            children=condition['children'])
 
             buffer.write(self._header("LINKSET LOGIC EXPRESSION"))
 
             for idx, linkset in enumerate(self._linkset_specs):
                 root = linkset.with_matching_methods_recursive(
                     write_node,
-                    lambda mm: Node(F"resource:{create_id(mm.method_name)}-{mm.config_hash}")
+                    lambda mm: Node(F"resource:{create_id(mm['matching_method'].method_name)}-"
+                                    F"{mm['matching_method'].config_hash}")
                 )
 
                 buffer.write(F"resource:LinksetFormulation-{self._job.job_id}-{linkset.id}\n")
@@ -514,8 +520,8 @@ class RdfExport:
 
             for key, (class_partition_key, selection) in selection_formulations.items():
                 root = selection.with_filters_recursive(
-                    lambda children_nodes, type: Node(type.upper(), children=children_nodes),
-                    lambda filter_func: Node(F"resource:PropertyPartition-{filter_func.hash}")
+                    lambda condition: Node(condition['type'].upper(), children=condition['children']),
+                    lambda filter_func: Node(F"resource:PropertyPartition-{filter_func['filter_function'].hash}")
                 )
 
                 buffer.write(F"\nresource:SelectionFormulation-{key}\n")
