@@ -2,7 +2,7 @@ version: '3.7'
 
 services:
   postgres:
-    image: knawhuc/lenticular-lens-postgresql:latest
+    image: registry.diginfra.net/tsd/lenticular-lens-postgresql:latest
     shm_size: 1g
     volumes:
       - ./pgdata:/pgdata
@@ -16,7 +16,7 @@ services:
       context: .
       dockerfile: Dockerfile
       target: worker
-    image: knawhuc/lenticular-lens-worker:latest
+    image: registry.diginfra.net/tsd/lenticular-lens-worker:latest
     depends_on:
       - postgres
     environment:
@@ -31,7 +31,7 @@ services:
       context: .
       dockerfile: Dockerfile
       target: worker
-    image: knawhuc/lenticular-lens-worker:latest
+    image: registry.diginfra.net/tsd/lenticular-lens-worker:latest
     depends_on:
       - postgres
     environment:
@@ -46,7 +46,7 @@ services:
       context: .
       dockerfile: Dockerfile
       target: worker
-    image: knawhuc/lenticular-lens-worker:latest
+    image: registry.diginfra.net/tsd/lenticular-lens-worker:latest
     depends_on:
       - postgres
     environment:
@@ -61,7 +61,7 @@ services:
       context: .
       dockerfile: Dockerfile
       target: worker
-    image: knawhuc/lenticular-lens-worker:latest
+    image: registry.diginfra.net/tsd/lenticular-lens-worker:latest
     depends_on:
       - postgres
     environment:
@@ -76,7 +76,7 @@ services:
       context: .
       dockerfile: Dockerfile
       target: web
-    image: knawhuc/lenticular-lens-web:latest
+    image: registry.diginfra.net/tsd/lenticular-lens-web:latest
     depends_on:
       - postgres
     environment:
@@ -86,7 +86,7 @@ services:
       - DATABASE_PASSWORD=postgres
 
   gui:
-    image: knawhuc/lenticular-lens-gui-vue:latest
+    image: registry.diginfra.net/tsd/lenticular-lens-gui:latest
     environment:
       - VUE_APP_LENTICULAR_LENS_API=http://127.0.0.1:8000
       - VUE_APP_LENTICULAR_LENS_TITLE=Lenticular Lens
