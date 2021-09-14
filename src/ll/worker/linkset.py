@@ -16,29 +16,26 @@ class LinksetJob(WorkerJob):
 
         self._job = None
         self._matching_sql = None
+        self._last_status = None
+        self._is_downloading = False
         self._counts = {}
 
         self.reset()
-        super().__init__(self.run_generated_sql)
+        super().__init__(self.run_matching)
 
     def reset(self):
         self._job = Job(self._job_id)
         self._matching_sql = MatchingSql(self._job, self._id)
 
-    def run(self):
-        download_status_set = False
+    def run_matching(self):
         while self._job.linkset_has_queued_table_data(self._id) and not self._killed:
-            if not download_status_set:
-                self._job.update_linkset(self._id, {'status': 'downloading'})
-                download_status_set = True
+            self._is_downloading = True
+            self._status = 'Downloading required data'
 
             time.sleep(1)
-            self.watch_kill()
             self.reset()
 
-        super().run()
-
-    def run_generated_sql(self):
+        self._is_downloading = False
         if not self._killed:
             self.process_sql(self._matching_sql.generate_schema_sql())
 
@@ -72,14 +69,22 @@ class LinksetJob(WorkerJob):
             self._db_conn.commit()
 
     def watch_process(self):
-        data = {'status_message': self._status}
+        cur_status = self._status
+        data = {
+            'status': 'downloading' if self._is_downloading else 'running',
+            'status_message': cur_status
+        } if cur_status and self._last_status != cur_status else {}
 
-        with db_conn() as conn, conn.cursor() as cur:
-            self.get_sequence_count(conn, cur, 'linkset_count', data, 'links_progress')
-            self.get_count(conn, cur, 'source', data, 'sources_count')
-            self.get_count(conn, cur, 'target', data, 'targets_count')
+        if cur_status and not self._is_downloading:
+            with db_conn() as conn, conn.cursor() as cur:
+                self.get_sequence_count(conn, cur, 'linkset_count', data, 'links_progress')
+                self.get_count(conn, cur, 'source', data, 'sources_count')
+                self.get_count(conn, cur, 'target', data, 'targets_count')
 
-        self._job.update_linkset(self._id, data)
+        if data:
+            self._job.update_linkset(self._id, data)
+
+        self._last_status = cur_status
 
     def get_sequence_count(self, conn, cur, sequence, data, key):
         try:

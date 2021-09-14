@@ -66,7 +66,7 @@ class Worker:
             watch_query = """
                 SELECT *
                 FROM linksets ls
-                WHERE ls.status = 'waiting' OR ls.status = 'downloading'
+                WHERE ls.status = 'waiting'
                 ORDER BY ls.requested_at
                 LIMIT 1
             """
