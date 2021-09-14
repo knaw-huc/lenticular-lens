@@ -296,7 +296,7 @@ _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/entity_type_selection_total/0`_
 ---
 
 **URL**: `/job/<job_id>/links_totals/<type>/<id>`\
-**Method**: `GET`\
+**Method**: `GET`, `POST`\
 **Parameters**: `apply_filters`, `uri`, `cluster_id`, `min`, `max`
 
 Returns the total number of links of `type` (`linkset` or `lens`) for the linkset/lens with `id` of the given `job_id`.
@@ -310,7 +310,7 @@ _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/links_totals/linkset/0`_
 ---
 
 **URL**: `/job/<job_id>/clusters_totals/<type>/<id>`\
-**Method**: `GET`\
+**Method**: `GET`, `POST`\
 **Parameters**: `apply_filters`, `uri`, `cluster_id`, `min`, `max`
 
 Returns the total number of clusters of `type` (`linkset` or `lens`) for the linkset/lens with `id` of the
@@ -339,7 +339,7 @@ _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/entity_type_selection/0`_
 ---
 
 **URL**: `/job/<job_id>/links/<type>/<id>`\
-**Method**: `GET`\
+**Method**: `GET`, `POST`\
 **Parameters**: `with_properties`, `apply_filters`, `valid`, `uri`, `cluster_id`, `min`, `max`, `sort`, `limit`
 , `offset`
 
@@ -358,7 +358,7 @@ _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/links/linkset/0`_
 ---
 
 **URL**: `/job/<job_id>/clusters/<type>/<id>`\
-**Method**: `GET`\
+**Method**: `GET`, `POST`\
 **Parameters**: `with_properties`, `apply_filters`, `include_nodes`, `uri`, `cluster_id`, `min`, `max`, `min_size`
 , `max_size`, `min_count`, `max_count`, `limit`, `offset`
 

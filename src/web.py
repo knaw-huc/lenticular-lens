@@ -424,7 +424,7 @@ def entity_type_selection_total(job, id):
     return jsonify(result)
 
 
-@app.get('/job/<job:job>/links_totals/<type:type>/<int:id>')
+@app.route('/job/<job:job>/links_totals/<type:type>/<int:id>', methods=['GET', 'POST'])
 @authenticated
 @with_job
 @with_spec
@@ -439,7 +439,7 @@ def links_totals(job, type, id):
     return jsonify(result)
 
 
-@app.get('/job/<job:job>/clusters_totals/<type:type>/<int:id>')
+@app.route('/job/<job:job>/clusters_totals/<type:type>/<int:id>', methods=['GET', 'POST'])
 @authenticated
 @with_job
 @with_spec
@@ -470,7 +470,7 @@ def entity_type_selection_sample(job, id):
     return jsonify(result)
 
 
-@app.get('/job/<job:job>/links/<type:type>/<int:id>')
+@app.route('/job/<job:job>/links/<type:type>/<int:id>', methods=['GET', 'POST'])
 @authenticated
 @with_job
 @with_spec
@@ -486,7 +486,7 @@ def links(job, type, id):
     return jsonify(list(result))
 
 
-@app.get('/job/<job:job>/clusters/<type:type>/<int:id>')
+@app.route('/job/<job:job>/clusters/<type:type>/<int:id>', methods=['GET', 'POST'])
 @authenticated
 @with_job
 @with_spec
