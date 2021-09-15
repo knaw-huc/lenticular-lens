@@ -310,8 +310,8 @@ class MatchingMethod:
             new_similarity_template = cleandoc(f'''	
                 jsonb_build_object('scores', ARRAY(
                     SELECT DISTINCT {similarity_template}
-                    FROM unnest({','.join([f'array_agg({field_sql})' for field_sql in source_fields_sqls])}) AS src({','.join(source_alias_sqls)})
-                    JOIN unnest({','.join([f'array_agg({field_sql})' for field_sql in target_fields_sqls])}) AS trg({','.join(target_alias_sqls)})
+                    FROM unnest({','.join([f'array_agg({field_sql}) FILTER (WHERE cardinality({field_sql}) > 0)' for field_sql in source_fields_sqls])}) AS src({','.join(source_alias_sqls)})
+                    JOIN unnest({','.join([f'array_agg({field_sql}) FILTER (WHERE cardinality({field_sql}) > 0)' for field_sql in target_fields_sqls])}) AS trg({','.join(target_alias_sqls)})
                     ON {match_template}
                 ), 'size', {list_threshold_similarity_template})
             ''')
