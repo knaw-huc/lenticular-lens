@@ -230,7 +230,7 @@ class LinksetBuilder:
                             apply_sorting=True, include_linkset_uris=True):
         use_filters = bool(with_view_filters and self._view.filters_per_collection)
 
-        filter_joins_sql = get_sql_empty(self._filter_join_sql, flag=use_filters)
+        filter_laterals_sql = get_sql_empty(self._filter_laterals_sql, flag=use_filters)
         where_sql = self._links_filter.sql(additional_filter=self._additional_filter_sql if use_filters else None)
 
         sort_sql = sql.SQL('ORDER BY sort_order ASC')
@@ -253,14 +253,14 @@ class LinksetBuilder:
                        source_intermediates, target_intermediates, cluster_id, cluster_hash_id, 
                        valid, similarity, motivation
                 FROM {schema}.{view_name} AS linkset
-                {filter_joins_sql}
+                {filter_laterals_sql}
                 {where_sql} 
                 {sort_sql} {limit_offset_sql}
             ) {include_linkset_uris_sql} 
         ''')).format(
             schema=sql.Identifier(self._schema),
             view_name=sql.Identifier(self._table_name),
-            filter_joins_sql=filter_joins_sql,
+            filter_laterals_sql=filter_laterals_sql,
             where_sql=where_sql,
             sort_sql=sort_sql,
             limit_offset_sql=limit_offset_sql,
@@ -301,32 +301,32 @@ class LinksetBuilder:
                 ])) for target in ['source_uri', 'target_uri']])
 
     @property
-    def _filter_join_sql(self):
+    def _filter_laterals_sql(self):
         sqls = []
         for collection in self._collections:
-            if collection in self._view.filters_per_collection:
-                sqls.append(sql.SQL(cleandoc('''
-                    LEFT JOIN (
-                        {resource_query}
-                    ) AS {resource}
-                    ON {resource}.uri IN (linkset.source_uri, linkset.target_uri)
-                ''')).format(
-                    resource_query=QueryBuilder.create_query(
-                        collection.alias, collection.table_name,
-                        filter_properties=self._view.filters_properties_per_collection[collection],
-                        condition=self._view.filters_sql_per_collection[collection]),
-                    resource=sql.Identifier(collection.alias),
-                ))
-            else:
-                sqls.append(sql.SQL(cleandoc('''
-                    LEFT JOIN timbuctoo.{table_name} AS {resource}
-                    ON {resource}.uri IN (linkset.source_uri, linkset.target_uri)
-                ''')).format(
-                    table_name=sql.Identifier(collection.table_name),
-                    resource=sql.Identifier(collection.alias),
-                ))
+            filter_properties = self._view.filters_properties_per_collection[collection] \
+                if collection in self._view.filters_per_collection else None
+            condition = sql.SQL('{res}.uri IN (linkset.source_uri, linkset.target_uri) AND {condition}') \
+                .format(res=sql.Identifier(collection.alias),
+                        condition=self._view.filters_sql_per_collection[collection]) \
+                if collection in self._view.filters_per_collection else None
 
-        return sql.Composed(sqls)
+            sqls.append(sql.SQL(cleandoc('''
+                LATERAL (
+                    {resource_query}
+                ) AS {resource}
+            ''')).format(
+                resource_query=QueryBuilder.create_query(
+                    collection.alias, collection.table_name,
+                    filter_properties=filter_properties,
+                    condition=condition),
+                resource=sql.Identifier(collection.alias),
+            ))
+
+        if sqls:
+            return sql.Composed([sql.SQL(',\n'), sql.SQL(',\n').join(sqls)])
+
+        return sql.SQL('')
 
     def _selection_props_sql(self, single_value=True):
         prop_selection_sqls = [
