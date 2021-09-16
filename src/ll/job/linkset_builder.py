@@ -306,10 +306,11 @@ class LinksetBuilder:
         for collection in self._collections:
             filter_properties = self._view.filters_properties_per_collection[collection] \
                 if collection in self._view.filters_per_collection else None
-            condition = sql.SQL('{res}.uri IN (linkset.source_uri, linkset.target_uri) AND {condition}') \
-                .format(res=sql.Identifier(collection.alias),
-                        condition=self._view.filters_sql_per_collection[collection]) \
-                if collection in self._view.filters_per_collection else None
+
+            condition = sql.SQL('{}.uri IN (linkset.source_uri, linkset.target_uri)') \
+                .format(sql.Identifier(collection.alias))
+            if collection in self._view.filters_per_collection:
+                condition = sql.SQL('{} AND {}').format(condition, self._view.filters_sql_per_collection[collection])
 
             sqls.append(sql.SQL(cleandoc('''
                 LATERAL (
