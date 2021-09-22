@@ -11,7 +11,6 @@ import functools
 from flask import Flask, Response, jsonify, session, request
 from flask_cors import CORS
 from flask.json import JSONEncoder
-from flask_compress import Compress
 from flask_socketio import SocketIO
 
 from flask_pyoidc import OIDCAuthentication
@@ -86,7 +85,6 @@ app.url_map.converters['job'] = JobConverter
 app.url_map.converters['type'] = TypeConverter
 
 CORS(app)
-Compress(app)
 
 auth = OIDCAuthentication({'default': ProviderConfiguration(
     issuer=os.environ['OIDC_SERVER'],

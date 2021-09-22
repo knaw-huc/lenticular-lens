@@ -9,9 +9,9 @@ from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
 conn_pool = ThreadedConnectionPool(
     minconn=2,
-    maxconn=20,
+    maxconn=int(os.environ.get('DATABASE_MAX_CONNECTIONS', 5)),
     host=os.environ.get('DATABASE_HOST', 'localhost'),
-    port=os.environ.get('DATABASE_PORT', 5432),
+    port=int(os.environ.get('DATABASE_PORT', 5432)),
     database=os.environ.get('DATABASE_DB', 'postgres'),
     user=os.environ.get('DATABASE_USER', 'postgres'),
     password=os.environ.get('DATABASE_PASSWORD', 'postgres'),

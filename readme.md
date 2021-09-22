@@ -59,6 +59,7 @@ Database configuration:
 - `DATABASE_DB`: The database name; defaults to `postgres`
 - `DATABASE_USER`: The database user; defaults to `postgres`
 - `DATABASE_PASSWORD`: The database password; defaults to `postgres`
+- `DATABASE_MAX_CONNECTIONS`: The maximum number of database connections in the connection pool; defaults to `5`
 
 OpenID Connect authentication configuration:
 
