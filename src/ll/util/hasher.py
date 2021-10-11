@@ -23,21 +23,21 @@ def hash_string(object):
 
 
 def table_name_hash(graphql_endpoint, dataset_id, collection_id):
-    dataset_id = dataset_id.split('__', 1)[1]
+    user, dataset_name = dataset_id.split('__', 1)
     prefix = known_endpoints[graphql_endpoint] + '_' if graphql_endpoint in known_endpoints else ''
     hash = hash_string(graphql_endpoint + dataset_id + collection_id)[:hash_length]
 
     min_collection_length = 15
     length = postgresql_id_max_length - 2 - len(prefix) - hash_length
-    if len(dataset_id) > (length - min_collection_length):
-        dataset_id = dataset_id[:length - min_collection_length]
+    if len(dataset_name) > (length - min_collection_length):
+        dataset_name = dataset_name[:length - min_collection_length]
 
-    length -= len(dataset_id)
+    length -= len(dataset_name)
     collection_id_split = collection_id.split('__')
     collection_id = collection_id_split[len(collection_id_split) - 1]
     collection_id = collection_id[-length:]
 
-    return prefix + dataset_id + '_' + collection_id + '_' + hash
+    return prefix + dataset_name + '_' + collection_id + '_' + hash
 
 
 def column_name_hash(column_name):
