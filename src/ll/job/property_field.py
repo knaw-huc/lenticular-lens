@@ -194,9 +194,13 @@ class PropertyField:
             path = self._collection.table_name
 
             prev_collection = self._collection
-            for (prop, collection_id) in [(self._data[i], self._data[i + 1]) for i in range(0, len(self._data) - 2, 2)]:
+            data = [(self._data[i], self._data[i + 1], self._data[i + 3] if i + 3 < len(self._data) else None)
+                    for i in range(0, len(self._data) - 2, 2)]
+            for (prop, collection_id, next_collection_id) in data:
                 collection = prev_collection.get_collection_by_id(collection_id)
-                path += f'[{collection.table_name}_{prop}]'
+                next_collection = collection.get_collection_by_id(next_collection_id) if next_collection_id else None
+                path += f'[{collection.table_name}_{prop}_{next_collection.table_name}]' if next_collection \
+                    else f'[{collection.table_name}_{prop}]'
 
                 self._prop_path.append({
                     'from_collection': prev_collection,

@@ -112,19 +112,19 @@ class QueryBuilder:
                 limit_offset=sql.SQL(get_pagination_sql(limit, offset))
             )
 
-        return sql.SQL('''
+        selection_joins.merge(filter_joins)
+
+        return sql.SQL(cleandoc('''
             SELECT {resource}.uri AS uri {selection}
             FROM timbuctoo.{table_name} AS {resource} 
-            {selection_joins}
-            {filter_joins}
+            {joins}
             {condition}
             GROUP BY {resource}.uri
-        ''').format(
+        ''')).format(
             resource=sql.Identifier(resource),
             selection=selection_sql,
             table_name=sql.Identifier(target),
-            selection_joins=selection_joins.sql,
-            filter_joins=filter_joins.sql,
+            joins=selection_joins.sql,
             condition=condition_sql,
             limit_offset=sql.SQL(get_pagination_sql(limit, offset))
         )
