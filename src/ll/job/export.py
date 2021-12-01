@@ -521,7 +521,8 @@ class RdfExport:
 
             for key, (class_partition_key, selection) in selection_formulations.items():
                 root = selection.with_filters_recursive(
-                    lambda condition: Node(condition['type'].upper(), children=condition['children']),
+                    lambda condition: Node(condition['type'].upper(), children=condition['children']) \
+                        if len(condition['children']) > 1 else condition['children'][0],
                     lambda filter_func: Node(F"resource:PropertyPartition-{filter_func['filter_function'].hash}")
                 )
 
@@ -743,7 +744,7 @@ class RdfExport:
 
                 buffer.write(F"resource:PropertyPartition-{property.hash}\n")
                 buffer.write(pred_val('a', VoidPlus.PropertyPartition))
-                buffer.write(pred_val(VoidPlus.subsetOf, F"resource:ResourceSelection-{ets}"))
+                buffer.write(pred_val(VoidPlus.subsetOf, F"resource:ResourceSelection-{self._job.job_id}-{ets}"))
 
                 for transformer in matching_method_prop.property_transformers:
                     write_transformer(transformer)

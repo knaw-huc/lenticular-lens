@@ -181,7 +181,8 @@ def get_lens_spec_schema():
             'id': Use(int),
             'type': Or('linkset', 'lens')
         }, ignore_extra_keys=True), name='elements', types=(
-            'union', 'intersection', 'difference', 'sym_difference', 'in_set_and', 'in_set_or'
+            'union', 'intersection', 'difference', 'sym_difference',
+            'in_set_and', 'in_set_or', 'in_set_source', 'in_set_target'
         ), elements_schema=Schema({
             'type': str,
             'elements': list,
