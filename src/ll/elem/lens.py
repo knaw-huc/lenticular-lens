@@ -1,4 +1,5 @@
 from psycopg2 import sql
+from inspect import cleandoc
 from ll.util.helpers import flatten, get_json_from_file
 
 
@@ -133,7 +134,11 @@ class Lens:
         if elem['left'] == sql.SQL('NULL'):
             return elem['right']
 
-        return sql.SQL('{function}({a}, {b})').format(
+        return sql.SQL(cleandoc('''
+            CASE WHEN {a} IS NULL THEN {b} 
+                 WHEN {b} IS NULL THEN {a}
+                 ELSE {function}({a}, {b}) END        
+        ''')).format(
             function=sql.SQL(Lens._logic_ops[elem['s_norm']]['sql']),
             a=elem['left'],
             b=elem['right']
