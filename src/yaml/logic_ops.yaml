@@ -1,0 +1,71 @@
+minimum_t_norm:
+  label: Minimum t-norm
+  short: "⊤min"
+  sql: t_min
+  sql_agg: t_min_agg
+
+product_t_norm:
+  label: Product t-norm
+  short: "⊤prod"
+  sql: t_prod
+  sql_agg: t_prod_agg
+
+lukasiewicz_t_norm:
+  label: Łukasiewicz t-norm
+  short: "⊤Luk"
+  sql: t_luk
+  sql_agg: t_luk_agg
+
+drastic_t_norm:
+  label: Drastic t-norm
+  short: "⊤D"
+  sql: t_d
+  sql_agg: t_d_agg
+
+nilpotent_minimum:
+  label: Nilpotent minimum
+  short: "⊤nM"
+  sql: t_nm
+  sql_agg: t_nm_agg
+
+hamacher_product:
+  label: Hamacher product
+  short: "⊤H0"
+  sql: t_h0
+  sql_agg: t_h0_agg
+
+maximum_s_norm:
+  label: Maximum s-norm
+  short: "⊥max"
+  sql: s_max
+  sql_agg: s_max_agg
+
+probabilistic_sum:
+  label: Probabilistic sum
+  short: "⊥sum"
+  sql: s_sum
+  sql_agg: s_sum_agg
+
+bounded_sum:
+  label: Bounded sum
+  short: "⊥Luk"
+  sql: s_luk
+  sql_agg: s_luk_agg
+
+drastic_s_norm:
+  label: Drastic s-norm
+  short: "⊥D"
+  sql: s_d
+  sql_agg: s_d_agg
+
+nilpotent_maximum:
+  label: Nilpotent maximum
+  short: "⊥nM"
+  sql: s_nm
+  sql_agg: s_nm_agg
+
+einstein_sum:
+  label: Einstein sum
+  short: "⊥H2"
+  sql: s_h2
+  sql_agg: s_h2_agg

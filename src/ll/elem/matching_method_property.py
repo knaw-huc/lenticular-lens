@@ -1,13 +1,11 @@
 from psycopg2 import sql
 
 from ll.job.property_field import PropertyField
-from ll.util.helpers import get_json_from_file
+from ll.util.db_functions import get_transformers
 from ll.util.hasher import hash_string_min
 
 
 class MatchingMethodProperty:
-    _transformers_info = get_json_from_file('transformers.json')
-
     def __init__(self, property, ets_id, job,
                  apply_transformers, method_transformers, property_transformers, property_transformer_first,
                  field_type_info, norm_template, norm_properties):
@@ -62,10 +60,12 @@ class MatchingMethodProperty:
         return None
 
     def _get_field_transformers(self, normalized=False):
+        transformers_info = get_transformers()
+
         field_transformers = self._transformers.copy()
         for transformer in field_transformers:
-            if transformer['name'] in self._transformers_info:
-                transformer['sql_template'] = self._transformers_info[transformer['name']]['sql_template']
+            if transformer['name'] in transformers_info:
+                transformer['sql_template'] = transformers_info[transformer['name']]['sql_template']
 
                 if transformer['name'] == 'stopwords':
                     transformer['parameters']['key'] = hash_string_min((transformer['parameters']['dictionary'],
@@ -75,18 +75,18 @@ class MatchingMethodProperty:
 
         if not self._field_type_info['type']:
             field_transformers.insert(0, {
-                'sql_template': self._transformers_info['lowercase']['sql_template'],
+                'sql_template': transformers_info['lowercase']['sql_template'],
                 'parameters': {}
             })
 
         if self._field_type_info['type'] == 'number':
             field_transformers.append({
-                'sql_template': self._transformers_info['to_numeric_immutable']['sql_template'],
+                'sql_template': transformers_info['to_numeric_immutable']['sql_template'],
                 'parameters': {}
             })
         elif self._field_type_info['type'] == 'date':
             field_transformers.append({
-                'sql_template': self._transformers_info['to_date_immutable']['sql_template'],
+                'sql_template': transformers_info['to_date_immutable']['sql_template'],
                 'parameters': {'format': self._field_type_info['parameters']['format']}
             })
 

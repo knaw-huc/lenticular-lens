@@ -56,7 +56,7 @@ def listen_for_notify(q):
     conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
 
     cur = conn.cursor()
-    cur.execute('LISTEN job_update; '
+    cur.execute('LISTEN extension_update; LISTEN job_update; '
                 'LISTEN timbuctoo_update; LISTEN alignment_update; LISTEN clustering_update; '
                 'LISTEN timbuctoo_delete; LISTEN alignment_delete; LISTEN clustering_delete;')
 

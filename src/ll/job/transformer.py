@@ -1,9 +1,6 @@
 from schema import Schema, SchemaError, And, Or, Use, Optional
-from ll.util.helpers import get_json_from_file
 
-transformers = get_json_from_file('transformers.json')
-filter_functions = get_json_from_file('filter_functions.json')
-matching_methods = get_json_from_file('matching_methods.json')
+from ll.util.db_functions import get_filter_functions, get_matching_methods, get_transformers
 
 
 class LogicBox:
@@ -75,6 +72,8 @@ def filter_properties(props):
 
 
 def get_entity_type_selection_schema():
+    filter_functions_info = get_filter_functions()
+
     return Schema({
         'id': Use(int),
         'label': And(str, len),
@@ -86,7 +85,7 @@ def get_entity_type_selection_schema():
         },
         Optional('filter', default=None): Or(None, LogicBox(Schema({
             'property': And(Use(filter_property), len),
-            'type': And(str, Use(str.lower), lambda t: t in filter_functions.keys()),
+            'type': And(str, Use(str.lower), lambda t: t in filter_functions_info.keys()),
             Optional('value'): Or(And(str, len), int),
             Optional('format'): And(str, len),
         }, ignore_extra_keys=True), 'conditions', ('and', 'or'))),
@@ -97,6 +96,9 @@ def get_entity_type_selection_schema():
 
 
 def get_linkset_spec_schema(ets_ids):
+    matching_methods_info = get_matching_methods()
+    transformers_info = get_transformers()
+
     return Schema({
         'id': Use(int),
         'label': And(str, len),
@@ -106,12 +108,12 @@ def get_linkset_spec_schema(ets_ids):
         'targets': [EntityTypeSelection(ets_ids)],
         'methods': And(LogicBox(Schema({
             'method': {
-                'name': And(str, Use(str.lower), lambda m: m in matching_methods.keys()),
+                'name': And(str, Use(str.lower), lambda m: m in matching_methods_info.keys()),
                 'config': And(dict, MatchingMethodConfig(ets_ids)),
             },
             Optional('sim_method', default={'name': None, 'config': {}, 'normalized': False}): {
                 Optional('name', default=None):
-                    Or(None, And(str, Use(str.lower), lambda m: m in matching_methods.keys())),
+                    Or(None, And(str, Use(str.lower), lambda m: m in matching_methods_info.keys())),
                 Optional('config', default={}): And(dict, MatchingMethodConfig(ets_ids)),
                 Optional('normalized', default=False): bool,
             },
@@ -134,13 +136,13 @@ def get_linkset_spec_schema(ets_ids):
                         'property': And(Use(filter_property), len),
                         Optional('property_transformer_first', default=False): bool,
                         Optional('transformers', default=list): [{
-                            'name': And(str, Use(str.lower), lambda n: n in transformers.keys()),
+                            'name': And(str, Use(str.lower), lambda n: n in transformers_info.keys()),
                             'parameters': dict
                         }],
                     }]
                 },
                 Optional('transformers', default=list): [{
-                    'name': And(str, Use(str.lower), lambda n: n in transformers.keys()),
+                    'name': And(str, Use(str.lower), lambda n: n in transformers_info.keys()),
                     'parameters': dict
                 }],
             },
@@ -150,13 +152,13 @@ def get_linkset_spec_schema(ets_ids):
                         'property': And(Use(filter_property), len),
                         Optional('property_transformer_first', default=False): bool,
                         Optional('transformers', default=list): [{
-                            'name': And(str, Use(str.lower), lambda n: n in transformers.keys()),
+                            'name': And(str, Use(str.lower), lambda n: n in transformers_info.keys()),
                             'parameters': dict
                         }],
                     }]
                 },
                 Optional('transformers', default=list): [{
-                    'name': And(str, Use(str.lower), lambda n: n in transformers.keys()),
+                    'name': And(str, Use(str.lower), lambda n: n in transformers_info.keys()),
                     'parameters': dict
                 }],
             }
@@ -195,6 +197,8 @@ def get_lens_spec_schema():
 
 
 def get_view_schema():
+    filter_functions_info = get_filter_functions()
+
     return Schema({
         'id': Use(int),
         'type': Or('linkset', 'lens'),
@@ -210,7 +214,7 @@ def get_view_schema():
             'timbuctoo_graphql': And(str, len),
             'filter': LogicBox(Schema({
                 'property': And(Use(filter_property), len),
-                'type': And(str, Use(str.lower), lambda t: t in filter_functions.keys()),
+                'type': And(str, Use(str.lower), lambda t: t in filter_functions_info.keys()),
                 Optional('value'): Or(And(str, len), int),
                 Optional('format'): And(str, len),
             }, ignore_extra_keys=True), 'conditions', ('and', 'or')),

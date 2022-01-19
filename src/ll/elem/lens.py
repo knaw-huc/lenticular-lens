@@ -1,10 +1,10 @@
 from psycopg2 import sql
 from inspect import cleandoc
-from ll.util.helpers import flatten, get_json_from_file
+from ll.util.helpers import flatten, get_yaml_from_file
 
 
 class Lens:
-    _logic_ops = get_json_from_file('logic_ops.json')
+    _logic_ops = get_yaml_from_file('logic_ops')
 
     def __init__(self, data, job):
         self._data = data

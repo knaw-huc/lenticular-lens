@@ -1,18 +1,17 @@
 from psycopg2 import sql
 
 from ll.util.hasher import hash_string_min
-from ll.util.helpers import get_json_from_file
+from ll.util.db_functions import get_filter_functions
 
 
 class FilterFunction:
-    _filter_functions = get_json_from_file('filter_functions.json')
-
     def __init__(self, function_obj, property):
         self.function_name = function_obj['type']
         self.property_field = property
 
-        if self.function_name in self._filter_functions:
-            self._function_info = self._filter_functions[self.function_name]
+        filter_functions_info = get_filter_functions()
+        if self.function_name in filter_functions_info:
+            self._function_info = filter_functions_info[self.function_name]
         else:
             raise NameError('Filter function %s is not defined' % self.function_name)
 

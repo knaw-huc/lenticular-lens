@@ -15,9 +15,10 @@ from ll.namespaces.void_plus import VoidPlus
 from ll.namespaces.shared_ontologies import Namespaces as NS
 
 from ll.util.hasher import hash_string_min
+from ll.util.db_functions import get_matching_methods
 from ll.util.stopwords import get_stopwords, get_iso_639_1_code
 from ll.util.n3_helpers import TAB, pred_val, multiple_val, blank_node
-from ll.util.helpers import flatten, get_json_from_file, get_publisher, get_from_buffer, num_to_chars, \
+from ll.util.helpers import flatten, get_yaml_from_file, get_publisher, get_from_buffer, num_to_chars, \
     snake_case_to_kebab_case_capitalize_first as create_id
 
 
@@ -53,10 +54,9 @@ class CsvExport:
 
 
 class RdfExport:
-    _logic_ops_info = get_json_from_file('logic_ops.json')
-    _matching_methods_info = get_json_from_file('matching_methods.json')
-    _lens_operators_info = get_json_from_file('lens_operators.json')
-    _validation_states_info = get_json_from_file('validation_states.json')
+    _logic_ops_info = get_yaml_from_file('logic_ops')
+    _lens_operators_info = get_yaml_from_file('lens_operators')
+    _validation_states_info = get_yaml_from_file('validation_states')
 
     _predefined_shared_prefix_mappings = {
         NS.RDF.prefix: NS.RDF.rdf,
@@ -770,9 +770,10 @@ class RdfExport:
         def methods_descriptions():
             buffer.write(self._header("METHODS'S DESCRIPTION"))
 
+            matching_methods_info = get_matching_methods()
             method_infos = {matching_method.method_name for matching_method in self._matching_methods}
             for idx, method_name in enumerate(method_infos):
-                method_info = self._matching_methods_info[method_name]
+                method_info = matching_methods_info[method_name]
 
                 buffer.write(F"resource:{create_id(method_name)}\n")
                 buffer.write(pred_val('a', VoidPlus.MatchingAlgorithm))

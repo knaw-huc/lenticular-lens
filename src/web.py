@@ -29,7 +29,8 @@ from ll.util.hasher import hash_string
 from ll.util.stopwords import get_stopwords
 from ll.util.config_db import listen_for_notify
 from ll.util.config_logging import config_logger
-from ll.util.helpers import get_json_from_file, get_string_from_sql
+from ll.util.helpers import get_string_from_sql
+from ll.util.db_functions import reset, get_filter_functions, get_matching_methods, get_transformers
 
 from ll.data.collection import Collection
 from ll.data.timbuctoo_datasets import TimbuctooDatasets
@@ -61,17 +62,18 @@ def emit_database_events():
     eventlet.spawn(listen_for_notify, q)
     while True:
         notify = q.get()
-        ns = '' if notify.channel.startswith('timbuctoo_') else json.loads(notify.payload)['job_id']
+        if notify.channel == 'extension_update':
+            reset()
+
+        ns = '' if notify.channel == 'extension_update' or notify.channel.startswith('timbuctoo_') \
+            else json.loads(notify.payload)['job_id']
+
         socketio.emit(notify.channel, notify.payload, namespace=f'/{ns}')
         log.debug(f'WebSocket emit on /{ns}: {notify.channel} = {notify.payload}')
 
 
 config_logger()
 log = logging.getLogger(__name__)
-
-filter_functions_info = get_json_from_file('filter_functions.json')
-matching_methods_info = get_json_from_file('matching_methods.json')
-transformers_info = get_json_from_file('transformers.json')
 
 app = Flask(__name__)
 app.config.update(
@@ -239,6 +241,10 @@ def stopwords(dictionary):
 @app.get('/methods')
 @authenticated
 def methods():
+    filter_functions_info = get_filter_functions()
+    matching_methods_info = get_matching_methods()
+    transformers_info = get_transformers()
+
     return jsonify(
         filter_functions=filter_functions_info,
         filter_functions_order=list(filter_functions_info.keys()),

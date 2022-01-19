@@ -4,13 +4,13 @@ from psycopg2 import sql
 from inspect import cleandoc
 
 from ll.util.hasher import hash_string_min
-from ll.util.helpers import get_json_from_file, flatten
+from ll.util.db_functions import get_matching_methods
+from ll.util.helpers import get_yaml_from_file, flatten
 from ll.elem.matching_method_property import MatchingMethodProperty
 
 
 class MatchingMethod:
-    _logic_ops = get_json_from_file('logic_ops.json')
-    _matching_methods = get_json_from_file('matching_methods.json')
+    _logic_ops = get_yaml_from_file('logic_ops')
 
     def __init__(self, data, job, linkset_id, id):
         self._data = data
@@ -18,18 +18,20 @@ class MatchingMethod:
 
         self.field_name = 'm' + str(linkset_id) + '_' + id
 
+        matching_methods_info = get_matching_methods()
+
         self.method_name = data['method']['name']
         self.method_config = data['method']['config']
-        if self.method_name in self._matching_methods:
-            self.method_info = self._matching_methods[self.method_name]
+        if self.method_name in matching_methods_info:
+            self.method_info = matching_methods_info[self.method_name]
         else:
             raise NameError('Matching method %s is not defined' % self.method_name)
 
         self.method_sim_name = data['sim_method']['name']
         self.method_sim_config = data['sim_method']['config']
         self.method_sim_normalized = data['sim_method']['normalized']
-        self.method_sim_info = self._matching_methods[self.method_sim_name] \
-            if self.method_sim_name in self._matching_methods else {}
+        self.method_sim_info = matching_methods_info[self.method_sim_name] \
+            if self.method_sim_name in matching_methods_info else {}
 
         self.t_norm = data['fuzzy']['t_norm']
         self.s_norm = data['fuzzy']['s_norm']

@@ -1,0 +1,57 @@
+union:
+  label: Union (A ∪ B)
+  description: The 'union' is in the Lenticular Lens a set-like operator that unifies
+    a collection of sets of links into a single set of all links stemmed from the
+    collection. In such a unified set, when dealing with links using symmetric predicates
+    such as identity predicates of the likes of owl:sameAs, the duplication of links
+    is not allowed. For example, <resource:1 owl:sameAs resource:2> and <resource:2
+    owl:sameAs resource:1> are not both admitted in the resulting set. Only one of
+    the two is consistently permitted.
+
+difference:
+  label: Difference (A ∩ B)
+  description: The 'difference' is in the Lenticular Lens a set-like operator between
+    two sets A and B of links that results in links stemmed from A that are not in
+    B.
+
+sym_difference:
+  label: Symmetric difference (A - B)
+  description: The 'symmetric difference' is in the Lenticular Lens a set-like operator
+    between two sets A and B of links that results in links stemmed from A or B that
+    are not in A and B.
+
+intersection:
+  label: Intersection (A ∆ B)
+  description: The 'intersection' is in the Lenticular Lens a set-like operator between
+    two sets A and B of links that results in links that are in both sets A and B.
+    In such a result-set, when dealing with links using symmetric predicates such
+    as identity predicates of the likes of owl:sameAs, the duplication of links is
+    not allowed. For example, <resource:1 owl:sameAs resource:2> and <resource:2 owl:sameAs
+    resource:1> are not both admitted in the resulting set. Only one of the two is
+    consistently permitted.
+
+in_set_and:
+  label: Source and target resources match
+  description: The 'source and target resources match' is in the Lenticular Lens a
+    set-like operator between two sets A (set of resources) and B (set of links) that
+    results in a subset of links from B where only resources from A occur as both
+    the subject AND object of each link.
+
+in_set_or:
+  label: Source or target resources match
+  description: The 'source or target resources match' is in the Lenticular Lens a
+    set-like operator between two sets A (set of resources) and B (set of links) that
+    results in a subset of links from B where only resources from A occur as the subject
+    OR the object of each link.
+
+in_set_source:
+  label: Source resources match
+  description: The 'source resources match' is in the Lenticular Lens a set-like operator
+    between two sets A (set of resources) and B (set of links) that results in a subset
+    of links from B where only resources from A occur as the subject of each link.
+
+in_set_target:
+  label: Target resources match
+  description: The 'target resources match' is in the Lenticular Lens a set-like operator
+    between two sets A (set of resources) and B (set of links) that results in a subset
+    of links from B where only resources from A occur as the target of each link.

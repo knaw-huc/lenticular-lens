@@ -1,6 +1,6 @@
 import os
 import re
-import json
+import yaml
 import datetime
 
 from psycopg2 import sql
@@ -23,12 +23,12 @@ def file_date():
     return f"{today}_{re.findall('..:.*', str(datetime.datetime.now()))[0]}"
 
 
-def get_json_from_file(filename):
-    json_file = open(join(dirname(realpath(__file__)), '../../json', filename), 'r')
-    json_config = json.load(json_file, object_pairs_hook=OrderedDict)
-    json_file.close()
+def get_yaml_from_file(filename):
+    yaml_file = open(join(dirname(realpath(__file__)), '../../yaml', filename + '.yaml'), 'r')
+    yaml_config = yaml.load(yaml_file)
+    yaml_file.close()
 
-    return json_config
+    return yaml_config
 
 
 def get_string_from_sql(sql):

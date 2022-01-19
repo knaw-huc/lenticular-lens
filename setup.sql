@@ -1,8 +1,4 @@
-CREATE EXTENSION IF NOT EXISTS fuzzystrmatch;
-CREATE EXTENSION IF NOT EXISTS plpython3u;
-CREATE EXTENSION IF NOT EXISTS pg_trgm;
-CREATE EXTENSION IF NOT EXISTS unaccent;
-CREATE EXTENSION IF NOT EXISTS lenticular_lens;
+CREATE EXTENSION IF NOT EXISTS lenticular_lens CASCADE;
 
 CREATE TYPE spec_type AS ENUM ('linkset', 'lens');
 CREATE TYPE link_order AS ENUM ('source_target', 'both', 'target_source');
@@ -119,6 +115,8 @@ CREATE TABLE IF NOT EXISTS clusterings
     PRIMARY KEY (job_id, spec_id, spec_type)
 );
 
+/* UTILITY FUNCTIONS */
+
 CREATE OR REPLACE FUNCTION increment_counter(sequence_name text) RETURNS boolean AS $$
 BEGIN
     RETURN nextval(sequence_name) > -1;
@@ -181,25 +179,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql STRICT IMMUTABLE PARALLEL SAFE;
 
-CREATE OR REPLACE FUNCTION to_date_immutable(text, text) RETURNS date AS $$
-BEGIN
-    RETURN to_date($1, $2);
-EXCEPTION
-    WHEN SQLSTATE '22008' THEN
-        RETURN NULL;
-    WHEN SQLSTATE '22007' THEN
-        RETURN NULL;
-END;
-$$ LANGUAGE plpgsql STRICT IMMUTABLE;
-
-CREATE OR REPLACE FUNCTION to_numeric_immutable(text) RETURNS numeric AS $$
-BEGIN
-    RETURN $1::numeric;
-EXCEPTION
-    WHEN OTHERS THEN
-        RETURN NULL;
-END;
-$$ LANGUAGE plpgsql STRICT IMMUTABLE;
+/* NOTIFICATIONS */
 
 CREATE OR REPLACE FUNCTION notify_job_update() RETURNS trigger AS $$
 DECLARE
@@ -364,3 +344,66 @@ FOR EACH ROW EXECUTE PROCEDURE notify_lens_update();
 
 CREATE TRIGGER clustering_notify AFTER INSERT OR UPDATE OR DELETE ON clusterings
 FOR EACH ROW EXECUTE PROCEDURE notify_clustering_update();
+
+/* LOGIC OPS FUNCTIONS */
+
+CREATE OR REPLACE FUNCTION t_min(a numeric, b numeric) RETURNS numeric AS $$
+SELECT least(a, b);
+$$ LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE;
+
+CREATE OR REPLACE FUNCTION t_prod(a numeric, b numeric) RETURNS numeric AS $$
+SELECT a * b;
+$$ LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE;
+
+CREATE OR REPLACE FUNCTION t_luk(a numeric, b numeric) RETURNS numeric AS $$
+SELECT greatest(0, a + b - 1);
+$$ LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE;
+
+CREATE OR REPLACE FUNCTION t_d(a numeric, b numeric) RETURNS numeric AS $$
+SELECT CASE WHEN b = 1 THEN a WHEN a = 1 THEN b ELSE 0 END;
+$$ LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE;
+
+CREATE OR REPLACE FUNCTION t_nm(a numeric, b numeric) RETURNS numeric AS $$
+SELECT CASE WHEN a + b > 1 THEN least(a, b) ELSE 0 END;
+$$ LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE;
+
+CREATE OR REPLACE FUNCTION t_h0(a numeric, b numeric) RETURNS numeric AS $$
+SELECT CASE WHEN NOT a = 0 AND NOT b = 0 THEN a * b / (a + b - (a * b)) ELSE 0 END;
+$$ LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE;
+
+CREATE OR REPLACE FUNCTION s_max(a numeric, b numeric) RETURNS numeric AS $$
+SELECT greatest(a, b);
+$$ LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE;
+
+CREATE OR REPLACE FUNCTION s_sum(a numeric, b numeric) RETURNS numeric AS $$
+SELECT a + b - (a * b);
+$$ LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE;
+
+CREATE OR REPLACE FUNCTION s_luk(a numeric, b numeric) RETURNS numeric AS $$
+SELECT least(a + b, 1);
+$$ LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE;
+
+CREATE OR REPLACE FUNCTION s_d(a numeric, b numeric) RETURNS numeric AS $$
+SELECT CASE WHEN b = 0 THEN a WHEN a = 0 THEN b ELSE 1 END;
+$$ LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE;
+
+CREATE OR REPLACE FUNCTION s_nm(a numeric, b numeric) RETURNS numeric AS $$
+SELECT CASE WHEN a + b < 1 THEN greatest(a, b) ELSE 1 END;
+$$ LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE;
+
+CREATE OR REPLACE FUNCTION s_h2(a numeric, b numeric) RETURNS numeric AS $$
+SELECT (a + b) / (1 + a * b);
+$$ LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE;
+
+CREATE AGGREGATE t_min_agg(numeric) (sfunc = t_min, stype = numeric);
+CREATE AGGREGATE t_prod_agg(numeric) (sfunc = t_prod, stype = numeric);
+CREATE AGGREGATE t_luk_agg(numeric) (sfunc = t_luk, stype = numeric);
+CREATE AGGREGATE t_d_agg(numeric) (sfunc = t_d, stype = numeric);
+CREATE AGGREGATE t_nm_agg(numeric) (sfunc = t_nm, stype = numeric);
+CREATE AGGREGATE t_h0_agg(numeric) (sfunc = t_h0, stype = numeric);
+CREATE AGGREGATE s_max_agg(numeric) (sfunc = s_max, stype = numeric);
+CREATE AGGREGATE s_sum_agg(numeric) (sfunc = s_sum, stype = numeric);
+CREATE AGGREGATE s_luk_agg(numeric) (sfunc = s_luk, stype = numeric);
+CREATE AGGREGATE s_d_agg(numeric) (sfunc = s_d, stype = numeric);
+CREATE AGGREGATE s_nm_agg(numeric) (sfunc = s_nm, stype = numeric);
+CREATE AGGREGATE s_h2_agg(numeric) (sfunc = s_h2, stype = numeric);

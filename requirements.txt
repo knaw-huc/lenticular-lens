@@ -8,6 +8,7 @@ schema==0.7.5
 kitchen==1.2.6
 psycopg2-binary==2.9.3
 networkx==2.6.3
+pyyaml==6.0
 python-intervals==1.10.0.post1
 rdflib==6.1.1
 requests==2.27.1
