@@ -183,7 +183,7 @@ class LinksetBuilder:
             selection_sql = sql.Composed([selection_sql, sql.SQL(', all_nodes AS nodes')])
 
         props_joins_sql = get_sql_empty(self._properties_join_sql(
-            sql.SQL('= ANY (all_nodes[:50])'), single_value=is_single_value, include_unnest=True), flag=use_properties)
+            sql.SQL('IN (nodes_limited)'), single_value=is_single_value, include_unnest=True), flag=use_properties)
 
         sort_sql = sql.SQL('ORDER BY cluster_id')
         if self._cluster_sort_type is not None:
@@ -214,6 +214,7 @@ class LinksetBuilder:
                 {having_sql}
                 {sort_sql} {limit_offset}
             ) AS clusters
+            LEFT JOIN unnest(all_nodes[0:50]) AS nodes_limited ON true
             {props_joins_sql}
             GROUP BY cluster_id, cluster_hash_id, all_nodes, size, links, total_links
             {sort_sql}
