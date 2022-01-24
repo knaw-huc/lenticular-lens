@@ -4,7 +4,6 @@ import yaml
 import datetime
 
 from psycopg2 import sql
-from collections import OrderedDict
 from os.path import join, dirname, realpath
 
 from ll.util.config_db import db_conn
@@ -23,9 +22,9 @@ def file_date():
     return f"{today}_{re.findall('..:.*', str(datetime.datetime.now()))[0]}"
 
 
-def get_yaml_from_file(filename):
-    yaml_file = open(join(dirname(realpath(__file__)), '../../yaml', filename + '.yaml'), 'r')
-    yaml_config = yaml.load(yaml_file)
+def get_yaml_from_file(name):
+    yaml_file = open(join(dirname(realpath(__file__)), '../../yaml', name + '.yaml'), 'r')
+    yaml_config = yaml.load(yaml_file, Loader=yaml.FullLoader)
     yaml_file.close()
 
     return yaml_config

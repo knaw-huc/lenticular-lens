@@ -36,8 +36,8 @@ class MatchingMethod:
         self.t_norm = data['fuzzy']['t_norm']
         self.s_norm = data['fuzzy']['s_norm']
         self.threshold = data['fuzzy']['threshold'] \
-            if self.method_info['is_similarity_method'] or \
-               ('is_similarity_method' in self.method_sim_info and self.method_sim_info['is_similarity_method']) else 0
+            if self.method_info.get('type') == 'similarity' or \
+               ('type' in self.method_sim_info and self.method_sim_info.get('type') == 'similarity') else 0
 
         self.list_threshold = data['list_matching']['threshold']
         self.list_is_percentage = data['list_matching']['is_percentage']
@@ -54,7 +54,7 @@ class MatchingMethod:
 
     @property
     def sql(self):
-        return self._sql(self._full_matching_template, self._similarity_template, match_sql=True)
+        return self._sql(self._matching_template, self._similarity_template, match_sql=True)
 
     @property
     def config_hash(self):
@@ -62,7 +62,7 @@ class MatchingMethod:
 
     @property
     def similarity_sql(self):
-        return self._sql(self._full_matching_template, self._similarity_template, match_sql=False) \
+        return self._sql(self._matching_template, self._similarity_template, match_sql=False) \
             if self._similarity_template else None
 
     @property
@@ -101,7 +101,7 @@ class MatchingMethod:
         index_sqls = [sql.SQL('CREATE INDEX ON target USING btree ({});')
                           .format(sql.Identifier(self.field_name))]
 
-        if self.method_info.get('field'):
+        if self.method_info.get('type') == 'normalizer':
             index_sqls.append(sql.SQL('CREATE INDEX ON target USING btree ({});')
                               .format(sql.Identifier(self.field_name + '_norm')))
 
@@ -187,25 +187,11 @@ class MatchingMethod:
         return hash_string_min((self.config_hash, sorted([prop.hash for prop in self.target_intermediates_props])))
 
     @property
-    def _match_template(self):
-        if 'match' in self.method_info:
-            template = self.method_info['match']
-        elif 'field' in self.method_info and 'match' in self.method_sim_info:
-            template = self.method_sim_info['match']
-            if self.method_sim_normalized:
-                template = re.sub(r'{source}', '{source_norm}', template)
-                template = re.sub(r'{target}', '{target_norm}', template)
-        else:
-            return None
-
-        return self._update_template_fields(template)
-
-    @property
     def _similarity_template(self):
-        if 'similarity' in self.method_info:
-            template = self.method_info['similarity']
-        elif 'field' in self.method_info and 'similarity' in self.method_sim_info:
-            template = self.method_sim_info['similarity']
+        if self.method_info.get('type') == 'similarity':
+            template = self.method_info['sql_templates']['similarity']
+        elif self.method_info.get('type') == 'normalizer' and self.method_sim_info.get('type') == 'similarity':
+            template = self.method_sim_info['sql_templates']['similarity']
             if self.method_sim_normalized:
                 template = re.sub(r'{source}', '{source_norm}', template)
                 template = re.sub(r'{target}', '{target_norm}', template)
@@ -216,27 +202,22 @@ class MatchingMethod:
 
     @property
     def _condition_template(self):
-        if 'condition' in self.method_info:
-            return self.method_info['condition']
+        if self.method_info.get('type') == 'similarity':
+            return self.method_info['sql_templates']['condition']
 
-        if 'condition' in self.method_sim_info:
-            return self.method_sim_info['condition']
+        if self.method_sim_info.get('type') == 'similarity':
+            return self.method_sim_info['sql_templates']['condition']
 
         return None
 
     @property
-    def _full_matching_template(self):
-        if 'field' in self.method_info and not self.method_sim_name:
+    def _matching_template(self):
+        if self.method_info.get('type') == 'normalizer' and self.method_sim_info.get('type') != 'similarity':
             template = '{source_norm} = {target_norm}'
+        elif self._similarity_template and self._condition_template:
+            template = re.sub(r'{similarity}', self._similarity_template, self._condition_template)
         else:
-            template = self._condition_template
-            if template:
-                if self._match_template:
-                    template = re.sub(r'{match}', self._match_template, template)
-                if self._similarity_template:
-                    template = re.sub(r'{similarity}', self._similarity_template, template)
-            else:
-                template = self._match_template
+            template = self.method_info['sql_template']
 
         if self.method_sim_name and not self.method_sim_normalized:
             template = '{source_norm} = {target_norm} AND ' + template
@@ -281,13 +262,13 @@ class MatchingMethod:
         if self.is_list_match:
             source_fields_sqls = ['source.{field_name}']
             source_alias_sqls = ['src_org']
-            if self.method_info.get('field'):
+            if self.method_info.get('type') == 'normalizer':
                 source_fields_sqls.append('source.{field_name_norm}')
                 source_alias_sqls.append('src_norm')
 
             target_fields_sqls = ['target.{field_name}']
             target_alias_sqls = ['trg_org']
-            if self.method_info.get('field'):
+            if self.method_info.get('type') == 'normalizer':
                 target_fields_sqls.append('target.{field_name_norm}')
                 target_alias_sqls.append('trg_norm')
 
@@ -345,10 +326,11 @@ class MatchingMethod:
         method_transformers = self.transformers(key) if apply_transformers else []
         property_transformers = field.get('transformers', []) if apply_transformers else []
         property_transformer_first = field.get('property_transformer_first', False) if apply_transformers else False
+        template = self.method_info.get('sql_template', None) if self.method_info.get('type') == 'normalizer' else None
 
         return MatchingMethodProperty(property, ets_id, self._job, apply_transformers,
                                       method_transformers, property_transformers, property_transformer_first,
-                                      field_type_info, self.method_info.get('field'), self.method_config)
+                                      field_type_info, template, self.method_config)
 
     @staticmethod
     def get_similarity_fields_sqls(matching_methods):
