@@ -329,7 +329,7 @@ class Job:
         linkset = self.get_linkset_spec_by_id(linkset_id)
         return any(not property.is_downloaded
                    for entity_type_selection in linkset.all_entity_type_selections
-                   for property in entity_type_selection.properties_for_matching(linkset))
+                   for property in entity_type_selection.properties_for_linkset(linkset))
 
     def get_entity_type_selection_by_id(self, id):
         return next((ets for ets in self.entity_type_selections if ets.id == id or ets.alias == id), None)

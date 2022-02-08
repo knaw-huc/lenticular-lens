@@ -4,11 +4,12 @@ from ll.util.db_functions import get_filter_functions, get_matching_methods, get
 
 
 class LogicBox:
-    def __init__(self, schema, name, types, elements_schema=None):
+    def __init__(self, schema, name, types, elements_schema=None, allow_empty_elements=False):
         self.schema = schema
         self.name = name
         self.types = types
         self.elements_schema = elements_schema
+        self.allow_empty_elements = allow_empty_elements
 
     def validate(self, data):
         if type(data) is not dict:
@@ -17,7 +18,7 @@ class LogicBox:
         if 'type' in data and data['type'].lower() in self.types and \
                 self.name in data and type(data[self.name]) is list:
             elements = [self.validate(c) for c in data[self.name]]
-            if len(elements) == 0:
+            if len(elements) == 0 and not self.allow_empty_elements:
                 return None
 
             logicbox = {}
@@ -103,9 +104,28 @@ def get_linkset_spec_schema(ets_ids):
         'id': Use(int),
         'label': And(str, len),
         Optional('description', default=None): Or(str, None),
+        Optional('matching', default='methods'): Or('extract', 'methods'),
         Optional('use_counter', default=True): bool,
         'sources': [EntityTypeSelection(ets_ids)],
         'targets': [EntityTypeSelection(ets_ids)],
+        'extract': {
+            'elements': {
+                Optional(EntityTypeSelection(ets_ids)): {
+                    'sources': [And(Use(filter_property), len)],
+                    'targets': [And(Use(filter_property), len)],
+                    Optional('entity_type_selections', default=[]): [EntityTypeSelection(ets_ids)],
+                    Optional('strengths', default=[]): [And(Use(filter_property), len)],
+                    Optional('threshold', default=0): Or(float, Use(lambda t: 0)),
+                    Optional('s_norm', default='maximum_s_norm'):
+                        lambda s: s in ('maximum_s_norm', 'probabilistic_sum', 'bounded_sum',
+                                        'drastic_s_norm', 'nilpotent_maximum', 'einstein_sum'),
+                }
+            },
+            Optional('threshold', default=0): Or(float, Use(lambda t: 0)),
+            Optional('s_norm', default='maximum_s_norm'):
+                lambda s: s in ('maximum_s_norm', 'probabilistic_sum', 'bounded_sum',
+                                'drastic_s_norm', 'nilpotent_maximum', 'einstein_sum'),
+        },
         'methods': And(LogicBox(Schema({
             'method': {
                 'name': And(str, Use(str.lower), lambda m: m in matching_methods_info.keys()),
@@ -170,7 +190,7 @@ def get_linkset_spec_schema(ets_ids):
             'type': str,
             'conditions': list,
             Optional('threshold', default=0): Or(float, Use(lambda t: 0)),
-        }, ignore_extra_keys=True)), dict),
+        }, ignore_extra_keys=True), allow_empty_elements=True), dict),
     }, ignore_extra_keys=True)
 
 

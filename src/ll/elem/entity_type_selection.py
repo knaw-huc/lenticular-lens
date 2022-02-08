@@ -73,13 +73,21 @@ class EntityTypeSelection:
             lambda filter_func: filter_func['filter_function'].hash
         )))
 
-    def properties_for_matching(self, linkset_spec):
-        return self.filter_properties.union(
-            matching_method_prop.prop_original for matching_method_prop in self.get_fields(linkset_spec))
+    def properties_for_linkset(self, linkset_spec):
+        return self.filter_properties \
+            .union(self.get_extract_fields(linkset_spec)) \
+            .union(matching_method_prop.prop_original
+                   for matching_method_prop in self.get_matching_fields(linkset_spec))
 
-    def get_fields(self, linkset_spec):
-        match_fields = linkset_spec.get_fields()
-        match_ets_fields = match_fields.get(self.id, set())
+    def get_extract_fields(self, linkset_spec):
+        extract_fields = linkset_spec.get_extract_fields()
+        extract_ets_fields = extract_fields.get(self.id, {})
+
+        return set(extract_ets_fields)
+
+    def get_matching_fields(self, linkset_spec):
+        match_fields = linkset_spec.get_matching_fields()
+        match_ets_fields = match_fields.get(self.id, {})
 
         return {match_field_property
                 for match_field_label, match_field in match_ets_fields.items()

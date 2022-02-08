@@ -3,7 +3,6 @@ import locale
 from psycopg import sql
 from inspect import cleandoc
 
-from ll.elem.matching_method import MatchingMethod
 from ll.util.helpers import get_string_from_sql, get_sql_empty
 
 locale.setlocale(locale.LC_ALL, '')
@@ -41,7 +40,14 @@ class LensSql:
             lambda spec: spec_select_sql(spec['id'], spec['type'])
         )
 
-        sim_fields_sqls = MatchingMethod.get_similarity_fields_sqls(self._lens.matching_methods)
+        sim_field_sqls = [similarity_fields_sql for linkset in self._lens.linksets
+                          for similarity_fields_sql in linkset.similarity_fields_sqls]
+        sim_joins_sqls = [similarity_joins_sql for linkset in self._lens.linksets
+                          for similarity_joins_sql in linkset.similarity_joins_sqls]
+        if sim_field_sqls:
+            sim_joins_sqls.insert(0, sql.SQL('CROSS JOIN LATERAL jsonb_to_record(similarities) AS sim({})').format(
+                sql.SQL(', ').join(sim_field_sqls)
+            ))
 
         sim_conditions_sqls = [sql.SQL('{similarity} >= {threshold}')
                                    .format(similarity=similarity, threshold=sql.Literal(threshold))
@@ -57,14 +63,14 @@ class LensSql:
                 FROM (
                     {lens_sql}
                 ) AS lens
-                {sim_fields_sql}
+                {sim_joins_sqls}
                 CROSS JOIN LATERAL coalesce({sim_logic_ops_sql}, 1) AS similarity 
                 {sim_condition_sql};
             """
         ) + '\n').format(
             lens=sql.Identifier(self._job.table_name(self._lens.id)),
             lens_sql=lens_sql,
-            sim_fields_sql=sql.SQL('\n').join(sim_fields_sqls),
+            sim_joins_sqls=sql.SQL('\n').join(sim_joins_sqls),
             sim_logic_ops_sql=self._lens.similarity_logic_ops_sql,
             sim_condition_sql=sim_condition_sql
         )

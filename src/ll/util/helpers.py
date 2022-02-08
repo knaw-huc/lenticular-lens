@@ -14,7 +14,8 @@ def get_publisher():
 
 
 def flatten(i, filter=True):
-    return [i] if not isinstance(i, list) else [k for j in i for k in flatten(j) if not filter or k]
+    return [i] if not isinstance(i, list) and not isinstance(i, set) else \
+        [k for j in i for k in flatten(j) if not filter or k]
 
 
 def file_date():

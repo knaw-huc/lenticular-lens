@@ -4,7 +4,6 @@ from psycopg import sql
 from inspect import cleandoc
 
 from ll.job.joins import Joins
-from ll.elem.matching_method import MatchingMethod
 
 from ll.util.hasher import hash_string_min
 from ll.util.helpers import get_string_from_sql, get_sql_empty
@@ -35,21 +34,24 @@ class MatchingSql:
             prepare_sqls = []
             matching_fields_sqls = [sql.SQL('{}.uri').format(sql.Identifier(entity_type_selection.alias))]
 
-            matching_methods_props = entity_type_selection.get_fields(self._linkset)
+            matching_methods_props = entity_type_selection.get_matching_fields(self._linkset)
             for matching_method_prop in matching_methods_props:
                 if matching_method_prop.prepare_sql:
                     prepare_sqls.append(matching_method_prop.prepare_sql)
 
-            for property_field in \
-                    {mm_prop.prop_original for mm_prop in matching_methods_props}.union(
-                        {mm_prop.prop_normalized for mm_prop in matching_methods_props if mm_prop.prop_normalized}):
+            extract_fields_props = entity_type_selection.get_extract_fields(self._linkset)
+            props = {mm_prop.prop_original for mm_prop in matching_methods_props} \
+                .union({mm_prop.prop_normalized for mm_prop in matching_methods_props if mm_prop.prop_normalized}) \
+                .union({ef_prop for ef_prop in extract_fields_props})
+
+            for property_field in props:
                 matching_fields_sqls.append(sql.SQL('{matching_field} AS {name}').format(
                     matching_field=property_field.sql,
                     name=sql.Identifier(property_field.hash)
                 ))
 
             joins = Joins()
-            joins.set_joins_for_props(entity_type_selection.properties_for_matching(self._linkset))
+            joins.set_joins_for_props(entity_type_selection.properties_for_linkset(self._linkset))
 
             where_sql = entity_type_selection.filters_sql
             if where_sql:
@@ -80,17 +82,56 @@ class MatchingSql:
 
         return sql.Composed(entity_type_selections_sql)
 
+    def generate_extract_linkset_sql(self):
+        intermediates_sqls = [sql.SQL('{}, array_agg(DISTINCT uri)').format(
+            sql.Literal('e' + str(self._linkset.id) + '_' + str(ets_id)))
+            for ets_id in self._linkset.get_extract_fields(['sources']).keys()]
+
+        similarities_sqls = [sql.SQL('{key}, array_agg(DISTINCT strength) '
+                                     'FILTER (WHERE strength >= 0 AND strength <= 1 AND ets_id = {ets_id})').format(
+            key=sql.Literal('e' + str(self._linkset.id) + '_' + str(ets_id)),
+            ets_id=sql.Literal(ets_id),
+        ) for ets_id, strength_props in self._linkset.get_extract_fields(['strengths']).items() if strength_props]
+
+        return sql.SQL(cleandoc(
+            """ DROP MATERIALIZED VIEW IF EXISTS linkset CASCADE;
+                CREATE MATERIALIZED VIEW linkset AS 
+                SELECT CASE WHEN src_uri < trg_uri THEN src_uri ELSE trg_uri END AS source_uri,
+                       CASE WHEN src_uri < trg_uri THEN trg_uri ELSE src_uri END AS target_uri,
+                       CASE WHEN every(src_uri < trg_uri) THEN 'source_target'::link_order
+                            WHEN every(trg_uri < src_uri) THEN 'target_source'::link_order
+                            ELSE 'both'::link_order END AS link_order,
+                       array_remove(array_agg(DISTINCT source_collection), NULL) AS source_collections,
+                       array_remove(array_agg(DISTINCT target_collection), NULL) AS target_collections,
+                       jsonb_build_object({intermediates}) AS source_intermediates,
+                       NULL::jsonb AS target_intermediates,
+                       {similarities} AS similarities
+                FROM (
+                    {extracted}
+                ) AS extracted
+                LEFT JOIN unnest(extracted.source_collections) AS source_collection ON true
+                LEFT JOIN unnest(extracted.target_collections) AS target_collection ON true
+                WHERE src_uri IS NOT NULL AND trg_uri IS NOT NULL AND src_uri != trg_uri 
+                GROUP BY source_uri, target_uri;
+            """
+        ) + '\n').format(
+            similarities=sql.SQL('jsonb_build_object({})').format(sql.SQL(', ').join(similarities_sqls)) \
+                if similarities_sqls else sql.SQL('NULL::jsonb'),
+            intermediates=sql.SQL(', ').join(intermediates_sqls),
+            extracted=self._get_extract_entity_type_selections_sql(self._linkset)
+        )
+
     def generate_match_source_sql(self):
         return sql.SQL(cleandoc(
             """ DROP MATERIALIZED VIEW IF EXISTS source CASCADE;
                 CREATE MATERIALIZED VIEW source AS 
                 {};
                 
-                CREATE INDEX ON source USING hash (uri);
                 ANALYZE source;
             """
         ) + '\n').format(
-            self._get_combined_entity_type_selections_sql(self._linkset.get_fields(['sources']), is_source=True))
+            self._get_combined_entity_type_selections_sql(self._linkset.get_matching_fields(['sources']),
+                                                          is_source=True))
 
     def generate_match_target_sql(self):
         return sql.SQL(cleandoc(
@@ -102,7 +143,8 @@ class MatchingSql:
                 ANALYZE target;
             """
         ) + '\n').format(
-            self._get_combined_entity_type_selections_sql(self._linkset.get_fields(['targets']), is_source=False))
+            self._get_combined_entity_type_selections_sql(self._linkset.get_matching_fields(['targets']),
+                                                          is_source=False))
 
     def generate_match_index_and_sequence_sql(self):
         sequence_sql = sql.SQL(cleandoc(
@@ -173,12 +215,13 @@ class MatchingSql:
             conditions=conditions_sql
         )
 
-    def generate_match_linkset_finish_sql(self):
-        sim_fields_sqls = MatchingMethod.get_similarity_fields_sqls(self._linkset.matching_methods)
-
-        sim_matching_methods_conditions_sqls = [match_method.similarity_threshold_sql
-                                                for match_method in self._linkset.matching_methods
-                                                if match_method.similarity_threshold_sql]
+    def generate_linkset_finish_sql(self):
+        sim_matching_conditions_sqls = [match_method.similarity_threshold_sql
+                                        for match_method in self._linkset.matching_methods
+                                        if match_method.similarity_threshold_sql] + \
+                                       [match_extract.similarity_threshold_sql
+                                        for match_extract in self._linkset.matching_extract
+                                        if match_extract.similarity_threshold_sql]
 
         sim_grouping_conditions_sqls = [sql.SQL('{similarity} >= {threshold}').format(
             similarity=similarity,
@@ -186,16 +229,22 @@ class MatchingSql:
         ) for (threshold, similarity) in self._linkset.similarity_logic_ops_sql_per_threshold]
 
         sim_condition_sql = get_sql_empty(sql.Composed([
-            sql.SQL('WHERE '), sql.SQL(' AND ')
-                .join(sim_matching_methods_conditions_sqls + sim_grouping_conditions_sqls)]),
-            flag=sim_matching_methods_conditions_sqls or sim_grouping_conditions_sqls)
+            sql.SQL('WHERE '), sql.SQL(' AND ').join(sim_matching_conditions_sqls + sim_grouping_conditions_sqls)]),
+            flag=sim_matching_conditions_sqls or sim_grouping_conditions_sqls)
+
+        sim_joins_sqls = []
+        sim_joins_sqls += self._linkset.similarity_joins_sqls
+        if self._linkset.similarity_fields_sqls:
+            sim_joins_sqls.insert(0, sql.SQL('CROSS JOIN LATERAL jsonb_to_record(similarities) AS sim({})').format(
+                sql.SQL(', ').join(self._linkset.similarity_fields_sqls)
+            ))
 
         return sql.SQL(cleandoc(
             """ DROP TABLE IF EXISTS linksets.{linkset} CASCADE;
                 CREATE TABLE linksets.{linkset} AS
                 SELECT linkset.*, similarity
                 FROM linkset
-                {sim_fields_sql}
+                {sim_joins_sqls}
                 CROSS JOIN LATERAL coalesce({sim_logic_ops_sql}, 1) AS similarity 
                 {sim_condition_sql};
                 
@@ -220,7 +269,7 @@ class MatchingSql:
             """
         ) + '\n').format(
             linkset=sql.Identifier(self._job.table_name(self._linkset.id)),
-            sim_fields_sql=sql.SQL('\n').join(sim_fields_sqls),
+            sim_joins_sqls=sql.SQL('\n').join(sim_joins_sqls),
             sim_logic_ops_sql=self._linkset.similarity_logic_ops_sql,
             sim_condition_sql=sim_condition_sql
         )
@@ -231,17 +280,86 @@ class MatchingSql:
         sql_str += '\n'
         sql_str += get_string_from_sql(self.generate_entity_type_selection_sql())
         sql_str += '\n'
-        sql_str += get_string_from_sql(self.generate_match_source_sql())
+
+        if self._linkset.matching == 'extract':
+            sql_str += get_string_from_sql(self.generate_extract_linkset_sql())
+        elif self._linkset.matching == 'methods':
+            sql_str += get_string_from_sql(self.generate_match_source_sql())
+            sql_str += '\n'
+            sql_str += get_string_from_sql(self.generate_match_target_sql())
+            sql_str += '\n'
+            sql_str += get_string_from_sql(self.generate_match_index_and_sequence_sql())
+            sql_str += '\n'
+            sql_str += get_string_from_sql(self.generate_match_linkset_sql())
+
         sql_str += '\n'
-        sql_str += get_string_from_sql(self.generate_match_target_sql())
-        sql_str += '\n'
-        sql_str += get_string_from_sql(self.generate_match_index_and_sequence_sql())
-        sql_str += '\n'
-        sql_str += get_string_from_sql(self.generate_match_linkset_sql())
-        sql_str += '\n'
-        sql_str += get_string_from_sql(self.generate_match_linkset_finish_sql())
+        sql_str += get_string_from_sql(self.generate_linkset_finish_sql())
 
         return sql_str
+
+    @staticmethod
+    def _get_extract_entity_type_selections_sql(linkset):
+        sqls = []
+
+        # Get the properties needed per entity-type selection
+        for match_extract in linkset.matching_extract:
+            ets_sources_joins = [sql.SQL('LEFT JOIN {ets} AS {alias} \nON src_uri = {alias}.uri').format(
+                ets=sql.Identifier(entity_type_selection.alias),
+                alias=sql.Identifier('source_' + entity_type_selection.alias)
+            ) for entity_type_selection in match_extract.referenced_entity_type_selections]
+
+            ets_targets_joins = [sql.SQL('LEFT JOIN {ets} AS {alias} \nON trg_uri = {alias}.uri').format(
+                ets=sql.Identifier(entity_type_selection.alias),
+                alias=sql.Identifier('target_' + entity_type_selection.alias)
+            ) for entity_type_selection in match_extract.referenced_entity_type_selections]
+
+            source_collections = [sql.SQL('CASE WHEN {alias} IS NOT NULL THEN {ets_id} ELSE NULL END').format(
+                alias=sql.Identifier('source_' + entity_type_selection.alias),
+                ets_id=sql.Literal(entity_type_selection.id)
+            ) for entity_type_selection in match_extract.referenced_entity_type_selections]
+
+            target_collections = [sql.SQL('CASE WHEN {alias} IS NOT NULL THEN {ets_id} ELSE NULL END').format(
+                alias=sql.Identifier('target_' + entity_type_selection.alias),
+                ets_id=sql.Literal(entity_type_selection.id)
+            ) for entity_type_selection in match_extract.referenced_entity_type_selections]
+
+            strength = sql.SQL('LEFT JOIN unnest(ARRAY[{}]) AS strength ON true').format(sql.SQL(', ').join([
+                sql.Identifier(prop.hash) for prop in match_extract.strengths])) \
+                if match_extract.strengths else sql.SQL('')
+
+            sqls.append(
+                sql.SQL(cleandoc(""" 
+                    SELECT {ets_id} AS ets_id, src.uri AS uri, src_uri, trg_uri, 
+                           array_remove(ARRAY[{source_collections}]::integer[], NULL) AS source_collections, 
+                           target_collections, {strength_select}
+                    FROM {res} AS src
+                    LEFT JOIN unnest(ARRAY[{sources}]) AS src_uri ON true
+                    {ets_sources_joins}
+                    LEFT JOIN (
+                        SELECT trg.uri, trg_uri, 
+                               array_remove(ARRAY[{target_collections}]::integer[], NULL) AS target_collections
+                        FROM {res} AS trg
+                        LEFT JOIN unnest(ARRAY[{targets}]) AS trg_uri ON true
+                        {ets_targets_joins}
+                    ) AS trg
+                    ON src.uri = trg.uri
+                    {strength}
+               """)).format(
+                    ets_id=sql.Literal(match_extract.entity_type_selection.id),
+                    strength_select=sql.Identifier('strength') if match_extract.strengths
+                    else sql.SQL('NULL AS strength'),
+                    res=sql.Identifier(hash_string_min(match_extract.entity_type_selection.id)),
+                    sources=sql.SQL(', ').join([sql.Identifier(prop.hash) for prop in match_extract.sources]),
+                    targets=sql.SQL(', ').join([sql.Identifier(prop.hash) for prop in match_extract.targets]),
+                    ets_sources_joins=sql.SQL('\n ').join(ets_sources_joins),
+                    ets_targets_joins=sql.SQL('\n ').join(ets_targets_joins),
+                    source_collections=sql.SQL(', ').join(source_collections),
+                    target_collections=sql.SQL(', ').join(target_collections),
+                    strength=strength,
+                )
+            )
+
+        return sql.SQL('\nUNION ALL\n').join(sqls)
 
     @staticmethod
     def _get_combined_entity_type_selections_sql(properties, is_source):

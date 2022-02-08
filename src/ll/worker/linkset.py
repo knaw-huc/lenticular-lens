@@ -15,6 +15,7 @@ class LinksetJob(WorkerJob):
         self._id = id
 
         self._job = None
+        self._linkset = None
         self._matching_sql = None
         self._last_status = None
         self._is_downloading = False
@@ -25,6 +26,7 @@ class LinksetJob(WorkerJob):
 
     def reset(self):
         self._job = Job(self._job_id)
+        self._linkset = self._job.get_linkset_spec_by_id(self._id)
         self._matching_sql = MatchingSql(self._job, self._id)
 
     def run_matching(self):
@@ -43,25 +45,31 @@ class LinksetJob(WorkerJob):
             self._status = 'Generating entity-type selections'
             self.process_sql(self._matching_sql.generate_entity_type_selection_sql())
 
-        if not self._killed:
-            self._status = 'Generating source entities'
-            self.process_sql(self._matching_sql.generate_match_source_sql())
+        if self._linkset.matching == 'extract':
+            if not self._killed:
+                self._status = 'Extracting linkset'
+                self.process_sql(self._matching_sql.generate_extract_linkset_sql())
 
-        if not self._killed:
-            self._status = 'Generating target entities'
-            self.process_sql(self._matching_sql.generate_match_target_sql())
+        elif self._linkset.matching == 'methods':
+            if not self._killed:
+                self._status = 'Generating source entities'
+                self.process_sql(self._matching_sql.generate_match_source_sql())
 
-        if not self._killed:
-            self._status = 'Generating indexes'
-            self.process_sql(self._matching_sql.generate_match_index_and_sequence_sql())
+            if not self._killed:
+                self._status = 'Generating target entities'
+                self.process_sql(self._matching_sql.generate_match_target_sql())
 
-        if not self._killed:
-            self._status = 'Looking for links'
-            self.process_sql(self._matching_sql.generate_match_linkset_sql())
+            if not self._killed:
+                self._status = 'Generating indexes'
+                self.process_sql(self._matching_sql.generate_match_index_and_sequence_sql())
+
+            if not self._killed:
+                self._status = 'Looking for links'
+                self.process_sql(self._matching_sql.generate_match_linkset_sql())
 
         if not self._killed:
             self._status = 'Finishing'
-            self.process_sql(self._matching_sql.generate_match_linkset_finish_sql())
+            self.process_sql(self._matching_sql.generate_linkset_finish_sql())
 
     def process_sql(self, sql):
         with self._db_conn.cursor() as cur:
@@ -75,7 +83,7 @@ class LinksetJob(WorkerJob):
             'status_message': cur_status
         } if cur_status and self._last_status != cur_status else {}
 
-        if cur_status and not self._is_downloading:
+        if self._linkset.matching == 'methods' and cur_status and not self._is_downloading:
             with conn_pool.connection() as conn, conn.cursor() as cur:
                 self.get_sequence_count(conn, cur, 'linkset_count', data, 'links_progress')
                 self.get_count(conn, cur, 'source', data, 'sources_count')
@@ -136,38 +144,68 @@ class LinksetJob(WorkerJob):
         self.watch_process()
 
         with conn_pool.connection() as conn, conn.cursor(row_factory=rows.dict_row) as cur:
-            cur.execute(sql.SQL('''
-                SELECT  (SELECT count(*) FROM linksets.{linkset_table}) AS links,
-                        (SELECT count(DISTINCT uri) FROM {linkset_schema}.source) AS sources,
-                        (SELECT count(DISTINCT uri) FROM {linkset_schema}.target) AS targets,
-                        (SELECT count(DISTINCT uris.uri) FROM (
-                            SELECT uri FROM {linkset_schema}.source
-                            UNION ALL
-                            SELECT uri FROM {linkset_schema}.target
-                         ) AS uris) AS entities,
-                        (SELECT count(DISTINCT uris.uri) FROM (
-                            SELECT source_uri AS uri FROM linksets.{linkset_table} 
-                            WHERE link_order = 'source_target' OR link_order = 'both'
-                            UNION ALL
-                            SELECT target_uri AS uri FROM linksets.{linkset_table} 
-                            WHERE link_order = 'target_source' OR link_order = 'both'
-                        ) AS uris) AS linkset_sources,
-                        (SELECT count(DISTINCT uris.uri) FROM (
-                            SELECT target_uri AS uri FROM linksets.{linkset_table} 
-                            WHERE link_order = 'source_target' OR link_order = 'both'
-                            UNION ALL
-                            SELECT source_uri AS uri FROM linksets.{linkset_table} 
-                            WHERE link_order = 'target_source' OR link_order = 'both'
-                        ) AS uris) AS linkset_targets,
-                        (SELECT count(DISTINCT uris.uri) FROM (
-                            SELECT source_uri AS uri FROM linksets.{linkset_table} 
-                            UNION ALL
-                            SELECT target_uri AS uri FROM linksets.{linkset_table}
-                        ) AS uris) AS linkset_entities
-            ''').format(
-                linkset_table=sql.Identifier(self._job.table_name(self._id)),
-                linkset_schema=sql.Identifier(self._job.schema_name(self._id)),
-            ))
+            if self._linkset.matching == 'methods':
+                cur.execute(sql.SQL('''
+                    SELECT  (SELECT count(*) FROM linksets.{linkset_table}) AS links,
+                            (SELECT count(DISTINCT uri) FROM {linkset_schema}.source) AS sources,
+                            (SELECT count(DISTINCT uri) FROM {linkset_schema}.target) AS targets,
+                            (SELECT count(DISTINCT uris.uri) FROM (
+                                SELECT uri FROM {linkset_schema}.source
+                                UNION ALL
+                                SELECT uri FROM {linkset_schema}.target
+                             ) AS uris) AS entities,
+                            (SELECT count(DISTINCT uris.uri) FROM (
+                                SELECT source_uri AS uri FROM linksets.{linkset_table} 
+                                WHERE link_order = 'source_target' OR link_order = 'both'
+                                UNION ALL
+                                SELECT target_uri AS uri FROM linksets.{linkset_table} 
+                                WHERE link_order = 'target_source' OR link_order = 'both'
+                            ) AS uris) AS linkset_sources,
+                            (SELECT count(DISTINCT uris.uri) FROM (
+                                SELECT target_uri AS uri FROM linksets.{linkset_table} 
+                                WHERE link_order = 'source_target' OR link_order = 'both'
+                                UNION ALL
+                                SELECT source_uri AS uri FROM linksets.{linkset_table} 
+                                WHERE link_order = 'target_source' OR link_order = 'both'
+                            ) AS uris) AS linkset_targets,
+                            (SELECT count(DISTINCT uris.uri) FROM (
+                                SELECT source_uri AS uri FROM linksets.{linkset_table} 
+                                UNION ALL
+                                SELECT target_uri AS uri FROM linksets.{linkset_table}
+                            ) AS uris) AS linkset_entities
+                ''').format(
+                    linkset_table=sql.Identifier(self._job.table_name(self._id)),
+                    linkset_schema=sql.Identifier(self._job.schema_name(self._id)),
+                ))
+            elif self._linkset.matching == 'extract':
+                cur.execute(sql.SQL('''
+                    SELECT  (SELECT count(*) FROM linksets.{linkset_table}) AS links,
+                            NULL AS sources,
+                            NULL AS targets,
+                            NULL AS entities,
+                            (SELECT count(DISTINCT uris.uri) FROM (
+                                SELECT source_uri AS uri FROM linksets.{linkset_table} 
+                                WHERE link_order = 'source_target' OR link_order = 'both'
+                                UNION ALL
+                                SELECT target_uri AS uri FROM linksets.{linkset_table} 
+                                WHERE link_order = 'target_source' OR link_order = 'both'
+                            ) AS uris) AS linkset_sources,
+                            (SELECT count(DISTINCT uris.uri) FROM (
+                                SELECT target_uri AS uri FROM linksets.{linkset_table} 
+                                WHERE link_order = 'source_target' OR link_order = 'both'
+                                UNION ALL
+                                SELECT source_uri AS uri FROM linksets.{linkset_table} 
+                                WHERE link_order = 'target_source' OR link_order = 'both'
+                            ) AS uris) AS linkset_targets,
+                            (SELECT count(DISTINCT uris.uri) FROM (
+                                SELECT source_uri AS uri FROM linksets.{linkset_table} 
+                                UNION ALL
+                                SELECT target_uri AS uri FROM linksets.{linkset_table}
+                            ) AS uris) AS linkset_entities
+                ''').format(
+                    linkset_table=sql.Identifier(self._job.table_name(self._id)),
+                    linkset_schema=sql.Identifier(self._job.schema_name(self._id)),
+                ))
 
             result = cur.fetchone()
             cur.execute(sql.SQL('DROP SCHEMA {} CASCADE')

@@ -103,7 +103,7 @@ class LinksetBuilder:
                     'source_intermediates': flatten(list(link['source_intermediates'].values())) if link[
                         'source_intermediates'] else None,
                     'target_intermediates': flatten(list(link['target_intermediates'].values())) if link[
-                        'source_intermediates'] else None,
+                        'target_intermediates'] else None,
                     'source_values': self._get_values(link, check_key='source_uri',
                                                       is_single_value=is_single_value) if use_properties else None,
                     'target_values': self._get_values(link, check_key='target_uri',
@@ -271,7 +271,7 @@ class LinksetBuilder:
 
     @property
     def _collections(self):
-        return set(ets.collection for ets in self._spec.entity_type_selections)
+        return set(ets.collection for ets in self._spec.all_entity_type_selections)
 
     @property
     def _source_collections(self):
