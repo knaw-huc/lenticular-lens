@@ -123,6 +123,11 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql COST 10000000 STRICT VOLATILE;
 
+CREATE AGGREGATE array_cat_agg(anycompatiblearray) (
+    sfunc = array_cat,
+    stype = anycompatiblearray
+);
+
 CREATE OR REPLACE FUNCTION array_perc_size(source anyarray, target anyarray, perc integer) RETURNS integer AS $$
 SELECT ceil(greatest(cardinality(source), cardinality(target)) * (perc / 100.0));
 $$ LANGUAGE sql STRICT IMMUTABLE PARALLEL SAFE;
