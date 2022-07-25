@@ -17,7 +17,7 @@ from flask_pyoidc import OIDCAuthentication
 from flask_pyoidc.user_session import UserSession
 from flask_pyoidc.provider_configuration import ProviderConfiguration, ClientMetadata
 
-from werkzeug.routing import BaseConverter, ValidationError
+from werkzeug.routing.converters import BaseConverter, ValidationError
 
 from ll.job.job import Job, Validation
 from ll.job.lens_sql import LensSql
