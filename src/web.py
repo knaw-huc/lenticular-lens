@@ -96,7 +96,8 @@ auth = OIDCAuthentication({'default': ProviderConfiguration(
     auth_request_params={'scope': ['openid', 'email', 'profile']},
 )}, app) if 'OIDC_SERVER' in os.environ and len(os.environ['OIDC_SERVER']) > 0 else None
 
-socketio = SocketIO(app, cors_allowed_origins='*')
+enable_logger = os.environ.get('LOG_LEVEL', 'INFO').lower() == 'debug'
+socketio = SocketIO(app, cors_allowed_origins='*', namespaces='*', logger=enable_logger, engineio_logger=enable_logger)
 socketio.start_background_task(emit_database_events)
 
 
