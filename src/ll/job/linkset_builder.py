@@ -250,9 +250,9 @@ class LinksetBuilder:
 
         return sql.SQL(cleandoc('''
             WITH linkset AS (
-                SELECT source_uri, target_uri, link_order, source_collections, target_collections, 
-                       source_intermediates, target_intermediates, cluster_id, cluster_hash_id, 
-                       valid, similarity, motivation
+                SELECT DISTINCT source_uri, target_uri, link_order, source_collections, target_collections, 
+                                source_intermediates, target_intermediates, cluster_id, cluster_hash_id, 
+                                valid, similarity, motivation, sort_order
                 FROM {schema}.{view_name} AS linkset
                 {filter_laterals_sql}
                 {where_sql} 
@@ -271,6 +271,14 @@ class LinksetBuilder:
     @property
     def _collections(self):
         return set(ets.collection for ets in self._spec.entity_type_selections)
+
+    @property
+    def _source_collections(self):
+        return set(ets.collection for ets in self._spec.sources)
+
+    @property
+    def _target_collections(self):
+        return set(ets.collection for ets in self._spec.targets)
 
     @property
     def _selection_resource_uris_sql(self):
@@ -293,12 +301,16 @@ class LinksetBuilder:
 
     @property
     def _additional_filter_sql(self):
+        aliases = [collection.alias for collection in self._collections if not self._collection_in_both(collection)]
+        aliases += [collection.alias + '_a' for collection in self._collections if self._collection_in_both(collection)]
+        aliases += [collection.alias + '_b' for collection in self._collections if self._collection_in_both(collection)]
+
         return sql.SQL(' AND ').join(
             [sql.SQL('{} IN ({})').format(
                 sql.Identifier(target),
                 sql.SQL(', ').join([
-                    sql.SQL('{}.{}').format(sql.Identifier(collection.alias), sql.Identifier('uri'))
-                    for collection in self._collections
+                    sql.SQL('{}.{}').format(sql.Identifier(alias), sql.Identifier('uri'))
+                    for alias in aliases
                 ])) for target in ['source_uri', 'target_uri']])
 
     @property
@@ -308,22 +320,24 @@ class LinksetBuilder:
             filter_properties = self._view.filters_properties_per_collection[collection] \
                 if collection in self._view.filters_per_collection else None
 
-            condition = sql.SQL('{}.uri IN (linkset.source_uri, linkset.target_uri)') \
-                .format(sql.Identifier(collection.alias))
-            if collection in self._view.filters_per_collection:
-                condition = sql.SQL('{} AND {}').format(condition, self._view.filters_sql_per_collection[collection])
+            for alias in [collection.alias + '_a', collection.alias + '_b'] \
+                    if self._collection_in_both(collection) else [collection.alias]:
+                condition = sql.SQL('{}.uri IN (linkset.source_uri, linkset.target_uri)') \
+                    .format(sql.Identifier(collection.alias))
+                if collection in self._view.filters_per_collection:
+                    condition = sql.SQL('{} AND {}').format(condition,
+                                                            self._view.filters_sql_per_collection[collection])
 
-            sqls.append(sql.SQL(cleandoc('''
-                LATERAL (
-                    {resource_query}
-                ) AS {resource}
-            ''')).format(
-                resource_query=QueryBuilder.create_query(
-                    collection.alias, collection.table_name,
-                    filter_properties=filter_properties,
-                    condition=condition),
-                resource=sql.Identifier(collection.alias),
-            ))
+                sqls.append(sql.SQL(cleandoc('''
+                    LATERAL (
+                        {resource_query}
+                    ) AS {resource}
+                ''')).format(
+                    resource_query=QueryBuilder.create_query(
+                        collection.alias, collection.table_name,
+                        filter_properties=filter_properties, condition=condition),
+                    resource=sql.Identifier(alias),
+                ))
 
         if sqls:
             return sql.Composed([sql.SQL(',\n'), sql.SQL(',\n').join(sqls)])
@@ -406,6 +420,9 @@ class LinksetBuilder:
                     })
 
         return all_values
+
+    def _collection_in_both(self, collection):
+        return collection in self._source_collections and collection in self._target_collections
 
     @staticmethod
     def create(schema, table_name, spec, view,

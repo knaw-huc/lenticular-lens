@@ -59,6 +59,14 @@ class Lens:
         return {ets for linkset in self.linksets for ets in linkset.all_entity_type_selections}
 
     @property
+    def sources(self):
+        return {ets for linkset in self.linksets for ets in linkset.sources}
+
+    @property
+    def targets(self):
+        return {ets for linkset in self.linksets for ets in linkset.targets}
+
+    @property
     def matching_methods(self):
         return [matching_method for linkset in self.linksets for matching_method in linkset.matching_methods]
 
