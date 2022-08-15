@@ -9,8 +9,8 @@ import eventlet
 import functools
 
 from flask import Flask, Response, jsonify, session, request
+from flask.json.provider import DefaultJSONProvider
 from flask_cors import CORS
-from flask.json import JSONEncoder
 from flask_socketio import SocketIO
 
 from flask_pyoidc import OIDCAuthentication
@@ -36,13 +36,15 @@ from ll.data.collection import Collection
 from ll.data.timbuctoo_datasets import TimbuctooDatasets
 
 
-class FixedJSONEncoder(JSONEncoder):
-    def default(self, obj):
+class FixedDefaultJSONProvider(DefaultJSONProvider):
+    @staticmethod
+    def default(obj):
         if isinstance(obj, decimal.Decimal):
             return float(obj)
         if isinstance(obj, datetime.date):
             return obj.isoformat()
-        return super(FixedJSONEncoder, self).default(obj)
+
+        return DefaultJSONProvider.default(obj)
 
 
 class JobConverter(BaseConverter):
@@ -82,7 +84,7 @@ app.config.update(
     COMPRESS_MIMETYPES=['text/html', 'text/css', 'text/plain', 'text/csv', 'text/turtle',
                         'application/json', 'application/javascript', 'application/trig'],
 )
-app.json_encoder = FixedJSONEncoder
+app.json = FixedDefaultJSONProvider(app)
 app.url_map.converters['job'] = JobConverter
 app.url_map.converters['type'] = TypeConverter
 
