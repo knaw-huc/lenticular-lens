@@ -8,6 +8,15 @@ CREATE SCHEMA IF NOT EXISTS timbuctoo;
 CREATE SCHEMA IF NOT EXISTS linksets;
 CREATE SCHEMA IF NOT EXISTS lenses;
 
+CREATE TABLE IF NOT EXISTS users
+(
+    user_id          text primary key,
+    name             text,
+    email            text,
+    user_data        jsonb   not null,
+    auto_delete_data boolean not null default true
+);
+
 CREATE TABLE IF NOT EXISTS jobs
 (
     job_id                           text primary key,

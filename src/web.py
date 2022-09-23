@@ -19,6 +19,7 @@ from flask_pyoidc.provider_configuration import ProviderConfiguration, ClientMet
 
 from werkzeug.routing.converters import BaseConverter, ValidationError
 
+from ll.job.user import User
 from ll.job.job import Job, Validation
 from ll.job.lens_sql import LensSql
 from ll.job.matching_sql import MatchingSql
@@ -110,6 +111,11 @@ def authenticated(func):
             user_session = UserSession(session, 'default')
             if user_session.last_authenticated is None:
                 return jsonify(result='not_authenticated', error='Please login!'), 401
+
+            if 'user' not in session:
+                user = User(user_session.userinfo)
+                user.persist_data()
+                session['user'] = user
 
         return func(*args, **kwargs)
 
