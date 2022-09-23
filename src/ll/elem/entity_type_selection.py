@@ -52,6 +52,10 @@ class EntityTypeSelection:
         return {filter.property_field for filter in self.filters}
 
     @property
+    def all_props(self):
+        return self.properties.union(self.filter_properties)
+
+    @property
     def filters(self):
         return self.with_filters_recursive(lambda condition: flatten(condition['children']), default=[])
 

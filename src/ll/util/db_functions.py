@@ -56,3 +56,10 @@ def get_transformers():
             transformers[key] = {**{'internal': True}, **config}
 
     return transformers
+
+
+def get_all_jobs():
+    with db_conn() as conn, conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
+        cur.execute("SELECT job_id, job_title, job_description, job_link, "
+                    "created_at, updated_at, 'owner' AS role FROM jobs")
+        return cur.fetchall()

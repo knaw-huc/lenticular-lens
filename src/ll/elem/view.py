@@ -21,6 +21,10 @@ class View:
         return self._data['type']
 
     @property
+    def all_props(self):
+        return self.properties.union(self.filter_properties)
+
+    @property
     def properties(self):
         return set(prop for collection_props in self.properties_per_collection.values() for prop in collection_props)
 
@@ -42,6 +46,10 @@ class View:
     @property
     def filters(self):
         return set(filter for coll_filters in self.filters_per_collection.values() for filter in coll_filters)
+
+    @property
+    def filter_properties(self):
+        return set(prop for filter_props in self.filters_properties_per_collection.values() for prop in filter_props)
 
     @property
     def filters_properties_per_collection(self):
