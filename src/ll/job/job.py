@@ -24,9 +24,9 @@ from ll.util.config_db import db_conn, fetch_one
 
 
 class Job:
-    def __init__(self, job_id):
+    def __init__(self, job_id, data=None):
         self.job_id = job_id
-        self._data = None
+        self._data = data
         self._entity_type_selections = None
         self._linkset_specs = None
         self._lens_specs = None
@@ -35,7 +35,15 @@ class Job:
     @property
     def data(self):
         if not self._data:
-            self._data = fetch_one('SELECT * FROM jobs WHERE job_id = %s', (self.job_id,), dict=True)
+            self._data = fetch_one('''
+                SELECT *, (
+                    SELECT json_object(array_agg(user_id), array_agg(role)::text[]) 
+                    FROM job_users
+                    WHERE job_id = %s
+                ) AS users
+                FROM jobs
+                WHERE job_id = %s
+            ''', (self.job_id, self.job_id,), dict=True)
 
         return self._data
 
@@ -118,13 +126,26 @@ class Job:
             """, (self.job_id, title, description, link))
 
     def update_data(self, data):
-        entity_type_selections_form_data = \
-            data['entity_type_selections'] if 'entity_type_selections' in data \
-                else self.data['entity_type_selections_form_data']
-        linkset_specs_form_data = \
-            data['linkset_specs'] if 'linkset_specs' in data else self.data['linkset_specs_form_data']
-        lens_specs_form_data = data['lens_specs'] if 'lens_specs' in data else self.data['lens_specs_form_data']
-        views_form_data = data['views'] if 'views' in data else self.data['views_form_data']
+        entity_type_selections_form_data = data['entity_type_selections'] \
+            if 'entity_type_selections' in data \
+               and data['entity_type_selections'] is not None else self.data['entity_type_selections_form_data'] \
+            if 'entity_type_selections_form_data' in self.data \
+               and self.data['entity_type_selections_form_data'] is not None else []
+        linkset_specs_form_data = data['linkset_specs'] \
+            if 'linkset_specs' in data \
+               and data['linkset_specs'] is not None else self.data['linkset_specs_form_data'] \
+            if 'linkset_specs_form_data' in self.data \
+               and self.data['linkset_specs_form_data'] is not None else []
+        lens_specs_form_data = data['lens_specs'] \
+            if 'lens_specs' in data \
+               and data['lens_specs'] is not None else self.data['lens_specs_form_data'] \
+            if 'lens_specs_form_data' in self.data \
+               and self.data['lens_specs_form_data'] is not None else []
+        views_form_data = data['views'] \
+            if 'views' in data \
+               and data['views'] is not None else self.data['views_form_data'] \
+            if 'views_form_data' in self.data \
+               and self.data['views_form_data'] is not None else []
 
         data_updated = {
             'job_title': data['job_title'].strip() \
@@ -241,7 +262,20 @@ class Job:
             cur.execute('UPDATE clusterings SET kill = true WHERE job_id = %s AND spec_id = %s AND spec_type = %s',
                         (self.job_id, id, type))
 
-    def delete(self, id, type):
+    def delete(self):
+        for linkset_spec in self.linkset_specs:
+            self.delete_spec(linkset_spec.id, 'linkset')
+
+        for lens_spec in self.lens_specs:
+            self.delete_spec(lens_spec.id, 'lens')
+
+        with db_conn() as conn, conn.cursor() as cur:
+            cur.execute('INSERT INTO jobs_deleted '
+                        'SELECT * FROM jobs WHERE job_id = %s '
+                        'ON CONFLICT (job_id) DO NOTHING', (self.job_id,))
+            cur.execute('DELETE FROM jobs WHERE job_id = %s', (self.job_id,))
+
+    def delete_spec(self, id, type):
         with db_conn() as conn, conn.cursor() as cur:
             cur.execute('DELETE FROM clusterings WHERE job_id = %s AND spec_id = %s AND spec_type = %s',
                         (self.job_id, id, type))

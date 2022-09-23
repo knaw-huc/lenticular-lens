@@ -159,7 +159,7 @@ class PropertyField:
 
     @property
     def collections_required(self):
-        return set([prop_in_path['to_collection'].collection_id for prop_in_path in self._prop_path])
+        return set([prop_in_path['to_collection'] for prop_in_path in self._intermediate_property_path])
 
     @property
     def is_downloaded(self):
@@ -176,7 +176,7 @@ class PropertyField:
     def hash(self):
         if not self._hash:
             self._hash = \
-                hash_string_min((self.resource_label, self.prop_label, self._extend, self.is_list, self._transformers))
+                hash_string_min((self.resource_label, self.prop_label, self._extend, self._transformers))
 
         return self._hash
 

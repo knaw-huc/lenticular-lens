@@ -14,6 +14,7 @@ alignment and is also able to report on manual corrections and the amount of man
     5. [Data retrieval](#data-retrieval)
     6. [Linksets interaction](#linksets-interaction)
     7. [Export](#export)
+    8. [Admin tasks](#admin-tasks)
 4. [Websocket](#websocket)
     1. [Default namespace](#default-namespace)
     2. [Job namespace](#job-namespace)
@@ -30,9 +31,9 @@ alignment and is also able to report on manual corrections and the amount of man
 
 1. Make sure Docker and Docker Compose are installed
     * _For Windows and Mac users: install [Docker Desktop](https://www.docker.com/products/docker-desktop)_
-1. Use the provided `docker-compose.yml` as a baseline
-1. Run `docker-compose up`
-1. Visit http://localhost:8000 in your browser
+2. Use the provided `docker-compose.yml` as a baseline
+3. Run `docker-compose up`
+4. Visit http://localhost:8000 in your browser
 
 _Note: This will create a folder `pgdata` with the database data. To clean up the database and start from scratch,
 simply remove this folder._
@@ -43,8 +44,10 @@ Misc. configuration:
 
 - `APP_DOMAIN`: The application domain; defaults to `http://localhost`
 - `SECRET_KEY`: The secret key used for session signing
+- `ADMIN_ACCESS_TOKEN`: The access token used for running admin tasks
 - `LOG_LEVEL`: The logging level; defaults to `INFO`
 - `PUBLISHER`: The publisher to be registered in the RDF export; defaults to `Lenticular Lens`
+- `AUTO_DELETE_JOB_DAYS`: The minimum number of days after creation of a job making the job eligible for deletion
 - `WORKER_TYPE`: For a worker instance, the type of the worker to run:
     - `TIMBUCTOO`
     - `LINKSET`
@@ -278,6 +281,15 @@ _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/kill_clustering/lens/0`_
 
 ---
 
+**URL**: `/job/<job_id>`\
+**Method**: `DELETE`
+
+Deletion of the job with the given `job_id`.
+
+_Example: `/job/d697ea3869422ce3c7cc1889264d03c7`_
+
+---
+
 **URL**: `/job/<job_id>/<type>/<id>`\
 **Method**: `DELETE`
 
@@ -286,6 +298,13 @@ Deletion of `type` (`linkset` or `lens`) for the linkset/lens with the given `id
 _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/lens/0`_
 
 ### Data retrieval
+
+**URL**: `/jobs`\
+**Method**: `GET`
+
+Returns all the logged-in user his/her jobs.
+
+---
 
 **URL**: `/job/<job_id>/entity_type_selection_total/<id>`\
 **Method**: `GET`
@@ -449,6 +468,26 @@ Specify `use_graphs` to determine the RDF format to use.
 
 Optionally specify `creator` to include extra metadata. If authentication is enabled, the `creator` is obtained from the
 authentication provider.
+
+### Admin tasks
+
+**URL**: `/admin/cleanup_jobs`\
+**Method**: `POST`\
+**Parameters**: `access_token`
+
+Cleanup all the jobs.
+
+Specify `access_token` to show authorization to run this admin task.
+
+---
+
+**URL**: `/admin/cleanup_downloaded`\
+**Method**: `POST`\
+**Parameters**: `access_token`
+
+Cleanup all the downloaded collections.
+
+Specify `access_token` to show authorization to run this admin task.
 
 ## WebSocket
 

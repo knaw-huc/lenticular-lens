@@ -229,6 +229,9 @@ class Collection:
     def hash(self):
         return hash_string_min((self.graphql_endpoint, self.dataset_id, self.collection_id))
 
+    def __str__(self):
+        return self.graphql_endpoint + ' - ' + self.dataset_id + ' - ' + self.collection_id
+
     def __eq__(self, other):
         return isinstance(other, Collection) and hash(self) == hash(other)
 

@@ -3,6 +3,7 @@ CREATE EXTENSION IF NOT EXISTS lenticular_lens CASCADE;
 CREATE TYPE spec_type AS ENUM ('linkset', 'lens');
 CREATE TYPE link_order AS ENUM ('source_target', 'both', 'target_source');
 CREATE TYPE link_validity AS ENUM ('accepted', 'rejected', 'uncertain', 'unchecked', 'disputed');
+CREATE TYPE job_role_type AS ENUM ('owner', 'shared');
 
 CREATE SCHEMA IF NOT EXISTS timbuctoo;
 CREATE SCHEMA IF NOT EXISTS linksets;
@@ -34,6 +35,34 @@ CREATE TABLE IF NOT EXISTS jobs
     created_at                       timestamp default now() not null,
     updated_at                       timestamp default now() not null
 );
+
+CREATE TABLE IF NOT EXISTS jobs_deleted
+(
+    job_id                           text primary key,
+    job_title                        text                    not null,
+    job_description                  text                    not null,
+    job_link                         text,
+    entity_type_selections_form_data jsonb,
+    linkset_specs_form_data          jsonb,
+    lens_specs_form_data             jsonb,
+    views_form_data                  jsonb,
+    entity_type_selections           jsonb,
+    linkset_specs                    jsonb,
+    lens_specs                       jsonb,
+    views                            jsonb,
+    created_at                       timestamp default now() not null,
+    updated_at                       timestamp default now() not null
+);
+
+CREATE TABLE IF NOT EXISTS job_users
+(
+    job_id  text          not null,
+    user_id text          not null,
+    role    job_role_type not null,
+    PRIMARY KEY (job_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS user_jobs_idx ON job_users USING hash (user_id);
 
 CREATE TABLE IF NOT EXISTS timbuctoo_tables
 (
@@ -102,25 +131,25 @@ CREATE TABLE IF NOT EXISTS lenses
 
 CREATE TABLE IF NOT EXISTS clusterings
 (
-    job_id           text      not null,
-    spec_id          int       not null,
-    spec_type        spec_type not null,
-    clustering_type  text      not null,
-    status           text      not null,
-    status_message   text,
-    kill             boolean   not null,
-    requested_at     timestamp,
-    processing_at    timestamp,
-    finished_at      timestamp,
-    links_count      bigint,
-    clusters_count   bigint,
-    resources_size   bigint,
-    extended_count   int,
-    cycles_count     int,
-    smallest_size    bigint,
-    largest_size     bigint,
-    smallest_count   bigint,
-    largest_count    bigint,
+    job_id          text      not null,
+    spec_id         int       not null,
+    spec_type       spec_type not null,
+    clustering_type text      not null,
+    status          text      not null,
+    status_message  text,
+    kill            boolean   not null,
+    requested_at    timestamp,
+    processing_at   timestamp,
+    finished_at     timestamp,
+    links_count     bigint,
+    clusters_count  bigint,
+    resources_size  bigint,
+    extended_count  int,
+    cycles_count    int,
+    smallest_size   bigint,
+    largest_size    bigint,
+    smallest_count  bigint,
+    largest_count   bigint,
     PRIMARY KEY (job_id, spec_id, spec_type)
 );
 

@@ -7,6 +7,7 @@ import datetime
 import psycopg2
 import eventlet
 import functools
+import threading
 
 from flask import Flask, Response, jsonify, session, request
 from flask.json.provider import DefaultJSONProvider
@@ -31,7 +32,8 @@ from ll.util.stopwords import get_stopwords
 from ll.util.config_db import listen_for_notify
 from ll.util.config_logging import config_logger
 from ll.util.helpers import get_string_from_sql
-from ll.util.db_functions import reset, get_filter_functions, get_matching_methods, get_transformers
+from ll.util.admin_tasks import cleanup_jobs, cleanup_downloaded
+from ll.util.db_functions import reset, get_filter_functions, get_matching_methods, get_transformers, get_all_jobs
 
 from ll.data.collection import Collection
 from ll.data.timbuctoo_datasets import TimbuctooDatasets
@@ -112,10 +114,22 @@ def authenticated(func):
             if user_session.last_authenticated is None:
                 return jsonify(result='not_authenticated', error='Please login!'), 401
 
-            if 'user' not in session:
+            if 'persisted' not in session:
                 user = User(user_session.userinfo)
                 user.persist_data()
-                session['user'] = user
+                session['persisted'] = True
+
+        return func(*args, **kwargs)
+
+    return wrapper
+
+
+def admin_task(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        if 'access_token' not in request.values or \
+                request.values['access_token'] != os.environ.get('ADMIN_ACCESS_TOKEN'):
+            return jsonify(result='not_authenticated', error='No access!'), 401
 
         return func(*args, **kwargs)
 
@@ -264,6 +278,12 @@ def methods():
     )
 
 
+@app.get('/job/list')
+@authenticated
+def job_list():
+    return jsonify(get_user().list_jobs() if auth else get_all_jobs())
+
+
 @app.post('/job/create')
 @authenticated
 def job_create():
@@ -285,6 +305,9 @@ def job_create():
         except:
             job_id = hash_string(uuid.uuid4().hex)
             job = Job(job_id)
+
+    if auth:
+        get_user().register_job(job_id, 'owner')
 
     return jsonify(result='created', job_id=job_id)
 
@@ -320,6 +343,9 @@ def job_update(job):
 @authenticated
 @with_job
 def job_data(job):
+    if auth and (not job.data['users'] or get_user().user_id not in job.data['users']):
+        get_user().register_job(job.data['job_id'], 'shared')
+
     return jsonify(
         job_id=job.data['job_id'],
         job_title=job.data['job_title'],
@@ -407,16 +433,24 @@ def kill_clustering(job, type, id):
     return jsonify(result='ok')
 
 
+@app.delete('/job/<job:job>')
+@authenticated
+@with_job
+def delete_job(job):
+    job.delete()
+    return jsonify(result='ok')
+
+
 @app.delete('/job/<job:job>/<type:type>/<int:id>')
 @authenticated
 @with_job
 @with_spec
-def delete(job, type, id):
+def delete_spec(job, type, id):
     lens_uses = job.spec_lens_uses(id, type)
     if len(lens_uses) > 0:
         return jsonify(result='error', lens_uses=lens_uses), 400
 
-    job.delete(id, type)
+    job.delete_spec(id, type)
     return jsonify(result='ok')
 
 
@@ -593,6 +627,25 @@ def export_to_rdf(job, type, id):
 
     return Response(export_generator, mimetype=mimetype,
                     headers={'Content-Disposition': f'attachment; filename={type}_{job.job_id}_{str(id)}.{extension}'})
+
+
+@app.post('/admin/cleanup_jobs')
+@admin_task
+def admin_cleanup_jobs():
+    threading.Thread(target=cleanup_jobs).start()
+    return jsonify(ok=True)
+
+
+@app.post('/admin/cleanup_downloaded')
+@admin_task
+def admin_cleanup_downloaded():
+    threading.Thread(target=cleanup_downloaded).start()
+    return jsonify(ok=True)
+
+
+def get_user():
+    user_session = UserSession(session, 'default')
+    return User(user_session.userinfo)
 
 
 def get_paging_params():
