@@ -1,8 +1,0 @@
-lowercase:
-  sql_template: lower({property})
-
-to_numeric_immutable:
-  sql_template: to_numeric_immutable({property})
-
-to_date_immutable:
-  sql_template: to_date_immutable({property}, {format})

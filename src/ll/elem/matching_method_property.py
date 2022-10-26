@@ -74,19 +74,18 @@ class MatchingMethodProperty:
                 raise NameError('Transformer %s is not defined' % transformer['name'])
 
         if not self._field_type_info['type']:
-            field_transformers.insert(0, {
-                'sql_template': transformers_info['lowercase']['sql_template'],
+            field_transformers.append({
+                'sql_template': 'lower({property})',
                 'parameters': {}
             })
-
-        if self._field_type_info['type'] == 'number':
+        elif self._field_type_info['type'] == 'number':
             field_transformers.append({
-                'sql_template': transformers_info['to_numeric_immutable']['sql_template'],
+                'sql_template': 'to_numeric_immutable({property})',
                 'parameters': {}
             })
         elif self._field_type_info['type'] == 'date':
             field_transformers.append({
-                'sql_template': transformers_info['to_date_immutable']['sql_template'],
+                'sql_template': 'to_date_immutable({property}, {format})',
                 'parameters': {'format': self._field_type_info['parameters']['format']}
             })
 

@@ -2,11 +2,15 @@ import urllib3
 import requests
 import logging
 
+from cachetools import cachedmethod, TTLCache
+
 log = logging.getLogger(__name__)
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 class Timbuctoo:
+    cache = TTLCache(maxsize=5, ttl=300)
+
     def __init__(self, graphql_uri):
         self._graphql_uri = graphql_uri
 
@@ -27,6 +31,7 @@ class Timbuctoo:
             log.error(e, exc_info=True)
 
     @property
+    @cachedmethod(lambda self: self.cache, key=lambda self: self._graphql_uri)
     def datasets(self):
         datasets_data = self.fetch_graph_ql("""
             {

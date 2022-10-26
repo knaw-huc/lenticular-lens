@@ -4,10 +4,6 @@ from psycopg2 import extras
 from collections import OrderedDict
 from ll.util.config_db import db_conn
 
-from ll.util.helpers import get_yaml_from_file
-
-internal_transformers_info = get_yaml_from_file('internal_transformers')
-
 filter_functions = OrderedDict()
 matching_methods = OrderedDict()
 transformers = OrderedDict()
@@ -51,9 +47,6 @@ def get_transformers():
             for transformer in cur:
                 transformers[transformer['key']] = \
                     json.loads(transformer['config'], object_pairs_hook=OrderedDict)
-
-        for (key, config) in internal_transformers_info.items():
-            transformers[key] = {**{'internal': True}, **config}
 
     return transformers
 
