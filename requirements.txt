@@ -1,4 +1,4 @@
-flask==2.2.3
+flask==2.3.2
 flask-cors==3.0.10
 flask-pyoidc==3.10.0
 flask-socketio==5.3.2
