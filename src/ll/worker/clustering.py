@@ -1,4 +1,3 @@
-from io import StringIO
 from psycopg import sql, rows
 
 from ll.worker.job import WorkerJob
@@ -22,12 +21,7 @@ class ClusteringJob(WorkerJob):
     def start_clustering(self):
         links = self._job.get_links(self._id, self._type)
         self._worker = SimpleLinkClustering(links)
-
-        data = StringIO()
-        for cluster in self._worker.get_clusters():
-            for node in cluster['nodes']:
-                data.write(f"{cluster['id']}\t{node}\n")
-        data.seek(0)
+        data = [(cluster['id'], node) for cluster in self._worker.get_clusters() for node in cluster['nodes']]
 
         if not self._killed:
             schema = 'linksets' if self._type == 'linkset' else 'lenses'
@@ -46,7 +40,9 @@ class ClusteringJob(WorkerJob):
                     ) ON COMMIT DROP
                 ''').format(sql.Identifier(clusters_table_name)))
 
-                cur.copy_from(data, clusters_table_name)
+                with cur.copy(sql.SQL('COPY {} FROM STDIN').format(sql.Identifier(clusters_table_name))) as copy:
+                    for d in data:
+                        copy.write_row(d)
 
                 cur.execute(sql.SQL('''
                     CREATE TEMPORARY TABLE IF NOT EXISTS {} ON COMMIT DROP AS

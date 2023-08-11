@@ -35,10 +35,10 @@ class Worker:
         self._type = type
         self._job = None
         self._job_data = None
+        self._killed = False
 
     def teardown(self):
-        print('Worker %s stopped.' % str(self._type))
-
+        self._killed = True
         if self._job:
             self._job.kill()
 
@@ -127,7 +127,7 @@ class Worker:
             self.watch_for_jobs("clusterings", watch_query, update_status, self.run_reconciliation_job)
 
     def watch_for_jobs(self, table, watch_sql, update_status, run_job):
-        while True:
+        while not self._killed:
             try:
                 with conn_pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
                     cur.execute("LOCK TABLE %s IN ACCESS EXCLUSIVE MODE;" % table)

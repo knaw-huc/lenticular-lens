@@ -389,7 +389,7 @@ class Job:
             where_sql = sql.SQL('WHERE {}').format(where_sql)
 
         query_sql = sql.SQL(cleandoc('''
-            SELECT count({resource}.uri) AS total
+            SELECT count(DISTINCT {resource}.uri) AS total
             FROM timbuctoo.{table_name} AS {resource} 
             {joins}
             {condition}
