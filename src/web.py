@@ -4,7 +4,6 @@ import uuid
 import logging
 import decimal
 import datetime
-import psycopg2
 import eventlet
 import functools
 import threading
@@ -18,6 +17,7 @@ from flask_pyoidc import OIDCAuthentication
 from flask_pyoidc.user_session import UserSession
 from flask_pyoidc.provider_configuration import ProviderConfiguration, ClientMetadata
 
+from psycopg.errors import UniqueViolation
 from werkzeug.routing.converters import BaseConverter, ValidationError
 
 from ll.job.user import User
@@ -102,7 +102,8 @@ auth = OIDCAuthentication({'default': ProviderConfiguration(
 )}, app) if 'OIDC_SERVER' in os.environ and len(os.environ['OIDC_SERVER']) > 0 else None
 
 enable_logger = os.environ.get('LOG_LEVEL', 'INFO').lower() == 'debug'
-socketio = SocketIO(app, cors_allowed_origins='*', namespaces='*', logger=enable_logger, engineio_logger=enable_logger)
+socketio = SocketIO(app, async_mode='eventlet', cors_allowed_origins='*', namespaces='*',
+                    logger=enable_logger, engineio_logger=enable_logger)
 socketio.start_background_task(emit_database_events)
 
 
@@ -390,7 +391,7 @@ def run_spec(job, type, id):
         restart = 'restart' in request.values and request.values['restart'] == 'true'
         job.run_linkset(id, restart) if type == 'linkset' else job.run_lens(id, restart)
         return jsonify(result='ok')
-    except psycopg2.errors.UniqueViolation:
+    except UniqueViolation:
         return jsonify(result='exists'), 400
 
 
@@ -402,7 +403,7 @@ def run_clustering(job, type, id):
     try:
         job.run_clustering(id, type)
         return jsonify(result='ok')
-    except psycopg2.errors.UniqueViolation:
+    except UniqueViolation:
         return jsonify(result='exists'), 400
 
 

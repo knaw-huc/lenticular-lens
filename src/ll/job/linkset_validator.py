@@ -1,7 +1,7 @@
 from uuid import uuid4
-from psycopg2 import sql
+from psycopg import sql
 
-from ll.util.config_db import db_conn
+from ll.util.config_db import conn_pool
 
 
 class LinksetValidator:
@@ -21,7 +21,7 @@ class LinksetValidator:
     def add_motivation(self, motivation):
         motivation = motivation.strip() if motivation is not None and motivation.strip() else None
 
-        with db_conn() as conn, conn.cursor() as cur:
+        with conn_pool.connection() as conn, conn.cursor() as cur:
             cur.execute(sql.SQL('''
                 {cte_sql}
                  
@@ -38,7 +38,7 @@ class LinksetValidator:
             ))
 
     def _validate_lens(self, valid):
-        with db_conn() as conn, conn.cursor() as cur:
+        with conn_pool.connection() as conn, conn.cursor() as cur:
             temp_table_id = uuid4().hex
 
             cur.execute(sql.SQL('''
@@ -84,7 +84,7 @@ class LinksetValidator:
             cur.execute(sql.Composed(update_sqls))
 
     def _validate_linkset(self, valid):
-        with db_conn() as conn, conn.cursor() as cur:
+        with conn_pool.connection() as conn, conn.cursor() as cur:
             cur.execute(sql.SQL('''
                 {cte_sql}
                  

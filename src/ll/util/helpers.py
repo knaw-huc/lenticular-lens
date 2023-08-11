@@ -3,10 +3,10 @@ import re
 import yaml
 import datetime
 
-from psycopg2 import sql
+from psycopg import sql
 from os.path import join, dirname, realpath
 
-from ll.util.config_db import db_conn
+from ll.util.config_db import conn_pool
 
 
 def get_publisher():
@@ -31,7 +31,7 @@ def get_yaml_from_file(name):
 
 
 def get_string_from_sql(sql):
-    with db_conn() as conn:
+    with conn_pool.connection() as conn:
         return sql.as_string(conn)
 
 

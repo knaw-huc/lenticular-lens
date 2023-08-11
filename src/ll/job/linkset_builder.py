@@ -1,13 +1,13 @@
 from uuid import uuid4
 from inspect import cleandoc
 
-from psycopg2 import sql, extras
+from psycopg import sql, rows
 
 from ll.job.query_builder import QueryBuilder
 from ll.job.links_filter import LinksFilter
 from ll.job.clusters_filter import ClustersFilter
 
-from ll.util.config_db import db_conn, fetch_many, fetch_one
+from ll.util.config_db import conn_pool, fetch_many
 from ll.util.helpers import get_pagination_sql, get_sql_empty, flatten
 
 
@@ -43,7 +43,7 @@ class LinksetBuilder:
         self._clusters_filter = clusters_filter
 
     def get_total_links(self, with_view_filters=False):
-        with db_conn() as conn, conn.cursor() as cur:
+        with conn_pool.connection() as conn, conn.cursor() as cur:
             cur.execute(self.get_total_links_sql(with_view_filters))
 
             return {
@@ -66,7 +66,8 @@ class LinksetBuilder:
                                                           apply_paging=False, include_linkset_uris=False))
 
     def get_total_clusters(self, with_view_filters=False):
-        return fetch_one(self.get_total_clusters_sql(with_view_filters), dict=True)
+        with conn_pool.connection() as conn, conn.cursor(row_factory=rows.dict_row) as cur:
+            return cur.execute(self.get_total_clusters_sql(with_view_filters)).fetchone()
 
     def get_total_clusters_sql(self, with_view_filters=False):
         return sql.SQL(cleandoc('''
@@ -89,7 +90,7 @@ class LinksetBuilder:
         is_single_value = with_view_properties == 'single'
         use_properties = bool(with_view_properties != 'none' and self._view.properties_per_collection)
 
-        with db_conn() as conn, conn.cursor(name=uuid4().hex, cursor_factory=extras.RealDictCursor) as cur:
+        with conn_pool.connection() as conn, conn.cursor(name=uuid4().hex, row_factory=rows.dict_row) as cur:
             cur.execute(self.get_links_generator_sql(with_view_properties, with_view_filters))
 
             for link in fetch_many(cur):
@@ -150,7 +151,7 @@ class LinksetBuilder:
         is_single_value = with_view_properties == 'single'
         use_properties = bool(with_view_properties != 'none' and self._view.properties_per_collection)
 
-        with db_conn() as conn, conn.cursor(name=uuid4().hex, cursor_factory=extras.RealDictCursor) as cur:
+        with conn_pool.connection() as conn, conn.cursor(name=uuid4().hex, row_factory=rows.dict_row) as cur:
             cur.execute(self.get_clusters_generator_sql(with_view_properties, with_view_filters, include_nodes))
 
             for cluster in fetch_many(cur):

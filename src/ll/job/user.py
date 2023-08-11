@@ -1,6 +1,6 @@
 from json import dumps
-from psycopg2 import extras
-from ll.util.config_db import db_conn
+from psycopg.rows import dict_row
+from ll.util.config_db import conn_pool
 
 
 class User:
@@ -20,7 +20,7 @@ class User:
         return self.user_data.get('email')
 
     def persist_data(self):
-        with db_conn() as conn, conn.cursor() as cur:
+        with conn_pool.connection() as conn, conn.cursor() as cur:
             cur.execute("""
                 INSERT INTO users (user_id, name, email, user_data) 
                 VALUES (%s, %s, %s, %s)
@@ -31,14 +31,14 @@ class User:
                   self.name, self.email, dumps(self.user_data)))
 
     def register_job(self, job_id, role):
-        with db_conn() as conn, conn.cursor() as cur:
+        with conn_pool.connection() as conn, conn.cursor() as cur:
             cur.execute("""
                 INSERT INTO job_users (job_id, user_id, role)
                 VALUES (%s, %s, %s)
             """, (job_id, self.user_id, role))
 
     def list_jobs(self):
-        with db_conn() as conn, conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
+        with conn_pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
             cur.execute("""
                 SELECT jobs.job_id, job_title, job_description, job_link, created_at, updated_at, job_users.role
                 FROM jobs

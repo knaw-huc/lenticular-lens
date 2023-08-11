@@ -1,4 +1,4 @@
-from psycopg2 import sql
+from psycopg import sql
 from rdflib import URIRef
 
 from ll.util.n3_helpers import pred_val, rdfs_sequence

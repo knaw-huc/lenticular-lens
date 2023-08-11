@@ -1,8 +1,8 @@
 from io import StringIO
-from psycopg2 import sql, extras
+from psycopg import sql, rows
 
 from ll.worker.job import WorkerJob
-from ll.util.config_db import db_conn
+from ll.util.config_db import conn_pool
 
 from ll.job.job import Job as JobLL
 from ll.job.simple_link_clustering import SimpleLinkClustering
@@ -104,7 +104,7 @@ class ClusteringJob(WorkerJob):
         if len(self._worker.clusters) == 0:
             return
 
-        with db_conn() as conn, conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
+        with conn_pool.connection() as conn, conn.cursor(row_factory=rows.dict_row) as cur:
             cur.execute(sql.SQL('''
                 SELECT (SELECT count(DISTINCT uri) AS size
                         FROM {schema}.{table_name}, 

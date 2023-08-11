@@ -1,4 +1,4 @@
-from psycopg2 import sql
+from psycopg import sql
 
 from ll.job.property_field import PropertyField
 from ll.util.db_functions import get_transformers

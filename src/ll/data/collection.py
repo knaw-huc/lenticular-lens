@@ -1,8 +1,8 @@
 from json import dumps
-from psycopg2 import sql, extras
+from psycopg import sql, rows
 
 from ll.data.timbuctoo import Timbuctoo
-from ll.util.config_db import db_conn
+from ll.util.config_db import conn_pool
 from ll.util.hasher import table_name_hash, column_name_hash, hash_string_min
 
 
@@ -20,7 +20,7 @@ class Collection:
     @property
     def dataset_table_data(self):
         if not self._dataset_table_data:
-            with db_conn() as conn, conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
+            with conn_pool.connection() as conn, conn.cursor(row_factory=rows.dict_row) as cur:
                 cur.execute('SELECT * FROM timbuctoo_tables WHERE graphql_endpoint = %s AND dataset_id = %s',
                             (self.graphql_endpoint, self.dataset_id))
                 self._dataset_table_data = {table_data['collection_id']: table_data for table_data in cur.fetchall()}
@@ -111,7 +111,7 @@ class Collection:
             columns = {column_name_hash(col_name): col_info
                        for col_name, col_info in collection['properties'].items()}
 
-            with db_conn() as conn, conn.cursor() as cur:
+            with conn_pool.connection() as conn, conn.cursor() as cur:
                 cur.execute(sql.SQL('DROP TABLE IF EXISTS timbuctoo.{name}; '
                                     'CREATE TABLE timbuctoo.{name} ({columns_sql})').format(
                     name=sql.Identifier(self.table_name),
@@ -137,7 +137,7 @@ class Collection:
         if dataset and collection:
             columns = {column_name_hash(col_name): col_info for col_name, col_info in collection['properties'].items()}
 
-            with db_conn() as conn, conn.cursor() as cur:
+            with conn_pool.connection() as conn, conn.cursor() as cur:
                 cur.execute('''
                     UPDATE timbuctoo_tables
                     SET dataset_uri = %s, dataset_name = %s, title = %s, description = %s, 
@@ -157,7 +157,7 @@ class Collection:
         uri_prefix_mappings = {}
         uri_prefixes = set()
 
-        with db_conn() as conn, conn.cursor(name=uuid4().hex) as cur:
+        with conn_pool.connection() as conn, conn.cursor(name=uuid4().hex) as cur:
             cur.execute(sql.SQL('SELECT uri FROM timbuctoo.{}').format(sql.Identifier(self.table_name)))
 
             for uri in fetch_many(cur):
@@ -206,7 +206,7 @@ class Collection:
     def download_status():
         collections = {'downloaded': [], 'downloading': []}
 
-        with db_conn() as conn, conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
+        with conn_pool.connection() as conn, conn.cursor(row_factory=rows.dict_row) as cur:
             cur.execute('SELECT graphql_endpoint, dataset_id, collection_id, total, rows_count FROM timbuctoo_tables')
 
             for table in cur:

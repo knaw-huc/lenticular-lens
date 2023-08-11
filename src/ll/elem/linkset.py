@@ -1,4 +1,4 @@
-from psycopg2 import sql
+from psycopg import sql
 
 from ll.elem.matching_method import MatchingMethod
 from ll.util.helpers import flatten, get_yaml_from_file

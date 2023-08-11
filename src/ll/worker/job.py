@@ -1,7 +1,7 @@
 import time
 import threading
 
-from ll.util.config_db import get_conn, return_conn
+from ll.util.config_db import conn_pool
 
 
 class WorkerJob:
@@ -31,14 +31,14 @@ class WorkerJob:
 
     def run_in_thread(self):
         try:
-            self._db_conn = get_conn()
+            self._db_conn = conn_pool.getconn()
             self._target()
             self._db_conn.commit()
         except Exception as e:
             self._exception = e
             raise e
         finally:
-            return_conn(self._db_conn)
+            conn_pool.putconn(self._db_conn)
             self._db_conn = None
 
     def kill(self, reset=True):

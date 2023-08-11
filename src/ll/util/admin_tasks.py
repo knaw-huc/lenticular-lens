@@ -1,10 +1,10 @@
 from os import environ
-from psycopg2 import extras, sql
+from psycopg import sql, rows
 from datetime import datetime, timedelta
 
 from ll.job.job import Job
 from ll.data.collection import Collection
-from ll.util.config_db import db_conn
+from ll.util.config_db import conn_pool
 
 
 def cleanup_jobs():
@@ -43,7 +43,7 @@ def cleanup_downloaded():
             for property in view.all_props:
                 collections_in_use = collections_in_use.union(property.collections_required)
 
-    with db_conn() as conn, conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
+    with conn_pool.connection() as conn, conn.cursor(row_factory=rows.dict_row) as cur:
         cur.execute('SELECT table_name, graphql_endpoint, dataset_id, collection_id FROM timbuctoo_tables')
 
         for table in cur:
@@ -54,6 +54,6 @@ def cleanup_downloaded():
 
 
 def jobs_by_query(job_query):
-    with db_conn() as conn, conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
+    with conn_pool.connection() as conn, conn.cursor(row_factory=rows.dict_row) as cur:
         cur.execute(job_query)
         return list(map(lambda job_spec: Job(job_spec['job_id'], job_spec), cur.fetchall()))

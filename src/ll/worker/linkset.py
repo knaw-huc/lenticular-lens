@@ -1,12 +1,12 @@
 import time
 
-from psycopg2 import sql, extras, ProgrammingError
+from psycopg import sql, rows, ProgrammingError
 
 from ll.job.job import Job
 from ll.job.matching_sql import MatchingSql
 
 from ll.worker.job import WorkerJob
-from ll.util.config_db import db_conn
+from ll.util.config_db import conn_pool
 
 
 class LinksetJob(WorkerJob):
@@ -76,7 +76,7 @@ class LinksetJob(WorkerJob):
         } if cur_status and self._last_status != cur_status else {}
 
         if cur_status and not self._is_downloading:
-            with db_conn() as conn, conn.cursor() as cur:
+            with conn_pool.connection() as conn, conn.cursor() as cur:
                 self.get_sequence_count(conn, cur, 'linkset_count', data, 'links_progress')
                 self.get_count(conn, cur, 'source', data, 'sources_count')
                 self.get_count(conn, cur, 'target', data, 'targets_count')
@@ -135,7 +135,7 @@ class LinksetJob(WorkerJob):
     def on_finish(self):
         self.watch_process()
 
-        with db_conn() as conn, conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
+        with conn_pool.connection() as conn, conn.cursor(row_factory=rows.dict_row) as cur:
             cur.execute(sql.SQL('''
                 SELECT  (SELECT count(*) FROM linksets.{linkset_table}) AS links,
                         (SELECT count(DISTINCT uri) FROM {linkset_schema}.source) AS sources,
@@ -204,6 +204,6 @@ class LinksetJob(WorkerJob):
                 cur.execute(query, (self._job_id, self._id))
 
     def cleanup(self):
-        with db_conn() as conn, conn.cursor() as cur:
+        with conn_pool.connection() as conn, conn.cursor() as cur:
             cur.execute(sql.SQL('DROP SCHEMA IF EXISTS {} CASCADE')
                         .format(sql.Identifier(self._job.schema_name(self._id))))

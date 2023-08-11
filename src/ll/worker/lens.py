@@ -1,10 +1,10 @@
-from psycopg2 import sql, extras
+from psycopg import sql, rows
 
 from ll.job.job import Job
 from ll.job.lens_sql import LensSql
 
 from ll.worker.job import WorkerJob
-from ll.util.config_db import db_conn
+from ll.util.config_db import conn_pool
 
 
 class LensJob(WorkerJob):
@@ -46,7 +46,7 @@ class LensJob(WorkerJob):
         self._job.update_lens(self._id, {'status': 'failed', 'status_message': err_message})
 
     def on_finish(self):
-        with db_conn() as conn, conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
+        with conn_pool.connection() as conn, conn.cursor(row_factory=rows.dict_row) as cur:
             cur.execute(sql.SQL('''
                 SELECT  (SELECT count(*) FROM lenses.{lens_table}) AS links,
                         (SELECT count(DISTINCT uris.uri) FROM (

@@ -1,7 +1,7 @@
 # Lenticular Lens
 
-Lenticular Lens is a tool which allows users to construct linksets between entities from different Timbuctoo datasets (
-so called data-alignment or reconciliation). Lenticular Lens tracks the configuration and the algorithms used in the
+Lenticular Lens is a tool which allows users to construct linksets between entities from different Timbuctoo datasets
+(so called data-alignment or reconciliation). Lenticular Lens tracks the configuration and the algorithms used in the
 alignment and is also able to report on manual corrections and the amount of manual validation done.
 
 1. [Installation with Docker](#installation-with-docker)
@@ -299,7 +299,7 @@ _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/lens/0`_
 
 ### Data retrieval
 
-**URL**: `/jobs`\
+**URL**: `/job/list`\
 **Method**: `GET`
 
 Returns all the logged-in user his/her jobs.
@@ -705,20 +705,20 @@ to use for a particular job.
 }
 ```        
 
-| Filtering             | Key                   | Value                         |
-| :-------------------- | :-------------------- | :---------------------------- | 
-| Equal to              | `equals`              | Yes                           |
-| Not equal to          | `not_equals`          | Yes                           |
-| Has no value          | `empty`               | No                            |
-| Has a value           | `not_empty`           | No                            |
-| Contains              | `contains`            | Yes _(Use % as a wildcard)_   |
-| Does not contain      | `not_contains`        | Yes _(Use % as a wildcard)_   |
-| Minimal               | `minimal`             | Yes _(An integer)_            |
-| Maximum               | `maximum`             | Yes _(An integer)_            |
-| Minimal date          | `minimal_date`        | Yes _(Use YYYY-MM-DD)_        |
-| Maximum date          | `maximum_date`        | Yes _(Use YYYY-MM-DD)_        |
-| Minimal appearances   | `minimal_appearances` | Yes _(An integer)_            |
-| Maximum appearances   | `maximum_appearances` | Yes _(An integer)_            |
+| Filtering           | Key                   | Value                       |
+|:--------------------|:----------------------|:----------------------------| 
+| Equal to            | `equals`              | Yes                         |
+| Not equal to        | `not_equals`          | Yes                         |
+| Has no value        | `empty`               | No                          |
+| Has a value         | `not_empty`           | No                          |
+| Contains            | `contains`            | Yes _(Use % as a wildcard)_ |
+| Does not contain    | `not_contains`        | Yes _(Use % as a wildcard)_ |
+| Minimal             | `minimal`             | Yes _(An integer)_          |
+| Maximum             | `maximum`             | Yes _(An integer)_          |
+| Minimal date        | `minimal_date`        | Yes _(Use YYYY-MM-DD)_      |
+| Maximum date        | `maximum_date`        | Yes _(Use YYYY-MM-DD)_      |
+| Minimal appearances | `minimal_appearances` | Yes _(An integer)_          |
+| Maximum appearances | `maximum_appearances` | Yes _(An integer)_          |
 
 ### Linkset specs
 
@@ -832,7 +832,7 @@ Linkset specs is a list of JSON objects that contain the configuration of the li
 ```
 
 | Matching method        | Key                      | Accepts a similarity method | Is a similarity method | Values                                                                                                     |
-| :--------------------- | :----------------------- | :-------------------------- | :--------------------- | :--------------------------------------------------------------------------------------------------------- | 
+|:-----------------------|:-------------------------|:----------------------------|:-----------------------|:-----------------------------------------------------------------------------------------------------------| 
 | Exact match            | `exact`                  | No                          | No                     |                                                                                                            |
 | Intermediate dataset   | `intermediate`           | No                          | No                     | `entity_type_selection`, `intermediate_source`, `intermediate_target` (Property paths)                     |
 | Levenshtein distance   | `levenshtein_distance`   | No                          | Yes                    | `max_distance`                                                                                             |
@@ -850,7 +850,7 @@ Linkset specs is a list of JSON objects that contain the configuration of the li
 | Jaro-Winkler           | `jaro_winkler`           | No                          | Yes                    | `threshold`, `prefix_weight`                                                                               |
 
 | Transformer                        | Key                          | Values                            |
-| :--------------------------------- | :--------------------------- | :-------------------------------- | 
+|:-----------------------------------|:-----------------------------|:----------------------------------| 
 | Transform 'last name first' format | `transform_last_name_format` | `infix`                           |
 | Prefix                             | `prefix`                     | `prefix`                          |
 | Suffix                             | `suffix`                     | `suffix`                          |
@@ -892,7 +892,7 @@ Lens specs is a list of JSON objects that contain the configuration of the lense
 ```
 
 | Lens type      | Description                       |
-| :------------- | :-------------------------------- |
+|:---------------|:----------------------------------|
 | union          | Union (A ∪ B)                     |
 | intersection   | Intersection (A ∩ B)              |
 | difference     | Difference (A - B)                |
@@ -1032,7 +1032,7 @@ The configuration mentions both t-norms (conjuction / and) and s-norms (disjunct
 how the similarity score is computed:
 
 | T-norm                    | Key                  |
-| :------------------------ | :------------------- |
+|:--------------------------|:---------------------|
 | Minimum t-norm (⊤min)     | `minimum_t_norm`     |
 | Product t-norm (⊤prod)    | `product_t_norm`     |
 | Łukasiewicz t-norm (⊤Luk) | `lukasiewicz_t_norm` |
@@ -1041,7 +1041,7 @@ how the similarity score is computed:
 | Hamacher product (⊤H0)    | `hamacher_product`   |
 
 | S-norm                   | Key                 |
-| :----------------------- | :------------------ |
+|:-------------------------|:--------------------|
 | Maximum s-norm (⊥max)    | `maximum_s_norm`    |
 | Probabilistic sum (⊥sum) | `probabilistic_sum` |
 | Bounded sum (⊥Luk)       | `bounded_sum`       |

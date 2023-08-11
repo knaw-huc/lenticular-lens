@@ -1,4 +1,4 @@
-from psycopg2 import sql
+from psycopg import sql
 
 from ll.data.collection import Collection
 from ll.job.property_field import PropertyField

@@ -1,4 +1,4 @@
-from ll.util.config_db import fetch_one
+from ll.util.config_db import conn_pool
 
 stopwords = dict()
 languages = {
@@ -34,7 +34,8 @@ def get_stopwords(dictionary):
         raise Exception('Invalid dictionary')
 
     if dictionary not in stopwords:
-        stopwords[dictionary] = fetch_one('SELECT get_stopwords(%s)', (dictionary,))[0]
+        with conn_pool.connection() as conn:
+            stopwords[dictionary] = conn.execute('SELECT get_stopwords(%s)', (dictionary,)).fetchone()[0]
 
     return stopwords[dictionary]
 

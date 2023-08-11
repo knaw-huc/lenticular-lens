@@ -1,8 +1,8 @@
 import json
 
-from psycopg2 import extras
+from psycopg.rows import dict_row
 from collections import OrderedDict
-from ll.util.config_db import db_conn
+from ll.util.config_db import conn_pool
 
 filter_functions = OrderedDict()
 matching_methods = OrderedDict()
@@ -17,7 +17,7 @@ def reset():
 
 def get_filter_functions():
     if not filter_functions:
-        with db_conn() as conn, conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
+        with conn_pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
             cur.execute("SELECT key, config::text FROM filter_functions ORDER BY (config->>'order')::int")
 
             for filter_function in cur:
@@ -29,7 +29,7 @@ def get_filter_functions():
 
 def get_matching_methods():
     if not matching_methods:
-        with db_conn() as conn, conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
+        with conn_pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
             cur.execute("SELECT key, config::text FROM matching_methods ORDER BY (config->>'order')::int")
 
             for matching_method in cur:
@@ -41,7 +41,7 @@ def get_matching_methods():
 
 def get_transformers():
     if not transformers:
-        with db_conn() as conn, conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
+        with conn_pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
             cur.execute("SELECT key, config::text FROM transformers ORDER BY (config->>'order')::int")
 
             for transformer in cur:
@@ -52,7 +52,7 @@ def get_transformers():
 
 
 def get_all_jobs():
-    with db_conn() as conn, conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
+    with conn_pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
         cur.execute("SELECT job_id, job_title, job_description, job_link, "
                     "created_at, updated_at, 'owner' AS role FROM jobs")
         return cur.fetchall()

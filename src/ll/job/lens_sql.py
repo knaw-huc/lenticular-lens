@@ -1,6 +1,6 @@
 import locale
 
-from psycopg2 import sql
+from psycopg import sql
 from inspect import cleandoc
 
 from ll.elem.matching_method import MatchingMethod

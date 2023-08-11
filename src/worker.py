@@ -7,7 +7,7 @@ import signal
 
 from enum import Enum
 
-from ll.util.config_db import db_conn
+from ll.util.config_db import conn_pool
 from ll.util.config_logging import config_logger
 
 from ll.worker.timbuctoo import TimbuctooJob
@@ -16,7 +16,8 @@ from ll.worker.lens import LensJob
 from ll.worker.clustering import ClusteringJob
 from ll.worker.reconciliation import ReconciliationJob
 
-from psycopg2 import extras as psycopg2_extras, InterfaceError, OperationalError
+from psycopg.rows import dict_row
+from psycopg import InterfaceError, OperationalError
 
 locale.setlocale(locale.LC_ALL, '')
 
@@ -128,7 +129,7 @@ class Worker:
     def watch_for_jobs(self, table, watch_sql, update_status, run_job):
         while True:
             try:
-                with db_conn() as conn, conn.cursor(cursor_factory=psycopg2_extras.DictCursor) as cur:
+                with conn_pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
                     cur.execute("LOCK TABLE %s IN ACCESS EXCLUSIVE MODE;" % table)
                     cur.execute(watch_sql)
 

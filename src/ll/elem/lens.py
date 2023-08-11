@@ -1,5 +1,6 @@
-from psycopg2 import sql
+from psycopg import sql
 from inspect import cleandoc
+
 from ll.util.helpers import flatten, get_yaml_from_file
 
 

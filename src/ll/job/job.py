@@ -1,8 +1,6 @@
 from json import dumps
 from inspect import cleandoc
-
-from psycopg2 import extras, sql
-from psycopg2.extensions import AsIs
+from psycopg import sql, rows
 
 from ll.job.joins import Joins
 from ll.job.transformer import transform
@@ -20,7 +18,7 @@ from ll.elem.linkset import Linkset
 from ll.elem.entity_type_selection import EntityTypeSelection
 
 from ll.util.helpers import get_sql_empty
-from ll.util.config_db import db_conn, fetch_one
+from ll.util.config_db import conn_pool
 
 
 class Job:
@@ -35,15 +33,16 @@ class Job:
     @property
     def data(self):
         if not self._data:
-            self._data = fetch_one('''
-                SELECT *, (
-                    SELECT json_object(array_agg(user_id), array_agg(role)::text[]) 
-                    FROM job_users
+            with conn_pool.connection() as conn, conn.cursor(row_factory=rows.dict_row) as cur:
+                self._data = cur.execute('''
+                    SELECT *, (
+                        SELECT json_object(array_agg(user_id), array_agg(role)::text[]) 
+                        FROM job_users
+                        WHERE job_id = %s
+                    ) AS users
+                    FROM jobs
                     WHERE job_id = %s
-                ) AS users
-                FROM jobs
-                WHERE job_id = %s
-            ''', (self.job_id, self.job_id,), dict=True)
+                ''', (self.job_id, self.job_id,)).fetchone()
 
         return self._data
 
@@ -82,7 +81,7 @@ class Job:
     @property
     def linksets(self):
         specs = self.linkset_specs
-        with db_conn() as conn, conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
+        with conn_pool.connection() as conn, conn.cursor(row_factory=rows.dict_row) as cur:
             cur.execute('SELECT * FROM linksets WHERE job_id = %s', (self.job_id,))
             linksets = cur.fetchall()
 
@@ -91,7 +90,7 @@ class Job:
     @property
     def lenses(self):
         specs = self.lens_specs
-        with db_conn() as conn, conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
+        with conn_pool.connection() as conn, conn.cursor(row_factory=rows.dict_row) as cur:
             cur.execute('SELECT * FROM lenses WHERE job_id = %s', (self.job_id,))
             lenses = cur.fetchall()
 
@@ -99,27 +98,30 @@ class Job:
 
     @property
     def clusterings(self):
-        with db_conn() as conn, conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
+        with conn_pool.connection() as conn, conn.cursor(row_factory=rows.dict_row) as cur:
             cur.execute('SELECT * FROM clusterings WHERE job_id = %s', (self.job_id,))
             return cur.fetchall()
 
     def linkset(self, id):
-        return fetch_one('SELECT * FROM linksets WHERE job_id = %s AND spec_id = %s',
-                         (self.job_id, id), dict=True)
+        with conn_pool.connection() as conn, conn.cursor(row_factory=rows.dict_row) as cur:
+            return cur.execute('SELECT * FROM linksets WHERE job_id = %s AND spec_id = %s',
+                               (self.job_id, id)).fetchone()
 
     def lens(self, id):
-        return fetch_one('SELECT * FROM lenses WHERE job_id = %s AND spec_id = %s',
-                         (self.job_id, id), dict=True)
+        with conn_pool.connection() as conn, conn.cursor(row_factory=rows.dict_row) as cur:
+            return cur.execute('SELECT * FROM lenses WHERE job_id = %s AND spec_id = %s',
+                               (self.job_id, id)).fetchone()
 
     def spec(self, id, type):
         return self.linkset(id) if type == 'linkset' else self.lens(id)
 
     def clustering(self, id, type):
-        return fetch_one('SELECT * FROM clusterings WHERE job_id = %s AND spec_id = %s AND spec_type = %s',
-                         (self.job_id, id, type), dict=True)
+        with conn_pool.connection() as conn, conn.cursor(row_factory=rows.dict_row) as cur:
+            return cur.execute('SELECT * FROM clusterings WHERE job_id = %s AND spec_id = %s AND spec_type = %s',
+                               (self.job_id, id, type)).fetchone()
 
     def create_job(self, title, description, link):
-        with db_conn() as conn, conn.cursor() as cur:
+        with conn_pool.connection() as conn, conn.cursor() as cur:
             cur.execute("""
                 INSERT INTO jobs (job_id, job_title, job_description, job_link) 
                 VALUES (%s, %s, %s, %s)
@@ -169,72 +171,68 @@ class Job:
         data_updated['lens_specs'] = dumps(lens_specs)
         data_updated['views'] = dumps(views)
 
-        with db_conn() as conn, conn.cursor() as cur:
-            cur.execute(sql.SQL('UPDATE jobs SET (%s) = ROW %s, updated_at = now() WHERE job_id = %s'), (
-                AsIs(', '.join(data_updated.keys())),
-                tuple(data_updated.values()),
-                self.job_id
+        with conn_pool.connection() as conn, conn.cursor() as cur:
+            cur.execute(sql.SQL('UPDATE jobs SET ({}) = ROW ({}), updated_at = now() WHERE job_id = {}').format(
+                sql.SQL(', ').join([sql.Identifier(column) for column in data_updated.keys()]),
+                sql.SQL(', ').join([sql.Literal(column) for column in data_updated.values()]),
+                sql.Literal(self.job_id)
             ))
 
         return entity_type_selections, linkset_specs, lens_specs, views, errors
 
     def update_linkset(self, id, data):
-        with db_conn() as conn, conn.cursor() as cur:
-            cur.execute(sql.SQL('UPDATE linksets SET (%s) = ROW %s WHERE job_id = %s AND spec_id = %s'), (
-                AsIs(', '.join(data.keys())),
-                tuple(data.values()),
-                self.job_id,
-                id
+        with conn_pool.connection() as conn, conn.cursor() as cur:
+            cur.execute(sql.SQL('UPDATE linksets SET ({}) = ROW ({}) WHERE job_id = {} AND spec_id = {}').format(
+                sql.SQL(', ').join([sql.Identifier(column) for column in data.keys()]),
+                sql.SQL(', ').join([sql.Literal(column) for column in data.values()]),
+                sql.Literal(self.job_id),
+                sql.Literal(id)
             ))
 
     def update_lens(self, id, data):
-        with db_conn() as conn, conn.cursor() as cur:
-            cur.execute(sql.SQL('UPDATE lenses SET (%s) = ROW %s WHERE job_id = %s AND spec_id = %s'), (
-                AsIs(', '.join(data.keys())),
-                tuple(data.values()),
-                self.job_id,
-                id
+        with conn_pool.connection() as conn, conn.cursor() as cur:
+            cur.execute(sql.SQL('UPDATE lenses SET ({}) = ROW ({}) WHERE job_id = {} AND spec_id = {}').format(
+                sql.SQL(', ').join([sql.Identifier(column) for column in data.keys()]),
+                sql.SQL(', ').join([sql.Literal(column) for column in data.values()]),
+                sql.Literal(self.job_id),
+                sql.Literal(id)
             ))
 
     def update_clustering(self, id, type, data):
-        with db_conn() as conn, conn.cursor() as cur:
-            cur.execute(sql.SQL('UPDATE clusterings SET (%s) = ROW %s '
-                                'WHERE job_id = %s AND spec_id = %s AND spec_type = %s'), (
-                            AsIs(', '.join(data.keys())),
-                            tuple(data.values()),
-                            self.job_id,
-                            id,
-                            type
-                        ))
+        with conn_pool.connection() as conn, conn.cursor() as cur:
+            cur.execute(sql.SQL('UPDATE clusterings SET ({}) = ROW ({}) '
+                                'WHERE job_id = {} AND spec_id = {} AND spec_type = {}').format(
+                sql.SQL(', ').join([sql.Identifier(column) for column in data.keys()]),
+                sql.SQL(', ').join([sql.Literal(column) for column in data.values()]),
+                sql.Literal(self.job_id),
+                sql.Literal(id),
+                sql.Literal(type)
+            ))
 
     def run_linkset(self, id, restart=False):
-        with db_conn() as conn, conn.cursor() as cur:
+        with conn_pool.connection() as conn, conn.cursor() as cur:
             if restart:
-                cur.execute(sql.SQL("DELETE FROM linksets WHERE job_id = %s AND spec_id = %s"),
-                            (self.job_id, id))
-                cur.execute(sql.SQL("DELETE FROM clusterings "
-                                    "WHERE job_id = %s AND spec_id = %s AND spec_type = 'linkset'"),
-                            (self.job_id, id))
+                cur.execute("DELETE FROM linksets WHERE job_id = %s AND spec_id = %s", (self.job_id, id))
+                cur.execute(("DELETE FROM clusterings "
+                             "WHERE job_id = %s AND spec_id = %s AND spec_type = 'linkset'"), (self.job_id, id))
 
-            cur.execute(sql.SQL("INSERT INTO linksets (job_id, spec_id, status, kill, requested_at) "
-                                "VALUES (%s, %s, %s, false, now())"), (self.job_id, id, 'waiting'))
+            cur.execute("INSERT INTO linksets (job_id, spec_id, status, kill, requested_at) "
+                        "VALUES (%s, %s, %s, false, now())", (self.job_id, id, 'waiting'))
 
     def run_lens(self, id, restart=False):
-        with db_conn() as conn, conn.cursor() as cur:
+        with conn_pool.connection() as conn, conn.cursor() as cur:
             if restart:
-                cur.execute(sql.SQL("DELETE FROM lenses WHERE job_id = %s AND spec_id = %s"),
-                            (self.job_id, id))
-                cur.execute(sql.SQL("DELETE FROM clusterings "
-                                    "WHERE job_id = %s AND spec_id = %s AND spec_type = 'lens'"),
-                            (self.job_id, id))
+                cur.execute("DELETE FROM lenses WHERE job_id = %s AND spec_id = %s", (self.job_id, id))
+                cur.execute("DELETE FROM clusterings "
+                            "WHERE job_id = %s AND spec_id = %s AND spec_type = 'lens'", (self.job_id, id))
 
-            cur.execute(sql.SQL("INSERT INTO lenses (job_id, spec_id, status, kill, requested_at) "
-                                "VALUES (%s, %s, %s, false, now())"), (self.job_id, id, 'waiting'))
+            cur.execute("INSERT INTO lenses (job_id, spec_id, status, kill, requested_at) "
+                        "VALUES (%s, %s, %s, false, now())", (self.job_id, id, 'waiting'))
 
     def run_clustering(self, id, type, clustering_type='default'):
         clustering = self.clustering(id, type)
 
-        with db_conn() as conn, conn.cursor() as cur:
+        with conn_pool.connection() as conn, conn.cursor() as cur:
             if clustering:
                 cur.execute(sql.SQL("""
                     UPDATE clusterings 
@@ -248,17 +246,17 @@ class Job:
                 """), (self.job_id, id, type, clustering_type, 'waiting'))
 
     def kill_linkset(self, id):
-        with db_conn() as conn, conn.cursor() as cur:
+        with conn_pool.connection() as conn, conn.cursor() as cur:
             cur.execute('UPDATE linksets SET kill = true WHERE job_id = %s AND spec_id = %s',
                         (self.job_id, id))
 
     def kill_lens(self, id):
-        with db_conn() as conn, conn.cursor() as cur:
+        with conn_pool.connection() as conn, conn.cursor() as cur:
             cur.execute('UPDATE lenses SET kill = true WHERE job_id = %s AND spec_id = %s',
                         (self.job_id, id))
 
     def kill_clustering(self, id, type):
-        with db_conn() as conn, conn.cursor() as cur:
+        with conn_pool.connection() as conn, conn.cursor() as cur:
             cur.execute('UPDATE clusterings SET kill = true WHERE job_id = %s AND spec_id = %s AND spec_type = %s',
                         (self.job_id, id, type))
 
@@ -269,14 +267,14 @@ class Job:
         for lens_spec in self.lens_specs:
             self.delete_spec(lens_spec.id, 'lens')
 
-        with db_conn() as conn, conn.cursor() as cur:
+        with conn_pool.connection() as conn, conn.cursor() as cur:
             cur.execute('INSERT INTO jobs_deleted '
                         'SELECT * FROM jobs WHERE job_id = %s '
                         'ON CONFLICT (job_id) DO NOTHING', (self.job_id,))
             cur.execute('DELETE FROM jobs WHERE job_id = %s', (self.job_id,))
 
     def delete_spec(self, id, type):
-        with db_conn() as conn, conn.cursor() as cur:
+        with conn_pool.connection() as conn, conn.cursor() as cur:
             cur.execute('DELETE FROM clusterings WHERE job_id = %s AND spec_id = %s AND spec_type = %s',
                         (self.job_id, id, type))
 
@@ -405,7 +403,8 @@ class Job:
         if sql_only:
             return query_sql
 
-        return fetch_one(query_sql, dict=True)
+        with conn_pool.connection() as conn, conn.cursor(row_factory=rows.dict_row) as cur:
+            return cur.execute(query_sql).fetchone()
 
     def get_links(self, id, type, validation_filter=Validation.ALL, cluster_ids=None, uris=None,
                   min_strength=0, max_strength=1, sort=None, limit=None, offset=0,

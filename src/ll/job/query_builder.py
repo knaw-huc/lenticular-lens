@@ -1,10 +1,10 @@
 from inspect import cleandoc
 from collections import defaultdict
 
-from psycopg2 import sql, extras
+from psycopg import sql, rows
 
 from ll.job.joins import Joins
-from ll.util.config_db import db_conn
+from ll.util.config_db import conn_pool
 from ll.util.helpers import get_pagination_sql
 
 
@@ -29,7 +29,7 @@ class QueryBuilder:
 
     def run_queries(self, dict=True):
         property_values = defaultdict(list) if dict else []
-        with db_conn() as conn, conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
+        with conn_pool.connection() as conn, conn.cursor(row_factory=rows.dict_row) as cur:
             for query_info in self._queries:
                 cur.execute(query_info['query'])
                 for values in cur:
@@ -50,7 +50,7 @@ class QueryBuilder:
 
     def run_queries_single_value(self):
         property_values = defaultdict(list)
-        with db_conn() as conn, conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
+        with conn_pool.connection() as conn, conn.cursor(row_factory=rows.dict_row) as cur:
             for query_info in self._queries:
                 cur.execute(query_info['query'])
                 for values in cur:

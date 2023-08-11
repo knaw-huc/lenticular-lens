@@ -1,12 +1,10 @@
-from io import StringIO
 from json import dumps
 from uuid import uuid4
-from psycopg2 import sql
+from psycopg import sql
 from unicodedata import normalize
 
 from ll.util.hasher import column_name_hash
-from ll.util.config_db import db_conn, fetch_many
-from ll.util.postgres_copy import prepare_for_copy
+from ll.util.config_db import conn_pool, fetch_many
 from ll.util.prefix_builder import get_uri_local_name, get_namespace_prefix
 
 from ll.worker.job import WorkerJob
@@ -113,18 +111,19 @@ class TimbuctooJob(WorkerJob):
                             'LOCK TABLE timbuctoo_tables IN ACCESS EXCLUSIVE MODE;')
 
                 # Check if the data we have is still the data that is expected to be inserted
-                cur.execute('''
-                    SELECT 1
-                    FROM timbuctoo_tables
-                    WHERE "table_name" = %(table_name)s
-                    AND (
-                        %(next_page)s IS NULL AND next_page IS NULL
+                if self._cursor:
+                    cur.execute('''
+                        SELECT 1
+                        FROM timbuctoo_tables
+                        WHERE "table_name" = %s AND next_page = %s
+                    ''', (self._table_name, self._cursor))
+                else:
+                    cur.execute('''
+                        SELECT 1
+                        FROM timbuctoo_tables
+                        WHERE "table_name" = %s AND next_page IS NULL
                         AND (update_finish_time IS NULL OR update_finish_time < update_start_time)
-                    ) 
-                    OR (
-                        %(next_page)s IS NOT NULL AND next_page = %(next_page)s
-                    )
-                ''', {'table_name': self._table_name, 'next_page': self._cursor})
+                    ''', (self._table_name,))
 
                 if cur.fetchone() != (1,):
                     raise Exception('This is weird... '
@@ -139,12 +138,14 @@ class TimbuctooJob(WorkerJob):
                                     % (self._table_name, table_rows, self._rows_count + total_insert))
 
                 if len(results) > 0:
-                    data = StringIO("\n".join(["\t".join(prepare_for_copy(result.values())) for result in results]))
-                    data.seek(0)
+                    with cur.copy(sql.SQL('COPY {} ({}) FROM STDIN').format(
+                            sql.Identifier(self._table_name),
+                            sql.SQL(', ').join([sql.Identifier(column) for column in results[0].keys()])
+                    )) as copy:
+                        for result in results:
+                            copy.write_row(list(result.values()))
 
-                    cur.copy_from(data, self._table_name, columns=results[0].keys())
                     total_insert += len(results)
-
                     cur.execute('''
                         UPDATE timbuctoo_tables
                         SET last_push_time = now(), next_page = %s, rows_count = %s
@@ -175,7 +176,7 @@ class TimbuctooJob(WorkerJob):
 
     def on_finish(self):
         if self._cursor is None:
-            with db_conn() as conn, conn.cursor() as cur:
+            with conn_pool.connection() as conn, conn.cursor() as cur:
                 cur.execute(sql.SQL('ANALYZE timbuctoo.{}').format(sql.Identifier(self._table_name)))
 
                 cur.execute(

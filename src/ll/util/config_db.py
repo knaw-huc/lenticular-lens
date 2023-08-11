@@ -1,44 +1,19 @@
 import os
 
-from contextlib import contextmanager
 from eventlet.hubs import trampoline
+from psycopg_pool import ConnectionPool
 
-from psycopg2 import extras
-from psycopg2.pool import ThreadedConnectionPool
-from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
-
-conn_pool = ThreadedConnectionPool(
-    minconn=2,
-    maxconn=int(os.environ.get('DATABASE_MAX_CONNECTIONS', 5)),
-    host=os.environ.get('DATABASE_HOST', 'localhost'),
-    port=int(os.environ.get('DATABASE_PORT', 5432)),
-    database=os.environ.get('DATABASE_DB', 'postgres'),
-    user=os.environ.get('DATABASE_USER', 'postgres'),
-    password=os.environ.get('DATABASE_PASSWORD', 'postgres'),
+conn_pool = ConnectionPool(
+    conninfo='host={} port={} dbname={} user={} password={}'.format(
+        os.environ.get('DATABASE_HOST', 'localhost'),
+        os.environ.get('DATABASE_PORT', ' 5432'),
+        os.environ.get('DATABASE_DB', 'postgres'),
+        os.environ.get('DATABASE_USER', 'postgres'),
+        os.environ.get('DATABASE_PASSWORD', 'postgres')
+    ),
+    min_size=4,
+    max_size=int(os.environ.get('DATABASE_MAX_CONNECTIONS', 5)),
 )
-
-
-def get_conn(key=None):
-    return conn_pool.getconn(key)
-
-
-def return_conn(conn, key=None):
-    conn_pool.putconn(conn, key)
-
-
-@contextmanager
-def db_conn(key=None):
-    try:
-        with get_conn(key) as conn:
-            yield conn
-    finally:
-        return_conn(conn, key)
-
-
-def fetch_one(query, args=None, dict=False):
-    with db_conn() as conn, conn.cursor(cursor_factory=extras.RealDictCursor) if dict else conn.cursor() as cur:
-        cur.execute(query, args)
-        return cur.fetchone() if cur.description else None
 
 
 def fetch_many(cur, size=2000):
@@ -52,16 +27,28 @@ def fetch_many(cur, size=2000):
 
 
 def listen_for_notify(q):
-    conn = get_conn()
-    conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+    def notifies_without_blocking(conn):
+        import psycopg
 
-    cur = conn.cursor()
-    cur.execute('LISTEN extension_update; LISTEN job_update; '
-                'LISTEN timbuctoo_update; LISTEN alignment_update; LISTEN clustering_update; '
-                'LISTEN timbuctoo_delete; LISTEN alignment_delete; LISTEN clustering_delete;')
+        with conn.lock:
+            try:
+                ns = conn.wait(psycopg.generators.notifies(conn.pgconn))
+            except psycopg.errors._NO_TRACEBACK as ex:
+                raise ex.with_traceback(None)
+
+        enc = psycopg._encodings.pgconn_encoding(conn.pgconn)
+        for pgn in ns:
+            n = psycopg.connection.Notify(pgn.relname.decode(enc), pgn.extra.decode(enc), pgn.be_pid)
+            yield n
+
+    conn = conn_pool.getconn()
+    conn.autocommit = True
+    conn.execute('LISTEN extension_update; LISTEN job_update; '
+                 'LISTEN timbuctoo_update; LISTEN alignment_update; LISTEN clustering_update; '
+                 'LISTEN timbuctoo_delete; LISTEN alignment_delete; LISTEN clustering_delete;')
 
     while True:
         trampoline(conn, read=True)
-        conn.poll()
-        while conn.notifies:
-            q.put(conn.notifies.pop())
+        gen = notifies_without_blocking(conn)  # TODO: conn.notifies()
+        for notify in gen:
+            q.put(notify)

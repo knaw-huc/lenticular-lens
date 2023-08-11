@@ -1,7 +1,7 @@
 from os.path import join
 
 from ll.util.hasher import hasher
-from ll.util.config_db import db_conn
+from ll.util.config_db import conn_pool
 from ll.job.job import Job as JobLL
 
 import ll.org.Clustering.SimpleLinkClustering as Cls
@@ -53,7 +53,7 @@ class ReconciliationJob(WorkerJob):
         self._job.update_clustering(self._id, self._type, {'status': 'failed', 'status_message': err_message})
 
     def on_finish(self):
-        with db_conn() as conn, conn.cursor() as cur:
+        with conn_pool.connection() as conn, conn.cursor() as cur:
             cur.execute('''
                 UPDATE clusterings
                 SET extended_count = %s, cycles_count = %s, status = %s, finished_at = now()

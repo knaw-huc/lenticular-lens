@@ -1,4 +1,4 @@
-from psycopg2 import sql
+from psycopg import sql
 
 from ll.util.hasher import hash_string_min
 from ll.util.db_functions import get_filter_functions

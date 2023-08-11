@@ -1,7 +1,7 @@
-from ll.util.config_db import db_conn
+from psycopg.rows import dict_row
+from ll.util.config_db import conn_pool
 from ll.data.timbuctoo import Timbuctoo
 from ll.data.collection import Collection
-from psycopg2 import extras as psycopg2_extras
 
 
 class TimbuctooDatasets:
@@ -39,7 +39,7 @@ class TimbuctooDatasets:
                     collection.determine_prefix_mappings()
 
     def _datasets_from_database(self):
-        with db_conn() as conn, conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) as cur:
+        with conn_pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
             cur.execute('SELECT * FROM timbuctoo_tables WHERE graphql_endpoint = %s', (self._graphql_uri,))
 
             datasets = {}

@@ -1,6 +1,6 @@
 import re
 
-from psycopg2 import sql
+from psycopg import sql
 from inspect import cleandoc
 
 from ll.util.hasher import hash_string_min

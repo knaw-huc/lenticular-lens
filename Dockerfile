@@ -1,4 +1,4 @@
-FROM python:3.9-slim AS worker
+FROM python:3.12-slim AS worker
 
 ENV PYTHONPATH /app
 ENV PYTHONUNBUFFERED 1
@@ -12,8 +12,6 @@ CMD ["python", "/app/worker.py"]
 
 FROM worker AS web
 
-ENV FLASK_ENV=production
-
 EXPOSE 8000
 
-CMD ["gunicorn", "--worker-class", "eventlet", "-b", ":8000", "-t", "60", "-w", "1", "--threads", "4", "web:app"]
+CMD ["gunicorn", "-k", "eventlet", "-b", ":8000", "-t", "60", "-w", "1", "web:app"]
