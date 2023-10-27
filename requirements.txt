@@ -19,3 +19,4 @@ xmltodict==0.13.0
 urllib3==2.0.4
 anytree==2.9.0
 sparqlwrapper==2.0.0
+werkzeug>=3.0.1 # not directly required, pinned by Snyk to avoid a vulnerability
