@@ -8,7 +8,7 @@ import eventlet
 import functools
 import threading
 
-from flask import Flask, Response, jsonify, session, request
+from flask import Flask, Response, jsonify, session, request, redirect
 from flask.json.provider import DefaultJSONProvider
 from flask_cors import CORS
 from flask_socketio import SocketIO
@@ -26,7 +26,6 @@ from ll.job.lens_sql import LensSql
 from ll.job.matching_sql import MatchingSql
 from ll.job.export import CsvExport, RdfExport
 
-from ll.util.oidc import oidc_auth
 from ll.util.hasher import hash_string
 from ll.util.stopwords import get_stopwords
 from ll.util.config_db import listen_for_notify
@@ -190,8 +189,10 @@ def index():
 
 if auth:
     @app.get('/login')
+    @auth.oidc_auth('default')
     def login():
-        return oidc_auth(auth, 'default', destination=request.values.get('redirect-uri', default='/'))
+        destination = request.values.get('redirect-uri', default='/')
+        return redirect(destination)
 
 
     @app.get('/user_info')
