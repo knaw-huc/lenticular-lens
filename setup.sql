@@ -155,7 +155,7 @@ CREATE TABLE IF NOT EXISTS clusterings
 
 /* UTILITY FUNCTIONS */
 
-CREATE OR REPLACE FUNCTION increment_counter(sequence_name text) RETURNS boolean AS $$
+CREATE OR REPLACE FUNCTION increment_counter(sequence_name regclass) RETURNS boolean AS $$
 BEGIN
     RETURN nextval(sequence_name) > -1;
 END;
