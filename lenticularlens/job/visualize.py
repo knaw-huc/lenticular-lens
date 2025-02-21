@@ -415,18 +415,18 @@ def get_visualization(job, id, type, cluster_id, associations=None, include_comp
                                       (link['target'], link['target_collections'][0], link['target_values'])]:
             if node not in nodes:
                 ets = job.get_entity_type_selection_by_id(ets_id)
-                dataset_name = ets.collection.table_data['dataset_name']
-                collection_uri = ets.collection.table_data['collection_shortened_uri']
+                dataset_name = ets.entity_type.label
+                entity_type_uri = ets.entity_type.shortened_uri
                 node_id = get_id_of_uri(node)
 
-                label = F"{dataset_name} {collection_uri} {node_id}"
+                label = F"{dataset_name} {entity_type_uri} {node_id}"
                 if value and value[0]['values']:
                     label = F"{value[0]['values'][0]} ({label})"
 
                 nodes[node] = create_node(
                     node, hash_string_min(ets.dataset_id),
                     label="-- " + label,
-                    dataset=dataset_name, entity=collection_uri, local_id=node_id
+                    dataset=dataset_name, entity=entity_type_uri, local_id=node_id
                 )
 
         links.append(create_link(link['source'], link['target'], strength=round(float(link['similarity']), 3)))

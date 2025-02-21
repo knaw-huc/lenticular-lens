@@ -1,10 +1,9 @@
 from psycopg import sql, rows
 
-from lenticularlens.worker.job import WorkerJob
-from lenticularlens.util.config_db import conn_pool
-
+from lenticularlens.workers.job import WorkerJob
 from lenticularlens.job.job import Job as JobLL
 from lenticularlens.job.simple_link_clustering import SimpleLinkClustering
+from lenticularlens.util.config_db import conn_pool
 
 
 class ClusteringJob(WorkerJob):

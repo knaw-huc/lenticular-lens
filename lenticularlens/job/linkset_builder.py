@@ -88,7 +88,7 @@ class LinksetBuilder:
 
     def get_links_generator(self, with_view_properties='none', with_view_filters=False):
         is_single_value = with_view_properties == 'single'
-        use_properties = bool(with_view_properties != 'none' and self._view.properties_per_collection)
+        use_properties = bool(with_view_properties != 'none' and self._view.properties_per_entity_type)
 
         with conn_pool.connection() as conn, conn.cursor(name=uuid4().hex, row_factory=rows.dict_row) as cur:
             cur.execute(self.get_links_generator_sql(with_view_properties, with_view_filters))
@@ -117,7 +117,7 @@ class LinksetBuilder:
 
     def get_links_generator_sql(self, with_view_properties='none', with_view_filters=False):
         is_single_value = with_view_properties == 'single'
-        use_properties = bool(with_view_properties != 'none' and self._view.properties_per_collection)
+        use_properties = bool(with_view_properties != 'none' and self._view.properties_per_entity_type)
 
         selection_sql = get_sql_empty(self._selection_props_sql(is_single_value),
                                       flag=use_properties, prefix=sql.SQL(', \n'), add_new_line=False)
@@ -149,7 +149,7 @@ class LinksetBuilder:
 
     def get_clusters_generator(self, with_view_properties='none', with_view_filters=False, include_nodes=False):
         is_single_value = with_view_properties == 'single'
-        use_properties = bool(with_view_properties != 'none' and self._view.properties_per_collection)
+        use_properties = bool(with_view_properties != 'none' and self._view.properties_per_entity_type)
 
         with conn_pool.connection() as conn, conn.cursor(name=uuid4().hex, row_factory=rows.dict_row) as cur:
             cur.execute(self.get_clusters_generator_sql(with_view_properties, with_view_filters, include_nodes))
@@ -176,7 +176,7 @@ class LinksetBuilder:
 
     def get_clusters_generator_sql(self, with_view_properties='none', with_view_filters=False, include_nodes=False):
         is_single_value = with_view_properties == 'single'
-        use_properties = bool(with_view_properties != 'none' and self._view.properties_per_collection)
+        use_properties = bool(with_view_properties != 'none' and self._view.properties_per_entity_type)
 
         selection_sql = get_sql_empty(self._cluster_selection_props_sql,
                                       flag=use_properties, prefix=sql.SQL(', \n'), add_new_line=False)
@@ -230,7 +230,7 @@ class LinksetBuilder:
 
     def get_linkset_cte_sql(self, with_view_filters=False, apply_paging=True,
                             apply_sorting=True, include_linkset_uris=True):
-        use_filters = bool(with_view_filters and self._view.filters_per_collection)
+        use_filters = bool(with_view_filters and self._view.filters_per_entity_type)
 
         filter_laterals_sql = get_sql_empty(self._filter_laterals_sql, flag=use_filters)
         where_sql = self._links_filter.sql(additional_filter=self._additional_filter_sql if use_filters else None)
@@ -250,16 +250,24 @@ class LinksetBuilder:
         ''')), flag=include_linkset_uris)
 
         return sql.SQL(cleandoc('''
-            WITH linkset AS (
-                SELECT DISTINCT source_uri, target_uri, link_order, source_collections, target_collections, 
-                                source_intermediates, target_intermediates, cluster_id, cluster_hash_id, 
-                                valid, similarity, motivation, sort_order
-                FROM {schema}.{view_name} AS linkset
+                                WITH linkset AS (SELECT DISTINCT source_uri,
+                                                                 target_uri,
+                                                                 link_order,
+                                                                 source_collections,
+                                                                 target_collections,
+                                                                 source_intermediates,
+                                                                 target_intermediates,
+                                                                 cluster_id,
+                                                                 cluster_hash_id,
+                                                                 valid,
+                                                                 similarity,
+                                                                 motivation,
+                                                                 sort_order
+                                                 FROM {schema}.{view_name} AS linkset
                 {filter_laterals_sql}
                 {where_sql} 
-                {sort_sql} {limit_offset_sql}
-            ) {include_linkset_uris_sql} 
-        ''')).format(
+                {sort_sql} {limit_offset_sql}) {include_linkset_uris_sql}
+                                ''')).format(
             schema=sql.Identifier(self._schema),
             view_name=sql.Identifier(self._table_name),
             filter_laterals_sql=filter_laterals_sql,
@@ -270,41 +278,44 @@ class LinksetBuilder:
         )
 
     @property
-    def _collections(self):
-        return set(ets.collection for ets in self._spec.entity_type_selections)
+    def _entity_types(self):
+        return set(ets.entity_type for ets in self._spec.entity_type_selections)
 
     @property
-    def _source_collections(self):
-        return set(ets.collection for ets in self._spec.sources)
+    def _source_entity_types(self):
+        return set(ets.entity_type for ets in self._spec.sources)
 
     @property
-    def _target_collections(self):
-        return set(ets.collection for ets in self._spec.targets)
+    def _target_entity_types(self):
+        return set(ets.entity_type for ets in self._spec.targets)
 
     @property
     def _selection_resource_uris_sql(self):
         return sql.SQL(', \n').join([
             sql.SQL('{}.uri AS {}').format(
-                sql.Identifier(collection.alias),
-                sql.Identifier(collection.alias + '_uri'))
-            for collection in self._collections
+                sql.Identifier(entity_type.alias),
+                sql.Identifier(entity_type.alias + '_uri'))
+            for entity_type in self._entity_types
         ])
 
     @property
     def _cluster_selection_props_sql(self):
         return sql.SQL(', \n').join(
             [sql.SQL('array_agg(DISTINCT {}) AS {}').format(
-                sql.Identifier(collection.alias + '_' + prop.hash + '_extended'),
-                sql.Identifier(collection.alias + '_' + prop.hash))
-                for collection in self._view.properties_per_collection
-                for prop in self._view.properties_per_collection.get(collection)]
+                sql.Identifier(entity_type.alias + '_' + prop.hash + '_extended'),
+                sql.Identifier(entity_type.alias + '_' + prop.hash))
+                for entity_type in self._view.properties_per_entity_type
+                for prop in self._view.properties_per_entity_type.get(entity_type)]
         )
 
     @property
     def _additional_filter_sql(self):
-        aliases = [collection.alias for collection in self._collections if not self._collection_in_both(collection)]
-        aliases += [collection.alias + '_a' for collection in self._collections if self._collection_in_both(collection)]
-        aliases += [collection.alias + '_b' for collection in self._collections if self._collection_in_both(collection)]
+        aliases = [entity_type.alias for entity_type in self._entity_types if
+                   not self._entity_type_in_both(entity_type)]
+        aliases += [entity_type.alias + '_a' for entity_type in self._entity_types if
+                    self._entity_type_in_both(entity_type)]
+        aliases += [entity_type.alias + '_b' for entity_type in self._entity_types if
+                    self._entity_type_in_both(entity_type)]
 
         return sql.SQL(' AND ').join(
             [sql.SQL('{} IN ({})').format(
@@ -317,17 +328,17 @@ class LinksetBuilder:
     @property
     def _filter_laterals_sql(self):
         sqls = []
-        for collection in self._collections:
-            filter_properties = self._view.filters_properties_per_collection[collection] \
-                if collection in self._view.filters_per_collection else None
+        for entity_type in self._entity_types:
+            filter_properties = self._view.filters_properties_per_entity_type[entity_type] \
+                if entity_type in self._view.filters_per_entity_type else None
 
-            for alias in [collection.alias + '_a', collection.alias + '_b'] \
-                    if self._collection_in_both(collection) else [collection.alias]:
+            for alias in [entity_type.alias + '_a', entity_type.alias + '_b'] \
+                    if self._entity_type_in_both(entity_type) else [entity_type.alias]:
                 condition = sql.SQL('{}.uri IN (linkset.source_uri, linkset.target_uri)') \
-                    .format(sql.Identifier(collection.alias))
-                if collection in self._view.filters_per_collection:
+                    .format(sql.Identifier(entity_type.alias))
+                if entity_type in self._view.filters_per_entity_type:
                     condition = sql.SQL('{} AND {}').format(condition,
-                                                            self._view.filters_sql_per_collection[collection])
+                                                            self._view.filters_sql_per_entity_type[entity_type])
 
                 sqls.append(sql.SQL(cleandoc('''
                     LATERAL (
@@ -335,7 +346,7 @@ class LinksetBuilder:
                     ) AS {resource}
                 ''')).format(
                     resource_query=QueryBuilder.create_query(
-                        collection.alias, collection.table_name,
+                        entity_type.alias, entity_type.table_name,
                         filter_properties=filter_properties, condition=condition),
                     resource=sql.Identifier(alias),
                 ))
@@ -347,10 +358,10 @@ class LinksetBuilder:
 
     def _selection_props_sql(self, single_value=True):
         prop_selection_sqls = [
-            (sql.SQL('{}.{}').format(sql.Identifier(collection.alias), sql.Identifier(prop.hash)),
-             sql.Identifier(collection.alias + '_' + prop.hash))
-            for collection in self._view.properties_per_collection
-            for (idx, prop) in enumerate(self._view.properties_per_collection.get(collection))
+            (sql.SQL('{}.{}').format(sql.Identifier(entity_type.alias), sql.Identifier(prop.hash)),
+             sql.Identifier(entity_type.alias + '_' + prop.hash))
+            for entity_type in self._view.properties_per_entity_type
+            for (idx, prop) in enumerate(self._view.properties_per_entity_type.get(entity_type))
             if not single_value or idx == 0
         ]
 
@@ -358,9 +369,9 @@ class LinksetBuilder:
                                for selection_sql in prop_selection_sqls]
 
         uri_selection_sqls = [
-            (sql.SQL('{}.uri').format(sql.Identifier(collection.alias)),
-             sql.Identifier(collection.alias + '_uri'))
-            for collection in self._view.properties_per_collection
+            (sql.SQL('{}.uri').format(sql.Identifier(entity_type.alias)),
+             sql.Identifier(entity_type.alias + '_uri'))
+            for entity_type in self._view.properties_per_entity_type
         ]
 
         uri_selection_sqls = [sql.SQL('array_agg({}) AS {}').format(selection_sql[0], selection_sql[1])
@@ -371,28 +382,28 @@ class LinksetBuilder:
     def _properties_join_sql(self, uri_match_sql, single_value=True, include_unnest=False):
         join_sqls = []
 
-        for collection in self._collections:
-            if collection in self._view.properties_per_collection:
-                resource_query_condition = sql.SQL('{}.uri {}').format(sql.Identifier(collection.alias), uri_match_sql)
+        for entity_type in self._entity_types:
+            if entity_type in self._view.properties_per_entity_type:
+                resource_query_condition = sql.SQL('{}.uri {}').format(sql.Identifier(entity_type.alias), uri_match_sql)
                 resource_query = QueryBuilder.create_query(
-                    collection.alias, collection.table_name,
+                    entity_type.alias, entity_type.table_name,
                     condition=resource_query_condition,
-                    selection_properties=self._view.properties_per_collection[collection],
+                    selection_properties=self._view.properties_per_entity_type[entity_type],
                     single_value=single_value)
 
                 join_sqls.append(sql.SQL(cleandoc('''
                     LEFT JOIN LATERAL (
                         {resource_query}
                     ) AS {resource} ON true
-                ''')).format(resource_query=resource_query, resource=sql.Identifier(collection.alias)))
+                ''')).format(resource_query=resource_query, resource=sql.Identifier(entity_type.alias)))
 
                 if include_unnest:
-                    for prop in self._view.properties_per_collection.get(collection):
+                    for prop in self._view.properties_per_entity_type.get(entity_type):
                         join_sqls.append(sql.SQL('LEFT JOIN unnest({resource}.{property}) '
                                                  'AS {extended_property} ON true ').format(
-                            resource=sql.Identifier(collection.alias),
+                            resource=sql.Identifier(entity_type.alias),
                             property=sql.Identifier(prop.hash),
-                            extended_property=sql.Identifier(collection.alias + '_' + prop.hash + '_extended'),
+                            extended_property=sql.Identifier(entity_type.alias + '_' + prop.hash + '_extended'),
                         ))
 
         return sql.SQL('\n').join(join_sqls)
@@ -400,11 +411,11 @@ class LinksetBuilder:
     def _get_values(self, source, check_key=None, is_single_value=False, max_values=None):
         all_values = []
 
-        for collection in self._view.properties_per_collection:
-            for (idx, prop) in enumerate(self._view.properties_per_collection.get(collection)):
-                uri_key = collection.alias + '_uri'
+        for entity_type in self._view.properties_per_entity_type:
+            for (idx, prop) in enumerate(self._view.properties_per_entity_type.get(entity_type)):
+                uri_key = entity_type.alias + '_uri'
                 if (not is_single_value or idx == 0) and (not check_key or (source[check_key] in source[uri_key])):
-                    values = source[collection.alias + '_' + prop.hash]
+                    values = source[entity_type.alias + '_' + prop.hash]
                     if check_key:
                         values = values[source[uri_key].index(source[check_key])]
 
@@ -413,17 +424,15 @@ class LinksetBuilder:
                         values = values[:(max_values or 1)]
 
                     all_values.append({
-                        'graphql_endpoint': collection.graphql_endpoint,
-                        'dataset_id': collection.dataset_id,
-                        'collection_id': collection.collection_id,
+                        'dataset': entity_type.dataset.get_dataset_ref(entity_type.entity_type_id).model_dump(),
                         'property': prop.property_path,
-                        'values': values
+                        'values': values,
                     })
 
         return all_values
 
-    def _collection_in_both(self, collection):
-        return collection in self._source_collections and collection in self._target_collections
+    def _entity_type_in_both(self, entity_type):
+        return entity_type in self._source_entity_types and entity_type in self._target_entity_types
 
     @staticmethod
     def create(schema, table_name, spec, view,

@@ -4,6 +4,7 @@ from psycopg import sql, rows
 
 from lenticularlens.job.joins import Joins
 from lenticularlens.job.transformer import transform
+from lenticularlens.job.upgrade import upgrade_job_config, current_version
 from lenticularlens.job.validation import Validation
 from lenticularlens.job.links_filter import LinksFilter
 from lenticularlens.job.query_builder import QueryBuilder
@@ -30,6 +31,9 @@ class Job:
         self._lens_specs = None
         self._views = None
 
+        if data is not None:
+            self._upgrade_data()
+
     @property
     def data(self):
         if not self._data:
@@ -43,6 +47,7 @@ class Job:
                     FROM jobs
                     WHERE job_id = %s
                 ''', (self.job_id, self.job_id,)).fetchone()
+                self._upgrade_data()
 
         return self._data
 
@@ -80,21 +85,15 @@ class Job:
 
     @property
     def linksets(self):
-        specs = self.linkset_specs
         with conn_pool.connection() as conn, conn.cursor(row_factory=rows.dict_row) as cur:
             cur.execute('SELECT * FROM linksets WHERE job_id = %s', (self.job_id,))
-            linksets = cur.fetchall()
-
-        return self._include_prefix_mappings_in_results(linksets, specs)
+            return cur.fetchall()
 
     @property
     def lenses(self):
-        specs = self.lens_specs
         with conn_pool.connection() as conn, conn.cursor(row_factory=rows.dict_row) as cur:
             cur.execute('SELECT * FROM lenses WHERE job_id = %s', (self.job_id,))
-            lenses = cur.fetchall()
-
-        return self._include_prefix_mappings_in_results(lenses, specs)
+            return cur.fetchall()
 
     @property
     def clusterings(self):
@@ -123,9 +122,9 @@ class Job:
     def create_job(self, title, description, link):
         with conn_pool.connection() as conn, conn.cursor() as cur:
             cur.execute("""
-                INSERT INTO jobs (job_id, job_title, job_description, job_link) 
-                VALUES (%s, %s, %s, %s)
-            """, (self.job_id, title, description, link))
+                INSERT INTO jobs (job_id, job_title, job_description, job_link, version) 
+                VALUES (%s, %s, %s, %s, %s)
+            """, (self.job_id, title, description, link, current_version))
 
     def update_data(self, data):
         entity_type_selections_form_data = data['entity_type_selections'] \
@@ -348,7 +347,8 @@ class Job:
 
     def get_entity_type_selection_sample(self, id, invert=False, limit=None, offset=0, sql_only=False):
         entity_type_selection = self.get_entity_type_selection_by_id(id)
-        if not entity_type_selection or not entity_type_selection.collection.is_downloaded:
+        if (not entity_type_selection or not entity_type_selection.entity_type or
+                not entity_type_selection.entity_type.is_downloaded):
             return []
 
         filter_properties = entity_type_selection.filter_properties
@@ -359,22 +359,21 @@ class Job:
 
         if sql_only:
             return QueryBuilder.create_query(
-                entity_type_selection.alias, entity_type_selection.collection.table_name, filter_properties,
+                entity_type_selection.alias, entity_type_selection.entity_type.table_name, filter_properties,
                 selection_properties, condition=entity_type_selection.filters_sql,
                 invert=invert, limit=limit, offset=offset)
 
         query_builder = QueryBuilder()
         query_builder.add_query(
-            entity_type_selection.graphql_endpoint, entity_type_selection.dataset_id,
-            entity_type_selection.collection_id, entity_type_selection.alias,
-            entity_type_selection.collection.table_name, filter_properties, selection_properties,
+            entity_type_selection.dataset, entity_type_selection.alias,
+            entity_type_selection.entity_type.table_name, filter_properties, selection_properties,
             condition=entity_type_selection.filters_sql, invert=invert, limit=limit, offset=offset)
 
         return query_builder.run_queries(dict=False)
 
     def get_entity_type_selection_sample_total(self, id, sql_only=False):
         entity_type_selection = self.get_entity_type_selection_by_id(id)
-        if not entity_type_selection or not entity_type_selection.collection.is_downloaded:
+        if not entity_type_selection or not entity_type_selection.entity_type.is_downloaded:
             return {'total': 0}
 
         filter_properties = entity_type_selection.filter_properties
@@ -390,12 +389,12 @@ class Job:
 
         query_sql = sql.SQL(cleandoc('''
             SELECT count(DISTINCT {resource}.uri) AS total
-            FROM timbuctoo.{table_name} AS {resource} 
+            FROM entity_types_data.{table_name} AS {resource} 
             {joins}
             {condition}
         ''')).format(
             resource=sql.Identifier(entity_type_selection.alias),
-            table_name=sql.Identifier(entity_type_selection.collection.table_name),
+            table_name=sql.Identifier(entity_type_selection.entity_type.table_name),
             joins=joins.sql,
             condition=get_sql_empty(where_sql)
         )
@@ -481,35 +480,43 @@ class Job:
     def visualize(self, id, type, cluster_id):
         return get_visualization(self, id, type, cluster_id, include_compact=True)
 
-    @staticmethod
-    def _include_prefix_mappings_in_results(results, specs):
-        try:
-            return [{
-                **result,
-                **{
-                    'prefix_mappings': {
-                        prefix: uri
-                        for (ets, prop) in next(x for x in specs if x.id == result['spec_id']).all_props
-                        for prefix, uri in prop.prefix_mappings.items()
-                    },
-                    'uri_prefix_mappings': {
-                        prefix: uri
-                        for ets in next(x for x in specs if x.id == result['spec_id']).all_entity_type_selections
-                        for prefix, uri in ets.collection.uri_prefix_mappings.items()
-                    },
-                    'dynamic_uri_prefix_mappings': {
-                        prefix: uri
-                        for ets in next(x for x in specs if x.id == result['spec_id']).all_entity_type_selections
-                        for prefix, uri in ets.collection.dynamic_uri_prefix_mappings.items()
-                    }
-                }
-            } for result in results]
-        except:
-            return [{
-                **result,
-                **{
-                    'prefix_mappings': {},
-                    'uri_prefix_mappings': {},
-                    'dynamic_uri_prefix_mappings': {}
-                }
-            } for result in results]
+    def _upgrade_data(self):
+        is_upgraded = upgrade_job_config(
+            self.data.get('version', 1),
+            self.data.get('entity_type_selections_form_data', []),
+            self.data.get('linkset_specs_form_data', []),
+            self.data.get('lens_specs_form_data', []),
+            self.data.get('views_form_data', []),
+        )
+
+        if is_upgraded:
+            (entity_type_selections, linkset_specs, lens_specs, views, errors) = transform(
+                self.data.get('entity_type_selections_form_data', []),
+                self.data.get('linkset_specs_form_data', []),
+                self.data.get('lens_specs_form_data', []),
+                self.data.get('views_form_data', [])
+            )
+
+            self.data['entity_type_selections'] = entity_type_selections
+            self.data['linkset_specs'] = linkset_specs
+            self.data['lens_specs'] = lens_specs
+            self.data['views'] = views
+
+            data_updated = {
+                'version': current_version,
+                'entity_type_selections_form_data': dumps(self.data['entity_type_selections_form_data']),
+                'linkset_specs_form_data': dumps(self.data['linkset_specs_form_data']),
+                'lens_specs_form_data': dumps(self.data['lens_specs_form_data']),
+                'views_form_data': dumps(self.data['views_form_data']),
+                'entity_type_selections': dumps(entity_type_selections),
+                'linkset_specs': dumps(linkset_specs),
+                'lens_specs': dumps(lens_specs),
+                'views': dumps(views)
+            }
+
+            with conn_pool.connection() as conn, conn.cursor() as cur:
+                cur.execute(sql.SQL('UPDATE jobs SET ({}) = ROW ({}), updated_at = now() WHERE job_id = {}').format(
+                    sql.SQL(', ').join([sql.Identifier(column) for column in data_updated.keys()]),
+                    sql.SQL(', ').join([sql.Literal(column) for column in data_updated.values()]),
+                    sql.Literal(self.job_id)
+                ))

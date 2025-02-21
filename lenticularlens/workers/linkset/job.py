@@ -4,8 +4,7 @@ from psycopg import sql, rows, ProgrammingError
 
 from lenticularlens.job.job import Job
 from lenticularlens.job.matching_sql import MatchingSql
-
-from lenticularlens.worker.job import WorkerJob
+from lenticularlens.workers.job import WorkerJob
 from lenticularlens.util.config_db import conn_pool
 
 

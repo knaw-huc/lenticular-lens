@@ -2,8 +2,7 @@ from psycopg import sql, rows
 
 from lenticularlens.job.job import Job
 from lenticularlens.job.lens_sql import LensSql
-
-from lenticularlens.worker.job import WorkerJob
+from lenticularlens.workers.job import WorkerJob
 from lenticularlens.util.config_db import conn_pool
 
 

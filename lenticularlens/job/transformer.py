@@ -79,9 +79,10 @@ def get_entity_type_selection_schema():
         'label': And(str, len),
         Optional('description', default=None): Or(str, None),
         'dataset': {
-            'dataset_id': And(str, len),
-            'collection_id': And(str, len),
-            'timbuctoo_graphql': And(str, len),
+            'type': And(str, Use(str.lower), lambda t: t in ('timbuctoo')),
+            'graphql_endpoint': And(str, len),
+            'timbuctoo_id': And(str, len),
+            'entity_type_id': And(str, len),
         },
         Optional('filter', default=None): Or(None, LogicBox(Schema({
             'property': And(Use(filter_property), len),
@@ -203,21 +204,27 @@ def get_view_schema():
         'id': Use(int),
         'type': Or('linkset', 'lens'),
         Optional('properties', default=[]): [{
-            'dataset_id': And(str, len),
-            'collection_id': And(str, len),
-            'timbuctoo_graphql': And(str, len),
             'properties': And(list, is_list_of_lists, Use(filter_properties)),
+            'dataset': {
+                'type': And(str, Use(str.lower), lambda t: t in ('timbuctoo')),
+                'graphql_endpoint': And(str, len),
+                'timbuctoo_id': And(str, len),
+                'entity_type_id': And(str, len),
+            },
         }],
         Optional('filters', default=[]): [{
-            'dataset_id': And(str, len),
-            'collection_id': And(str, len),
-            'timbuctoo_graphql': And(str, len),
             'filter': LogicBox(Schema({
                 'property': And(Use(filter_property), len),
                 'type': And(str, Use(str.lower), lambda t: t in filter_functions_info.keys()),
                 Optional('value'): Or(And(str, len), int),
                 Optional('format'): And(str, len),
             }, ignore_extra_keys=True), 'conditions', ('and', 'or')),
+            'dataset': {
+                'type': And(str, Use(str.lower), lambda t: t in ('timbuctoo')),
+                'graphql_endpoint': And(str, len),
+                'timbuctoo_id': And(str, len),
+                'entity_type_id': And(str, len),
+            },
         }],
         Optional('prefix_mappings', default={}): dict
     }, ignore_extra_keys=True)

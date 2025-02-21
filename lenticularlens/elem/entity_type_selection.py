@@ -1,6 +1,6 @@
 from psycopg import sql
 
-from lenticularlens.data.collection import Collection
+from lenticularlens.elem.dataset_reference import DatasetReference
 from lenticularlens.job.property_field import PropertyField
 from lenticularlens.elem.filter_function import FilterFunction
 
@@ -12,12 +12,7 @@ class EntityTypeSelection:
     def __init__(self, data, job):
         self._data = data
         self._job = job
-
-        self.graphql_endpoint = self._data['dataset']['timbuctoo_graphql']
-        self.dataset_id = self._data['dataset']['dataset_id']
-        self.collection_id = self._data['dataset']['collection_id']
-
-        self.collection = Collection(self.graphql_endpoint, self.dataset_id, self.collection_id)
+        self._entity_type = None
 
     @property
     def id(self):
@@ -44,6 +39,17 @@ class EntityTypeSelection:
         return self._data.get('random', False)
 
     @property
+    def dataset(self):
+        return self._data.get('dataset')
+
+    @property
+    def entity_type(self):
+        if self._entity_type is None and self.dataset is not None:
+            self._entity_type = DatasetReference(self.dataset).entity_type
+
+        return self._entity_type
+
+    @property
     def properties(self):
         return {PropertyField(property, entity_type_selection=self) for property in self._data['properties']}
 
@@ -68,7 +74,7 @@ class EntityTypeSelection:
 
     @property
     def hash(self):
-        return hash_string_min((self.collection.hash, self.with_filters_recursive(
+        return hash_string_min((self.entity_type.hash, self.with_filters_recursive(
             lambda condition: hash_string_min((condition['children'], condition['type'])),
             lambda filter_func: filter_func['filter_function'].hash
         )))

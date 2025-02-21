@@ -3,12 +3,6 @@ from hashlib import md5
 hash_length = 15
 postgresql_id_max_length = 63
 
-known_endpoints = {
-    'https://repository.goldenagents.org/v5/graphql': 'ga',
-    'https://repository.huygens.knaw.nl/v5/graphql': 'huygens',
-    'https://data.anansi.clariah.nl/v5/graphql': 'clariah',
-}
-
 
 def hasher(object):
     return F"H{hash_string_min(object)}"
@@ -22,22 +16,20 @@ def hash_string(object):
     return md5(bytes(object.__str__(), encoding='utf-8')).hexdigest()
 
 
-def table_name_hash(graphql_endpoint, dataset_id, collection_id):
-    user, dataset_name = dataset_id.split('__', 1)
-    prefix = known_endpoints[graphql_endpoint] + '_' if graphql_endpoint in known_endpoints else ''
-    hash = hash_string(graphql_endpoint + dataset_id + collection_id)[:hash_length]
+def table_name_hash(prefix, dataset_name, entity_type_name, full_name):
+    prefix = prefix + '_' if prefix is not None and len(prefix) > 0 else ''
+    hash = hash_string(full_name)[:hash_length]
 
-    min_collection_length = 15
+    min_entity_type_name_length = 15
     length = postgresql_id_max_length - 2 - len(prefix) - hash_length
-    if len(dataset_name) > (length - min_collection_length):
-        dataset_name = dataset_name[:length - min_collection_length]
+    if len(dataset_name) > (length - min_entity_type_name_length):
+        dataset_name = dataset_name[:length - min_entity_type_name_length]
 
     length -= len(dataset_name)
-    collection_id_split = collection_id.split('__')
-    collection_id = collection_id_split[len(collection_id_split) - 1]
-    collection_id = collection_id[-length:]
+    entity_type_name = entity_type_name[len(entity_type_name) - 1]
+    entity_type_name = entity_type_name[-length:]
 
-    return prefix + dataset_name + '_' + collection_id + '_' + hash
+    return prefix + dataset_name + '_' + entity_type_name + '_' + hash
 
 
 def column_name_hash(column_name):

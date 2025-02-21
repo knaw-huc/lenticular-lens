@@ -12,17 +12,14 @@ class QueryBuilder:
     def __init__(self):
         self._queries = []
 
-    def add_query(self, graphql_endpoint, dataset_id, collection_id, resource, target,
-                  filter_properties, selection_properties,
+    def add_query(self, dataset_ref, resource, target, filter_properties, selection_properties,
                   condition=None, invert=False, single_value=False, limit=None, offset=0):
         query = self.create_query(resource, target, filter_properties, selection_properties,
                                   condition=condition, invert=invert, single_value=single_value,
                                   limit=limit, offset=offset)
         if query:
             self._queries.append({
-                'graphql_endpoint': graphql_endpoint,
-                'dataset_id': dataset_id,
-                'collection_id': collection_id,
+                'dataset': dataset_ref,
                 'properties': selection_properties,
                 'query': query
             })
@@ -34,9 +31,7 @@ class QueryBuilder:
                 cur.execute(query_info['query'])
                 for values in cur:
                     prop_and_values = [{
-                        'graphql_endpoint': query_info['graphql_endpoint'],
-                        'dataset_id': query_info['dataset_id'],
-                        'collection_id': query_info['collection_id'],
+                        'dataset': query_info['dataset'],
                         'property': property.property_path,
                         'values': list(filter(None, values[property.hash])) if property.hash in values else []
                     } for property in query_info['properties']]
@@ -90,11 +85,11 @@ class QueryBuilder:
         if limit or offset:
             return sql.SQL(cleandoc('''
                 SELECT {resource}.uri AS uri {selection}
-                FROM timbuctoo.{table_name} AS {resource} 
+                FROM entity_types_data.{table_name} AS {resource} 
                 {selection_joins}
                 WHERE {resource}.uri IN (
                     SELECT {resource}.uri
-                    FROM timbuctoo.{table_name} AS {resource}
+                    FROM entity_types_data.{table_name} AS {resource}
                     {filter_joins}
                     {condition}
                     GROUP BY {resource}.uri
@@ -116,7 +111,7 @@ class QueryBuilder:
 
         return sql.SQL(cleandoc('''
             SELECT {resource}.uri AS uri {selection}
-            FROM timbuctoo.{table_name} AS {resource} 
+            FROM entity_types_data.{table_name} AS {resource} 
             {joins}
             {condition}
             GROUP BY {resource}.uri

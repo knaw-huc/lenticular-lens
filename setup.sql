@@ -4,8 +4,9 @@ CREATE TYPE spec_type AS ENUM ('linkset', 'lens');
 CREATE TYPE link_order AS ENUM ('source_target', 'both', 'target_source');
 CREATE TYPE link_validity AS ENUM ('accepted', 'rejected', 'uncertain', 'unchecked', 'disputed');
 CREATE TYPE job_role_type AS ENUM ('owner', 'shared');
+CREATE TYPE dataset_type AS ENUM ('timbuctoo', 'sparql', 'rdf');
 
-CREATE SCHEMA IF NOT EXISTS timbuctoo;
+CREATE SCHEMA IF NOT EXISTS datasets;
 CREATE SCHEMA IF NOT EXISTS linksets;
 CREATE SCHEMA IF NOT EXISTS lenses;
 
@@ -24,6 +25,7 @@ CREATE TABLE IF NOT EXISTS jobs
     job_title                        text                    not null,
     job_description                  text                    not null,
     job_link                         text,
+    version                          int                     not null,
     entity_type_selections_form_data jsonb,
     linkset_specs_form_data          jsonb,
     lens_specs_form_data             jsonb,
@@ -56,44 +58,80 @@ CREATE TABLE IF NOT EXISTS jobs_deleted
 
 CREATE TABLE IF NOT EXISTS job_users
 (
-    job_id  text          not null,
-    user_id text          not null,
+    job_id  text          not null references jobs (job_id),
+    user_id text          not null references users (user_id),
     role    job_role_type not null,
     PRIMARY KEY (job_id, user_id)
 );
 
 CREATE INDEX IF NOT EXISTS user_jobs_idx ON job_users USING hash (user_id);
 
-CREATE TABLE IF NOT EXISTS timbuctoo_tables
+CREATE TABLE IF NOT EXISTS datasets
 (
-    table_name                  text primary key,
-    graphql_endpoint            text                      not null,
-    dataset_id                  text                      not null,
-    collection_id               text                      not null,
-    dataset_uri                 text                      not null,
-    dataset_name                text                      not null,
-    title                       text                      not null,
-    description                 text,
-    collection_uri              text                      not null,
-    collection_title            text,
-    collection_shortened_uri    text                      not null,
+    dataset_id      text primary key,
+    dataset_type    dataset_type              not null,
+    title           text                      not null,
+    description     text,
+    prefix_mappings jsonb default '{}'::jsonb not null
+);
+
+CREATE INDEX IF NOT EXISTS datasets_types_idx ON datasets USING btree (dataset_type, dataset_id);
+
+CREATE TABLE IF NOT EXISTS timbuctoo
+(
+    dataset_id       text primary key references datasets (dataset_id),
+    graphql_endpoint text not null,
+    timbuctoo_id     text not null,
+    UNIQUE (graphql_endpoint, timbuctoo_id)
+);
+
+CREATE TABLE IF NOT EXISTS entity_types
+(
+    dataset_id                  text                      not null references datasets (dataset_id) on delete cascade,
+    entity_type_id              text                      not null,
+    table_name                  text                      not null,
+    label                       text,
+    uri                         text                      not null,
+    shortened_uri               text                      not null,
     total                       int                       not null,
-    columns                     jsonb                     not null,
-    prefix_mappings             jsonb                     not null,
-    uri_prefix_mappings         jsonb default '{}'::jsonb not null,
-    dynamic_uri_prefix_mappings jsonb default '{}'::jsonb not null,
+    rows_count                  int default 0             not null,
+    cursor                      text,
     create_time                 timestamp                 not null,
     update_start_time           timestamp,
-    next_page                   text,
-    rows_count                  int   default 0           not null,
     last_push_time              timestamp,
     update_finish_time          timestamp,
-    UNIQUE (graphql_endpoint, dataset_id, collection_id)
+    uri_prefix_mappings         jsonb default '{}'::jsonb not null,
+    dynamic_uri_prefix_mappings jsonb default '{}'::jsonb not null,
+    PRIMARY KEY (dataset_id, entity_type_id),
+    UNIQUE (table_name)
 );
+
+CREATE INDEX IF NOT EXISTS entity_types_key_idx ON entity_types USING btree (dataset_id, entity_type_id);
+
+CREATE TABLE IF NOT EXISTS entity_type_properties
+(
+    dataset_id     text    not null,
+    entity_type_id text    not null,
+    property_id    text    not null,
+    column_name    text    not null,
+    uri            text    not null,
+    shortened_uri  text    not null,
+    rows_count     int     not null,
+    referenced     text[]  default '{}'::text[],
+    is_link        boolean default false,
+    is_list        boolean default false,
+    is_inverse     boolean default false,
+    is_value_type  boolean default false,
+    PRIMARY KEY (dataset_id, entity_type_id, property_id),
+    FOREIGN KEY (dataset_id, entity_type_id) REFERENCES entity_types (dataset_id, entity_type_id) ON DELETE CASCADE,
+    UNIQUE (dataset_id, entity_type_id, property_id, column_name)
+);
+
+CREATE INDEX IF NOT EXISTS entity_type_properties_key_idx ON entity_type_properties USING btree (dataset_id, entity_type_id, property_id);
 
 CREATE TABLE IF NOT EXISTS linksets
 (
-    job_id                 text    not null,
+    job_id                 text    not null references jobs (job_id),
     spec_id                int     not null,
     status                 text    not null,
     status_message         text,
@@ -114,7 +152,7 @@ CREATE TABLE IF NOT EXISTS linksets
 
 CREATE TABLE IF NOT EXISTS lenses
 (
-    job_id              text    not null,
+    job_id              text    not null references jobs (job_id),
     spec_id             int     not null,
     status              text    not null,
     status_message      text,
@@ -131,7 +169,7 @@ CREATE TABLE IF NOT EXISTS lenses
 
 CREATE TABLE IF NOT EXISTS clusterings
 (
-    job_id          text      not null,
+    job_id          text      not null references jobs (job_id),
     spec_id         int       not null,
     spec_type       spec_type not null,
     clustering_type text      not null,
@@ -255,28 +293,40 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION notify_timbuctoo_update() RETURNS trigger AS $$
+CREATE OR REPLACE FUNCTION notify_entity_types_update() RETURNS trigger AS $$
 DECLARE
     notification json;
+    type dataset_type;
+    timbuctoo timbuctoo%ROWTYPE;
 BEGIN
-    IF NEW IS NULL THEN
-        notification = json_build_object(
-            'graphql_endpoint', OLD.graphql_endpoint,
-            'dataset_id', OLD.dataset_id,
-            'collection_id', OLD.collection_id
-        );
+    SELECT dataset_type INTO type
+    FROM datasets
+    WHERE dataset_id IN (NEW.dataset_id, OLD.dataset_id);
 
-        PERFORM pg_notify('timbuctoo_delete', notification::text);
-    ELSIF OLD IS NULL OR NEW.rows_count != OLD.rows_count THEN
-        notification = json_build_object(
-            'graphql_endpoint', NEW.graphql_endpoint,
-            'dataset_id', NEW.dataset_id,
-            'collection_id', NEW.collection_id,
-            'total', NEW.total,
-            'rows_count', NEW.rows_count
-        );
+    IF type = 'timbuctoo' THEN
+        SELECT * INTO timbuctoo
+        FROM timbuctoo
+        WHERE dataset_id IN (NEW.dataset_id, OLD.dataset_id);
 
-        PERFORM pg_notify('timbuctoo_update', notification::text);
+        IF NEW IS NULL THEN
+            notification = json_build_object(
+                'graphql_endpoint', timbuctoo.graphql_endpoint,
+                'timbuctoo_id', timbuctoo.timbuctoo_id,
+                'entity_type_id', OLD.entity_type_id
+            );
+
+            PERFORM pg_notify('timbuctoo_delete', notification::text);
+        ELSIF OLD IS NULL OR NEW.rows_count != OLD.rows_count THEN
+            notification = json_build_object(
+                'graphql_endpoint', timbuctoo.graphql_endpoint,
+                'timbuctoo_id', timbuctoo.timbuctoo_id,
+                'entity_type_id', NEW.entity_type_id,
+                'total', NEW.total,
+                'rows_count', NEW.rows_count
+            );
+
+            PERFORM pg_notify('timbuctoo_update', notification::text);
+        END IF;
     END IF;
 
     RETURN NEW;
@@ -376,8 +426,8 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER job_notify AFTER UPDATE ON jobs
 FOR EACH ROW EXECUTE PROCEDURE notify_job_update();
 
-CREATE TRIGGER timbuctoo_notify AFTER INSERT OR UPDATE OR DELETE ON timbuctoo_tables
-FOR EACH ROW EXECUTE PROCEDURE notify_timbuctoo_update();
+CREATE TRIGGER entity_types_notify AFTER INSERT OR UPDATE OR DELETE ON entity_types
+FOR EACH ROW EXECUTE PROCEDURE notify_entity_types_update();
 
 CREATE TRIGGER linkset_notify AFTER INSERT OR UPDATE OR DELETE ON linksets
 FOR EACH ROW EXECUTE PROCEDURE notify_linkset_update();

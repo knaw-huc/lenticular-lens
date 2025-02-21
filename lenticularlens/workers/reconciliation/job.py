@@ -1,12 +1,11 @@
 from os.path import join
 
+from lenticularlens.job.job import Job as JobLL
+from lenticularlens.workers.job import WorkerJob
 from lenticularlens.util.hasher import hasher
 from lenticularlens.util.config_db import conn_pool
-from lenticularlens.job.job import Job as JobLL
 
 import lenticularlens.org.Clustering.SimpleLinkClustering as Cls
-
-from lenticularlens.worker.job import WorkerJob
 
 # TODO: Paths
 # from ll.LLData.CSV_Associations import CSV_ASSOCIATIONS_DIR
@@ -16,7 +15,7 @@ CLUSTER_SERIALISATION_DIR = ''
 
 
 class ReconciliationJob(WorkerJob):
-    def __init__(self, job_id, id, type, association_file = None):
+    def __init__(self, job_id, id, type, association_file=None):
         self._job_id = job_id
         self._id = id
         self._type = type

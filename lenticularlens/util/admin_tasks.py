@@ -3,7 +3,6 @@ from psycopg import sql, rows
 from datetime import datetime, timedelta
 
 from lenticularlens.job.job import Job
-from lenticularlens.data.collection import Collection
 from lenticularlens.util.config_db import conn_pool
 
 
@@ -24,33 +23,35 @@ def cleanup_jobs():
 
 
 def cleanup_downloaded():
-    collections_in_use = set()
+    entity_types_in_use = set()
     for job in jobs_by_query('SELECT * FROM jobs'):
         for ets in job.entity_type_selections:
-            collections_in_use.add(ets.collection)
+            entity_types_in_use.add(ets.entity_type)
             for property in ets.all_props:
-                collections_in_use = collections_in_use.union(property.collections_required)
+                entity_types_in_use = entity_types_in_use.union(property.entity_types_required)
 
         for linkset in job.linkset_specs:
             for property in linkset.all_props:
-                collections_in_use = collections_in_use.union(property[1].collections_required)
+                entity_types_in_use = entity_types_in_use.union(property[1].entity_types_required)
 
         for lens in job.lens_specs:
             for property in lens.all_props:
-                collections_in_use = collections_in_use.union(property[1].collections_required)
+                entity_types_in_use = entity_types_in_use.union(property[1].entity_types_required)
 
         for view in job.views:
             for property in view.all_props:
-                collections_in_use = collections_in_use.union(property.collections_required)
+                entity_types_in_use = entity_types_in_use.union(property.entity_types_required)
+
+    in_use = set(map(lambda et: (et.dataset_id, et.entity_type_id), entity_types_in_use))
 
     with conn_pool.connection() as conn, conn.cursor(row_factory=rows.dict_row) as cur:
-        cur.execute('SELECT table_name, graphql_endpoint, dataset_id, collection_id FROM timbuctoo_tables')
+        cur.execute('SELECT dataset_id, entity_type_id, table_name FROM entity_types')
 
         for table in cur:
-            collection = Collection(table['graphql_endpoint'], table['dataset_id'], table['collection_id'])
-            if collection not in collections_in_use:
-                cur.execute('DELETE FROM timbuctoo_tables WHERE table_name = %s', table['table_name'])
-                cur.execute(sql.SQL('DROP TABLE IF EXISTS timbuctoo.{}').format(sql.Identifier(table['table_name'])))
+            if (table['dataset_id'], table['entity_type_id']) not in in_use:
+                cur.execute('DELETE FROM entity_types WHERE table_name = %s', table['table_name'])
+                cur.execute(
+                    sql.SQL('DROP TABLE IF EXISTS entity_types_data.{}').format(sql.Identifier(table['table_name'])))
 
 
 def jobs_by_query(job_query):

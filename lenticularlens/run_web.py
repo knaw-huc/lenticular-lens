@@ -20,6 +20,9 @@ from flask_pyoidc.provider_configuration import ProviderConfiguration, ClientMet
 from psycopg.errors import UniqueViolation
 from werkzeug.routing.converters import BaseConverter, ValidationError
 
+from lenticularlens.data.timbuctoo.dataset import Dataset as TimbuctooDataset
+from lenticularlens.data.timbuctoo.entity_type import EntityType as TimbuctooEntityType
+
 from lenticularlens.job.user import User
 from lenticularlens.job.job import Job, Validation
 from lenticularlens.job.lens_sql import LensSql
@@ -32,10 +35,8 @@ from lenticularlens.util.config_db import listen_for_notify
 from lenticularlens.util.config_logging import config_logger
 from lenticularlens.util.helpers import get_string_from_sql
 from lenticularlens.util.admin_tasks import cleanup_jobs, cleanup_downloaded
-from lenticularlens.util.db_functions import reset, get_filter_functions, get_matching_methods, get_transformers, get_all_jobs
-
-from lenticularlens.data.collection import Collection
-from lenticularlens.data.timbuctoo_datasets import TimbuctooDatasets
+from lenticularlens.util.db_functions import reset, get_filter_functions, get_matching_methods, get_transformers, \
+    get_all_jobs
 
 
 class FixedDefaultJSONProvider(DefaultJSONProvider):
@@ -202,54 +203,35 @@ if auth:
         return jsonify(user_session.userinfo)
 
 
-@app.get('/datasets')
+@app.get('/datasets/timbuctoo/downloads')
 @authenticated
-def datasets():
-    if not request.values.get('endpoint'):
+def downloads_timbuctoo():
+    downloads = TimbuctooDataset.get_downloads()
+    return jsonify([download.model_dump() for download in downloads])
+
+
+@app.get('/datasets/timbuctoo')
+@authenticated
+def datasets_timbuctoo():
+    if not request.values.get('graphql_endpoint'):
         return jsonify(result='error', error='Please apply the GraphQL endpoint'), 400
 
-    return jsonify(TimbuctooDatasets(request.values.get('endpoint')).datasets)
+    datasets = TimbuctooDataset.get_datasets_for_graphql(request.values.get('graphql_endpoint'))
+    return jsonify({key: value.model_dump() for key, value in datasets.items()})
 
 
-@app.post('/datasets/update')
+@app.post('/datasets/timbuctoo')
 @authenticated
-def datasets_update():
-    if not request.values.get('endpoint'):
+def datasets_timbuctoo_download():
+    if not request.values.get('graphql_endpoint'):
         return jsonify(result='error', error='Please apply the GraphQL endpoint'), 400
+    if not request.values.get('timbuctoo_id'):
+        return jsonify(result='error', error='Please apply the Timbuctoo id'), 400
+    if not request.values.get('entity_type_id'):
+        return jsonify(result='error', error='Please apply the entity type id'), 400
 
-    TimbuctooDatasets(request.values.get('endpoint')).update()
-    return jsonify(result='updated')
-
-
-@app.get('/datasets/determine_prefix_mappings')
-@authenticated
-def determine_prefix_mappings():
-    if not request.values.get('endpoint'):
-        return jsonify(result='error', error='Please apply the GraphQL endpoint'), 400
-
-    TimbuctooDatasets(request.values.get('endpoint')).determine_prefix_mappings()
-    return jsonify(result='updated')
-
-
-@app.get('/downloads')
-@authenticated
-def downloads():
-    return jsonify(Collection.download_status())
-
-
-@app.get('/download')
-@authenticated
-def start_download():
-    if not request.values.get('endpoint'):
-        return jsonify(result='error', error='Please apply the GraphQL endpoint'), 400
-    if not request.values.get('dataset_id'):
-        return jsonify(result='error', error='Please apply the Timbuctoo dataset id'), 400
-    if not request.values.get('collection_id'):
-        return jsonify(result='error', error='Please apply the Timbuctoo collection id'), 400
-
-    collection = Collection(request.values.get('endpoint'),
-                            request.values.get('dataset_id'), request.values.get('collection_id'))
-    collection.start_download()
+    TimbuctooEntityType.start_download(request.values.get('graphql_endpoint'),
+                                       request.values.get('timbuctoo_id'), request.values.get('entity_type_id'))
 
     return jsonify(result='ok')
 

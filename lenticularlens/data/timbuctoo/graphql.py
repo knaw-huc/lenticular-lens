@@ -2,19 +2,32 @@ import urllib3
 import requests
 import logging
 
+from math import floor
+from typing import Dict
 from cachetools import cachedmethod, TTLCache
+
+from lenticularlens.data.dataset_info import Dataset, EntityType, Property
 
 log = logging.getLogger(__name__)
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
-class Timbuctoo:
+class GraphQL:
     cache = TTLCache(maxsize=5, ttl=300)
+
+    known_endpoints = {
+        'https://repository.goldenagents.org/graphql': 'ga',
+        'https://repository.goldenagents.org/v5/graphql': 'ga',
+        'https://repository.huygens.knaw.nl/graphql': 'huygens',
+        'https://repository.huygens.knaw.nl/v5/graphql': 'huygens',
+        'https://data.anansi.clariah.nl/graphql': 'clariah',
+        'https://data.anansi.clariah.nl/v5/graphql': 'clariah',
+    }
 
     def __init__(self, graphql_uri):
         self._graphql_uri = graphql_uri
 
-    def fetch_graph_ql(self, query, variables=None, timeout=60):
+    def fetch(self, query, variables=None, timeout=60):
         try:
             response = requests.post(self._graphql_uri, json={
                 'query': query,
@@ -32,8 +45,8 @@ class Timbuctoo:
 
     @property
     @cachedmethod(lambda self: self.cache, key=lambda self: self._graphql_uri)
-    def datasets(self):
-        datasets_data = self.fetch_graph_ql("""
+    def datasets(self) -> Dict[str, Dataset]:
+        datasets_data = self.fetch("""
             {
                 dataSetMetadataList(promotedOnly: false, publishedOnly: false) {
                     uri
@@ -88,14 +101,14 @@ class Timbuctoo:
             prefix_mapping = {prefixMapping['prefix']: prefixMapping['uri']
                               for prefixMapping in dataset['prefixMappings']}
 
-            datasets[dataset_id] = {
-                'uri': dataset['uri'],
-                'name': dataset_name,
-                'title': dataset_title,
-                'description': dataset_description,
-                'prefixMappings': prefix_mapping,
-                'collections': {},
-            }
+            datasets[dataset_id] = Dataset(
+                type='timbuctoo',
+                title=dataset_title,
+                description=dataset_description,
+                graphql_endpoint=self._graphql_uri,
+                timbuctoo_id=dataset_id,
+                prefix_mapping=prefix_mapping
+            )
 
             for collection in dataset['collectionList']['items']:
                 collection_id = collection['collectionId']
@@ -103,14 +116,14 @@ class Timbuctoo:
                     if collection['title'] and collection['title']['value'] else None
 
                 if collection_id != 'tim_unknown':
-                    datasets[dataset_id]['collections'][collection_id] = {
-                        'uri': collection['uri'],
-                        'title': collection_title,
-                        'shortenedUri': collection['shortenedUri'],
-                        'total': collection['total'],
-                        'downloaded': False,
-                        'properties': {}
-                    }
+                    datasets[dataset_id].entity_types[collection_id] = EntityType(
+                        id=collection_id,
+                        label=collection_title,
+                        uri=collection['uri'],
+                        shortened_uri=collection['shortenedUri'],
+                        total=collection['total'],
+                        downloaded=False
+                    )
 
                     for collection_property in collection['properties']['items']:
                         property_name = collection_property['name']
@@ -122,21 +135,19 @@ class Timbuctoo:
                         uri = collection_property['uri']
                         short_uri = collection_property['shortenedUri']
 
-                        prefix = short_uri[:short_uri.index(':')] if uri != short_uri and ':' in short_uri else None
-                        prefix_uri = prefix_mapping[prefix] if prefix and prefix in prefix_mapping else None
+                        entities_size = datasets[dataset_id].entity_types[collection_id].total
+                        rows_count = floor(entities_size * collection_property['density'])
 
-                        datasets[dataset_id]['collections'][collection_id]['properties'][property_name] = {
-                            'uri': uri,
-                            'name': property_name,
-                            'shortenedUri': short_uri,
-                            'isInverse': collection_property['isInverse'],
-                            'isList': collection_property['isList'],
-                            'isValueType': collection_property['isValueType'],
-                            'isLink': len(referenced_collections) > 0,
-                            'density': collection_property['density'],
-                            'referencedCollections': referenced_collections_filtered,
-                            'prefix': prefix,
-                            'prefixUri': prefix_uri,
-                        }
+                        datasets[dataset_id].entity_types[collection_id].properties[property_name] = Property(
+                            id=property_name,
+                            uri=uri,
+                            shortened_uri=short_uri,
+                            rows_count=rows_count,
+                            referenced=referenced_collections_filtered,
+                            is_link=len(referenced_collections) > 0,
+                            is_list=collection_property['isList'],
+                            is_inverse=collection_property['isInverse'],
+                            is_value_type=collection_property['isValueType']
+                        )
 
         return datasets

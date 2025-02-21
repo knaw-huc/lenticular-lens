@@ -59,7 +59,7 @@ class MatchingSql:
                 """ DROP MATERIALIZED VIEW IF EXISTS {view_name} CASCADE;
                     CREATE MATERIALIZED VIEW {view_name} AS
                     {pre}SELECT DISTINCT {matching_fields}
-                    FROM timbuctoo.{table_name} AS {view_name}{joins}{wheres}{limit};
+                    FROM entity_types_data.{table_name} AS {view_name}{joins}{wheres}{limit};
                     
                     ANALYZE {view_name};
                 """
@@ -67,7 +67,7 @@ class MatchingSql:
                 pre=sql.SQL('SELECT * FROM (') if entity_type_selection.limit > -1 else sql.SQL(''),
                 view_name=sql.Identifier(entity_type_selection.alias),
                 matching_fields=sql.SQL(',\n       ').join(matching_fields_sqls),
-                table_name=sql.Identifier(entity_type_selection.collection.table_name),
+                table_name=sql.Identifier(entity_type_selection.entity_type.table_name),
                 joins=get_sql_empty(joins.sql),
                 wheres=get_sql_empty(where_sql),
                 limit=get_sql_empty(limit),

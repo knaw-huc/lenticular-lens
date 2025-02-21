@@ -189,8 +189,8 @@ class RdfExport:
 
             for ets in self._entity_type_selections:
                 predefined_prefix_mappings = {**predefined_prefix_mappings,
-                                              **ets.collection.uri_prefix_mappings,
-                                              **ets.collection.dynamic_uri_prefix_mappings}
+                                              **ets.entity_type.uri_prefix_mappings,
+                                              **ets.entity_type.dynamic_uri_prefix_mappings}
 
         prefix_mappings_view = self._view.prefix_mappings
         for (prefix, uri) in list(predefined_prefix_mappings.items()):
@@ -418,7 +418,7 @@ class RdfExport:
                 if linkset['targets_count'] > 0:
                     buffer.write(pred_val(VoidPlus.targetEntities, Literal(linkset['targets_count']).n3(ns_manager)))
 
-                if clustering and clustering['clusters_count'] > 0:
+                if clustering and clustering['status'] == 'done' and clustering['clusters_count'] > 0:
                     buffer.write(F"\n{TAB}### ABOUT CLUSTERS\n")
                     buffer.write(pred_val(VoidPlus.clusters, Literal(clustering['clusters_count']).n3(ns_manager)))
                     buffer.write(pred_val(VoidPlus.hasClusterset,
@@ -494,8 +494,8 @@ class RdfExport:
             buffer.write(F"{self._header('LINKSET RESOURCE SELECTIONS')}")
 
             for selection in sorted(self._entity_type_selections, key=lambda ets: ets.id):
-                class_partitions[selection.collection.hash] = selection.collection.table_data['collection_uri']
-                selection_formulations[selection.hash] = (selection.collection.hash, selection)
+                class_partitions[selection.entity_type.hash] = selection.entity_type.uri
+                selection_formulations[selection.hash] = (selection.entity_type.hash, selection)
                 for filter in selection.filters:
                     filters[filter.hash] = filter
 
@@ -509,7 +509,7 @@ class RdfExport:
 
                 buffer.write(pred_val(VoidPlus.subsetOf, F"resource:{selection.dataset_id}"))
                 buffer.write(pred_val(NS.DCterms.identifier,
-                                      Literal(selection.collection.table_data['dataset_name']).n3(ns_manager)))
+                                      Literal(selection.entity_type.dataset.name).n3(ns_manager)))
                 buffer.write(pred_val(VoidPlus.hasFormulation,
                                       F"resource:SelectionFormulation-{selection.hash}", end=True))
                 buffer.write("\n")

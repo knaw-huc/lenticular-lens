@@ -1,0 +1,22 @@
+# Obtain classes (entity types / collections)
+
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX dct: <http://purl.org/dc/terms/>
+
+SELECT ?class (SAMPLE(?label) AS ?label) (COUNT(*) AS ?count)
+WHERE {
+    {
+        ?instance rdf:type ?class .
+        FILTER (!isBlank(?class))
+
+        OPTIONAL { ?class rdfs:label ?label }
+    }
+    UNION
+    {
+        FILTER NOT EXISTS { ?instance rdf:type ?class }
+
+        BIND(rdfs:Resource AS ?class)
+    }
+}
+GROUP BY ?class
