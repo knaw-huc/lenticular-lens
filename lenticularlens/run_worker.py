@@ -19,8 +19,11 @@ if __name__ == '__main__':
     config_logger()
 
     worker_type = os.environ['WORKER_TYPE'].lower()
+    worker_type_camelcase = ''.join(['SPARQL' if name == 'sparql' else name.capitalize()
+                                     for name in worker_type.split('_')])
+
     worker_module = importlib.import_module(f'lenticularlens.workers.{worker_type}.worker')
-    worker_class = getattr(worker_module, f'{worker_type.capitalize()}Worker')
+    worker_class = getattr(worker_module, f'{worker_type_camelcase}Worker')
     worker = worker_class()
 
     signal.signal(signal.SIGTERM, teardown)

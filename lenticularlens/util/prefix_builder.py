@@ -1,6 +1,6 @@
 from re import findall
+from rdflib import Graph
 
-from lenticularlens.util.sparql import SPARQL
 from lenticularlens.util.hasher import hash_string
 
 registered_namespaces = dict()
@@ -30,8 +30,10 @@ def get_uri_local_name(uri):
 
 def get_registered_namespace(namespace):
     if namespace not in registered_namespaces:
-        sparql = SPARQL('https://lov.linkeddata.es/dataset/lov/sparql')
-        result = sparql.query(f'''
+        g = Graph()
+        g.parse('https://lov.linkeddata.es/dataset/lov')
+
+        query = f"""
             PREFIX vann: <http://purl.org/vocab/vann/>
             PREFIX voaf: <http://purl.org/vocommons/voaf#>
 
@@ -41,10 +43,12 @@ def get_registered_namespace(namespace):
                            vann:preferredNamespacePrefix ?output ;
                            vann:preferredNamespaceUri "{namespace}" .
                 }}
-            }}
-        ''', timeout=10)
+        """
 
-        if result is not None:
-            registered_namespaces[namespace] = result[0]['output']['value'] if result else None
+        result = list(g.query(query))
+        if result:
+            registered_namespaces[namespace] = str(result[0][0])
+        else:
+            registered_namespaces[namespace] = None
 
     return registered_namespaces.get(namespace)

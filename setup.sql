@@ -85,23 +85,32 @@ CREATE TABLE IF NOT EXISTS timbuctoo
     UNIQUE (graphql_endpoint, timbuctoo_id)
 );
 
+CREATE TABLE IF NOT EXISTS sparql
+(
+    dataset_id      text primary key references datasets (dataset_id),
+    sparql_endpoint text    not null,
+    status          text    not null,
+    UNIQUE (sparql_endpoint)
+);
+
 CREATE TABLE IF NOT EXISTS entity_types
 (
-    dataset_id                  text                      not null references datasets (dataset_id) on delete cascade,
-    entity_type_id              text                      not null,
-    table_name                  text                      not null,
+    dataset_id                  text                        not null references datasets (dataset_id) on delete cascade,
+    entity_type_id              text                        not null,
+    table_name                  text                        not null,
     label                       text,
-    uri                         text                      not null,
-    shortened_uri               text                      not null,
-    total                       int                       not null,
-    rows_count                  int default 0             not null,
+    uri                         text                        not null,
+    shortened_uri               text                        not null,
+    total                       int                         not null,
+    rows_count                  int     default 0           not null,
     cursor                      text,
-    create_time                 timestamp                 not null,
+    status                      text                        not null,
+    create_time                 timestamp                   not null,
     update_start_time           timestamp,
     last_push_time              timestamp,
     update_finish_time          timestamp,
-    uri_prefix_mappings         jsonb default '{}'::jsonb not null,
-    dynamic_uri_prefix_mappings jsonb default '{}'::jsonb not null,
+    uri_prefix_mappings         jsonb   default '{}'::jsonb not null,
+    dynamic_uri_prefix_mappings jsonb   default '{}'::jsonb not null,
     PRIMARY KEY (dataset_id, entity_type_id),
     UNIQUE (table_name)
 );
@@ -298,6 +307,7 @@ DECLARE
     notification json;
     type dataset_type;
     timbuctoo timbuctoo%ROWTYPE;
+    sparql sparql%ROWTYPE;
 BEGIN
     SELECT dataset_type INTO type
     FROM datasets
@@ -326,6 +336,29 @@ BEGIN
             );
 
             PERFORM pg_notify('timbuctoo_update', notification::text);
+        END IF;
+    ELSEIF type = 'sparql' THEN
+        SELECT * INTO sparql
+        FROM sparql
+        WHERE dataset_id IN (NEW.dataset_id, OLD.dataset_id);
+
+        IF NEW IS NULL THEN
+            notification = json_build_object(
+                'sparql_endpoint', sparql.sparql_endpoint,
+                'entity_type_id', OLD.entity_type_id
+            );
+
+            PERFORM pg_notify('sparql_delete', notification::text);
+        ELSIF OLD IS NULL OR NEW.rows_count != OLD.rows_count THEN
+            notification = json_build_object(
+                'sparql_endpoint', sparql.sparql_endpoint,
+                'entity_type_id', NEW.entity_type_id
+                'status', NEW.status,
+                'total', NEW.total,
+                'rows_count', NEW.rows_count
+            );
+
+            PERFORM pg_notify('sparql_update', notification::text);
         END IF;
     END IF;
 

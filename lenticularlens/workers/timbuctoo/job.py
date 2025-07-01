@@ -8,6 +8,7 @@ from lenticularlens.data.timbuctoo.graphql import GraphQL
 from lenticularlens.util.hasher import column_name_hash
 from lenticularlens.util.config_db import conn_pool, fetch_many
 from lenticularlens.util.prefix_builder import get_uri_local_name, get_namespace_prefix
+from lenticularlens.workers.write_data_helper import write_data_helper
 
 
 class TimbuctooJob(WorkerJob):
@@ -106,61 +107,15 @@ class TimbuctooJob(WorkerJob):
 
             query_result = query_result['dataSets'][self._timbuctoo_id][self._entity_type_id + 'List']
 
-            # Property names can be too long for column names in Postgres, so make them shorter
+            # Property names can be too long for column names in Postgres, so shorten them
             # We use hashing, because that keeps the column names unique and uniform
             results = [
                 {column_name_hash(name): self.extract_value(item[name]) for name in item}
                 for item in query_result['items']
             ]
 
-            with self._db_conn.cursor() as cur:
-                cur.execute('SET search_path TO "$user", entity_types_data, public; '
-                            'LOCK TABLE entity_types IN ACCESS EXCLUSIVE MODE;')
-
-                # Check if the data we have is still the data that is expected to be inserted
-                if self._cursor:
-                    cur.execute('''
-                        SELECT 1
-                        FROM entity_types
-                        WHERE "table_name" = %s AND "cursor" = %s
-                    ''', (self._table_name, self._cursor))
-                else:
-                    cur.execute('''
-                        SELECT 1
-                        FROM entity_types
-                        WHERE "table_name" = %s AND "cursor" IS NULL
-                        AND (update_finish_time IS NULL OR update_finish_time < update_start_time)
-                    ''', (self._table_name,))
-
-                if cur.fetchone() != (1,):
-                    raise Exception('This is weird... '
-                                    'Someone else updated the job for table %s '
-                                    'while I was fetching data.' % self._table_name)
-
-                cur.execute(sql.SQL('SELECT count(*) FROM {}').format(sql.Identifier(self._table_name)))
-                table_rows = cur.fetchone()[0]
-
-                if table_rows != self._rows_count + total_insert:
-                    raise Exception('Table %s has %i rows, expected %i. Quitting job.'
-                                    % (self._table_name, table_rows, self._rows_count + total_insert))
-
-                if len(results) > 0:
-                    with cur.copy(sql.SQL('COPY {} ({}) FROM STDIN').format(
-                            sql.Identifier(self._table_name),
-                            sql.SQL(', ').join([sql.Identifier(column) for column in results[0].keys()])
-                    )) as copy:
-                        for result in results:
-                            copy.write_row(list(result.values()))
-
-                    total_insert += len(results)
-                    cur.execute('''
-                        UPDATE entity_types
-                        SET last_push_time = now(), "cursor" = %s, rows_count = %s
-                        WHERE "table_name" = %s
-                    ''', (query_result['nextCursor'], table_rows + len(results), self._table_name))
-
-                self._db_conn.commit()
-
+            total_insert = write_data_helper(self._db_conn, self._cursor, query_result['nextCursor'],
+                                             self._table_name, self._rows_count, total_insert, results)
             self._cursor = query_result['nextCursor']
 
     def determine_prefix_mappings(self):
@@ -193,15 +148,3 @@ class TimbuctooJob(WorkerJob):
                         get_namespace_prefix(namespace): namespace
                         for namespace in self._uri_prefixes
                     }), self._table_name,))
-
-    def watch_process(self):
-        pass
-
-    def watch_kill(self):
-        pass
-
-    def on_kill(self, reset):
-        pass
-
-    def on_exception(self):
-        pass

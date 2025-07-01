@@ -2,6 +2,7 @@ from hashlib import md5
 
 hash_length = 15
 postgresql_id_max_length = 63
+min_entity_type_name_length = 15
 
 
 def hasher(object):
@@ -20,13 +21,13 @@ def table_name_hash(prefix, dataset_name, entity_type_name, full_name):
     prefix = prefix + '_' if prefix is not None and len(prefix) > 0 else ''
     hash = hash_string(full_name)[:hash_length]
 
-    min_entity_type_name_length = 15
     length = postgresql_id_max_length - 2 - len(prefix) - hash_length
-    if len(dataset_name) > (length - min_entity_type_name_length):
-        dataset_name = dataset_name[:length - min_entity_type_name_length]
+    minimal_entity_type_length = min(len(entity_type_name), min_entity_type_name_length)
+
+    if len(dataset_name) > (length - minimal_entity_type_length):
+        dataset_name = dataset_name[:length - minimal_entity_type_length]
 
     length -= len(dataset_name)
-    entity_type_name = entity_type_name[len(entity_type_name) - 1]
     entity_type_name = entity_type_name[-length:]
 
     return prefix + dataset_name + '_' + entity_type_name + '_' + hash

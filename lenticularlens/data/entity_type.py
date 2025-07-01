@@ -1,12 +1,13 @@
-from psycopg import rows
+from json import dumps
+from psycopg import rows, sql
 from datetime import datetime
 from pydantic import BaseModel
 from functools import cached_property
 from typing import TYPE_CHECKING, Optional, Dict
 
 from lenticularlens.data.dataset import Dataset
-from lenticularlens.util.hasher import hash_string_min
 from lenticularlens.util.config_db import conn_pool
+from lenticularlens.util.hasher import hash_string_min, column_name_hash
 
 if TYPE_CHECKING:
     from lenticularlens.data.property import Property
@@ -77,6 +78,44 @@ class EntityType(BaseModel):
     @property
     def hash(self):
         return hash_string_min((self.dataset.dataset_id, self.entity_type_id))
+
+    @staticmethod
+    def _insert_into_database(dataset_id: str, table_name: str, dataset: Dataset, entity_type: 'EntityType'):
+        with conn_pool.connection() as conn, conn.cursor() as cur:
+            cur.execute('''
+                INSERT INTO datasets (dataset_id, dataset_type, title, description, prefix_mappings)
+                VALUES (%s, %s, %s, %s, %s)
+                ON CONFLICT (dataset_id) DO NOTHING
+            ''', (dataset_id, dataset.dataset_type, dataset.title, dataset.description, dumps(dataset.prefix_mappings)))
+
+            cur.execute('''
+                        INSERT INTO entity_types (dataset_id, entity_type_id, "table_name",
+                                                  label, uri, shortened_uri, total, status, create_time)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, 'finished', now())
+                        ''', (dataset_id, entity_type.entity_type_id, table_name,
+                  entity_type.label, entity_type.uri, entity_type.shortened_uri, entity_type.total))
+
+            for name, property in entity_type.properties.items():
+                cur.execute('''
+                    INSERT INTO entity_type_properties (dataset_id, entity_type_id, property_id, column_name, 
+                                                        uri, shortened_uri, rows_count, referenced,
+                                                        is_link, is_list, is_inverse, is_value_type)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ''', (dataset_id, entity_type.entity_type_id, name, column_name_hash(name),
+                      property.uri, property.shortened_uri, property.rows_count, property.referenced,
+                      property.is_link, property.is_list, property.is_inverse, property.is_value_type))
+
+    @staticmethod
+    def _start_download(dataset_id: str, table_name: str, entity_type: 'EntityType'):
+        with conn_pool.connection() as conn, conn.cursor() as cur:
+            cur.execute(sql.SQL('DROP TABLE IF EXISTS entity_types_data.{name}; '
+                                'CREATE TABLE entity_types_data.{name} ({columns_sql})').format(
+                name=sql.Identifier(table_name),
+                columns_sql=entity_type.columns_sql,
+            ))
+
+            cur.execute("UPDATE entity_types SET status = 'downloadable' "
+                        "WHERE dataset_id = %s AND entity_type_id = %s", (dataset_id, entity_type.id))
 
     def __str__(self):
         return str(self.dataset.dataset_id) + ' - ' + self.entity_type_id

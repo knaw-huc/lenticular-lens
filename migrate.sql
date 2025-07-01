@@ -19,7 +19,7 @@ DROP FUNCTION create_dataset_id;
 
 INSERT INTO entity_types
 SELECT t.dataset_id, collection_id, table_name, collection_title,
-       tt.collection_uri, collection_shortened_uri, total, rows_count, next_page,
+       tt.collection_uri, collection_shortened_uri, total, rows_count, next_page, 'downloadable' AS status,
        create_time, update_start_time, last_push_time, update_finish_time,
        uri_prefix_mappings, dynamic_uri_prefix_mappings
 FROM timbuctoo_tables tt

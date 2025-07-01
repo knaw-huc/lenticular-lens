@@ -22,6 +22,8 @@ from werkzeug.routing.converters import BaseConverter, ValidationError
 
 from lenticularlens.data.timbuctoo.dataset import Dataset as TimbuctooDataset
 from lenticularlens.data.timbuctoo.entity_type import EntityType as TimbuctooEntityType
+from lenticularlens.data.sparql.dataset import Dataset as SPARQLDataset
+from lenticularlens.data.sparql.entity_type import EntityType as SPARQLEntityType
 
 from lenticularlens.job.user import User
 from lenticularlens.job.job import Job, Validation
@@ -210,6 +212,13 @@ def downloads_timbuctoo():
     return jsonify([download.model_dump() for download in downloads])
 
 
+@app.get('/datasets/sparql/downloads')
+@authenticated
+def downloads_sparql():
+    downloads = SPARQLDataset.get_downloads()
+    return jsonify([download.model_dump() for download in downloads])
+
+
 @app.get('/datasets/timbuctoo')
 @authenticated
 def datasets_timbuctoo():
@@ -218,6 +227,27 @@ def datasets_timbuctoo():
 
     datasets = TimbuctooDataset.get_datasets_for_graphql(request.values.get('graphql_endpoint'))
     return jsonify({key: value.model_dump() for key, value in datasets.items()})
+
+
+@app.get('/datasets/sparql')
+@authenticated
+def datasets_sparql():
+    if not request.values.get('sparql_endpoint'):
+        return jsonify(result='error', error='Please apply the SPARQL endpoint'), 400
+
+    datasets = SPARQLDataset.get_datasets_for_sparql(request.values.get('sparql_endpoint'))
+    return jsonify({key: value.model_dump() for key, value in datasets.items()})
+
+
+@app.post('/datasets/sparql/load')
+@authenticated
+def datasets_sparql_load():
+    if not request.values.get('sparql_endpoint'):
+        return jsonify(result='error', error='Please apply the SPARQL endpoint'), 400
+
+    SPARQLDataset.load_datasets_for_sparql(request.values.get('sparql_endpoint'))
+
+    return jsonify(result='ok')
 
 
 @app.post('/datasets/timbuctoo')
@@ -232,6 +262,19 @@ def datasets_timbuctoo_download():
 
     TimbuctooEntityType.start_download(request.values.get('graphql_endpoint'),
                                        request.values.get('timbuctoo_id'), request.values.get('entity_type_id'))
+
+    return jsonify(result='ok')
+
+
+@app.post('/datasets/sparql')
+@authenticated
+def datasets_sparql_download():
+    if not request.values.get('sparql_endpoint'):
+        return jsonify(result='error', error='Please apply the SPARQL endpoint'), 400
+    if not request.values.get('entity_type_id'):
+        return jsonify(result='error', error='Please apply the entity type id'), 400
+
+    SPARQLEntityType.start_download(request.values.get('sparql_endpoint'), request.values.get('entity_type_id'))
 
     return jsonify(result='ok')
 
