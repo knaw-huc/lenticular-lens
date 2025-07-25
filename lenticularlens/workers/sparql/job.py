@@ -47,6 +47,9 @@ class SPARQLJob(WorkerJob):
 
     def run_process(self):
         total_insert = 0
+        match_type_clause = f"?uri a <{self._entity_type_id}> ." \
+            if self._entity_type_id != 'http://www.w3.org/2000/01/rdf-schema#Resource' else \
+            f"MINUS {{ ?uri a ?type . }}"
 
         while total_insert == 0 or self._cursor:
             single_value_columns = [(id, cols)
@@ -56,7 +59,7 @@ class SPARQLJob(WorkerJob):
             query = f"""
                 SELECT ?uri {" ".join('?' + id for (id, cols) in single_value_columns)}
                 WHERE {{
-                    ?uri a <{self._entity_type_id}> .
+                    {match_type_clause}
                     {'\n'.join(self.format_sparql_query(id, cols['uri'], cols['is_inverse'])
                                for (id, cols) in single_value_columns)}
                 }}

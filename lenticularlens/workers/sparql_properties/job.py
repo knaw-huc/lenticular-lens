@@ -20,19 +20,20 @@ class SPARQLPropertiesJob(WorkerJob):
             if properties_data:
                 for property_data in properties_data:
                     property = str(property_data.get('property'))
-                    referenced = str(property_data.get('valueClasses')).split(' | ')
+                    referenced = [ref for ref in str(property_data.get('valueClasses')).split(' | ') if ref]
                     rows_count = int(property_data.get('count'))
                     is_link = len(referenced) > 0
                     is_list = bool(property_data.get('isList'))
                     is_inverse = bool(property_data.get('isInverse'))
-                    is_value_type = bool(property_data.get('isLiteral'))
+                    is_value_type = bool(property_data.get('hasLiterals'))
+                    property_id = ('inv_' if is_inverse else '') + property
 
                     cur.execute('''
                         INSERT INTO entity_type_properties (dataset_id, entity_type_id, property_id, column_name,
                                                             uri, shortened_uri, rows_count, referenced,
                                                             is_link, is_list, is_inverse, is_value_type)
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    ''', (self._dataset_id, self._entity_type_id, property, column_name_hash(property),
+                    ''', (self._dataset_id, self._entity_type_id, property_id, column_name_hash(property_id),
                           property, property, rows_count, referenced, is_link, is_list, is_inverse,
                           is_value_type))
 

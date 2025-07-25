@@ -98,16 +98,18 @@ class GraphQL:
             dataset_description = dataset['description']['value'] \
                 if dataset['description'] and dataset['description']['value'] else None
 
-            prefix_mapping = {prefixMapping['prefix']: prefixMapping['uri']
-                              for prefixMapping in dataset['prefixMappings']}
+            prefix_mappings = {prefixMapping['prefix']: prefixMapping['uri']
+                               for prefixMapping in dataset['prefixMappings']}
 
             datasets[dataset_id] = Dataset(
+                id=dataset_id,
                 type='timbuctoo',
+                name=dataset_id.split('__')[1],
                 title=dataset_title,
                 description=dataset_description,
                 graphql_endpoint=self._graphql_uri,
                 timbuctoo_id=dataset_id,
-                prefix_mapping=prefix_mapping
+                prefix_mappings=prefix_mappings
             )
 
             for collection in dataset['collectionList']['items']:
@@ -122,7 +124,7 @@ class GraphQL:
                         uri=collection['uri'],
                         shortened_uri=collection['shortenedUri'],
                         total=collection['total'],
-                        downloaded=False
+                        status='finished',
                     )
 
                     for collection_property in collection['properties']['items']:

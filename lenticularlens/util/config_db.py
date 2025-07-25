@@ -44,8 +44,12 @@ def listen_for_notify(q):
     conn = conn_pool.getconn()
     conn.autocommit = True
     conn.execute('LISTEN extension_update; LISTEN job_update; '
-                 'LISTEN timbuctoo_update; LISTEN alignment_update; LISTEN clustering_update; '
-                 'LISTEN timbuctoo_delete; LISTEN alignment_delete; LISTEN clustering_delete;')
+                 'LISTEN sparql_delete; LISTEN timbuctoo_delete; '
+                 'LISTEN sparql_load_update; LISTEN sparql_load_delete; '
+                 'LISTEN sparql_status_update; LISTEN timbuctoo_status_update; '
+                 'LISTEN sparql_update; LISTEN timbuctoo_update; '
+                 'LISTEN alignment_update; LISTEN clustering_update; '
+                 'LISTEN alignment_delete; LISTEN clustering_delete;')
 
     while True:
         trampoline(conn, read=True)

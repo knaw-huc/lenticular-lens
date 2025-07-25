@@ -6,6 +6,7 @@ from functools import cached_property
 from typing import TYPE_CHECKING, Optional, Dict
 
 from lenticularlens.data.dataset import Dataset
+from lenticularlens.data.dataset_info import Dataset as DatasetInfo, EntityType as EntityTypeInfo
 from lenticularlens.util.config_db import conn_pool
 from lenticularlens.util.hasher import hash_string_min, column_name_hash
 
@@ -80,19 +81,19 @@ class EntityType(BaseModel):
         return hash_string_min((self.dataset.dataset_id, self.entity_type_id))
 
     @staticmethod
-    def _insert_into_database(dataset_id: str, table_name: str, dataset: Dataset, entity_type: 'EntityType'):
+    def _insert_into_database(dataset_id: str, table_name: str, dataset: DatasetInfo, entity_type: EntityTypeInfo):
         with conn_pool.connection() as conn, conn.cursor() as cur:
             cur.execute('''
                 INSERT INTO datasets (dataset_id, dataset_type, title, description, prefix_mappings)
                 VALUES (%s, %s, %s, %s, %s)
                 ON CONFLICT (dataset_id) DO NOTHING
-            ''', (dataset_id, dataset.dataset_type, dataset.title, dataset.description, dumps(dataset.prefix_mappings)))
+            ''', (dataset_id, dataset.type, dataset.title, dataset.description, dumps(dataset.prefix_mappings)))
 
             cur.execute('''
-                        INSERT INTO entity_types (dataset_id, entity_type_id, "table_name",
-                                                  label, uri, shortened_uri, total, status, create_time)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, 'finished', now())
-                        ''', (dataset_id, entity_type.entity_type_id, table_name,
+                INSERT INTO entity_types (dataset_id, entity_type_id, "table_name",
+                                          label, uri, shortened_uri, total, status, create_time)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, 'finished', now())
+            ''', (dataset_id, entity_type.id, table_name,
                   entity_type.label, entity_type.uri, entity_type.shortened_uri, entity_type.total))
 
             for name, property in entity_type.properties.items():
@@ -101,7 +102,7 @@ class EntityType(BaseModel):
                                                         uri, shortened_uri, rows_count, referenced,
                                                         is_link, is_list, is_inverse, is_value_type)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                ''', (dataset_id, entity_type.entity_type_id, name, column_name_hash(name),
+                ''', (dataset_id, entity_type.id, name, column_name_hash(name),
                       property.uri, property.shortened_uri, property.rows_count, property.referenced,
                       property.is_link, property.is_list, property.is_inverse, property.is_value_type))
 

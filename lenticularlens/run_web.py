@@ -72,7 +72,8 @@ def emit_database_events():
         if notify.channel == 'extension_update':
             reset()
 
-        ns = '' if notify.channel == 'extension_update' or notify.channel.startswith('timbuctoo_') \
+        ns = '' if (notify.channel == 'extension_update' or
+                    notify.channel.startswith('timbuctoo_') or notify.channel.startswith('sparql_')) \
             else json.loads(notify.payload)['job_id']
 
         socketio.emit(notify.channel, notify.payload, namespace=f'/{ns}')

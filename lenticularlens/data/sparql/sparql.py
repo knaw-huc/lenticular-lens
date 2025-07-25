@@ -27,9 +27,7 @@ class SPARQL:
     @cachedmethod(lambda self: self.cache, key=partial(methodkey, method='classes'))
     def get_classes(self) -> query.Result | None:
         return self.fetch("""
-            PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
             PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-            PREFIX dct: <http://purl.org/dc/terms/>
             
             SELECT ?class (SAMPLE(?label) AS ?label) (COUNT(DISTINCT ?instance) AS ?count)
             WHERE {
@@ -57,30 +55,35 @@ class SPARQL:
 
     @cachedmethod(lambda self: self.cache, key=partial(methodkey, method='properties'))
     def get_class_properties(self, class_uri: str) -> query.Result | None:
+        match_type_clause = f"?entity a <{class_uri}> ." \
+            if class_uri != 'http://www.w3.org/2000/01/rdf-schema#Resource' else \
+            f"MINUS {{ ?entity a ?type . }}"
+
         return self.fetch(f"""
-            PREFIX owl: <http://www.w3.org/2002/07/owl#>
-            PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
             PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
             
-            SELECT ?property ?isInverse ?isLiteral ?isIRI
+            SELECT ?property ?isInverse
+                   (MAX(?isLiteral) AS ?hasLiterals)
+                   (MAX(?isIRI) AS ?hasIRIs)
                    (SUM(IF(?numValues > 1, 1, 0)) > 0 AS ?isList)
                    (COUNT(DISTINCT ?entity) AS ?count)
-                   (GROUP_CONCAT(DISTINCT COALESCE(?valueClass, rdfs:Resource); SEPARATOR=" | ") AS ?valueClasses)
+                   (GROUP_CONCAT(DISTINCT ?valueClassIRIs; SEPARATOR=" | ") AS ?valueClasses)
             WHERE {{
                 {{
-                    ?entity rdf:type <{class_uri}> .
+                    {match_type_clause}
                     ?entity ?property ?value .
             
                     BIND(FALSE AS ?isInverse)
                     BIND(isLiteral(?value) AS ?isLiteral)
                     BIND(isIRI(?value) AS ?isIRI)
             
-                    OPTIONAL {{ ?value rdf:type ?valueClass }}
+                    OPTIONAL {{ ?value a ?valueClass }}
+                    BIND(IF(?isIRI, COALESCE(?valueClass, rdfs:Resource), "") AS ?valueClassIRIs)
                     
                     {{
                         SELECT ?entity ?property (COUNT(DISTINCT ?value) AS ?numValues)
                         WHERE {{
-                            ?entity a <{class_uri}> .
+                            {match_type_clause}
                             ?entity ?property ?value .
                         }}
                         GROUP BY ?entity ?property
@@ -88,35 +91,25 @@ class SPARQL:
                 }}
                 UNION
                 {{
-                    ?entity rdf:type <{class_uri}> .
+                    {match_type_clause}
                     ?value ?property ?entity .
             
                     BIND(TRUE AS ?isInverse)
                     BIND(isLiteral(?value) AS ?isLiteral)
                     BIND(isIRI(?value) AS ?isIRI)
             
-                    OPTIONAL {{ ?value rdf:type ?valueClass }}
+                    OPTIONAL {{ ?value a ?valueClass }}
+                    BIND(IF(?isIRI, COALESCE(?valueClass, rdfs:Resource), "") AS ?valueClassIRIs)
                     
                     {{
                          SELECT ?entity ?property (COUNT(DISTINCT ?value) AS ?numValues)
                          WHERE {{
-                            ?entity a <{class_uri}> .
+                            {match_type_clause}
                             ?value ?property ?entity .
                         }}
                         GROUP BY ?entity ?property
                     }}
                 }}
             }}
-            GROUP BY ?property ?isInverse ?isLiteral ?isIRI
+            GROUP BY ?property ?isInverse
         """)
-
-
-# sparql = SPARQL('https://sparql2.goldenagents.org/rijksmuseum')
-# dataset = sparql.dataset
-# if dataset:
-#     print(f"Dataset title: {dataset.title}")
-#     print(f"Number of entity types: {len(dataset.entity_types)}")
-#     for entity_type in dataset.entity_types.values():
-#         print(f"Entity type: {entity_type.label} ({entity_type.id})")
-#         for property in entity_type.properties.values():
-#             print(f"  Property: {property.label} ({property.id})")

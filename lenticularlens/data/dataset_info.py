@@ -23,7 +23,7 @@ class EntityType(BaseModel):
     uri: str
     shortened_uri: str
     total: int
-    downloaded: bool
+    status: str
     properties: Dict[str, Property] = {}
 
     @property
@@ -45,7 +45,9 @@ class EntityType(BaseModel):
 
 
 class Dataset(BaseModel):
+    id: str
     type: Literal['timbuctoo', 'sparql', 'rdf']
+    name: Optional[str] = None
     title: str
     description: Optional[str] = None
     entity_types: Dict[str, EntityType] = {}

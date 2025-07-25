@@ -23,6 +23,6 @@ class EntityType(BaseEntityType):
         entity_id_slash_split = entity_id_slash.split('#')
         entity_id = entity_id_slash_split[len(entity_id_slash_split) - 1]
 
-        full_name = sparql_endpoint + entity_id
+        full_name = sparql_endpoint + entity_type_id
 
         return table_name_hash('', sparql_endpoint, entity_id, full_name)

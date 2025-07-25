@@ -57,7 +57,7 @@ class Dataset(BaseDataset):
 
             cur.execute('''
                 INSERT INTO sparql (dataset_id, sparql_endpoint, status) VALUES (%s, %s, 'waiting')
-                ON CONFLICT (dataset_id) DO NOTHING
+                ON CONFLICT (dataset_id) DO UPDATE SET status = 'waiting'
             ''', (dataset_id, sparql_endpoint))
 
     @staticmethod
@@ -78,5 +78,5 @@ class Dataset(BaseDataset):
             'INNER JOIN sparql ON datasets.dataset_id = sparql.dataset_id WHERE sparql_endpoint = %s',
             (sparql_endpoint,),
             'sparql_endpoint',
-            ['sparql_endpoint']
+            ['sparql_endpoint', 'status']
         )

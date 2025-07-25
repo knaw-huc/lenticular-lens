@@ -60,29 +60,35 @@ class Dataset(BaseModel):
 
                 properties[key][table['property_id']] = Property(id=table['property_id'], **table)
 
-            cur.execute('SELECT * '
-                        'FROM entity_types '
-                        'INNER JOIN datasets ON entity_types.dataset_id = datasets.dataset_id '
-                        f'{join}', params)
+            cur.execute(f'SELECT * FROM datasets {join}', params)
 
             datasets = {}
             for table in cur:
                 if not table[dataset_id_column] in datasets:
                     datasets[table[dataset_id_column]] = DatasetInfo(
+                        id=table[dataset_id_column],
                         type=type,
                         title=table['title'],
                         description=table['description'],
                         **{col: table[col] for col in columns},
                     )
 
+            cur.execute('SELECT *, entity_types.status AS entity_type_status '
+                        'FROM entity_types '
+                        'INNER JOIN datasets ON entity_types.dataset_id = datasets.dataset_id '
+                        f'{join}', params)
+
+            for table in cur:
                 properties_key = (table['dataset_id'], table['entity_type_id'])
-                if properties_key in properties:
-                    datasets[table[dataset_id_column]].entity_types[table['entity_type_id']] = EntityType(
-                        id=table['entity_type_id'],
-                        **table,
-                        downloaded=True,
-                        properties=properties[properties_key]
-                    )
+                datasets[table[dataset_id_column]].entity_types[table['entity_type_id']] = EntityType(
+                    id=table['entity_type_id'],
+                    label=table['label'],
+                    uri=table['uri'],
+                    shortened_uri=table['shortened_uri'],
+                    total=table['total'],
+                    status=table['entity_type_status'],
+                    properties=properties[properties_key] if properties_key in properties else {},
+                )
 
             return datasets
 

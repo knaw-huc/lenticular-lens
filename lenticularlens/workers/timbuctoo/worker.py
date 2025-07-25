@@ -7,8 +7,8 @@ class TimbuctooWorker(Worker):
         super().__init__('entity_types', """
             SELECT *
             FROM entity_types
-            INNER JOIN timbuctoo 
-            ON entity_types.dataset_id = timbuctoo.dataset_id
+            INNER JOIN timbuctoo ON entity_types.dataset_id = timbuctoo.dataset_id
+            INNER JOIN datasets ON entity_types.dataset_id = datasets.dataset_id
             WHERE update_start_time IS NULL
             OR (
                 (update_finish_time IS NULL OR update_finish_time < update_start_time)

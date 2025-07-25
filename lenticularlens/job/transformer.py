@@ -3,6 +3,30 @@ from schema import Schema, SchemaError, And, Or, Use, Optional
 from lenticularlens.util.db_functions import get_filter_functions, get_matching_methods, get_transformers
 
 
+class Dataset:
+    def validate(self, data):
+        if type(data) is not dict:
+            raise SchemaError('not an dict')
+
+        if 'type' not in data or data['type'] not in ('timbuctoo', 'sparql'):
+            raise SchemaError('dataset type %s not valid' % data.get('type', ''))
+
+        if data['type'] == 'timbuctoo':
+            if 'graphql_endpoint' not in data or type(data['graphql_endpoint']) is not str:
+                raise SchemaError('missing or invalid graphql_endpoint')
+            if 'timbuctoo_id' not in data or type(data['timbuctoo_id']) is not str:
+                raise SchemaError('missing or invalid timbuctoo_id')
+            if 'entity_type_id' not in data or type(data['entity_type_id']) is not str:
+                raise SchemaError('missing or invalid entity_type_id')
+        elif data['type'] == 'sparql':
+            if 'sparql_endpoint' not in data or type(data['sparql_endpoint']) is not str:
+                raise SchemaError('missing or invalid sparql_endpoint')
+            if 'entity_type_id' not in data or type(data['entity_type_id']) is not str:
+                raise SchemaError('missing or invalid entity_type_id')
+
+        return data
+
+
 class LogicBox:
     def __init__(self, schema, name, types, elements_schema=None):
         self.schema = schema
@@ -78,12 +102,7 @@ def get_entity_type_selection_schema():
         'id': Use(int),
         'label': And(str, len),
         Optional('description', default=None): Or(str, None),
-        'dataset': {
-            'type': And(str, Use(str.lower), lambda t: t in ('timbuctoo')),
-            'graphql_endpoint': And(str, len),
-            'timbuctoo_id': And(str, len),
-            'entity_type_id': And(str, len),
-        },
+        'dataset': And(dict, Dataset()),
         Optional('filter', default=None): Or(None, LogicBox(Schema({
             'property': And(Use(filter_property), len),
             'type': And(str, Use(str.lower), lambda t: t in filter_functions_info.keys()),
@@ -205,12 +224,7 @@ def get_view_schema():
         'type': Or('linkset', 'lens'),
         Optional('properties', default=[]): [{
             'properties': And(list, is_list_of_lists, Use(filter_properties)),
-            'dataset': {
-                'type': And(str, Use(str.lower), lambda t: t in ('timbuctoo')),
-                'graphql_endpoint': And(str, len),
-                'timbuctoo_id': And(str, len),
-                'entity_type_id': And(str, len),
-            },
+            'dataset': And(dict, Dataset()),
         }],
         Optional('filters', default=[]): [{
             'filter': LogicBox(Schema({
@@ -219,12 +233,7 @@ def get_view_schema():
                 Optional('value'): Or(And(str, len), int),
                 Optional('format'): And(str, len),
             }, ignore_extra_keys=True), 'conditions', ('and', 'or')),
-            'dataset': {
-                'type': And(str, Use(str.lower), lambda t: t in ('timbuctoo')),
-                'graphql_endpoint': And(str, len),
-                'timbuctoo_id': And(str, len),
-                'entity_type_id': And(str, len),
-            },
+            'dataset': And(dict, Dataset()),
         }],
         Optional('prefix_mappings', default={}): dict
     }, ignore_extra_keys=True)

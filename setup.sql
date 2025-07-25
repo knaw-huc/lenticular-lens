@@ -326,7 +326,16 @@ BEGIN
             );
 
             PERFORM pg_notify('timbuctoo_delete', notification::text);
-        ELSIF OLD IS NULL OR NEW.rows_count != OLD.rows_count THEN
+        ELSIF OLD IS NULL OR NEW.status != OLD.status THEN
+            notification = json_build_object(
+                'graphql_endpoint', timbuctoo.graphql_endpoint,
+                'timbuctoo_id', timbuctoo.timbuctoo_id,
+                'entity_type_id', NEW.entity_type_id,
+                'status', NEW.status
+            );
+
+            PERFORM pg_notify('timbuctoo_status_update', notification::text);
+        ELSIF OLD IS NULL OR NEW.update_start_time != OLD.update_start_time OR NEW.rows_count != OLD.rows_count THEN
             notification = json_build_object(
                 'graphql_endpoint', timbuctoo.graphql_endpoint,
                 'timbuctoo_id', timbuctoo.timbuctoo_id,
@@ -349,11 +358,18 @@ BEGIN
             );
 
             PERFORM pg_notify('sparql_delete', notification::text);
-        ELSIF OLD IS NULL OR NEW.rows_count != OLD.rows_count THEN
+        ELSIF OLD IS NULL OR NEW.status != OLD.status THEN
             notification = json_build_object(
                 'sparql_endpoint', sparql.sparql_endpoint,
-                'entity_type_id', NEW.entity_type_id
-                'status', NEW.status,
+                'entity_type_id', NEW.entity_type_id,
+                'status', NEW.status
+            );
+
+            PERFORM pg_notify('sparql_status_update', notification::text);
+        ELSIF OLD IS NULL OR NEW.update_start_time != OLD.update_start_time OR NEW.rows_count != OLD.rows_count THEN
+            notification = json_build_object(
+                'sparql_endpoint', sparql.sparql_endpoint,
+                'entity_type_id', NEW.entity_type_id,
                 'total', NEW.total,
                 'rows_count', NEW.rows_count
             );
@@ -456,6 +472,30 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE FUNCTION notify_sparql_load_update() RETURNS trigger AS $$
+DECLARE
+    notification json;
+BEGIN
+    IF NEW IS NULL THEN
+        notification = json_build_object(
+            'sparql_endpoint', OLD.sparql_endpoint,
+            'status', OLD.status
+        );
+
+        PERFORM pg_notify('sparql_load_delete', notification::text);
+    ELSIF OLD IS NULL OR NEW.status != OLD.status THEN
+        notification = json_build_object(
+            'sparql_endpoint', NEW.sparql_endpoint,
+            'status', NEW.status
+        );
+
+        PERFORM pg_notify('sparql_load_update', notification::text);
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 CREATE TRIGGER job_notify AFTER UPDATE ON jobs
 FOR EACH ROW EXECUTE PROCEDURE notify_job_update();
 
@@ -470,6 +510,9 @@ FOR EACH ROW EXECUTE PROCEDURE notify_lens_update();
 
 CREATE TRIGGER clustering_notify AFTER INSERT OR UPDATE OR DELETE ON clusterings
 FOR EACH ROW EXECUTE PROCEDURE notify_clustering_update();
+
+CREATE TRIGGER sparql_load_notify AFTER INSERT OR UPDATE OR DELETE ON sparql
+FOR EACH ROW EXECUTE PROCEDURE notify_sparql_load_update();
 
 /* LOGIC OPS FUNCTIONS */
 
