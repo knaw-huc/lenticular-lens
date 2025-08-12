@@ -5,6 +5,7 @@ CREATE TYPE link_order AS ENUM ('source_target', 'both', 'target_source');
 CREATE TYPE link_validity AS ENUM ('accepted', 'rejected', 'uncertain', 'unchecked', 'disputed');
 CREATE TYPE job_role_type AS ENUM ('owner', 'shared');
 CREATE TYPE dataset_type AS ENUM ('timbuctoo', 'sparql', 'rdf');
+CREATE TYPE mapping_type AS ENUM ('jsonld');
 
 CREATE SCHEMA IF NOT EXISTS datasets;
 CREATE SCHEMA IF NOT EXISTS linksets;
@@ -66,6 +67,14 @@ CREATE TABLE IF NOT EXISTS job_users
 
 CREATE INDEX IF NOT EXISTS user_jobs_idx ON job_users USING hash (user_id);
 
+CREATE TABLE IF NOT EXISTS mappings
+(
+    mapping_id   text primary key,
+    mapping_type mapping_type not null,
+    source       text         not null,
+    mapping      jsonb
+);
+
 CREATE TABLE IF NOT EXISTS datasets
 (
     dataset_id      text primary key,
@@ -123,6 +132,7 @@ CREATE TABLE IF NOT EXISTS entity_type_properties
     entity_type_id text    not null,
     property_id    text    not null,
     column_name    text    not null,
+    label          text,
     uri            text    not null,
     shortened_uri  text    not null,
     rows_count     int     not null,
@@ -496,6 +506,21 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE FUNCTION notify_mapping_update() RETURNS trigger AS $$
+DECLARE
+    notification json;
+BEGIN
+    notification = json_build_object(
+        'mapping_id', NEW.mapping_id,
+        'mapping_type', NEW.mapping_type
+    );
+
+    PERFORM pg_notify('mapping_update', notification::text);
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 CREATE TRIGGER job_notify AFTER UPDATE ON jobs
 FOR EACH ROW EXECUTE PROCEDURE notify_job_update();
 
@@ -513,6 +538,9 @@ FOR EACH ROW EXECUTE PROCEDURE notify_clustering_update();
 
 CREATE TRIGGER sparql_load_notify AFTER INSERT OR UPDATE OR DELETE ON sparql
 FOR EACH ROW EXECUTE PROCEDURE notify_sparql_load_update();
+
+CREATE TRIGGER mapping_notify AFTER UPDATE ON mappings
+FOR EACH ROW EXECUTE PROCEDURE notify_mapping_update();
 
 /* LOGIC OPS FUNCTIONS */
 

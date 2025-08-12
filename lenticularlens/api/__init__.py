@@ -12,6 +12,7 @@ from lenticularlens.api.auth import router as auth_router
 from lenticularlens.api.socket import sio, fastapi_lifespan
 from lenticularlens.api.utils import router as utils_router
 from lenticularlens.api.datasets import router as datasets_router
+from lenticularlens.api.mappings import router as mappings_router
 from lenticularlens.api.job import router as job_router
 from lenticularlens.api.admin import router as admin_router
 from lenticularlens.util.config_logging import config_logger
@@ -30,5 +31,6 @@ if oauth:
 
 app.include_router(utils_router)
 app.include_router(datasets_router)
+app.include_router(mappings_router)
 app.include_router(job_router)
 app.include_router(admin_router)

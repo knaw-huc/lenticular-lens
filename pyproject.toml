@@ -33,6 +33,7 @@ urllib3 = "^2.5.0"
 anytree = "^2.12.1"
 itsdangerous = "^2.2.0"
 httpx = "^0.28.1"
+pyld = "^2.0.4"
 
 [build-system]
 requires = ["poetry-core"]
