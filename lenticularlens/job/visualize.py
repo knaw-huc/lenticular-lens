@@ -424,7 +424,7 @@ def get_visualization(job, id, type, cluster_id, associations=None, include_comp
                     label = F"{value[0]['values'][0]} ({label})"
 
                 nodes[node] = create_node(
-                    node, hash_string_min(ets.dataset_id),
+                    node, hash_string_min(ets.entity_type.dataset.dataset_id),
                     label="-- " + label,
                     dataset=dataset_name, entity=entity_type_uri, local_id=node_id
                 )
