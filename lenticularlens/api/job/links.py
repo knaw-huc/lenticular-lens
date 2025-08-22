@@ -61,28 +61,6 @@ async def links_sql(data: JobSpecDep, params: Annotated[LinksParams, Query()]):
     return get_string_from_sql(result)
 
 
-@router.get('/sql')
-async def sql(data: JobSpecDep):
-    job, type, id = data
-    job_sql = MatchingSql(job, id) if type == 'linkset' else LensSql(job, id)
-    return job_sql.sql_string
-
-
-@router.post('/run')
-async def run(data: JobSpecDep, restart: Annotated[bool, Form()] = False):
-    try:
-        job, type, id = data
-        job.run_linkset(id, restart) if type == 'linkset' else job.run_lens(id, restart)
-    except UniqueViolation:
-        raise HTTPException(status_code=400, detail=f'This {type} already exists')
-
-
-@router.post('/kill')
-async def kill(data: JobSpecDep):
-    job, type, id = data
-    job.kill_linkset(id) if type == 'linkset' else job.kill_lens(id)
-
-
 @router.post('/totals')
 async def totals(data: JobSpecDep, params: Annotated[LinksTotalsParams, Form()]):
     job, type, id = data
@@ -110,3 +88,25 @@ async def totals_sql(data: JobSpecDep, params: Annotated[LinksTotalsParams, Quer
         with_view_filters=params.apply_filters
     )
     return get_string_from_sql(result)
+
+
+@router.get('/sql')
+async def sql(data: JobSpecDep):
+    job, type, id = data
+    job_sql = MatchingSql(job, id) if type == 'linkset' else LensSql(job, id)
+    return job_sql.sql_string
+
+
+@router.post('/run')
+async def run(data: JobSpecDep, restart: Annotated[bool, Form()] = False):
+    try:
+        job, type, id = data
+        job.run_linkset(id, restart) if type == 'linkset' else job.run_lens(id, restart)
+    except UniqueViolation:
+        raise HTTPException(status_code=400, detail=f'This {type} already exists')
+
+
+@router.post('/kill')
+async def kill(data: JobSpecDep):
+    job, type, id = data
+    job.kill_linkset(id) if type == 'linkset' else job.kill_lens(id)
