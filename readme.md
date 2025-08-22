@@ -8,13 +8,16 @@ alignment and is also able to report on manual corrections and the amount of man
 2. [Definition of terms](#definition-of-terms)
 3. [API](#api)
     1. [Default](#default)
-    2. [Authentication and authorization](#authentication-and-authorization)
-    3. [Job creation and updates](#job-creation-and-updates)
-    4. [Job processes](#job-processes)
-    5. [Data retrieval](#data-retrieval)
-    6. [Linksets interaction](#linksets-interaction)
-    7. [Export](#export)
-    8. [Admin tasks](#admin-tasks)
+    2. [Datasets (Timbuctoo)](#datasets-timbuctoo)
+    3. [Datasets (SPARQL)](#datasets-sparql)
+    4. [Authentication and authorization](#authentication-and-authorization)
+    5. [Jobs](#jobs)
+    6. [Job instance](#job-instance)
+    7. [Job instance linkset/lens specification](#job-instance-linksetlens-specification)
+    8. [Job instance entity-type selection](#job-instance-entity-type-selection)
+    9. [Job instance links](#job-instance-links)
+    10. [Job instance clusters](#job-instance-clusters)
+    11. [Admin tasks](#admin-tasks)
 4. [Websocket](#websocket)
     1. [Default namespace](#default-namespace)
     2. [Job namespace](#job-namespace)
@@ -49,11 +52,14 @@ Misc. configuration:
 - `PUBLISHER`: The publisher to be registered in the RDF export; defaults to `Lenticular Lens`
 - `AUTO_DELETE_JOB_DAYS`: The minimum number of days after creation of a job making the job eligible for deletion
 - `WORKER_TYPE`: For a worker instance, the type of the worker to run:
-    - `TIMBUCTOO`
-    - `LINKSET`
-    - `LENS`
-    - `CLUSTERING`
-    - `RECONCILIATION`
+    - `timbuctoo`
+    - `sparql`
+    - `sparql_classes`
+    - `sparql_properties`
+    - `linkset`
+    - `lens`
+    - `clustering`
+    - `reconciliation`
 
 Database configuration:
 
@@ -123,36 +129,7 @@ OpenID Connect authentication configuration:
 **URL**: `/`\
 **Method**: `GET`
 
-Root page. Will return the GUI for the tool.
-
----
-
-**URL**: `/datasets`\
-**Method**: `GET`\
-**Parameters**: `endpoint`
-
-Returns all available datasets for a specific Timbuctoo GraphQL `endpoint`.
-
-_Example: `/datasets?endpoint=https://repository.goldenagents.org/v5/graphql`_
-
----
-
-**URL**: `/downloads`\
-**Method**: `GET`
-
-Returns all currently running data downloads and finished data downloads from Timbuctoo.
-
----
-
-**URL**: `/download`\
-**Method**: `GET`\
-**Parameters**: `endpoint`, `dataset_id`, `collection_id`
-
-Starts a data download from Timbuctoo from the given Timbuctoo GraphQL `endpoint`. Use `dataset_id` to specify from
-which dataset to download and `collection_id` to specify the collection from the dataset to download.
-
-_
-Example: `/download?endpoint=https://repository.goldenagents.org/v5/graphql&dataset_id=ufab7d657a250e3461361c982ce9b38f3816e0c4b__ecartico_20190805&collection_id=schema_Person`_
+Root page.
 
 ---
 
@@ -168,42 +145,98 @@ Returns the stopwords for the given `dictionary`.
 
 Returns the various available filter functions, matching methods and transformers.
 
+### Datasets (Timbuctoo)
+
+**URL**: `/datasets/timbuctoo`\
+**Method**: `GET`\
+**Parameters**: `endpoint`
+
+Returns all available datasets for a specific Timbuctoo GraphQL `graphql_endpoint`.
+
+_Example: `/datasets?graphql_endpoint=https://repository.goldenagents.org/v5/graphql`_
+
+---
+
+**URL**: `/datasets/timbuctoo`\
+**Method**: `POST`\
+**Parameters**: `graphql_endpoint`, `timbuctoo_id`, `entity_type_id`
+
+Starts a data download from Timbuctoo from the given Timbuctoo GraphQL `endpoint`. Use `timbuctoo_id` to specify from
+which dataset to download and `entity_type_id` to specify the collection from the dataset to download.
+
+---
+
+**URL**: `/datasets/timbuctoo/downloads`\
+**Method**: `GET`
+
+Returns all currently running data downloads and finished data downloads from Timbuctoo.
+
+### Datasets (SPARQL)
+
+**URL**: `/datasets/sparql`\
+**Method**: `GET`\
+**Parameters**: `endpoint`
+
+Returns all available datasets for a specific SPARQL endpoint `sparql_endpoint`.
+
+---
+
+**URL**: `/datasets/sparql`\
+**Method**: `POST`\
+**Parameters**: `sparql_endpoint`, `entity_type_id`
+
+Starts a data download from a SPARQL endpoint `sparql_endpoint`. Use `entity_type_id` to specify the entity type to
+download.
+
+---
+
+**URL**: `/datasets/sparql/load`\
+**Method**: `POST`\
+**Parameters**: `sparql_endpoint`
+
+Load metadata about available entity types from a SPARQL endpoint `sparql_endpoint`.
+
+---
+
+**URL**: `/datasets/sparql/downloads`\
+**Method**: `GET`
+
+Returns all currently running data downloads and finished data downloads from SPARQL endpoints.
+
 ### Authentication and authorization
 
 **URL**: `/login`\
 **Method**: `GET`\
-**Parameters**: `redirect-uri`
+**Parameters**: `redirect`
 
-Allow the user to login and then redirect back to the given `redirect-uri`.
+Allow the user to login and then redirect back to the given `redirect`.
 
-_Example: `/login?redirect-uri=https://lenticularlens.org`_
+_Example: `/login?redirect=https://lenticularlens.org`_
 
 ---
 
-**URL**: `/user_info`\
+**URL**: `/userinfo`\
 **Method**: `GET`
 
 Returns the user information of the logged-in user.
 
-### Job creation and updates
+### Jobs
 
-**URL**: `/job/create`\
-**Method**: `POST`\
-**Form data**: `job_title`, `job_description`
+**URL**: `/job`\
+**Method**: `GET`
 
-Creates a new job with the given `job_title` and `job_description`. Returns the identifier of this new job.
-
----
-
-**URL**: `/job/update`\
-**Method**: `POST`\
-**JSON**: `job_id`, `job_title`, `job_description`, `job_link`, `entity_type_selections`, `linkset_specs`, `lens_specs`
-, `views`
-
-Updates a job with the given `job_id`. Updates the `job_title`, `job_description`, `job_link`, `entity_type_selections`
-, `linkset_specs`, `lens_specs` and `views`.
+Returns all the logged-in user his/her jobs.
 
 ---
+
+**URL**: `/job`\
+**Method**: `POST`\
+**Form data**: `job_title`, `job_description`, `job_link`
+
+Creates a new job with the given `job_title` and `job_description` (`job_link` is optional). Returns the identifier of
+this new job.
+
+### Job instance
 
 **URL**: `/job/<job_id>`\
 **Method**: `GET`
@@ -212,7 +245,25 @@ Returns the details of a job with the given `job_id`.
 
 _Example: `/job/d697ea3869422ce3c7cc1889264d03c7`_
 
-### Job processes
+---
+
+**URL**: `/job/<job_id>`\
+**Method**: `PUT`\
+**JSON**: `job_title`, `job_description`, `job_link`, `entity_type_selections`, `linkset_specs`, `lens_specs`, `views`
+
+Updates a job with the given `job_id`. Updates the `job_title`, `job_description`, `job_link`, `entity_type_selections`
+, `linkset_specs`, `lens_specs` and `views`.
+
+---
+
+**URL**: `/job/<job_id>`\
+**Method**: `DELETE`
+
+Deletion of the job with the given `job_id`.
+
+_Example: `/job/d697ea3869422ce3c7cc1889264d03c7`_
+
+---
 
 **URL**: `/job/<job_id>/linksets`\
 **Method**: `GET`
@@ -239,56 +290,7 @@ Returns the details of all clustering jobs with the given `job_id`.
 
 _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/clusterings`_
 
----
-
-**URL**: `/job/<job_id>/run/<type>/<linkset>`\
-**Method**: `POST`\
-**Form data**: `restart`
-
-Start a process for the given spec of `type` (`linkset` or `lens`) of a specific `job_id`. Specify `restart` to restart
-the process.
-
-_Example: `/job/d697ea3869422ce3c7cc1889264d03c7/run/linkset/0`_
-
----
-
-**URL**: `/job/<job_id>/run_clustering/<type>/<id>`\
-**Method**: `POST`
-
-Start a clustering process of `type` (`linkset` or `lens`) for the linkset/lens with the given `id` of a
-specific `job_id`.
-
-_Example: `/job/d697ea3869422ce3c7cc1889264d03c7/run_clustering/linkset/0`_
-
----
-
-**URL**: `/job/<job_id>/kill/<type>/<linkset>`\
-**Method**: `POST`
-
-Stop a process for the given spec of `type` (`linkset` or `lens`) of a specific `job_id`.
-
-_Example: `/job/d697ea3869422ce3c7cc1889264d03c7/kill/linkset/0`_
-
----
-
-**URL**: `/job/<job_id>/kill_clustering/<type>/<id>`\
-**Method**: `POST`
-
-Stop a clustering process of `type` (`linkset` or `lens`)
-for the linkset/lens with the given `id` of a specific `job_id`.
-
-_Example: `/job/d697ea3869422ce3c7cc1889264d03c7/kill_clustering/lens/0`_
-
----
-
-**URL**: `/job/<job_id>`\
-**Method**: `DELETE`
-
-Deletion of the job with the given `job_id`.
-
-_Example: `/job/d697ea3869422ce3c7cc1889264d03c7`_
-
----
+### Job instance linkset/lens specification
 
 **URL**: `/job/<job_id>/<type>/<id>`\
 **Method**: `DELETE`
@@ -297,108 +299,9 @@ Deletion of `type` (`linkset` or `lens`) for the linkset/lens with the given `id
 
 _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/lens/0`_
 
-### Data retrieval
-
-**URL**: `/job/list`\
-**Method**: `GET`
-
-Returns all the logged-in user his/her jobs.
-
 ---
 
-**URL**: `/job/<job_id>/entity_type_selection_total/<id>`\
-**Method**: `GET`
-
-Returns the total number of entities for an entity-type selection with the given `id` of the given `job_id`.
-
-_Example: `/job/d697ea3869422ce3c7cc1889264d03c7/entity_type_selection_total/0`_
-
----
-
-**URL**: `/job/<job_id>/links_totals/<type>/<id>`\
-**Method**: `GET`, `POST`\
-**Parameters**: `apply_filters`, `uri`, `cluster_id`, `min`, `max`
-
-Returns the total number of links of `type` (`linkset` or `lens`) for the linkset/lens with `id` of the given `job_id`.
-
-Specify `apply_filters` to apply the filters specified by the user. Specify `uri` to only return links with the
-specified URIs. Specify `cluster_id` to only return the links of specific clusters. Specify `min` and/or `max` to only
-return links with a similarity score within the specified minimum and maximum score.
-
-_Example: `/job/d697ea3869422ce3c7cc1889264d03c7/links_totals/linkset/0`_
-
----
-
-**URL**: `/job/<job_id>/clusters_totals/<type>/<id>`\
-**Method**: `GET`, `POST`\
-**Parameters**: `apply_filters`, `uri`, `cluster_id`, `min`, `max`
-
-Returns the total number of clusters of `type` (`linkset` or `lens`) for the linkset/lens with `id` of the
-given `job_id`.
-
-Specify `apply_filters` to apply the filters specified by the user. Specify `uri` to only return links with the
-specified URIs. Specify `cluster_id` to only return the links of specific clusters. Specify `min` and/or `max` to only
-take into account links with a similarity score within the specified minimum and maximum score. Specify `min_size`
-and/or `max_size` to only return clusters with a size that is within the specified minimum and maximum size.
-Specify `min_count` and/or `max_count` to only return clusters with a links count that is within the specified minimum
-and maximum count.
-
-_Example: `/job/d697ea3869422ce3c7cc1889264d03c7/clusters_totals/linkset/0`_
-
----
-
-**URL**: `/job/<job_id>/entity_type_selection/<id>`\
-**Method**: `GET`\
-**Parameters**: `limit`, `offset`
-
-Returns all data for an entity-type selection with the given `id` of the given `job_id`. Use `limit` and `offset` for
-paging.
-
-_Example: `/job/d697ea3869422ce3c7cc1889264d03c7/entity_type_selection/0`_
-
----
-
-**URL**: `/job/<job_id>/links/<type>/<id>`\
-**Method**: `GET`, `POST`\
-**Parameters**: `with_properties`, `apply_filters`, `valid`, `uri`, `cluster_id`, `min`, `max`, `sort`, `limit`
-, `offset`
-
-Returns the links of `type` (`linkset` or `lens`) for the linkset/lens with `id` of the given `job_id`. Use `limit`
-and `offset` for paging.
-
-Specify `with_properties` with 'none' to return no property values, 'single' to only return a single property value or '
-multiple' to return multiple property values. Specify `apply_filters` to apply the filters specified by the user.
-Specify `valid` with `accepted`, `rejected`, `uncertain` and/or `unchecked` to only return from the specified validity
-types. Specify `uri` to only return links with the specified URIs. Specify `cluster_id` to only return the links of
-specific clusters. Specify `min` and/or `max` to only return links with a similarity score within the specified minimum
-and maximum score. Specify `sort` if you want to enable sorting on similarity score using `asc` or `desc`.
-
-_Example: `/job/d697ea3869422ce3c7cc1889264d03c7/links/linkset/0`_
-
----
-
-**URL**: `/job/<job_id>/clusters/<type>/<id>`\
-**Method**: `GET`, `POST`\
-**Parameters**: `with_properties`, `apply_filters`, `include_nodes`, `uri`, `cluster_id`, `min`, `max`, `min_size`
-, `max_size`, `min_count`, `max_count`, `limit`, `offset`
-
-Returns the clusters of `type` (`linkset` or `lens`) for the linkset/lens with `id` of the given `job_id`. Use `limit`
-and `offset` for paging.
-
-Specify `with_properties` with 'none' to return no property values, 'single' to only return a single property value or '
-multiple' to return multiple property values. Specify `apply_filters` to apply the filters specified by the user.
-Specify `include_nodes` to include all nodes that are part of the cluster in the response. Specify `uri` to only return
-links with the specified URIs. Specify `cluster_id` to only return the links of specific clusters. Specify `min`
-and/or `max` to only return links with a similarity score within the specified minimum and maximum score.
-Specify `min_size` and/or `max_size` to only return clusters with a size that is within the specified minimum and
-maximum size. Specify `min_count` and/or `max_count` to only return clusters with a links count that is within the
-specified minimum and maximum count.
-
-_Example: `/job/d697ea3869422ce3c7cc1889264d03c7/clusters/0`_
-
-### Linksets interaction
-
-**URL**: `/job/<job_id>/validate/<type>/<id>`\
+**URL**: `/job/<job_id>/<type>/<id>/validate`\
 **Method**: `POST`\
 **Form data**: `source`, `target`, `apply_filters`, `valid`, `uri`, `cluster_id`, `min`, `max`, `validation`
 
@@ -414,7 +317,7 @@ Provide `validation` with either `accepted`, `rejected` or `uncertain` to valida
 
 ---
 
-**URL**: `/job/<job_id>/motivate/<type>/<id>`\
+**URL**: `/job/<job_id>/<type>/<id>/motivate`\
 **Method**: `POST`\
 **Form data**: `source`, `target`, `apply_filters`, `valid`, `uri`, `cluster_id`, `min`, `max`, `motivation`
 
@@ -428,15 +331,15 @@ to only return links with a similarity score within the specified minimum and ma
 
 ---
 
-**URL**: `/job/<job_id>/cluster/<type>/<id>/<cluster_id>/graph`\
+**URL**: `/job/<job_id>/<type>/<id>/cluster/<cluster_id>/graph`\
 **Method**: `GET`
 
 Get the visualization information for a cluster with `cluster_id` of `type` (`linkset` or `lens`)
 for the linkset/lens with `id` of the given `job_id`.
 
-### Export
+---
 
-**URL**: `/job/<job_id>/csv/<type>/<id>`\
+**URL**: `/job/<job_id>/<type>/<id>/csv`\
 **Method**: `GET`\
 **Parameters**: `valid`
 
@@ -447,12 +350,12 @@ types.
 
 ---
 
-**URL**: `/job/<job_id>/rdf/<type>/<id>`\
+**URL**: `/job/<job_id>/<type>/<id>/rdf`\
 **Method**: `GET`\
 **Parameters**: `valid`, `link_pred_namespace`, `link_pred_shortname`, `export_metadata`,
 `export_linkset`, `reification`, `use_graphs`, `creator`, `publisher`
 
-Get a RDF export of `type` (`linkset` or `lens`) for the linkset/lens with `id` the given `job_id`.
+Get an RDF export of `type` (`linkset` or `lens`) for the linkset/lens with `id` the given `job_id`.
 
 Specify `valid` with `accepted`, `rejected`, `uncertain` and/or `unchecked` to only export from the specified validity
 types.
@@ -468,6 +371,137 @@ Specify `use_graphs` to determine the RDF format to use.
 
 Optionally specify `creator` to include extra metadata. If authentication is enabled, the `creator` is obtained from the
 authentication provider.
+
+### Job instance entity-type selection
+
+**URL**: `/job/<job_id>/<id>`\
+**Method**: `POST`\
+**Parameters**: `invert`, `limit`, `offset`
+
+Returns all data for an entity-type selection with the given `id` of the given `job_id`. Use `limit` and `offset` for
+paging. Use `invert` to invert the selection.
+
+_Developer note: Use GET to obtain the generated SQL._
+
+---
+
+**URL**: `/job/<job_id>/<id>/totals`\
+**Method**: `POST`
+
+Returns the total number of entities for an entity-type selection with the given `id` of the given `job_id`.
+
+_Developer note: Use GET to obtain the generated SQL._
+
+### Job instance links
+
+**URL**: `/job/<job_id>/<type>/<id>/links`\
+**Method**: `POST`\
+**Parameters**: `with_properties`, `apply_filters`, `valid`, `uri`, `cluster_id`, `min`, `max`, `sort`, `limit`
+, `offset`
+
+Returns the links of `type` (`linkset` or `lens`) for the linkset/lens with `id` of the given `job_id`. Use `limit`
+and `offset` for paging.
+
+Specify `with_properties` with 'none' to return no property values, 'single' to only return a single property value or '
+multiple' to return multiple property values. Specify `apply_filters` to apply the filters specified by the user.
+Specify `valid` with `accepted`, `rejected`, `uncertain` and/or `unchecked` to only return from the specified validity
+types. Specify `uri` to only return links with the specified URIs. Specify `cluster_id` to only return the links of
+specific clusters. Specify `min` and/or `max` to only return links with a similarity score within the specified minimum
+and maximum score. Specify `sort` if you want to enable sorting on similarity score using `asc` or `desc`.
+
+_Developer note: Use GET to obtain the generated SQL._
+
+---
+
+**URL**: `/job/<job_id>/<type>/<id>/links/totals`\
+**Method**: `POST`\
+**Parameters**: `apply_filters`, `uri`, `cluster_id`, `min`, `max`
+
+Returns the total number of links of `type` (`linkset` or `lens`) for the linkset/lens with `id` of the given `job_id`.
+
+Specify `apply_filters` to apply the filters specified by the user. Specify `uri` to only return links with the
+specified URIs. Specify `cluster_id` to only return the links of specific clusters. Specify `min` and/or `max` to only
+return links with a similarity score within the specified minimum and maximum score.
+
+_Developer note: Use GET to obtain the generated SQL._
+
+---
+
+**URL**: `/job/<job_id>/<type>/<id>/links/run`\
+**Method**: `POST`\
+**Form data**: `restart`
+
+Start a process for the given spec of `type` (`linkset` or `lens`) of a specific `job_id`. Specify `restart` to restart
+the process.
+
+---
+
+**URL**: `/job/<job_id>/<type>/<id>/links/kill`\
+**Method**: `POST`
+
+Kill a process for the given spec of `type` (`linkset` or `lens`) of a specific `job_id`.
+
+---
+
+**URL**: `/job/<job_id>/<type>/<id>/links/sql`\
+**Method**: `GET`
+
+Obtain the matching SQL for the given spec of `type` (`linkset` or `lens`) of a specific `job_id`.
+
+### Job instance clusters
+
+**URL**: `/job/<job_id>/<type>/<id>/clusters`\
+**Method**: `POST`\
+**Parameters**: `with_properties`, `apply_filters`, `include_nodes`, `uri`, `cluster_id`, `min`, `max`, `min_size`
+, `max_size`, `min_count`, `max_count`, `limit`, `offset`
+
+Returns the clusters of `type` (`linkset` or `lens`) for the linkset/lens with `id` of the given `job_id`. Use `limit`
+and `offset` for paging.
+
+Specify `with_properties` with 'none' to return no property values, 'single' to only return a single property value or '
+multiple' to return multiple property values. Specify `apply_filters` to apply the filters specified by the user.
+Specify `include_nodes` to include all nodes that are part of the cluster in the response. Specify `uri` to only return
+links with the specified URIs. Specify `cluster_id` to only return the links of specific clusters. Specify `min`
+and/or `max` to only return links with a similarity score within the specified minimum and maximum score.
+Specify `min_size` and/or `max_size` to only return clusters with a size that is within the specified minimum and
+maximum size. Specify `min_count` and/or `max_count` to only return clusters with a links count that is within the
+specified minimum and maximum count.
+
+_Developer note: Use GET to obtain the generated SQL._
+
+---
+
+**URL**: `/job/<job_id>/<type>/<id>/clusters/totals`\
+**Method**: `POST`\
+**Parameters**: `apply_filters`, `uri`, `cluster_id`, `min`, `max`
+
+Returns the total number of clusters of `type` (`linkset` or `lens`) for the linkset/lens with `id` of the
+given `job_id`.
+
+Specify `apply_filters` to apply the filters specified by the user. Specify `uri` to only return links with the
+specified URIs. Specify `cluster_id` to only return the links of specific clusters. Specify `min` and/or `max` to only
+take into account links with a similarity score within the specified minimum and maximum score. Specify `min_size`
+and/or `max_size` to only return clusters with a size that is within the specified minimum and maximum size.
+Specify `min_count` and/or `max_count` to only return clusters with a links count that is within the specified minimum
+and maximum count.
+
+_Developer note: Use GET to obtain the generated SQL._
+
+---
+
+**URL**: `/job/<job_id>/<type>/<id>/clusters/run`\
+**Method**: `POST`
+
+Start a clustering process of `type` (`linkset` or `lens`) for the linkset/lens with the given `id` of a
+specific `job_id`.
+
+---
+
+**URL**: `/job/<job_id>/<type>/<id>/clusters/kill`\
+**Method**: `POST`
+
+Stop a clustering process of `type` (`linkset` or `lens`)
+for the linkset/lens with the given `id` of a specific `job_id`.
 
 ### Admin tasks
 
@@ -506,13 +540,32 @@ Emits download progress on Timbuctoo datasets.
   // The GraphQL interface of the Timbuctoo instance
   "graphql_endpoint": "https://repository.goldenagents.org/v5/graphql",
   // The identifier of the dataset
-  "dataset_id": "ufab7d657a250e3461361c982ce9b38f3816e0c4b__ecartico_20190805",
+  "timbuctoo_id": "ufab7d657a250e3461361c982ce9b38f3816e0c4b__ecartico_20190805",
   // The identifier of the collection from this dataset
-  "collection_id": "foaf_Person",
+  "entity_type_id": "foaf_Person",
   // The total number of entities to be downloaded
   "total": 1000,
   // The total number of entities currently downloaded
-  "rows_count": 400,
+  "rows_count": 400
+}
+```
+
+---
+
+**Event**: `timbuctoo_status_update`
+
+Emits status change of a Timbuctoo dataset collection from the database.
+
+```json5
+{
+  // The GraphQL interface of the Timbuctoo instance
+  "graphql_endpoint": "https://repository.goldenagents.org/v5/graphql",
+  // The identifier of the dataset
+  "timbuctoo_id": "ufab7d657a250e3461361c982ce9b38f3816e0c4b__ecartico_20190805",
+  // The identifier of the collection from this dataset
+  "entity_type_id": "foaf_Person",
+  // The status of the collection from this dataset
+  "status": "downloadable"
 }
 ```
 
@@ -527,9 +580,90 @@ Emits removal of a Timbuctoo dataset collection from the database.
   // The GraphQL interface of the Timbuctoo instance
   "graphql_endpoint": "https://repository.goldenagents.org/v5/graphql",
   // The identifier of the dataset
-  "dataset_id": "ufab7d657a250e3461361c982ce9b38f3816e0c4b__ecartico_20190805",
+  "timbuctoo_id": "ufab7d657a250e3461361c982ce9b38f3816e0c4b__ecartico_20190805",
   // The identifier of the collection from this dataset
-  "collection_id": "foaf_Person",
+  "entity_type_id": "foaf_Person"
+}
+```
+
+---
+
+**Event**: `sparql_update`
+
+Emits download progress on SPARQL datasets.
+
+```json5
+{
+  // The SPARQL endpoint
+  "sparql_endpoint": "https://sparql2.goldenagents.org/rijksmuseum",
+  // The identifier of the entity type from this SPARQL endpoint
+  "entity_type_id": "http://www.europeana.eu/schemas/edm/Agent",
+  // The total number of entities to be downloaded
+  "total": 1000,
+  // The total number of entities currently downloaded
+  "rows_count": 400
+}
+```
+
+---
+
+**Event**: `sparql_status_update`
+
+Emits status change of a SPARQL dataset from the database.
+
+```json5
+{
+  // The SPARQL endpoint
+  "sparql_endpoint": "https://sparql2.goldenagents.org/rijksmuseum",
+  // The identifier of the entity type from this SPARQL endpoint
+  "entity_type_id": "http://www.europeana.eu/schemas/edm/Agent",
+  // The status of the collection from this dataset
+  "status": "downloadable"
+}
+```
+
+---
+
+**Event**: `sparql_delete`
+
+Emits removal of a SPARQL dataset from the database.
+
+```json5
+{
+  // The SPARQL endpoint
+  "sparql_endpoint": "https://sparql2.goldenagents.org/rijksmuseum",
+  // The identifier of the entity type from this SPARQL endpoint
+  "entity_type_id": "http://www.europeana.eu/schemas/edm/Agent"
+}
+```
+
+---
+
+**Event**: `sparql_load_update`
+
+Emits loading status of metadata about entity types of a SPARQL endpoint.
+
+```json5
+{
+  // The SPARQL endpoint
+  "sparql_endpoint": "https://sparql2.goldenagents.org/rijksmuseum",
+  // The status
+  "status": "running"
+}
+```
+
+---
+
+**Event**: `sparql_load_delete`
+
+Emits removal of a SPARQL loading task from the database.
+
+```json5
+{
+  // The SPARQL endpoint
+  "sparql_endpoint": "https://sparql2.goldenagents.org/rijksmuseum",
+  // The status
+  "status": "running"
 }
 ```
 
@@ -558,7 +692,7 @@ Emits when the job has been updated.
   // Were any lens specifications updated?
   "is_lens_specs_update": false,
   // Were any views updated?
-  "is_views_update": false,
+  "is_views_update": false
 }
 ```
 
@@ -581,7 +715,7 @@ Emits linkset or lens matching progress.
   // A human-readable status message
   "status_message": "Matching",
   // If links progressing is enabled, the number of links found so far
-  "links_progress": 23,
+  "links_progress": 23
 }
 ```
 
@@ -598,7 +732,7 @@ Emits removal of a linkset or lens.
   // The specification type: a linkset or a lens
   "spec_type": 'linkset',
   // The specification identifier
-  "spec_id": 1,
+  "spec_id": 1
 }
 ```
 
@@ -625,7 +759,7 @@ Emits clustering progress.
   // The number of links clustered so far
   "links_count": 452,
   // The number of clusters found so far
-  "clusters_count": 5,
+  "clusters_count": 5
 }
 ```
 
@@ -644,7 +778,7 @@ Emits removal of a clustering.
   // The specification identifier
   "spec_id": 1,
   // The type of clustering performed
-  "clustering_type": "default",
+  "clustering_type": "default"
 }
 ```
 
@@ -665,12 +799,16 @@ to use for a particular job.
   "description": "",
   // The data to use from Timbuctoo
   "dataset": {
-    // The identifier of the dataset to use
-    "dataset_id": "ufab7d657a250e3461361c982ce9b38f3816e0c4b__ecartico_20190805",
-    // The identifier of the collection from this dataset to use
-    "collection_id": "foaf_Person",
-    // The GraphQL interface of the Timbuctoo instance
-    "timbuctoo_graphql": "https://repository.goldenagents.org/v5/graphql",
+    // The type of dataset to use; either 'timbuctoo' or 'sparql'
+    "type": "timbuctoo",
+    // In the case of 'timbuctoo': the GraphQL interface of the Timbuctoo instance
+    "graphql_endpoint": "https://repository.goldenagents.org/v5/graphql",
+    // In the case of 'timbuctoo': the identifier of the dataset to use
+    "timbuctoo_id": "ufab7d657a250e3461361c982ce9b38f3816e0c4b__ecartico_20190805",
+    // In the case of 'sparql': the SPARQL endpoint
+    "sparql_endpoint": "https://sparql2.goldenagents.org/rijksmuseum",
+    // The identifier of the entity type to use
+    "entity_type_id": "foaf_Person"
   },
   // The filter configuration to obtain only a subset of the data from Timbuctoo; optional field
   "filter": {

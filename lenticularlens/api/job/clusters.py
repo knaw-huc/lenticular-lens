@@ -66,21 +66,6 @@ async def clusters_sql(data: JobSpecDep, params: Annotated[ClustersParams, Query
     return get_string_from_sql(result)
 
 
-@router.post('/run')
-async def run(data: JobSpecDep):
-    try:
-        job, type, id = data
-        job.run_clustering(id, type)
-    except UniqueViolation:
-        raise HTTPException(status_code=400, detail=f'This {type} clustering already exists')
-
-
-@router.post('/kill')
-async def kill(data: JobSpecDep):
-    job, type, id = data
-    job.kill_clustering(id, type)
-
-
 @router.post('/totals')
 async def totals(data: JobSpecDep, params: Annotated[ClustersTotalsParams, Form()]):
     job, type, id = data
@@ -116,3 +101,18 @@ async def totals_sql(data: JobSpecDep, params: Annotated[ClustersTotalsParams, Q
         max_count=params.max_count,
     )
     return get_string_from_sql(result)
+
+
+@router.post('/run')
+async def run(data: JobSpecDep):
+    try:
+        job, type, id = data
+        job.run_clustering(id, type)
+    except UniqueViolation:
+        raise HTTPException(status_code=400, detail=f'This {type} clustering already exists')
+
+
+@router.post('/kill')
+async def kill(data: JobSpecDep):
+    job, type, id = data
+    job.kill_clustering(id, type)
