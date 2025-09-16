@@ -1,9 +1,7 @@
 import logging
 
 from rdflib import Graph, query
-from functools import partial
 from cachetools import cachedmethod, TTLCache
-from cachetools.keys import methodkey
 from rdflib.plugins.stores.sparqlstore import SPARQLStore
 
 log = logging.getLogger(__name__)
@@ -24,92 +22,75 @@ class SPARQL:
 
         return result
 
-    @cachedmethod(lambda self: self.cache, key=partial(methodkey, method='classes'))
-    def get_classes(self) -> query.Result | None:
+    @cachedmethod(lambda self: self.cache, key=lambda self: (self._sparql_url, 'explicit_classes'))
+    def get_explicit_classes(self) -> query.Result | None:
         return self.fetch("""
             PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
             
             SELECT ?class (SAMPLE(?label) AS ?label) (COUNT(DISTINCT ?instance) AS ?count)
             WHERE {
-                {
-                    ?instance a ?class .
-                    FILTER (!isBlank(?class))
-                    OPTIONAL { ?class rdfs:label ?label }
-                }
-                UNION
-                {
-                    ?instance ?p ?o .
-                    MINUS { ?instance a ?class }
-                    BIND(rdfs:Resource AS ?class)
-                }
-                UNION
-                {
-                    ?s ?p ?instance .
-                    MINUS { ?instance a ?class }
-                    FILTER (isURI(?instance))
-                    BIND(rdfs:Resource AS ?class)
-                }
+              ?instance a ?class .
+              FILTER (!isBlank(?class))
+              OPTIONAL { ?class rdfs:label ?label }
             }
             GROUP BY ?class
         """)
 
-    @cachedmethod(lambda self: self.cache, key=partial(methodkey, method='properties'))
-    def get_class_properties(self, class_uri: str) -> query.Result | None:
+    @cachedmethod(lambda self: self.cache, key=lambda self: (self._sparql_url, 'untyped_resources'))
+    def get_untyped_resources(self) -> query.Result | None:
+        return self.fetch("""
+            PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+            
+            SELECT (rdfs:Resource AS ?class) (COUNT(DISTINCT ?instance) AS ?count)
+            WHERE {
+              {
+                ?instance ?p ?o .
+              }
+              UNION
+              {
+                ?s ?p ?instance .
+                FILTER(isURI(?instance))
+              }
+              MINUS { ?instance a ?anyClass }
+            }
+        """)
+
+    @cachedmethod(lambda self: self.cache,
+                  key=lambda self, class_uri, inverse: (self._sparql_url, 'class_properties', class_uri, inverse))
+    def get_class_properties(self, class_uri: str, inverse: bool) -> query.Result | None:
         match_type_clause = f"?entity a <{class_uri}> ." \
             if class_uri != 'http://www.w3.org/2000/01/rdf-schema#Resource' else \
             f"MINUS {{ ?entity a ?type . }}"
 
+        match_clause = '?value ?property ?entity .' if inverse else '?entity ?property ?value .'
+
         return self.fetch(f"""
             PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
             
-            SELECT ?property ?isInverse
+            SELECT ?property
                    (MAX(?isLiteral) AS ?hasLiterals)
                    (MAX(?isIRI) AS ?hasIRIs)
                    (SUM(IF(?numValues > 1, 1, 0)) > 0 AS ?isList)
                    (COUNT(DISTINCT ?entity) AS ?count)
                    (GROUP_CONCAT(DISTINCT ?valueClassIRIs; SEPARATOR=" | ") AS ?valueClasses)
             WHERE {{
+                {match_type_clause}
+                {match_clause}
+        
+                BIND(isLiteral(?value) AS ?isLiteral)
+                BIND(isIRI(?value) AS ?isIRI)
+        
+                OPTIONAL {{ ?value a ?valueClass }}
+                BIND(IF(?isIRI, COALESCE(?valueClass, rdfs:Resource), "") AS ?valueClassIRIs)
+                
                 {{
-                    {match_type_clause}
-                    ?entity ?property ?value .
-            
-                    BIND(FALSE AS ?isInverse)
-                    BIND(isLiteral(?value) AS ?isLiteral)
-                    BIND(isIRI(?value) AS ?isIRI)
-            
-                    OPTIONAL {{ ?value a ?valueClass }}
-                    BIND(IF(?isIRI, COALESCE(?valueClass, rdfs:Resource), "") AS ?valueClassIRIs)
-                    
-                    {{
-                        SELECT ?entity ?property (COUNT(DISTINCT ?value) AS ?numValues)
-                        WHERE {{
-                            {match_type_clause}
-                            ?entity ?property ?value .
-                        }}
-                        GROUP BY ?entity ?property
+                    SELECT ?entity ?property (COUNT(DISTINCT ?value) AS ?numValues)
+                    WHERE {{
+                        {match_type_clause}
+                        {match_clause}
                     }}
-                }}
-                UNION
-                {{
-                    {match_type_clause}
-                    ?value ?property ?entity .
-            
-                    BIND(TRUE AS ?isInverse)
-                    BIND(isLiteral(?value) AS ?isLiteral)
-                    BIND(isIRI(?value) AS ?isIRI)
-            
-                    OPTIONAL {{ ?value a ?valueClass }}
-                    BIND(IF(?isIRI, COALESCE(?valueClass, rdfs:Resource), "") AS ?valueClassIRIs)
-                    
-                    {{
-                         SELECT ?entity ?property (COUNT(DISTINCT ?value) AS ?numValues)
-                         WHERE {{
-                            {match_type_clause}
-                            ?value ?property ?entity .
-                        }}
-                        GROUP BY ?entity ?property
-                    }}
+                    GROUP BY ?entity ?property
                 }}
             }}
-            GROUP BY ?property ?isInverse
+            GROUP BY ?property
         """)
