@@ -1,18 +1,16 @@
 from typing import Any
 
 from psycopg import Cursor
-from rdflib import Graph
 from rdflib.query import ResultRow
 
 from lenticularlens.workers.job import WorkerJob
 from lenticularlens.data.sparql.sparql import SPARQL
 from lenticularlens.util.config_db import conn_pool
 from lenticularlens.util.hasher import column_name_hash
+from lenticularlens.util.prefix_builder import qname
 
 
 class SPARQLPropertiesJob(WorkerJob):
-    graph = Graph()
-
     def __init__(self, dataset_id, entity_type_id, sparql_endpoint):
         self._dataset_id = dataset_id
         self._entity_type_id = entity_type_id
@@ -47,13 +45,7 @@ class SPARQLPropertiesJob(WorkerJob):
         is_list = bool(property_data.get('isList'))
         is_value_type = bool(property_data.get('hasLiterals'))
         property_id = ('inv_' if is_inverse else '') + property
-
-        try:
-            ns_manager = SPARQLPropertiesJob.graph.namespace_manager
-            prefix, namespace, name = ns_manager.compute_qname(property, generate=False)
-            shortened_uri = ':'.join((prefix, name))
-        except KeyError:
-            shortened_uri = property
+        shortened_uri, _prefix, _name = qname(property)
 
         cur.execute('''
             INSERT INTO entity_type_properties (dataset_id, entity_type_id, property_id, column_name,

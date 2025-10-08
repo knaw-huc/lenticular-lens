@@ -1,18 +1,16 @@
 from typing import Any
 
 from psycopg import Cursor
-from rdflib import Graph
 from rdflib.query import ResultRow
 
 from lenticularlens.workers.job import WorkerJob
 from lenticularlens.util.config_db import conn_pool
+from lenticularlens.util.prefix_builder import qname
 from lenticularlens.data.sparql.sparql import SPARQL
 from lenticularlens.data.sparql.entity_type import EntityType
 
 
 class SPARQLClassesJob(WorkerJob):
-    graph = Graph()
-
     def __init__(self, dataset_id, sparql_endpoint):
         self._dataset_id = dataset_id
         self._sparql_endpoint = sparql_endpoint
@@ -39,13 +37,7 @@ class SPARQLClassesJob(WorkerJob):
     def insert_class_data(self, class_data: ResultRow, cur: Cursor[Any]):
         class_uri = str(class_data.get('class'))
         table_name = EntityType.create_table_name(self._sparql_endpoint, class_uri)
-
-        try:
-            ns_manager = SPARQLClassesJob.graph.namespace_manager
-            prefix, namespace, name = ns_manager.compute_qname(class_uri, generate=False)
-            shortened_uri = ':'.join((prefix, name))
-        except KeyError:
-            shortened_uri = class_uri
+        shortened_uri, _prefix, _name = qname(class_uri)
 
         label = str(class_data.get('label')) if class_data.get('label') else None
         total = int(class_data.get('count'))

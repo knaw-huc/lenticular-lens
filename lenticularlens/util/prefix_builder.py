@@ -3,11 +3,23 @@ from rdflib import Graph
 
 from lenticularlens.util.hasher import hash_string
 
-registered_namespaces = dict()
+graph = Graph()
+
+
+def qname(uri: str) -> tuple[str, str | None, str | None]:
+    try:
+        ns_manager = graph.namespace_manager
+        prefix, namespace, name = ns_manager.compute_qname(uri, generate=False)
+        shortened_uri = ':'.join((prefix, name))
+    except (KeyError, ValueError):
+        prefix, name = None, None
+        shortened_uri = uri
+
+    return shortened_uri, prefix, name
 
 
 def get_namespace_prefix(uri):
-    prefix = get_registered_namespace(uri)
+    _shortened_uri, prefix, _name = qname(uri)
     if not prefix:
         name = get_uri_local_name(uri)
         hash = hash_string(uri.replace(name, ''))[:5]
@@ -26,29 +38,3 @@ def get_uri_local_name(uri):
         return get_uri_local_name(bad_uri[0])
 
     return uri
-
-
-def get_registered_namespace(namespace):
-    if namespace not in registered_namespaces:
-        g = Graph()
-        g.parse('https://lov.linkeddata.es/dataset/lov')
-
-        query = f"""
-            PREFIX vann: <http://purl.org/vocab/vann/>
-            PREFIX voaf: <http://purl.org/vocommons/voaf#>
-
-            SELECT DISTINCT ?output {{
-                GRAPH <https://lov.linkeddata.es/dataset/lov> {{
-                    ?vocab a voaf:Vocabulary;
-                           vann:preferredNamespacePrefix ?output ;
-                           vann:preferredNamespaceUri "{namespace}" .
-                }}
-        """
-
-        result = list(g.query(query))
-        if result:
-            registered_namespaces[namespace] = str(result[0][0])
-        else:
-            registered_namespaces[namespace] = None
-
-    return registered_namespaces.get(namespace)
