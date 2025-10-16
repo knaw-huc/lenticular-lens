@@ -99,5 +99,5 @@ class ClustersSortParams(BaseModel):
 
 
 class SourceTargetParams(BaseModel):
-    source: str
-    target: str
+    source: Optional[str] = None
+    target: Optional[str] = None

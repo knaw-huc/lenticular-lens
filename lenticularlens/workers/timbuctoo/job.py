@@ -29,7 +29,8 @@ class TimbuctooJob(WorkerJob):
         with conn_pool.connection() as conn, conn.cursor(row_factory=rows.dict_row) as cur:
             cur.execute('SELECT * FROM entity_type_properties '
                         'INNER JOIN entity_types '
-                        'ON entity_type_properties.entity_type_id = entity_types.entity_type_id '
+                        'ON entity_type_properties.dataset_id = entity_types.dataset_id '
+                        'AND entity_type_properties.entity_type_id = entity_types.entity_type_id '
                         'WHERE "table_name" = %s', (self._table_name,))
             self._columns = {row['column_name']: row for row in cur}
 
