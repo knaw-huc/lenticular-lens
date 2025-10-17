@@ -75,27 +75,29 @@ async def csv_export(data: JobSpecDep, params: Annotated[LinksValidationFilterPa
     export_generator = export.create_generator(Validation.get(params.valid))
 
     return StreamingResponse(
-        export_generator(),
+        export_generator,
         media_type='text/csv',
         headers={'Content-Disposition': f'attachment; filename={type}_{job.job_id}_{str(id)}.csv'}
     )
 
 
 @router.get('/rdf')
-async def rdf_export(data: JobSpecDep, user: UserDep, valid: Validation = Validation.ALL,
+async def rdf_export(data: JobSpecDep, user: UserDep,
+                     valid: list[Literal['all', 'accepted', 'rejected', 'uncertain', 'unchecked', 'disputed']] = None,
                      export_linkset: bool = True, export_metadata: bool = True,
                      export_validation_set: bool = True, export_cluster_set: bool = True,
                      reification: Literal['none', 'standard', 'singleton', 'rdf_star'] = 'none',
                      link_pred_namespace: str = None, link_pred_shortname: str = None, creator: str = None):
     job, type, id = data
     export = RdfExport(job, type, id)
+    validation = Validation.get(valid if valid is not None else ['all'])
 
     if user:
         creator = user.name
 
     export_generator = export.create_generator(
         link_pred_namespace, link_pred_shortname, export_linkset, export_metadata,
-        export_validation_set, export_cluster_set, reification, creator, valid)
+        export_validation_set, export_cluster_set, reification, creator, validation)
 
     use_graphs = (export_linkset and export_metadata or export_validation_set or export_cluster_set) \
                  or export_validation_set or export_cluster_set
@@ -103,7 +105,7 @@ async def rdf_export(data: JobSpecDep, user: UserDep, valid: Validation = Valida
     extension = 'trig' if use_graphs else 'ttl'
 
     return StreamingResponse(
-        export_generator(),
+        export_generator,
         media_type=mimetype,
         headers={'Content-Disposition': f'attachment; filename={type}_{job.job_id}_{str(id)}.{extension}'}
     )

@@ -507,9 +507,10 @@ class RdfExport:
                 if selection.description:
                     buffer.write(pred_val(NS.DCterms.description, Literal(selection.description).n3(ns_manager)))
 
-                buffer.write(pred_val(VoidPlus.subsetOf, F"resource:{selection.dataset_id}"))
+                buffer.write(pred_val(VoidPlus.subsetOf,
+                                      F"resource:{selection.dataset['timbuctoo_id'] if 'timbuctoo_id' in selection.dataset else 'dataset'}"))
                 buffer.write(pred_val(NS.DCterms.identifier,
-                                      Literal(selection.entity_type.dataset.name).n3(ns_manager)))
+                                      Literal(selection.entity_type.dataset).n3(ns_manager)))
                 buffer.write(pred_val(VoidPlus.hasFormulation,
                                       F"resource:SelectionFormulation-{selection.hash}", end=True))
                 buffer.write("\n")

@@ -85,7 +85,7 @@ class PropertyField:
                 property_prefix_mappings[prefix] = prefix_mappings[prefix]
 
             prefix, prefix_uri = prop_in_path['to_entity_type'].prefix_info
-            if prefix and prefix not in property_prefix_mappings:
+            if prefix and prefix not in property_prefix_mappings and prefix_uri:
                 property_prefix_mappings[prefix] = prefix_uri
 
         short_uri = self._property_entity_type.properties[self.prop_name].shortened_uri
@@ -94,25 +94,25 @@ class PropertyField:
             property_prefix_mappings[prefix] = prefix_mappings[prefix]
 
         prefix, prefix_uri = self._property_entity_type.prefix_info
-        if prefix and prefix not in property_prefix_mappings:
+        if prefix and prefix not in property_prefix_mappings and prefix_uri:
             property_prefix_mappings[prefix] = prefix_uri
 
         return property_prefix_mappings
 
     def n3(self, ns_manager, end=False, line=True, tabs=1):
         if len(self._data) == 1:
-            property = self._entity_type.properties[self.prop_name]['uri'] \
+            property = self._entity_type.properties[self.prop_name].uri \
                 if self.prop_name != 'uri' else f'{VoidPlus.resource}uri'
             value = URIRef(property).n3(ns_manager)
         else:
             urirefs = []
             for prop_in_path in self._intermediate_property_path:
-                urirefs.append(URIRef(prop_in_path['from_entity_type'].properties[prop_in_path['property']]['uri']
+                urirefs.append(URIRef(prop_in_path['from_entity_type'].properties[prop_in_path['property']].uri
                                       if prop_in_path['property'] != 'uri'
                                       else f'{VoidPlus.resource}uri').n3(ns_manager))
-                urirefs.append(URIRef(prop_in_path['to_entity_type'].entity_type.uri).n3(ns_manager))
+                urirefs.append(URIRef(prop_in_path['to_entity_type'].entity_type_id).n3(ns_manager))
 
-            urirefs.append(URIRef(self._property_entity_type.properties[self.prop_name]['uri']
+            urirefs.append(URIRef(self._property_entity_type.properties[self.prop_name].uri
                                   if self.prop_name != 'uri' else f'{VoidPlus.resource}uri').n3(ns_manager))
 
             value = rdfs_sequence(urirefs, tabs=tabs)
