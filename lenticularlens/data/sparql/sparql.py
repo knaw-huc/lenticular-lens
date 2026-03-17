@@ -27,11 +27,11 @@ class SPARQL:
         return self.fetch("""
             PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
             
-            SELECT ?class (SAMPLE(?label) AS ?label) (COUNT(DISTINCT ?instance) AS ?count)
+            SELECT ?class (SAMPLE(?lbl) AS ?label) (COUNT(DISTINCT ?instance) AS ?count)
             WHERE {
               ?instance a ?class .
               FILTER (!isBlank(?class))
-              OPTIONAL { ?class rdfs:label ?label }
+              OPTIONAL { ?class rdfs:label ?lbl }
             }
             GROUP BY ?class
         """)
