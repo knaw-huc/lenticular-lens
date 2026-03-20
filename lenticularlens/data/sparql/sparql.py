@@ -1,3 +1,4 @@
+import time
 import logging
 
 from rdflib import Graph, query
@@ -15,25 +16,43 @@ class SPARQL:
         self._graph = Graph(bind_namespaces='none', store=SPARQLStore(sparql_url))
         self._graph.store.method = 'POST_FORM'
 
-    def fetch(self, query) -> query.Result:
+    def fetch(self, query: str, retry: bool = True) -> query.Result:
         result = self._graph.query(query)
         if isinstance(result, tuple):
-            raise Exception(f'SPARQL endpoint returned error {result[0]}: {result[1]}')
+            if result[0] == 504 and retry:
+                time.sleep(5)
+                return self.fetch(query, retry=False)
+            else:
+                raise Exception(f'SPARQL endpoint returned error {result[0]}: {result[1]}')
 
         return result
 
-    @cachedmethod(lambda self: self.cache, key=lambda self: (self._sparql_url, 'explicit_classes'))
-    def get_explicit_classes(self) -> query.Result | None:
-        return self.fetch("""
+    @cachedmethod(lambda self: self.cache,
+                  key=lambda self, only_classes: (self._sparql_url, 'explicit_classes', only_classes))
+    def get_explicit_classes(self, only_classes: bool) -> query.Result | None:
+        return self.fetch(f"""
             PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
             
-            SELECT ?class (SAMPLE(?lbl) AS ?label) (COUNT(DISTINCT ?instance) AS ?count)
-            WHERE {
+            SELECT ?class {'(SAMPLE(?labels) AS ?label) (COUNT(DISTINCT ?instance) AS ?count)' if not only_classes else ''}
+            WHERE {{
               ?instance a ?class .
               FILTER (!isBlank(?class))
-              OPTIONAL { ?class rdfs:label ?lbl }
-            }
+              {'OPTIONAL { ?class rdfs:label ?labels }' if not only_classes else ''}
+            }}
             GROUP BY ?class
+        """)
+
+    @cachedmethod(lambda self: self.cache,
+                  key=lambda self, class_uri: (self._sparql_url, 'class_counts', class_uri))
+    def get_class_counts(self, class_uri: str) -> query.Result | None:
+        return self.fetch(f"""
+            PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+            SELECT (SAMPLE(?labels) AS ?label) (COUNT(DISTINCT ?instance) AS ?count)
+            WHERE {{
+              ?instance a <{class_uri}> .
+              OPTIONAL {{ <{class_uri}> rdfs:label ?labels }}
+            }}
         """)
 
     @cachedmethod(lambda self: self.cache, key=lambda self: (self._sparql_url, 'untyped_resources'))

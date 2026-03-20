@@ -21,15 +21,21 @@ class SPARQLPropertiesJob(WorkerJob):
     def run_sparql_query(self):
         sparql = SPARQL(self._sparql_endpoint)
         properties_data = sparql.get_class_properties(self._entity_type_id, False)
-        inverse_properties_data = sparql.get_class_properties(self._entity_type_id, True)
+
+        inverse_properties_data = None
+        try:
+            inverse_properties_data = sparql.get_class_properties(self._entity_type_id, True)
+        except Exception:
+            pass
 
         with conn_pool.connection() as conn, conn.cursor() as cur:
-            if properties_data or inverse_properties_data:
+            if properties_data:
                 for property_data in properties_data:
                     self.insert_properties_data(property_data, False, cur)
 
-                for property_data in inverse_properties_data:
-                    self.insert_properties_data(property_data, True, cur)
+                if inverse_properties_data:
+                    for property_data in inverse_properties_data:
+                        self.insert_properties_data(property_data, True, cur)
 
                 cur.execute("UPDATE entity_types SET status = 'finished' "
                             "WHERE dataset_id = %s AND entity_type_id = %s", (self._dataset_id, self._entity_type_id))
