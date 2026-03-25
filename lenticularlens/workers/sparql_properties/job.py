@@ -1,13 +1,24 @@
-from typing import Any
+from logging import getLogger
+from typing import Any, TypedDict
 
 from psycopg import Cursor
-from rdflib.query import ResultRow
 
 from lenticularlens.workers.job import WorkerJob
 from lenticularlens.data.sparql.sparql import SPARQL
 from lenticularlens.util.config_db import conn_pool
 from lenticularlens.util.hasher import column_name_hash
 from lenticularlens.util.prefix_builder import qname
+
+log = getLogger(__name__)
+
+
+class PropertyInfo(TypedDict):
+    is_inverse: bool
+    count: int
+    is_link: bool
+    is_value_type: bool
+    is_list: bool
+    referenced: list[str]
 
 
 class SPARQLPropertiesJob(WorkerJob):
@@ -20,46 +31,59 @@ class SPARQLPropertiesJob(WorkerJob):
 
     def run_sparql_query(self):
         sparql = SPARQL(self._sparql_endpoint)
-        properties_data = sparql.get_class_properties(self._entity_type_id, False)
 
-        inverse_properties_data = None
-        try:
-            inverse_properties_data = sparql.get_class_properties(self._entity_type_id, True)
-        except Exception:
-            pass
+        log.info(f'Try to obtain properties and their counts from {self._sparql_endpoint}')
+        properties_data = sparql.get_class_properties_counts_and_types(self._entity_type_id, False)
+        log.info(f'Obtained properties and their counts from {self._sparql_endpoint}!')
+
+        log.info(f'Try to obtain inverse properties and their counts from {self._sparql_endpoint}')
+        inverse_properties_data = sparql.get_class_properties_counts_and_types(self._entity_type_id, True)
+        log.info(f'Obtained inverse properties and their counts from {self._sparql_endpoint}!')
+
+        properties = dict()
+        for inverse in [False, True]:
+            for property_data in (inverse_properties_data if inverse else properties_data):
+                property = property_data.get('property').value
+
+                log.info(f'Try to obtain is list from {self._sparql_endpoint} for property {property} inverse {inverse}')
+                is_list = sparql.get_class_property_is_list(self._entity_type_id, property, inverse)[0]
+                log.info(f'Obtained is list from {self._sparql_endpoint} for property {property} inverse {inverse}!')
+
+                value_classes = []
+                if property_data.get('hasIRIs').value == 'true' or property_data.get('hasBlankNodes').value == 'true':
+                    log.info(f'Try to obtain value classes from {self._sparql_endpoint} for property {property} inverse {inverse}')
+                    value_classes = sparql.get_class_property_value_classes(self._entity_type_id, property, inverse)
+                    log.info(f'Obtained value classes from {self._sparql_endpoint} for property {property} inverse {inverse}!')
+
+                properties[property] = PropertyInfo(
+                    is_inverse=inverse,
+                    count=int(property_data.get('count').value),
+                    is_link=property_data.get('hasIRIs').value == 'true' or property_data.get('hasBlankNodes').value == 'true',
+                    is_value_type=property_data.get('hasLiterals').value == 'true',
+                    is_list=is_list.get('isList').value == 'true',
+                    referenced=[value_class.get('valueClass').value for value_class in value_classes]
+                )
 
         with conn_pool.connection() as conn, conn.cursor() as cur:
-            if properties_data:
-                for property_data in properties_data:
-                    self.insert_properties_data(property_data, False, cur)
+            for [property, property_data] in properties.items():
+                self.insert_properties_data(property, property_data, cur)
 
-                if inverse_properties_data:
-                    for property_data in inverse_properties_data:
-                        self.insert_properties_data(property_data, True, cur)
+            cur.execute("UPDATE entity_types SET status = 'finished' "
+                        "WHERE dataset_id = %s AND entity_type_id = %s", (self._dataset_id, self._entity_type_id))
 
-                cur.execute("UPDATE entity_types SET status = 'finished' "
-                            "WHERE dataset_id = %s AND entity_type_id = %s", (self._dataset_id, self._entity_type_id))
-            else:
-                cur.execute("UPDATE entity_types SET status = 'failed' "
-                            "WHERE dataset_id = %s AND entity_type_id = %s", (self._dataset_id, self._entity_type_id))
-
-    def insert_properties_data(self, property_data: ResultRow, is_inverse: bool, cur: Cursor[Any]):
-        property = str(property_data.get('property'))
-        referenced = [ref for ref in str(property_data.get('valueClasses')).split(' | ') if ref]
-        rows_count = int(property_data.get('count'))
-        is_link = len(referenced) > 0
-        is_list = bool(property_data.get('isList'))
-        is_value_type = bool(property_data.get('hasLiterals'))
-        property_id = ('inv_' if is_inverse else '') + property
+    def insert_properties_data(self, property: str, property_data: PropertyInfo, cur: Cursor[Any]):
+        property_id = ('inv_' if property_data['is_inverse'] else '') + property
         shortened_uri, _prefix, _name = qname(property)
 
         cur.execute('''
-            INSERT INTO entity_type_properties (dataset_id, entity_type_id, property_id, column_name,
-                                                uri, shortened_uri, rows_count, referenced,
-                                                is_link, is_list, is_inverse, is_value_type)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        ''', (self._dataset_id, self._entity_type_id, property_id, column_name_hash(property_id),
-              property, shortened_uri, rows_count, referenced, is_link, is_list, is_inverse, is_value_type))
+                    INSERT INTO entity_type_properties (dataset_id, entity_type_id, property_id, column_name,
+                                                        uri, shortened_uri, rows_count, referenced,
+                                                        is_link, is_list, is_inverse, is_value_type)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ''', (self._dataset_id, self._entity_type_id, property_id, column_name_hash(property_id),
+                          property, shortened_uri, property_data['count'], property_data['referenced'],
+                          property_data['is_link'], property_data['is_list'],
+                          property_data['is_inverse'], property_data['is_value_type']))
 
     def on_exception(self):
         with conn_pool.connection() as conn, conn.cursor() as cur:

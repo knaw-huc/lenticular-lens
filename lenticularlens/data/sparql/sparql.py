@@ -1,35 +1,33 @@
 import time
 import logging
 
-from rdflib import Graph, query
-from cachetools import cachedmethod, TTLCache
-from rdflib.plugins.stores.sparqlstore import SPARQLStore
+from SPARQLWrapper import SPARQLWrapper2
+from SPARQLWrapper.SmartWrapper import Value
 
 log = logging.getLogger(__name__)
 
 
 class SPARQL:
-    cache = TTLCache(maxsize=500, ttl=24 * 60 * 60)  # One day cache
-
     def __init__(self, sparql_url: str):
         self._sparql_url = sparql_url
-        self._graph = Graph(bind_namespaces='none', store=SPARQLStore(sparql_url))
-        self._graph.store.method = 'POST_FORM'
 
-    def fetch(self, query: str, retry: bool = True) -> query.Result:
-        result = self._graph.query(query)
-        if isinstance(result, tuple):
-            if result[0] == 504 and retry:
-                time.sleep(5)
+    def fetch(self, query: str, retry: bool = True, timeout=600) -> list[dict[str, Value]]:
+        try:
+            sparql = SPARQLWrapper2(self._sparql_url)
+            sparql.setMethod('POST')
+            sparql.setRequestMethod('postdirectly')
+            sparql.setTimeout(timeout)
+            sparql.setQuery(query)
+
+            return sparql.query().bindings
+        except Exception as e:
+            log.info(f'SPARQL query failed on {self._sparql_url}: {e}')
+            if retry:
+                time.sleep(30)
                 return self.fetch(query, retry=False)
-            else:
-                raise Exception(f'SPARQL endpoint returned error {result[0]}: {result[1]}')
+            raise e
 
-        return result
-
-    @cachedmethod(lambda self: self.cache,
-                  key=lambda self, only_classes: (self._sparql_url, 'explicit_classes', only_classes))
-    def get_explicit_classes(self, only_classes: bool) -> query.Result | None:
+    def get_explicit_classes(self, only_classes: bool) -> list[dict[str, Value]]:
         return self.fetch(f"""
             PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
             
@@ -42,9 +40,7 @@ class SPARQL:
             GROUP BY ?class
         """)
 
-    @cachedmethod(lambda self: self.cache,
-                  key=lambda self, class_uri: (self._sparql_url, 'class_counts', class_uri))
-    def get_class_counts(self, class_uri: str) -> query.Result | None:
+    def get_class_counts(self, class_uri: str) -> list[dict[str, Value]]:
         return self.fetch(f"""
             PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 
@@ -55,8 +51,7 @@ class SPARQL:
             }}
         """)
 
-    @cachedmethod(lambda self: self.cache, key=lambda self: (self._sparql_url, 'untyped_resources'))
-    def get_untyped_resources(self) -> query.Result | None:
+    def get_untyped_resources(self) -> list[dict[str, Value]]:
         return self.fetch("""
             PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
             
@@ -74,42 +69,63 @@ class SPARQL:
             }
         """)
 
-    @cachedmethod(lambda self: self.cache,
-                  key=lambda self, class_uri, inverse: (self._sparql_url, 'class_properties', class_uri, inverse))
-    def get_class_properties(self, class_uri: str, inverse: bool) -> query.Result | None:
-        match_type_clause = f"?entity a <{class_uri}> ." \
-            if class_uri != 'http://www.w3.org/2000/01/rdf-schema#Resource' else \
-            f"MINUS {{ ?entity a ?type . }}"
+    def get_class_properties_counts_and_types(self, class_uri: str, inverse: bool) -> list[dict[str, Value]]:
+        property_clause = self.get_class_properties_sparql_clause(class_uri, inverse)
 
-        match_clause = '?value ?property ?entity .' if inverse else '?entity ?property ?value .'
+        return self.fetch(f"""
+            PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+            SELECT ?property (COUNT(DISTINCT ?entity) AS ?count)
+                   (MAX(isLiteral(?value)) AS ?hasLiterals) 
+                   (MAX(isIRI(?value)) AS ?hasIRIs) 
+                   (MAX(isBlank(?value)) AS ?hasBlankNodes)
+            WHERE {{
+                {property_clause}
+            }}
+            GROUP BY ?property
+        """)
+
+    def get_class_property_is_list(self, class_uri: str, property_uri: str, inverse: bool) -> list[dict[str, Value]]:
+        property_clause = self.get_class_properties_sparql_clause(class_uri, inverse, property_uri)
+
+        return self.fetch(f"""
+            SELECT (COUNT(*) > 0 AS ?isList)
+            WHERE {{
+                {{
+                    SELECT ?entity (COUNT(DISTINCT ?value) AS ?numValues)
+                    WHERE {{
+                        {property_clause}
+                    }}
+                    GROUP BY ?entity
+                    HAVING (COUNT(DISTINCT ?value) > 1)
+                }}
+            }}
+        """)
+
+    def get_class_property_value_classes(self, class_uri: str, property_uri: str, inverse: bool) -> list[dict[str, Value]]:
+        property_clause = self.get_class_properties_sparql_clause(class_uri, inverse, property_uri)
 
         return self.fetch(f"""
             PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
             
-            SELECT ?property
-                   (MAX(?isLiteral) AS ?hasLiterals)
-                   (MAX(?isIRI) AS ?hasIRIs)
-                   (SUM(IF(?numValues > 1, 1, 0)) > 0 AS ?isList)
-                   (COUNT(DISTINCT ?entity) AS ?count)
-                   (GROUP_CONCAT(DISTINCT ?valueClassIRIs; SEPARATOR=" | ") AS ?valueClasses)
+            SELECT DISTINCT ?valueClass
             WHERE {{
-                {match_type_clause}
-                {match_clause}
-        
-                BIND(isLiteral(?value) AS ?isLiteral)
-                BIND(isIRI(?value) AS ?isIRI)
-        
-                OPTIONAL {{ ?value a ?valueClass }}
-                BIND(IF(?isIRI, COALESCE(?valueClass, rdfs:Resource), "") AS ?valueClassIRIs)
+                {property_clause}
                 
-                {{
-                    SELECT ?entity ?property (COUNT(DISTINCT ?value) AS ?numValues)
-                    WHERE {{
-                        {match_type_clause}
-                        {match_clause}
-                    }}
-                    GROUP BY ?entity ?property
-                }}
+                FILTER(isIRI(?value) || isBlank(?value))
+                OPTIONAL {{ ?value a ?valueClassExplicit }}
+                
+                BIND(COALESCE(?valueClassExplicit, rdfs:Resource) AS ?valueClass)
             }}
-            GROUP BY ?property
         """)
+
+    @staticmethod
+    def get_class_properties_sparql_clause(class_uri: str, inverse: bool, property_uri: str | None = None) -> str:
+        is_resource_class = class_uri != 'http://www.w3.org/2000/01/rdf-schema#Resource'
+
+        return f"""
+            {f"?entity a <{class_uri}> ." if is_resource_class else f"MINUS {{ ?entity a ?type . }}"}
+            {('?value ?property ?entity .' if inverse else '?entity ?property ?value .') \
+            if property_uri is None else \
+            (f'?value <{property_uri}> ?entity .' if inverse else f'?entity <{property_uri}> ?value .')}
+        """
