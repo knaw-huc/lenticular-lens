@@ -1,7 +1,7 @@
 FROM python:3.13-slim AS worker
 
-ENV PYTHONPATH /app
-ENV PYTHONUNBUFFERED 1
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
 
 RUN pip3 install poetry
 
@@ -17,7 +17,7 @@ CMD ["python", "/app/lenticularlens/run_worker.py"]
 
 FROM worker AS web
 
-ENV WEB_CONCURRENCY 1
+ENV WEB_CONCURRENCY=1
 
 EXPOSE 8000
 
