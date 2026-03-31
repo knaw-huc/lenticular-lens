@@ -10,10 +10,8 @@ class EntityType(BaseEntityType):
         dataset = datasets.get(sparql_endpoint, None)
         entity_type = dataset.entity_types.get(entity_type_id, None) if dataset is not None else None
 
-        if dataset and entity_type:
-            dataset_id = Dataset.generate_id(sparql_endpoint)
-            table_name = EntityType.create_table_name(sparql_endpoint, entity_type_id)
-            BaseEntityType._start_download(dataset_id, table_name, entity_type)
+        if entity_type:
+            BaseEntityType._start_download(entity_type)
 
     @staticmethod
     def create_table_name(sparql_endpoint: str, entity_type_id: str):

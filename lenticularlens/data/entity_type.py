@@ -107,16 +107,16 @@ class EntityType(BaseModel):
                       property.is_link, property.is_list, property.is_inverse, property.is_value_type))
 
     @staticmethod
-    def _start_download(dataset_id: str, table_name: str, entity_type: 'EntityType'):
+    def _start_download(entity_type: 'EntityType'):
         with conn_pool.connection() as conn, conn.cursor() as cur:
             cur.execute(sql.SQL('DROP TABLE IF EXISTS entity_types_data.{name}; '
                                 'CREATE TABLE entity_types_data.{name} ({columns_sql})').format(
-                name=sql.Identifier(table_name),
+                name=sql.Identifier(entity_type.table_name),
                 columns_sql=entity_type.columns_sql,
             ))
 
             cur.execute("UPDATE entity_types SET status = 'downloadable' "
-                        "WHERE dataset_id = %s AND entity_type_id = %s", (dataset_id, entity_type.id))
+                        "WHERE dataset_id = %s AND entity_type_id = %s", (entity_type.dataset.dataset_id, entity_type.id))
 
     def __str__(self):
         return str(self.dataset.dataset_id) + ' - ' + self.entity_type_id

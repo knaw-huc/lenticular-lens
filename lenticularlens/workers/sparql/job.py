@@ -18,7 +18,7 @@ class SPARQLJob(WorkerJob):
         self._table_name = table_name
         self._sparql_endpoint = sparql_endpoint
         self._entity_type_id = entity_type_id
-        self._cursor = cursor
+        self._cursor = int(cursor) if cursor is not None else 0
         self._rows_count = rows_count
         self._rows_per_page = rows_per_page
         self._endpoint = SPARQL(sparql_endpoint)
@@ -52,7 +52,6 @@ class SPARQLJob(WorkerJob):
 
     def run_process(self):
         total_insert = 0
-        use_filter_paging = self._cursor is None or not self._cursor.isnumeric()
 
         match_type_clause = f"?uri a <{self._entity_type_id}> ." \
             if self._entity_type_id != 'http://www.w3.org/2000/01/rdf-schema#Resource' else \
@@ -66,35 +65,22 @@ class SPARQLJob(WorkerJob):
                                 if cols['is_list']]
 
         while total_insert == 0 or self._cursor:
-            cursor = str(self._rows_per_page) \
-                if not use_filter_paging and self._cursor is not None and not self._cursor.isnumeric() \
-                else self._cursor
-
             query = f"""
                 SELECT ?uri {" ".join('?' + id for (id, cols) in single_value_columns)}
                 WHERE {{
                     {match_type_clause}
                     {'\n'.join(self.format_sparql_query(id, cols['uri'], cols['is_inverse'])
                                for (id, cols) in single_value_columns)}
-                    {f'FILTER (?uri > {cursor})' if cursor is not None and use_filter_paging else ''}
                 }}
-                ORDER BY ?uri 
-                LIMIT {self._rows_per_page} {f'OFFSET {cursor}' if not use_filter_paging else ''}
+                LIMIT {self._rows_per_page} OFFSET {self._cursor}
             """
 
             query_result = self._endpoint.fetch(query)
             if not query_result:
-                total_written = self._rows_count + total_insert
-                if use_filter_paging and total_written == self._rows_per_page:
-                    use_filter_paging = False
-                    continue
-
                 self._cursor = None
                 return
 
-            next_cursor = self.format_sparql_uri(query_result[-1].get('uri')) \
-                if use_filter_paging else str(int(cursor) + len(query_result))
-
+            next_cursor = self._cursor + len(query_result)
             results = {
                 results.get('uri').value: {
                     'uri': results.get('uri').value,
