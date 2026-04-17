@@ -9,8 +9,7 @@ class LinksetValidator:
         self._job = job
         self._type = type
         self._spec = spec
-        self._cte_sql = linkset_builder.get_linkset_cte_sql(with_view_filters=with_view_filters,
-                                                            apply_paging=False, include_linkset_uris=False)
+        self._cte_sql = linkset_builder.get_linkset_cte_sql(with_view_filters=with_view_filters, apply_paging=False)
 
     def validate(self, valid):
         if self._type == 'lens':

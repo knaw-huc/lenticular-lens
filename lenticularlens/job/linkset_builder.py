@@ -62,8 +62,7 @@ class LinksetBuilder:
             SELECT valid, count(*) AS valid_count 
             FROM linkset
             GROUP BY valid
-        ''')).format(linkset_cte=self.get_linkset_cte_sql(with_view_filters=with_view_filters,
-                                                          apply_paging=False, include_linkset_uris=False))
+        ''')).format(linkset_cte=self.get_linkset_cte_sql(with_view_filters=with_view_filters, apply_paging=False))
 
     def get_total_clusters(self, with_view_filters=False):
         with conn_pool.connection() as conn, conn.cursor(row_factory=rows.dict_row) as cur:
@@ -81,8 +80,7 @@ class LinksetBuilder:
                 {having_sql}
             ) AS x
         ''')).format(
-            linkset_cte=self.get_linkset_cte_sql(with_view_filters=with_view_filters,
-                                                 apply_paging=False, include_linkset_uris=False),
+            linkset_cte=self.get_linkset_cte_sql(with_view_filters=with_view_filters, apply_paging=False),
             having_sql=self._clusters_filter.sql()
         )
 
@@ -228,8 +226,7 @@ class LinksetBuilder:
             sort_sql=sort_sql,
         )
 
-    def get_linkset_cte_sql(self, with_view_filters=False, apply_paging=True,
-                            apply_sorting=True, include_linkset_uris=True):
+    def get_linkset_cte_sql(self, with_view_filters=False, apply_paging=True, apply_sorting=True):
         use_filters = bool(with_view_filters and self._view.filters_per_entity_type)
 
         filter_laterals_sql = get_sql_empty(self._filter_laterals_sql, flag=use_filters)
@@ -241,13 +238,6 @@ class LinksetBuilder:
                 .format(sql.SQL('DESC') if self._sort_desc else sql.SQL('ASC'))
 
         limit_offset_sql = get_sql_empty(sql.SQL(get_pagination_sql(self._limit, self._offset)), flag=apply_paging)
-
-        include_linkset_uris_sql = get_sql_empty(sql.SQL(cleandoc('''
-            , linkset_uris AS (
-                SELECT DISTINCT nodes.uri
-                FROM linkset, LATERAL (VALUES (linkset.source_uri), (linkset.target_uri)) AS nodes(uri)
-            )
-        ''')), flag=include_linkset_uris)
 
         return sql.SQL(cleandoc('''
                                 WITH linkset AS (SELECT DISTINCT source_uri,
@@ -266,7 +256,7 @@ class LinksetBuilder:
                                                  FROM {schema}.{view_name} AS linkset
                 {filter_laterals_sql}
                 {where_sql} 
-                {sort_sql} {limit_offset_sql}) {include_linkset_uris_sql}
+                {sort_sql} {limit_offset_sql})
                                 ''')).format(
             schema=sql.Identifier(self._schema),
             view_name=sql.Identifier(self._table_name),
@@ -274,7 +264,6 @@ class LinksetBuilder:
             where_sql=where_sql,
             sort_sql=sort_sql,
             limit_offset_sql=limit_offset_sql,
-            include_linkset_uris_sql=include_linkset_uris_sql,
         )
 
     @property
