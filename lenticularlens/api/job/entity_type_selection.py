@@ -13,7 +13,7 @@ class SampleParams(PagingParams):
 
 
 @router.post('')
-async def sample(data: JobEtsDep, params: Annotated[SampleParams, Form()]):
+def sample(data: JobEtsDep, params: Annotated[SampleParams, Form()]):
     job, id = data
     return job.get_entity_type_selection_sample(
         id,
@@ -25,7 +25,7 @@ async def sample(data: JobEtsDep, params: Annotated[SampleParams, Form()]):
 
 
 @router.get('', response_class=PlainTextResponse)
-async def sample_sql(data: JobEtsDep, params: Annotated[SampleParams, Query()]):
+def sample_sql(data: JobEtsDep, params: Annotated[SampleParams, Query()]):
     job, id = data
     result = job.get_entity_type_selection_sample(
         id,
@@ -38,13 +38,13 @@ async def sample_sql(data: JobEtsDep, params: Annotated[SampleParams, Query()]):
 
 
 @router.post('/totals')
-async def totals(data: JobEtsDep):
+def totals(data: JobEtsDep):
     job, id = data
     return job.get_entity_type_selection_sample_total(id, sql_only=False)
 
 
 @router.get('/totals', response_class=PlainTextResponse)
-async def totals_sql(data: JobEtsDep):
+def totals_sql(data: JobEtsDep):
     job, id = data
     result = job.get_entity_type_selection_sample_total(id, sql_only=True)
     return get_string_from_sql(result)

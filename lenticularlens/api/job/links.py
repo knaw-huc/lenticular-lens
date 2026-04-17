@@ -23,7 +23,7 @@ class LinksTotalsParams(BasicFilterParams, LinksFilterParams):
 
 
 @router.post('')
-async def links(data: JobSpecDep, params: Annotated[LinksParams, Form()]):
+def links(data: JobSpecDep, params: Annotated[LinksParams, Form()]):
     job, type, id = data
     return job.get_links(
         id, type,
@@ -42,7 +42,7 @@ async def links(data: JobSpecDep, params: Annotated[LinksParams, Form()]):
 
 
 @router.get('', response_class=PlainTextResponse)
-async def links_sql(data: JobSpecDep, params: Annotated[LinksParams, Query()]):
+def links_sql(data: JobSpecDep, params: Annotated[LinksParams, Query()]):
     job, type, id = data
     result = job.get_links(
         id, type,
@@ -62,7 +62,7 @@ async def links_sql(data: JobSpecDep, params: Annotated[LinksParams, Query()]):
 
 
 @router.post('/totals')
-async def totals(data: JobSpecDep, params: Annotated[LinksTotalsParams, Form()]):
+def totals(data: JobSpecDep, params: Annotated[LinksTotalsParams, Form()]):
     job, type, id = data
     return job.get_links_totals(
         id, type,
@@ -76,7 +76,7 @@ async def totals(data: JobSpecDep, params: Annotated[LinksTotalsParams, Form()])
 
 
 @router.get('/totals', response_class=PlainTextResponse)
-async def totals_sql(data: JobSpecDep, params: Annotated[LinksTotalsParams, Query()]):
+def totals_sql(data: JobSpecDep, params: Annotated[LinksTotalsParams, Query()]):
     job, type, id = data
     result = job.get_links_totals(
         id, type,
@@ -91,14 +91,14 @@ async def totals_sql(data: JobSpecDep, params: Annotated[LinksTotalsParams, Quer
 
 
 @router.get('/sql')
-async def sql(data: JobSpecDep):
+def sql(data: JobSpecDep):
     job, type, id = data
     job_sql = MatchingSql(job, id) if type == 'linkset' else LensSql(job, id)
     return job_sql.sql_string
 
 
 @router.post('/run')
-async def run(data: JobSpecDep, restart: Annotated[bool, Form()] = False):
+def run(data: JobSpecDep, restart: Annotated[bool, Form()] = False):
     try:
         job, type, id = data
         job.run_linkset(id, restart) if type == 'linkset' else job.run_lens(id, restart)
@@ -107,6 +107,6 @@ async def run(data: JobSpecDep, restart: Annotated[bool, Form()] = False):
 
 
 @router.post('/kill')
-async def kill(data: JobSpecDep):
+def kill(data: JobSpecDep):
     job, type, id = data
     job.kill_linkset(id) if type == 'linkset' else job.kill_lens(id)

@@ -215,6 +215,9 @@ class MatchingSql:
                 CREATE INDEX ON linksets.{linkset} USING btree (cluster_id);
                 CREATE INDEX ON linksets.{linkset} USING btree (similarity);
                 CREATE INDEX ON linksets.{linkset} USING btree (sort_order);
+                CREATE INDEX ON linksets.{linkset} USING btree (sort_order, similarity) 
+                    INCLUDE (source_uri, target_uri, link_order, source_collections, target_collections, 
+                             source_intermediates, target_intermediates, cluster_id, cluster_hash_id, valid, motivation);
 
                 ANALYZE linksets.{linkset};
             """

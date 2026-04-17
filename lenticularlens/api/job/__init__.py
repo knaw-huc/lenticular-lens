@@ -16,12 +16,12 @@ router.include_router(job_instance_router)
 
 
 @router.get('')
-async def list(user: UserDep):
+def list(user: UserDep):
     return user.list_jobs() if oauth and user else get_all_jobs()
 
 
 @router.post('')
-async def create(user: UserDep, job_title: Annotated[str, Form()],
+def create(user: UserDep, job_title: Annotated[str, Form()],
                  job_description: Annotated[str, Form()], job_link: Annotated[str, Form()] = None):
     job_id = hash_string(job_title + job_description)
     job = Job(job_id)

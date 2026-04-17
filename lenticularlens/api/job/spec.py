@@ -23,7 +23,7 @@ class MotivationParams(BasicFilterParams, SourceTargetParams, LinksFilterParams,
 
 
 @router.delete('')
-async def delete(data: JobSpecDep):
+def delete(data: JobSpecDep):
     job, type, id = data
     lens_uses = job.spec_lens_uses(id, type)
     if len(lens_uses) > 0:
@@ -33,7 +33,7 @@ async def delete(data: JobSpecDep):
 
 
 @router.post('/validate')
-async def validate(data: JobSpecDep, params: Annotated[ValidationParams, Form()]):
+def validate(data: JobSpecDep, params: Annotated[ValidationParams, Form()]):
     job, type, id = data
     job.validate_link(
         id, type, params.validation,
@@ -48,7 +48,7 @@ async def validate(data: JobSpecDep, params: Annotated[ValidationParams, Form()]
 
 
 @router.post('/motivate')
-async def motivate(data: JobSpecDep, params: Annotated[MotivationParams, Form()]):
+def motivate(data: JobSpecDep, params: Annotated[MotivationParams, Form()]):
     job, type, id = data
     job.motivate_link(
         id, type, params.motivation,
@@ -63,13 +63,13 @@ async def motivate(data: JobSpecDep, params: Annotated[MotivationParams, Form()]
 
 
 @router.get('/cluster/{cluster_id}/graph')
-async def cluster_graph_data(data: JobSpecDep, cluster_id: int):
+def cluster_graph_data(data: JobSpecDep, cluster_id: int):
     job, type, id = data
     return job.visualize(id, type, cluster_id)
 
 
 @router.get('/csv')
-async def csv_export(data: JobSpecDep, params: Annotated[LinksValidationFilterParams, Query()]):
+def csv_export(data: JobSpecDep, params: Annotated[LinksValidationFilterParams, Query()]):
     job, type, id = data
     export = CsvExport(job, type, id)
     export_generator = export.create_generator(Validation.get(params.valid))
@@ -82,7 +82,7 @@ async def csv_export(data: JobSpecDep, params: Annotated[LinksValidationFilterPa
 
 
 @router.get('/rdf')
-async def rdf_export(data: JobSpecDep, user: UserDep,
+def rdf_export(data: JobSpecDep, user: UserDep,
                      valid: list[Literal['all', 'accepted', 'rejected', 'uncertain', 'unchecked', 'disputed']] = None,
                      export_linkset: bool = True, export_metadata: bool = True,
                      export_validation_set: bool = True, export_cluster_set: bool = True,

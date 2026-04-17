@@ -8,7 +8,7 @@ router = APIRouter(prefix='/mappings', tags=['mappings'], dependencies=[Depends(
 
 
 @router.post('', status_code=201)
-async def create(type: Annotated[Literal['jsonld'], Form()],
+def create(type: Annotated[Literal['jsonld'], Form()],
                  url: Annotated[str, Form()] = None, file: UploadFile = None):
     if not url and not file:
         raise HTTPException(status_code=400, detail='You must provide either an URL or upload a file')
@@ -19,6 +19,6 @@ async def create(type: Annotated[Literal['jsonld'], Form()],
 
 
 @router.get('/{mapping_id:path}')
-async def mapping(mapping_id: str):
+def mapping(mapping_id: str):
     mapping = Mapping(mapping_id)
     return mapping.map

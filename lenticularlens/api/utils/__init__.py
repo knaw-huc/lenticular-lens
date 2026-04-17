@@ -12,7 +12,7 @@ async def index():
 
 
 @router.get('/stopwords/{dictionary}')
-async def stopwords(dictionary: str):
+def stopwords(dictionary: str):
     try:
         return get_stopwords(dictionary)
     except:
@@ -20,7 +20,7 @@ async def stopwords(dictionary: str):
 
 
 @router.get('/methods')
-async def methods():
+def methods():
     filter_functions_info = get_filter_functions()
     matching_methods_info = get_matching_methods()
     transformers_info = get_transformers()

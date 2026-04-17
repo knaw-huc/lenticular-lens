@@ -20,7 +20,7 @@ class ClustersTotalsParams(BasicFilterParams, LinksFilterParams, ClustersFilterP
 
 
 @router.post('')
-async def clusters(data: JobSpecDep, params: Annotated[ClustersParams, Form()]):
+def clusters(data: JobSpecDep, params: Annotated[ClustersParams, Form()]):
     job, type, id = data
     return job.get_clusters(
         id, type,
@@ -43,7 +43,7 @@ async def clusters(data: JobSpecDep, params: Annotated[ClustersParams, Form()]):
 
 
 @router.get('', response_class=PlainTextResponse)
-async def clusters_sql(data: JobSpecDep, params: Annotated[ClustersParams, Query()]):
+def clusters_sql(data: JobSpecDep, params: Annotated[ClustersParams, Query()]):
     job, type, id = data
     result = job.get_clusters(
         id, type,
@@ -67,7 +67,7 @@ async def clusters_sql(data: JobSpecDep, params: Annotated[ClustersParams, Query
 
 
 @router.post('/totals')
-async def totals(data: JobSpecDep, params: Annotated[ClustersTotalsParams, Form()]):
+def totals(data: JobSpecDep, params: Annotated[ClustersTotalsParams, Form()]):
     job, type, id = data
     return job.get_clusters_totals(
         id, type,
@@ -85,7 +85,7 @@ async def totals(data: JobSpecDep, params: Annotated[ClustersTotalsParams, Form(
 
 
 @router.get('/totals', response_class=PlainTextResponse)
-async def totals_sql(data: JobSpecDep, params: Annotated[ClustersTotalsParams, Query()]):
+def totals_sql(data: JobSpecDep, params: Annotated[ClustersTotalsParams, Query()]):
     job, type, id = data
     result = job.get_clusters_totals(
         id, type,
@@ -104,7 +104,7 @@ async def totals_sql(data: JobSpecDep, params: Annotated[ClustersTotalsParams, Q
 
 
 @router.post('/run')
-async def run(data: JobSpecDep):
+def run(data: JobSpecDep):
     try:
         job, type, id = data
         job.run_clustering(id, type)
@@ -113,6 +113,6 @@ async def run(data: JobSpecDep):
 
 
 @router.post('/kill')
-async def kill(data: JobSpecDep):
+def kill(data: JobSpecDep):
     job, type, id = data
     job.kill_clustering(id, type)

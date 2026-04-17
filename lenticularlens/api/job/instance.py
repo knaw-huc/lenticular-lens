@@ -11,7 +11,7 @@ router.include_router(job_ets_router)
 
 
 @router.get('')
-async def data(job: JobDep, user: UserDep):
+def data(job: JobDep, user: UserDep):
     if user and (not job.data['users'] or user.user_id not in job.data['users']):
         user.register_job(job.data['job_id'], 'shared')
 
@@ -63,15 +63,15 @@ def delete(job: JobDep):
 
 
 @router.get('/linksets')
-async def linksets(job: JobDep):
+def linksets(job: JobDep):
     return job.linksets
 
 
 @router.get('/lenses')
-async def lenses(job: JobDep):
+def lenses(job: JobDep):
     return job.lenses
 
 
 @router.get('/clusterings')
-async def clusterings(job: JobDep):
+def clusterings(job: JobDep):
     return job.clusterings

@@ -7,7 +7,6 @@ from starlette.requests import Request
 from lenticularlens.api.oauth import oauth
 from lenticularlens.job.job import Job
 from lenticularlens.job.user import User
-from lenticularlens.job.validation import Validation
 
 
 def authenticated(request: Request):

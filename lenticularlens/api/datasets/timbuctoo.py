@@ -8,16 +8,16 @@ router = APIRouter(prefix='/timbuctoo', tags=['timbuctoo'])
 
 
 @router.get('')
-async def datasets(graphql_endpoint: str):
+def datasets(graphql_endpoint: str):
     return Dataset.get_datasets_for_graphql(graphql_endpoint)
 
 
 @router.post('')
-async def download(graphql_endpoint: Annotated[str, Form()], timbuctoo_id: Annotated[str, Form()],
+def download(graphql_endpoint: Annotated[str, Form()], timbuctoo_id: Annotated[str, Form()],
                    entity_type_id: Annotated[str, Form()]):
     EntityType.start_download(graphql_endpoint, timbuctoo_id, entity_type_id)
 
 
 @router.get('/downloads')
-async def downloads():
+def downloads():
     return Dataset.get_downloads()

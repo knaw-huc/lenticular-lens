@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "lenticular-lens"
-version = "1.27"
+version = "1.28"
 description = ""
 readme = "readme.md"
 package-mode = false
@@ -9,21 +9,21 @@ packages = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.13"
-fastapi = "^0.135.1"
-uvicorn = "^0.42.0"
-python-multipart = "^0.0.22"
-authlib = "^1.6.5"
+python = "^3.14.3"
+fastapi = "^0.136.0"
+uvicorn = "^0.44.0"
+python-multipart = "^0.0.26"
+authlib = "^1.6.11"
 python-socketio = "^5.14.2"
 brotli-asgi = "^1.4.0"
 cachetools = "^7.0.5"
 schema = "^0.7.7"
 kitchen = "^1.2.6"
-psycopg = { version = "^3.2.10", extras = ["binary"] }
-psycopg_pool = "^3.2.1"
-networkx = "^3.6"
+psycopg = { version = "^3.3.3", extras = ["binary"] }
+psycopg_pool = "^3.3.0"
+networkx = "^3.6.1"
 pyyaml = "^6.0.3"
-pydantic = "^2.11.10"
+pydantic = "^2.13.1"
 python-intervals = "^1.10.0.post1"
 rdflib = "^7.2.1"
 requests = "^2.32.4"
@@ -33,7 +33,7 @@ urllib3 = "^2.5.0"
 anytree = "^2.12.1"
 itsdangerous = "^2.2.0"
 httpx = "^0.28.1"
-pyld = "^2.0.4"
+pyld = "^3.0.0"
 sparqlwrapper = "^2.0.0"
 
 [build-system]
