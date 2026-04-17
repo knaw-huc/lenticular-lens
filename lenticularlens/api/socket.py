@@ -2,8 +2,9 @@ from os import environ
 from json import loads
 from logging import getLogger
 
+from psycopg import Notify
 from socketio import AsyncServer
-from asyncio import create_task, Queue
+from asyncio import create_task, CancelledError
 from contextlib import asynccontextmanager
 
 from lenticularlens.util.db_functions import reset
@@ -16,30 +17,31 @@ sio = AsyncServer(cors_allowed_origins='*', namespaces='*', async_mode='asgi',
                   logger=enable_logger, engineio_logger=enable_logger)
 
 
-async def emit_database_events(queue: Queue):
-    while True:
-        notify = await queue.get()
-        if notify.channel == 'extension_update':
-            reset()
+async def start_listener():
+    await listen_for_notify(handle_notify)
 
-        ns = '' if (notify.channel == 'extension_update' or
-                    notify.channel.startswith('timbuctoo_') or notify.channel.startswith('sparql_')) \
-            else loads(notify.payload)['job_id']
 
-        await sio.emit(notify.channel, notify.payload, namespace=f'/{ns}')
-        queue.task_done()
+async def handle_notify(notify: Notify):
+    if notify.channel == 'extension_update':
+        reset()
 
-        log.debug(f'WebSocket emit on /{ns}: {notify.channel} = {notify.payload}')
+    ns = '' if (notify.channel == 'extension_update' or
+                notify.channel.startswith('timbuctoo_') or notify.channel.startswith('sparql_')) \
+        else loads(notify.payload)['job_id']
+
+    await sio.emit(notify.channel, notify.payload, namespace=f'/{ns}')
+
+    log.debug(f'WebSocket emit on /{ns}: {notify.channel} = {notify.payload}')
 
 
 @asynccontextmanager
 async def fastapi_lifespan(_app):
-    queue = Queue()
-    listener_task = create_task(listen_for_notify(queue))
-    emitter_task = create_task(emit_database_events(queue))
+    task = create_task(start_listener())
 
     yield
 
-    emitter_task.cancel()
-    listener_task.cancel()
-    queue.shutdown()
+    task.cancel()
+    try:
+        await task
+    except CancelledError:
+        pass

@@ -1,5 +1,6 @@
 from os import environ
-from asyncio import Queue
+from asyncio import sleep
+
 from psycopg import AsyncConnection
 from psycopg_pool import ConnectionPool
 
@@ -28,15 +29,31 @@ def fetch_many(cur, size=2000):
             yield result
 
 
-async def listen_for_notify(queue: Queue):
-    conn = await AsyncConnection.connect(conn_info, autocommit=True)
-    await conn.execute('LISTEN extension_update; LISTEN job_update; '
-                       'LISTEN sparql_delete; LISTEN timbuctoo_delete; '
-                       'LISTEN sparql_load_update; LISTEN sparql_load_delete; '
-                       'LISTEN sparql_status_update; LISTEN timbuctoo_status_update; '
-                       'LISTEN sparql_update; LISTEN timbuctoo_update; '
-                       'LISTEN alignment_update; LISTEN clustering_update; '
-                       'LISTEN alignment_delete; LISTEN clustering_delete;')
+CHANNELS_LISTEN = """
+LISTEN extension_update;
+LISTEN job_update;
+LISTEN sparql_delete;
+LISTEN timbuctoo_delete;
+LISTEN sparql_load_update;
+LISTEN sparql_load_delete;
+LISTEN sparql_status_update;
+LISTEN timbuctoo_status_update;
+LISTEN sparql_update;
+LISTEN timbuctoo_update;
+LISTEN alignment_update;
+LISTEN clustering_update;
+LISTEN alignment_delete;
+LISTEN clustering_delete;
+"""
 
-    async for notify in conn.notifies():
-        await queue.put(notify)
+
+async def listen_for_notify(handler):
+    while True:
+        try:
+            conn = await AsyncConnection.connect(conn_info, autocommit=True)
+            await conn.execute(CHANNELS_LISTEN)
+
+            async for notify in conn.notifies():
+                await handler(notify)
+        except Exception:
+            await sleep(1)
