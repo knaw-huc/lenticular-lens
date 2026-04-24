@@ -1,3 +1,5 @@
+from json import dumps
+from hashlib import md5
 from psycopg import sql
 
 from lenticularlens.job.property_field import PropertyField
@@ -11,6 +13,7 @@ class View:
     def __init__(self, data, job):
         self._data = data
         self._job = job
+        self._datasets = dict()
 
     @property
     def id(self):
@@ -32,7 +35,7 @@ class View:
     def properties_per_entity_type(self):
         properties = dict()
         for dataset_props in self._data['properties']:
-            entity_type = DatasetReference(dataset_props['dataset']).entity_type
+            entity_type = self._with_dataset(dataset_props['dataset']).entity_type
             properties[entity_type] = list(dict.fromkeys([PropertyField(prop, entity_type=entity_type)
                                                           for prop in dataset_props['properties']]))
 
@@ -68,11 +71,21 @@ class View:
     def prefix_mappings(self):
         return self._data['prefix_mappings']
 
+    def _with_dataset(self, dataset_ref):
+        hasher = md5()
+        encoded = dumps(dataset_ref, sort_keys=True).encode()
+        hasher.update(encoded)
+
+        hash = hasher.hexdigest()
+        if hash not in self._datasets:
+            self._datasets[hash] = DatasetReference(dataset_ref)
+        return self._datasets[hash]
+
     def _with_filters_per_entity_type(self, with_conditions, with_filter_function=None):
         filters = dict()
         for dataset_filter in self._data['filters']:
             if dataset_filter['filter']:
-                entity_type = DatasetReference(dataset_filter['dataset']).entity_type
+                entity_type = self._with_dataset(dataset_filter['dataset']).entity_type
                 filters[entity_type] = self._r_filters(dataset_filter['filter'], entity_type,
                                                        with_conditions, with_filter_function)
 

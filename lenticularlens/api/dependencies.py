@@ -85,10 +85,6 @@ class LinksValidationFilterParams(BaseModel):
     valid: list[Literal['all', 'accepted', 'rejected', 'uncertain', 'unchecked', 'disputed']] = ['all']
 
 
-class ClustersNodesFilterParams(BaseModel):
-    include_nodes: bool = False
-
-
 class DefaultSortParams(BaseModel):
     sort: Literal['asc', 'desc'] = 'asc'
 

@@ -4,14 +4,14 @@ from fastapi import APIRouter, Form, Query, HTTPException
 from fastapi.responses import PlainTextResponse
 
 from lenticularlens.api.dependencies import JobSpecDep, BasicFilterParams, ClustersFilterParams, PagingParams, \
-    LinksFilterParams, ClustersNodesFilterParams, LinksPropertiesFilterParams, ClustersSortParams
+    LinksFilterParams, LinksPropertiesFilterParams, ClustersSortParams
 from lenticularlens.util.helpers import get_string_from_sql
 
 router = APIRouter(prefix='/clusters', tags=['clusters'])
 
 
 class ClustersParams(BasicFilterParams, LinksFilterParams, LinksPropertiesFilterParams, ClustersFilterParams,
-                     ClustersNodesFilterParams, ClustersSortParams, PagingParams):
+                     ClustersSortParams, PagingParams):
     pass
 
 
@@ -38,7 +38,6 @@ def clusters(data: JobSpecDep, params: Annotated[ClustersParams, Form()]):
         offset=params.offset,
         with_view_properties=params.with_properties,
         with_view_filters=params.apply_filters,
-        include_nodes=params.include_nodes,
     )
 
 
@@ -61,7 +60,6 @@ def clusters_sql(data: JobSpecDep, params: Annotated[ClustersParams, Query()]):
         offset=params.offset,
         with_view_properties=params.with_properties,
         with_view_filters=params.apply_filters,
-        include_nodes=params.include_nodes,
     )
     return get_string_from_sql(result)
 

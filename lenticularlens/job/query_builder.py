@@ -13,10 +13,10 @@ class QueryBuilder:
         self._queries = []
 
     def add_query(self, dataset_ref, resource, target, filter_properties, selection_properties,
-                  condition=None, invert=False, single_value=False, limit=None, offset=0):
+                  condition=None, invert=False, single_value=False, group_on_uri=True, limit=None, offset=0):
         query = self.create_query(resource, target, filter_properties, selection_properties,
                                   condition=condition, invert=invert, single_value=single_value,
-                                  limit=limit, offset=offset)
+                                  group_on_uri=group_on_uri, limit=limit, offset=offset)
         if query:
             self._queries.append({
                 'dataset': dataset_ref,
@@ -57,8 +57,8 @@ class QueryBuilder:
         return property_values
 
     @staticmethod
-    def create_query(resource, target, filter_properties=None, selection_properties=None,
-                     condition=None, extra_join=None, invert=False, single_value=False, limit=None, offset=0):
+    def create_query(resource, target, filter_properties=None, selection_properties=None, condition=None,
+                     extra_join=None, invert=False, single_value=False, group_on_uri=True, limit=None, offset=0):
         filtered_filter_properties = [prop for prop in filter_properties if prop.is_downloaded] \
             if filter_properties else []
         filtered_selection_properties = [prop for prop in selection_properties if prop.is_downloaded] \
@@ -67,6 +67,11 @@ class QueryBuilder:
         selection_sqls = QueryBuilder.get_selection_sqls(filtered_selection_properties, single_value)
         selection_sql = sql.Composed([sql.SQL(', '), sql.SQL(', ').join(selection_sqls)]) \
             if selection_sqls else sql.SQL('')
+
+        uri_selection_sql = sql.SQL('{resource}.uri AS uri').format(resource=sql.Identifier(resource)) \
+            if group_on_uri else sql.SQL('array_agg(DISTINCT {resource}.uri) AS uri').format(resource=sql.Identifier(resource))
+        group_by_sql = sql.SQL('GROUP BY {resource}.uri').format(resource=sql.Identifier(resource)) \
+            if group_on_uri else sql.SQL('')
 
         condition_sql = sql.SQL('')
         if condition and condition != sql.SQL(''):
@@ -84,7 +89,7 @@ class QueryBuilder:
 
         if limit or offset:
             return sql.SQL(cleandoc('''
-                SELECT {resource}.uri AS uri {selection}
+                SELECT {uri_selection} {selection}
                 FROM entity_types_data.{table_name} AS {resource} 
                 {selection_joins}
                 WHERE {resource}.uri IN (
@@ -95,33 +100,36 @@ class QueryBuilder:
                     GROUP BY {resource}.uri
                     ORDER BY {resource}.uri ASC {limit_offset}
                 )
-                GROUP BY {resource}.uri
+                {group_by}
                 ORDER BY {resource}.uri
             ''')).format(
                 resource=sql.Identifier(resource),
+                uri_selection=uri_selection_sql,
                 selection=selection_sql,
                 table_name=sql.Identifier(target),
                 selection_joins=selection_joins.sql,
                 filter_joins=filter_joins.sql,
                 condition=condition_sql,
-                limit_offset=sql.SQL(get_pagination_sql(limit, offset))
+                limit_offset=sql.SQL(get_pagination_sql(limit, offset)),
+                group_by=group_by_sql,
             )
 
         selection_joins.merge(filter_joins)
 
         return sql.SQL(cleandoc('''
-            SELECT {resource}.uri AS uri {selection}
+            SELECT {uri_selection} {selection}
             FROM entity_types_data.{table_name} AS {resource} 
             {joins}
             {condition}
-            GROUP BY {resource}.uri
+            {group_by}
         ''')).format(
             resource=sql.Identifier(resource),
+            uri_selection=uri_selection_sql,
             selection=selection_sql,
             table_name=sql.Identifier(target),
             joins=selection_joins.sql,
             condition=condition_sql,
-            limit_offset=sql.SQL(get_pagination_sql(limit, offset))
+            group_by=group_by_sql,
         )
 
     @staticmethod

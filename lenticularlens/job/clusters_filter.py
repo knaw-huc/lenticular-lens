@@ -25,41 +25,35 @@ class ClustersFilter:
             filters.append(self._min_max_links_sql)
 
         if filters:
-            return sql.SQL('HAVING {}').format(sql.SQL(' AND ').join(filters))
+            return sql.SQL('WHERE {}').format(sql.SQL(' AND ').join(filters))
 
         return sql.SQL('')
 
     @property
     def _min_max_size_sql(self):
-        min_sql = sql.SQL('count(DISTINCT nodes) >= {}').format(sql.Literal(self._min_size)) \
+        min_sql = sql.SQL('size >= {}').format(sql.Literal(self._min_size)) \
             if self._min_size is not None and self._min_size > 0 else None
 
-        max_sql = sql.SQL('count(DISTINCT nodes) <= {}').format(sql.Literal(self._max_size)) \
+        max_sql = sql.SQL('size <= {}').format(sql.Literal(self._max_size)) \
             if self._max_size is not None else None
 
         if min_sql and max_sql:
             return sql.Composed([min_sql, sql.SQL(' AND '), max_sql])
-        if min_sql:
-            return min_sql
-        if max_sql:
-            return max_sql
-        return None
+
+        return min_sql or max_sql
 
     @property
     def _min_max_links_sql(self):
-        min_sql = sql.SQL('count(valid) / 2 >= {}').format(sql.Literal(self._min_count)) \
+        min_sql = sql.SQL('total_links >= {}').format(sql.Literal(self._min_count)) \
             if self._min_count is not None and self._min_count > 0 else None
 
-        max_sql = sql.SQL('count(valid) / 2 <= {}').format(sql.Literal(self._max_count)) \
+        max_sql = sql.SQL('total_links <= {}').format(sql.Literal(self._max_count)) \
             if self._max_count is not None else None
 
         if min_sql and max_sql:
             return sql.Composed([min_sql, sql.SQL(' AND '), max_sql])
-        if min_sql:
-            return min_sql
-        if max_sql:
-            return max_sql
-        return None
+
+        return min_sql or max_sql
 
     @staticmethod
     def create(min_size=None, max_size=None, min_count=None, max_count=None):
