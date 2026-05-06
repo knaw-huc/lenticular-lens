@@ -1,6 +1,5 @@
 from uuid import uuid4
 from inspect import cleandoc
-
 from psycopg import sql, rows
 
 from lenticularlens.job.query_builder import QueryBuilder
@@ -59,8 +58,12 @@ class LinksetBuilder:
         return sql.SQL(cleandoc('''
             SELECT valid, count(*) AS valid_count 
             {linkset_from}
+            {linkset_view_filters}
             GROUP BY valid
-        ''')).format(linkset_from=self.get_linkset_from_sql(with_view_filters=with_view_filters))
+        ''')).format(
+            linkset_from=self.get_linkset_from_sql(),
+            linkset_view_filters=get_sql_empty(self.get_linkset_view_filters(), flag=with_view_filters),
+        )
 
     def get_total_clusters(self, with_view_filters=False):
         with conn_pool.connection() as conn, conn.cursor(row_factory=rows.dict_row) as cur:
@@ -125,12 +128,14 @@ class LinksetBuilder:
                    {selection_sql}
             {linkset_from}
             {props_joins_sql}
+            {linkset_view_filters}
             {sort_sql}
             {pagination_sql}
         ''')).format(
             selection_sql=selection_sql,
-            linkset_from=self.get_linkset_from_sql(with_view_filters=with_view_filters),
+            linkset_from=self.get_linkset_from_sql(),
             props_joins_sql=props_joins_sql,
+            linkset_view_filters=get_sql_empty(self.get_linkset_view_filters(), flag=with_view_filters),
             sort_sql=self.get_linkset_sort_sql(),
             pagination_sql=self.get_linkset_pagination_sql(),
         )
@@ -207,21 +212,20 @@ class LinksetBuilder:
             limit_offset=sql.SQL(get_pagination_sql(self._limit, self._offset)),
         )
 
-    def get_linkset_from_sql(self, with_view_filters=False):
-        use_filters = bool(with_view_filters and self._view.filters_per_entity_type)
+    def get_linkset_from_sql(self):
+        return sql.SQL('FROM {schema}.{view_name} AS linkset').format(
+            schema=sql.Identifier(self._schema),
+            view_name=sql.Identifier(self._table_name),
+        )
 
-        filter_laterals_sql = get_sql_empty(self._filter_laterals_sql, flag=use_filters)
-        where_sql = self._links_filter.sql(additional_filter=self._additional_filter_sql if use_filters else None)
-
+    def get_linkset_view_filters(self):
         return sql.SQL(cleandoc('''
-            FROM {schema}.{view_name} AS linkset
             {filter_laterals_sql}
             {where_sql}
         ''')).format(
-            schema=sql.Identifier(self._schema),
-            view_name=sql.Identifier(self._table_name),
-            filter_laterals_sql=filter_laterals_sql,
-            where_sql=where_sql,
+            filter_laterals_sql=get_sql_empty(self._filter_laterals_sql, flag=self._view.filters_per_entity_type),
+            where_sql=self._links_filter.sql(
+                additional_filter=self._additional_filter_sql if self._view.filters_per_entity_type else None),
         )
 
     def get_linkset_sort_sql(self):
@@ -246,6 +250,7 @@ class LinksetBuilder:
                             'disputed',  count(*) FILTER (WHERE valid = 'disputed')
                        ) AS links
                 {linkset_from}
+                {linkset_view_filters}
                 GROUP BY cluster_id
             ), cluster_sizes AS (
                 SELECT cluster_id, count(DISTINCT uri) AS size
@@ -253,14 +258,17 @@ class LinksetBuilder:
                 FROM (
                     SELECT cluster_id, source_uri AS uri
                     {linkset_from}
+                    {linkset_view_filters}
                     UNION
                     SELECT cluster_id, target_uri AS uri
                     {linkset_from}
+                    {linkset_view_filters}
                 ) u
                 GROUP BY cluster_id
             )
         ''')).format(
-            linkset_from=self.get_linkset_from_sql(with_view_filters=with_view_filters),
+            linkset_from=self.get_linkset_from_sql(),
+            linkset_view_filters=get_sql_empty(self.get_linkset_view_filters(), flag=with_view_filters),
             limited_nodes_sql=get_sql_empty(sql.SQL(', (array_agg(DISTINCT uri))[1:50] AS limited_nodes'),
                                             with_limited_nodes),
             all_nodes_sql=get_sql_empty(sql.SQL(', array_agg(DISTINCT uri) AS nodes'), with_all_nodes),

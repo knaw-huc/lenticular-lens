@@ -200,24 +200,21 @@ class MatchingSql:
                 {sim_condition_sql};
                 
                 ALTER TABLE linksets.{linkset}
-                ADD PRIMARY KEY (source_uri, target_uri),
-                ADD COLUMN cluster_id integer,
-                ADD COLUMN cluster_hash_id char(15),
-                ADD COLUMN valid link_validity DEFAULT 'unchecked' NOT NULL,
-                ADD COLUMN motivation text;
+                    ADD PRIMARY KEY (source_uri, target_uri),
+                    ADD COLUMN cluster_id integer,
+                    ADD COLUMN cluster_hash_id char(15),
+                    ADD COLUMN valid link_validity DEFAULT 'unchecked' NOT NULL,
+                    ADD COLUMN motivation text,
+                    ADD COLUMN sort_order serial;
 
-                ALTER TABLE linksets.{linkset} ADD COLUMN sort_order serial;
-
-                CREATE INDEX ON linksets.{linkset} USING hash (source_uri);
                 CREATE INDEX ON linksets.{linkset} USING hash (target_uri);
-                CREATE INDEX ON linksets.{linkset} USING hash (valid);
+                CREATE INDEX ON linksets.{linkset} USING btree (similarity, sort_order);
+                CREATE INDEX ON linksets.{linkset} USING btree (valid, similarity);
 
-                CREATE INDEX ON linksets.{linkset} USING btree (cluster_id);
-                CREATE INDEX ON linksets.{linkset} USING btree (similarity);
-                CREATE INDEX ON linksets.{linkset} USING btree (sort_order);
-                CREATE INDEX ON linksets.{linkset} USING btree (sort_order, similarity) 
-                    INCLUDE (source_uri, target_uri, link_order, source_collections, target_collections, 
-                             source_intermediates, target_intermediates, cluster_id, cluster_hash_id, valid, motivation);
+                CREATE INDEX ON linksets.{linkset} USING btree (cluster_id) INCLUDE (cluster_hash_id, valid);
+                CREATE INDEX ON linksets.{linkset} USING btree (cluster_id, source_uri);
+                CREATE INDEX ON linksets.{linkset} USING btree (cluster_id, target_uri);
+                CREATE INDEX ON linksets.{linkset} USING btree (cluster_id, similarity);
 
                 ANALYZE linksets.{linkset};
             """
