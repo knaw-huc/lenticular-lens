@@ -20,14 +20,15 @@ class ClassInfo(TypedDict):
 
 
 class SPARQLClassesJob(WorkerJob):
-    def __init__(self, dataset_id, sparql_endpoint):
+    def __init__(self, dataset_id, sparql_endpoint, graph):
         self._dataset_id = dataset_id
         self._sparql_endpoint = sparql_endpoint
+        self._graph = graph
 
         super().__init__(self.run_sparql_query)
 
     def run_sparql_query(self):
-        sparql = SPARQL(self._sparql_endpoint)
+        sparql = SPARQL(self._sparql_endpoint, self._graph)
 
         classes = []
         try:

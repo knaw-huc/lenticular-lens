@@ -43,7 +43,7 @@ class Dataset(BaseModel):
         pass
 
     @staticmethod
-    def _datasets_from_database(type: Literal['timbuctoo', 'sparql', 'rdf'], join: str, params: Sequence[str],
+    def _datasets_from_database(type: Literal['timbuctoo', 'sparql', 'rdf'], join: str, params: Sequence[str | None],
                                 dataset_id_column: str, columns: List[str]) -> Dict[str, DatasetInfo]:
         with conn_pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
             cur.execute('SELECT entity_type_properties.* '

@@ -1,3 +1,4 @@
+from typing import Optional
 from fastapi import APIRouter, Form
 from typing_extensions import Annotated
 
@@ -8,18 +9,19 @@ router = APIRouter(prefix='/sparql', tags=['sparql'])
 
 
 @router.get('')
-def datasets(sparql_endpoint: str):
-    return Dataset.get_datasets_for_sparql(sparql_endpoint)
+def datasets(sparql_endpoint: str, graph: Optional[str] = None):
+    return Dataset.get_datasets_for_sparql(sparql_endpoint, graph)
 
 
 @router.post('/load')
-def load(sparql_endpoint: Annotated[str, Form()]):
-    Dataset.load_datasets_for_sparql(sparql_endpoint)
+def load(sparql_endpoint: Annotated[str, Form()], graph: Annotated[Optional[str], Form()]):
+    Dataset.load_datasets_for_sparql(sparql_endpoint, graph)
 
 
 @router.post('')
-def download(sparql_endpoint: Annotated[str, Form()], entity_type_id: Annotated[str, Form()]):
-    EntityType.start_download(sparql_endpoint, entity_type_id)
+def download(sparql_endpoint: Annotated[str, Form()], graph: Annotated[Optional[str], Form()],
+             entity_type_id: Annotated[str, Form()]):
+    EntityType.start_download(sparql_endpoint, graph, entity_type_id)
 
 
 @router.get('/downloads')

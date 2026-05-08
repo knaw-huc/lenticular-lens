@@ -98,8 +98,9 @@ CREATE TABLE IF NOT EXISTS sparql
 (
     dataset_id      text primary key references datasets (dataset_id),
     sparql_endpoint text    not null,
+    graph           text,
     status          text    not null,
-    UNIQUE (sparql_endpoint)
+    UNIQUE (sparql_endpoint, graph)
 );
 
 CREATE TABLE IF NOT EXISTS entity_types

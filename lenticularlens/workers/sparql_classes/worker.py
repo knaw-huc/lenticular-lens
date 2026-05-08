@@ -12,7 +12,8 @@ class SPARQLClassesWorker(Worker):
 
     def _create_job(self):
         self._job = SPARQLClassesJob(dataset_id=self._job_data['dataset_id'],
-                                     sparql_endpoint=self._job_data['sparql_endpoint'])
+                                     sparql_endpoint=self._job_data['sparql_endpoint'],
+                                     graph=self._job_data['graph'])
 
     def _update_status(self, cur):
         cur.execute("UPDATE sparql SET status = 'running' WHERE dataset_id = %s", (self._job_data['dataset_id'],))

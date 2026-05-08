@@ -1,6 +1,7 @@
 import time
 import logging
 
+from typing import Optional
 from SPARQLWrapper import SPARQLWrapper2
 from SPARQLWrapper.SmartWrapper import Value
 
@@ -8,8 +9,9 @@ log = logging.getLogger(__name__)
 
 
 class SPARQL:
-    def __init__(self, sparql_url: str):
+    def __init__(self, sparql_url: str, graph: Optional[str] = None):
         self._sparql_url = sparql_url
+        self._graph = graph
 
     def fetch(self, query: str, retry: bool = True, timeout=600) -> list[dict[str, Value]]:
         try:
@@ -18,6 +20,9 @@ class SPARQL:
             sparql.setRequestMethod('postdirectly')
             sparql.setTimeout(timeout)
             sparql.setQuery(query)
+
+            if self._graph is not None:
+                sparql.addParameter('default' if self._graph == 'default' else 'graph', self._graph)
 
             return sparql.query().bindings
         except Exception as e:

@@ -16,7 +16,7 @@ class DatasetReference:
             if self.type == 'timbuctoo':
                 self._dataset = TimbuctooDataset(self._data['graphql_endpoint'], self._data['timbuctoo_id'])
             elif self.type == 'sparql':
-                self._dataset = SparqlDataset(self._data['sparql_endpoint'])
+                self._dataset = SparqlDataset(self._data['sparql_endpoint'], self._data.get('graph'))
 
         if self._dataset is not None:
             return self._dataset.entity_types.get(self._data['entity_type_id'])

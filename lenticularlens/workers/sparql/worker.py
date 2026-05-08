@@ -25,6 +25,7 @@ class SPARQLWorker(Worker):
     def _create_job(self):
         self._job = SPARQLJob(table_name=self._job_data['table_name'],
                               sparql_endpoint=self._job_data['sparql_endpoint'],
+                              graph=self._job_data['graph'],
                               entity_type_id=self._job_data['entity_type_id'],
                               cursor=self._job_data['cursor'],
                               rows_count=self._job_data['rows_count'],
