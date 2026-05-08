@@ -208,13 +208,14 @@ class MatchingSql:
                     ADD COLUMN sort_order serial;
 
                 CREATE INDEX ON linksets.{linkset} USING hash (target_uri);
+
                 CREATE INDEX ON linksets.{linkset} USING btree (similarity, sort_order);
                 CREATE INDEX ON linksets.{linkset} USING btree (valid, similarity);
 
-                CREATE INDEX ON linksets.{linkset} USING btree (cluster_id) INCLUDE (cluster_hash_id, valid);
                 CREATE INDEX ON linksets.{linkset} USING btree (cluster_id, source_uri);
                 CREATE INDEX ON linksets.{linkset} USING btree (cluster_id, target_uri);
                 CREATE INDEX ON linksets.{linkset} USING btree (cluster_id, similarity);
+                CREATE INDEX ON linksets.{linkset} USING btree (cluster_id) INCLUDE (cluster_hash_id, valid);
 
                 ANALYZE linksets.{linkset};
             """

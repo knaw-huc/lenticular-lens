@@ -45,6 +45,10 @@ class Linkset:
                             if matching_method.is_intermediate})
 
     @property
+    def entity_type_selections_ids(self):
+        return {ets_id for ets_id in self._data['sources']}.union({ets_id for ets_id in self._data['targets']})
+
+    @property
     def entity_type_selections(self):
         return self.sources.union(self.targets)
 
