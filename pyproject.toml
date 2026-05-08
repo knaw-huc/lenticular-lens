@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "lenticular-lens"
-version = "1.29"
+version = "1.30"
 description = ""
 readme = "readme.md"
 package-mode = false
@@ -12,7 +12,7 @@ packages = [
 python = "^3.14.3"
 fastapi = "^0.136.1"
 uvicorn = "^0.46.0"
-python-multipart = "^0.0.26"
+python-multipart = "^0.0.27"
 authlib = "^1.7.0"
 python-socketio = "^5.14.2"
 brotli-asgi = "^1.4.0"
@@ -28,6 +28,8 @@ urllib3 = "^2.5.0"
 anytree = "^2.12.1"
 pyld = "^3.0.0"
 sparqlwrapper = "^2.0.0"
+itsdangerous = "^2.2.0"
+httpx = "^0.28.1"
 
 [build-system]
 requires = ["poetry-core"]
