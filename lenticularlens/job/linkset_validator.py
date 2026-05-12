@@ -9,7 +9,8 @@ class LinksetValidator:
         self._job = job
         self._type = type
         self._spec = spec
-        self._from_sql = linkset_builder.get_linkset_from_sql(with_view_filters=with_view_filters)
+        self._from_sql = linkset_builder.get_linkset_from_sql()
+        self._filters_sql = linkset_builder.get_linkset_view_filters() if with_view_filters else sql.SQL('')
 
     def validate(self, valid):
         if self._type == 'lens':
@@ -22,16 +23,14 @@ class LinksetValidator:
 
         with conn_pool.connection() as conn, conn.cursor() as cur:
             cur.execute(sql.SQL('''
-                UPDATE {schema}.{table_name} AS ls
+                UPDATE {schema}.{table_name} AS linkset
                 SET motivation = {motivation}
-                {from_sql}
-                WHERE ls.source_uri = linkset.source_uri
-                AND ls.target_uri = linkset.target_uri
+                {filters_sql}
             ''').format(
-                from_sql=self._from_sql,
                 schema=sql.Identifier('linksets' if self._type == 'linkset' else 'lenses'),
                 table_name=sql.Identifier(self._job.table_name(self._spec.id)),
-                motivation=sql.Literal(motivation.strip())
+                motivation=sql.Literal(motivation),
+                filters_sql=self._filters_sql,
             ))
 
     def _validate_lens(self, valid):
@@ -42,10 +41,12 @@ class LinksetValidator:
                 CREATE TEMPORARY TABLE {table_name} ON COMMIT DROP AS (
                     SELECT source_uri, target_uri
                     {from_sql}
+                    {filters_sql}
                 )
             ''').format(
                 table_name=sql.Identifier(temp_table_id),
                 from_sql=self._from_sql,
+                filters_sql=self._filters_sql,
             ))
 
             # If links in a lens are updated, then also update the same links from the originating linksets/lenses
@@ -83,16 +84,14 @@ class LinksetValidator:
     def _validate_linkset(self, valid):
         with conn_pool.connection() as conn, conn.cursor() as cur:
             cur.execute(sql.SQL('''
-                UPDATE linksets.{table_name} AS ls
+                UPDATE linksets.{table_name} AS linkset
                 SET valid = {valid}
-                {from_sql}
-                WHERE ls.source_uri = linkset.source_uri
-                AND ls.target_uri = linkset.target_uri
+                {filters_sql}
             ''').format(
-                from_sql=self._from_sql,
                 table_name=sql.Identifier(self._job.table_name(self._spec.id)),
-                valid=sql.Literal(valid))
-            )
+                valid=sql.Literal(valid),
+                filters_sql=self._filters_sql,
+            ))
 
             # If links in a linkset are updated, then also update the same links from lenses based on this linkset
             # However, if the same link yield different validations among the linksets, then use 'disputed'
@@ -105,11 +104,13 @@ class LinksetValidator:
                         sql.SQL('''
                             SELECT ls.source_uri, ls.target_uri, ls.valid
                             {from_sql}
+                            {filters_sql}
                             INNER JOIN linksets.{linkset_table} AS ls
                             ON ls.source_uri = linkset.source_uri
                             AND ls.target_uri = linkset.target_uri
                         ''').format(
                             from_sql=self._from_sql,
+                            filters_sql=self._filters_sql,
                             linkset_table=sql.Identifier(self._job.table_name(linkset.id))
                         )
                         for linkset in lens_spec.linksets
