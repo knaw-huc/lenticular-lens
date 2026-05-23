@@ -13,7 +13,7 @@ from lenticularlens.workers.write_data_helper import write_data_helper
 
 class TimbuctooJob(WorkerJob):
     def __init__(self, table_name, graphql_endpoint, timbuctoo_id, entity_type_id,
-                 prefix_mappings, cursor, rows_count, rows_per_page):
+                 prefix_mappings, cursor, rows_count, rows_per_page, perform_count_check):
         self._table_name = table_name
         self._graphql_endpoint = graphql_endpoint
         self._timbuctoo_id = timbuctoo_id
@@ -22,6 +22,7 @@ class TimbuctooJob(WorkerJob):
         self._cursor = cursor
         self._rows_count = rows_count
         self._rows_per_page = rows_per_page
+        self._perform_count_check = perform_count_check
         self._uri_prefix_mappings = {}
         self._uri_prefixes = set()
         self._columns = {}
@@ -115,8 +116,8 @@ class TimbuctooJob(WorkerJob):
                 for item in query_result['items']
             ]
 
-            total_insert = write_data_helper(self._db_conn, self._cursor, query_result['nextCursor'],
-                                             self._table_name, self._rows_count, total_insert, results)
+            total_insert = write_data_helper(self._db_conn, self._cursor, query_result['nextCursor'], self._table_name,
+                                             self._rows_count, total_insert, self._perform_count_check, results)
             self._cursor = query_result['nextCursor']
 
     def determine_prefix_mappings(self):

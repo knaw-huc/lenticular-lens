@@ -1,3 +1,5 @@
+from os import environ
+
 from lenticularlens.workers.worker import Worker
 from lenticularlens.workers.sparql.job import SPARQLJob
 
@@ -29,7 +31,8 @@ class SPARQLWorker(Worker):
                               entity_type_id=self._job_data['entity_type_id'],
                               cursor=self._job_data['cursor'],
                               rows_count=self._job_data['rows_count'],
-                              rows_per_page=1000)
+                              rows_per_page=int(environ.get('ROWS_PER_PAGE', 1000)),
+                              perform_count_check=environ.get('COUNT_CHECK', 'true') == 'true')
 
     def _update_status(self, cur):
         cur.execute("""

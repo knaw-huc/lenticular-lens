@@ -1,7 +1,7 @@
 from psycopg import sql
 
 
-def write_data_helper(db_conn, cursor, next_cursor, table_name, rows_count, total_insert, results):
+def write_data_helper(db_conn, cursor, next_cursor, table_name, rows_count, total_insert, perform_count_check, results):
     with db_conn.cursor() as cur:
         cur.execute('SET search_path TO "$user", entity_types_data, public; '
                     'LOCK TABLE entity_types IN ACCESS EXCLUSIVE MODE;')
@@ -23,12 +23,14 @@ def write_data_helper(db_conn, cursor, next_cursor, table_name, rows_count, tota
                             'Someone else updated the job for table %s '
                             'while I was fetching data.' % table_name)
 
-        cur.execute(sql.SQL('SELECT count(*) FROM {}').format(sql.Identifier(table_name)))
-        table_rows = cur.fetchone()[0]
+        table_rows = rows_count + total_insert
+        if perform_count_check:
+            cur.execute(sql.SQL('SELECT count(*) FROM {}').format(sql.Identifier(table_name)))
+            table_rows = cur.fetchone()[0]
 
-        if table_rows != rows_count + total_insert:
-            raise Exception('Table %s has %i rows, expected %i. Quitting job.'
-                            % (table_name, table_rows, rows_count + total_insert))
+            if table_rows != rows_count + total_insert:
+                raise Exception('Table %s has %i rows, expected %i. Quitting job.'
+                                % (table_name, table_rows, rows_count + total_insert))
 
         if len(results) > 0:
             with cur.copy(sql.SQL('COPY {} ({}) FROM STDIN').format(

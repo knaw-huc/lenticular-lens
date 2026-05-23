@@ -14,7 +14,8 @@ from lenticularlens.util.config_db import conn_pool
 
 
 class SPARQLJob(WorkerJob):
-    def __init__(self, table_name, sparql_endpoint, graph, entity_type_id, cursor, rows_count, rows_per_page):
+    def __init__(self, table_name, sparql_endpoint, graph, entity_type_id, cursor,
+                 rows_count, rows_per_page, perform_count_check):
         self._table_name = table_name
         self._sparql_endpoint = sparql_endpoint
         self._graph = graph
@@ -22,6 +23,7 @@ class SPARQLJob(WorkerJob):
         self._cursor = int(cursor) if cursor is not None else 0
         self._rows_count = rows_count
         self._rows_per_page = rows_per_page
+        self._perform_count_check = perform_count_check
         self._endpoint = SPARQL(sparql_endpoint, graph)
         self._columns = {}
 
@@ -105,8 +107,9 @@ class SPARQLJob(WorkerJob):
                 for uri, query_results in groupby(list_query_result, lambda x: x.get('uri').value):
                     results[uri][cols['column_name']] = self.format_value(query_results, id, cols['is_list'])
 
-            total_insert = write_data_helper(self._db_conn, self._cursor, next_cursor,
-                                             self._table_name, self._rows_count, total_insert, list(results.values()))
+            total_insert = write_data_helper(self._db_conn, self._cursor, next_cursor, self._table_name,
+                                             self._rows_count, total_insert, self._perform_count_check,
+                                             list(results.values()))
             self._cursor = next_cursor
 
     def on_finish(self):

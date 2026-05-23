@@ -1,3 +1,5 @@
+from os import environ
+
 from lenticularlens.workers.worker import Worker
 from lenticularlens.workers.timbuctoo.job import TimbuctooJob
 
@@ -27,7 +29,8 @@ class TimbuctooWorker(Worker):
                                  prefix_mappings=self._job_data['prefix_mappings'],
                                  cursor=self._job_data['cursor'],
                                  rows_count=self._job_data['rows_count'],
-                                 rows_per_page=1000)
+                                 rows_per_page=int(environ.get('ROWS_PER_PAGE', 1000)),
+                                 perform_count_check=environ.get('COUNT_CHECK', 'true') == 'true')
 
     def _update_status(self, cur):
         cur.execute("""
