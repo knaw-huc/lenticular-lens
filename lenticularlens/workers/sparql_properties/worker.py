@@ -23,7 +23,8 @@ class SPARQLPropertiesWorker(Worker):
         self._job = SPARQLPropertiesJob(dataset_id=self._job_data['dataset_id'],
                                         entity_type_id=self._job_data['entity_type_id'],
                                         sparql_endpoint=self._job_data['sparql_endpoint'],
-                                        graph=self._job_data['graph'])
+                                        graph=self._job_data['graph'],
+                                        authorization=self._job_data['authorization'])
 
     def _update_status(self, cur):
         cur.execute("UPDATE entity_types SET status = 'running' "

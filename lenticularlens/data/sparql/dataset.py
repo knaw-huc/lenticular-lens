@@ -24,6 +24,7 @@ class Download(BaseModel):
 class Dataset(BaseDataset):
     sparql_endpoint: str
     graph: Optional[str]
+    authorization: Optional[str]
 
     def __init__(self, sparql_endpoint: str, graph: Optional[str]):
         with conn_pool.connection() as conn, conn.cursor(row_factory=rows.dict_row) as cur:
@@ -56,7 +57,8 @@ class Dataset(BaseDataset):
         return Dataset._from_database(sparql_endpoint, graph)
 
     @staticmethod
-    def load_datasets_for_sparql(sparql_endpoint: str, graph: Optional[str]):
+    def load_datasets_for_sparql(sparql_endpoint: str, graph: Optional[str] = None,
+                                 authorization: Optional[str] = None):
         with conn_pool.connection() as conn, conn.cursor() as cur:
             dataset_id = Dataset.generate_id(sparql_endpoint, graph)
 
@@ -66,9 +68,10 @@ class Dataset(BaseDataset):
             ''', (dataset_id, sparql_endpoint))
 
             cur.execute('''
-                INSERT INTO sparql (dataset_id, sparql_endpoint, graph, status) VALUES (%s, %s, %s, 'waiting')
+                INSERT INTO sparql (dataset_id, sparql_endpoint, graph, authorization, status) 
+                VALUES (%s, %s, %s, %s, 'waiting')
                 ON CONFLICT (dataset_id) DO UPDATE SET status = 'waiting'
-            ''', (dataset_id, sparql_endpoint, graph))
+            ''', (dataset_id, sparql_endpoint, graph, authorization))
 
     @staticmethod
     def get_downloads() -> List[Download]:

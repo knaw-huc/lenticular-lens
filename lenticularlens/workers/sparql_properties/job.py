@@ -22,16 +22,17 @@ class PropertyInfo(TypedDict):
 
 
 class SPARQLPropertiesJob(WorkerJob):
-    def __init__(self, dataset_id, entity_type_id, sparql_endpoint, graph):
+    def __init__(self, dataset_id, entity_type_id, sparql_endpoint, graph, authorization):
         self._dataset_id = dataset_id
         self._entity_type_id = entity_type_id
         self._sparql_endpoint = sparql_endpoint
         self._graph = graph
+        self._authorization = authorization
 
         super().__init__(self.run_sparql_query)
 
     def run_sparql_query(self):
-        sparql = SPARQL(self._sparql_endpoint, self._graph)
+        sparql = SPARQL(self._sparql_endpoint, self._graph, authorization=self._authorization)
 
         log.info(f'Try to obtain properties and their counts from {self._sparql_endpoint}')
         properties_data = sparql.get_class_properties_counts_and_types(self._entity_type_id, False)

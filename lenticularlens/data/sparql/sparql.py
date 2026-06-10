@@ -1,4 +1,5 @@
 import time
+import base64
 import logging
 
 from typing import Optional
@@ -9,15 +10,18 @@ log = logging.getLogger(__name__)
 
 
 class SPARQL:
-    def __init__(self, sparql_url: str, graph: Optional[str] = None):
+    def __init__(self, sparql_url: str, graph: Optional[str] = None, authorization: Optional[str] = None):
         self._sparql_url = sparql_url
         self._graph = graph
+        self._user, self._password = base64.b64decode(authorization.encode()).decode().split(':', 1) \
+            if authorization else (None, None)
 
     def fetch(self, query: str, retry: bool = True, timeout=600) -> list[dict[str, Value]]:
         try:
             sparql = SPARQLWrapper2(self._sparql_url)
             sparql.setMethod('POST')
             sparql.setRequestMethod('postdirectly')
+            sparql.setCredentials(self._user, self._password)
             sparql.setTimeout(timeout)
             sparql.setQuery(query)
 
