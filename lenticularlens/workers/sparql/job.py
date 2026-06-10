@@ -14,7 +14,7 @@ from lenticularlens.util.config_db import conn_pool
 
 
 class SPARQLJob(WorkerJob):
-    def __init__(self, table_name, sparql_endpoint, graph, entity_type_id, cursor,
+    def __init__(self, table_name, sparql_endpoint, graph, authorization, entity_type_id, cursor,
                  rows_count, rows_per_page, perform_count_check):
         self._table_name = table_name
         self._sparql_endpoint = sparql_endpoint
@@ -24,7 +24,7 @@ class SPARQLJob(WorkerJob):
         self._rows_count = rows_count
         self._rows_per_page = rows_per_page
         self._perform_count_check = perform_count_check
-        self._endpoint = SPARQL(sparql_endpoint, graph)
+        self._endpoint = SPARQL(sparql_endpoint, graph, authorization=authorization)
         self._columns = {}
 
         with conn_pool.connection() as conn, conn.cursor(row_factory=rows.dict_row) as cur:

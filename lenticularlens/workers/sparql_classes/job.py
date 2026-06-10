@@ -20,15 +20,16 @@ class ClassInfo(TypedDict):
 
 
 class SPARQLClassesJob(WorkerJob):
-    def __init__(self, dataset_id, sparql_endpoint, graph):
+    def __init__(self, dataset_id, sparql_endpoint, graph, authorization):
         self._dataset_id = dataset_id
         self._sparql_endpoint = sparql_endpoint
         self._graph = graph
+        self._authorization = authorization
 
         super().__init__(self.run_sparql_query)
 
     def run_sparql_query(self):
-        sparql = SPARQL(self._sparql_endpoint, self._graph)
+        sparql = SPARQL(self._sparql_endpoint, self._graph, authorization=self._authorization)
 
         classes = []
         try:
@@ -71,7 +72,7 @@ class SPARQLClassesJob(WorkerJob):
                 cur.execute("UPDATE sparql SET status = 'failed' WHERE dataset_id = %s", (self._dataset_id,))
 
     def insert_class_data(self, class_info: ClassInfo, cur: Cursor[Any]):
-        table_name = EntityType.create_table_name(self._sparql_endpoint, class_info['class_uri'])
+        table_name = EntityType.create_table_name(self._sparql_endpoint, self._graph, class_info['class_uri'])
         shortened_uri, _prefix, _name = qname(class_info['class_uri'])
 
         cur.execute('''
