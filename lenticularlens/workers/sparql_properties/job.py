@@ -48,7 +48,7 @@ class SPARQLPropertiesJob(WorkerJob):
                 property = property_data.get('property').value
 
                 log.info(f'Try to obtain is list from {self._sparql_endpoint} for property {property} inverse {inverse}')
-                is_list = sparql.get_class_property_is_list(self._entity_type_id, property, inverse)[0]
+                is_list = sparql.get_class_property_is_list(self._entity_type_id, property, inverse)
                 log.info(f'Obtained is list from {self._sparql_endpoint} for property {property} inverse {inverse}!')
 
                 value_classes = []
