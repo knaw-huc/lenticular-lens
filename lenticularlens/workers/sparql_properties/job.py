@@ -1,4 +1,3 @@
-from logging import getLogger
 from typing import Any, TypedDict
 
 from psycopg import Cursor
@@ -8,9 +7,6 @@ from lenticularlens.data.sparql.sparql import SPARQL
 from lenticularlens.util.config_db import conn_pool
 from lenticularlens.util.hasher import column_name_hash
 from lenticularlens.util.prefix_builder import qname
-
-log = getLogger(__name__)
-
 
 class PropertyInfo(TypedDict):
     is_inverse: bool
@@ -34,35 +30,25 @@ class SPARQLPropertiesJob(WorkerJob):
     def run_sparql_query(self):
         sparql = SPARQL(self._sparql_endpoint, self._graph, authorization=self._authorization)
 
-        log.info(f'Try to obtain properties and their counts from {self._sparql_endpoint}')
         properties_data = sparql.get_class_properties_counts_and_types(self._entity_type_id, False)
-        log.info(f'Obtained properties and their counts from {self._sparql_endpoint}!')
-
-        log.info(f'Try to obtain inverse properties and their counts from {self._sparql_endpoint}')
         inverse_properties_data = sparql.get_class_properties_counts_and_types(self._entity_type_id, True)
-        log.info(f'Obtained inverse properties and their counts from {self._sparql_endpoint}!')
 
         properties = dict()
         for inverse in [False, True]:
             for property_data in (inverse_properties_data if inverse else properties_data):
                 property = property_data.get('property').value
-
-                log.info(f'Try to obtain is list from {self._sparql_endpoint} for property {property} inverse {inverse}')
-                is_list = sparql.get_class_property_is_list(self._entity_type_id, property, inverse)[0]
-                log.info(f'Obtained is list from {self._sparql_endpoint} for property {property} inverse {inverse}!')
+                is_list = sparql.get_class_property_is_list(self._entity_type_id, property, inverse)
 
                 value_classes = []
                 if property_data.get('hasIRIs').value == 'true' or property_data.get('hasBlankNodes').value == 'true':
-                    log.info(f'Try to obtain value classes from {self._sparql_endpoint} for property {property} inverse {inverse}')
                     value_classes = sparql.get_class_property_value_classes(self._entity_type_id, property, inverse)
-                    log.info(f'Obtained value classes from {self._sparql_endpoint} for property {property} inverse {inverse}!')
 
                 properties[property] = PropertyInfo(
                     is_inverse=inverse,
                     count=int(property_data.get('count').value),
                     is_link=property_data.get('hasIRIs').value == 'true' or property_data.get('hasBlankNodes').value == 'true',
                     is_value_type=property_data.get('hasLiterals').value == 'true',
-                    is_list=is_list.get('isList').value == 'true',
+                    is_list=is_list,
                     referenced=[value_class.get('valueClass').value for value_class in value_classes]
                 )
 

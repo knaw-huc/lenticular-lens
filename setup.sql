@@ -1,3 +1,4 @@
+CREATE EXTENSION IF NOT EXISTS unaccent CASCADE;
 CREATE EXTENSION IF NOT EXISTS lenticular_lens CASCADE;
 
 CREATE TYPE spec_type AS ENUM ('linkset', 'lens');
