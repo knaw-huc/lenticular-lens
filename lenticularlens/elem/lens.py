@@ -76,6 +76,10 @@ class Lens:
         return set(all_props for linkset in self.linksets for all_props in linkset.all_props)
 
     @property
+    def entity_type_selections_ids(self):
+        return set(ets_id for linkset in self.linksets for ets_id in linkset.entity_type_selections_ids)
+
+    @property
     def similarity_logic_ops_sql(self):
         return self.with_lenses_recursive(
             lambda elem: self._logic_ops_for_condition(elem),
