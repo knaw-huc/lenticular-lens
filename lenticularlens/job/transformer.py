@@ -21,6 +21,8 @@ class Dataset:
         elif data['type'] == 'sparql':
             if 'sparql_endpoint' not in data or type(data['sparql_endpoint']) is not str:
                 raise SchemaError('missing or invalid sparql_endpoint')
+            if 'graph' in data and (type(data['graph']) is not str or not data['graph']):
+                raise SchemaError('invalid graph')
             if 'entity_type_id' not in data or type(data['entity_type_id']) is not str:
                 raise SchemaError('missing or invalid entity_type_id')
 

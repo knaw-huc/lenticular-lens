@@ -367,6 +367,7 @@ BEGIN
         IF NEW IS NULL THEN
             notification = json_build_object(
                 'sparql_endpoint', sparql.sparql_endpoint,
+                'graph', sparql.graph,
                 'entity_type_id', OLD.entity_type_id
             );
 
@@ -374,6 +375,7 @@ BEGIN
         ELSIF OLD IS NULL OR NEW.status != OLD.status THEN
             notification = json_build_object(
                 'sparql_endpoint', sparql.sparql_endpoint,
+                'graph', sparql.graph,
                 'entity_type_id', NEW.entity_type_id,
                 'status', NEW.status
             );
@@ -382,6 +384,7 @@ BEGIN
         ELSIF OLD IS NULL OR NEW.update_start_time != OLD.update_start_time OR NEW.rows_count != OLD.rows_count THEN
             notification = json_build_object(
                 'sparql_endpoint', sparql.sparql_endpoint,
+                'graph', sparql.graph,
                 'entity_type_id', NEW.entity_type_id,
                 'total', NEW.total,
                 'rows_count', NEW.rows_count

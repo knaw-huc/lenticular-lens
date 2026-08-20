@@ -175,26 +175,29 @@ Returns all currently running data downloads and finished data downloads from Ti
 
 **URL**: `/datasets/sparql`\
 **Method**: `GET`\
-**Parameters**: `endpoint`
+**Parameters**: `sparql_endpoint`, `graph`
 
-Returns all available datasets for a specific SPARQL endpoint `sparql_endpoint`.
+Returns all available datasets for a specific SPARQL endpoint `sparql_endpoint`. Supply `graph` to select a dataset
+scoped to that default graph; omit it for an endpoint-only dataset.
 
 ---
 
 **URL**: `/datasets/sparql`\
 **Method**: `POST`\
-**Parameters**: `sparql_endpoint`, `entity_type_id`
+**Parameters**: `sparql_endpoint`, `entity_type_id`, `graph`
 
 Starts a data download from a SPARQL endpoint `sparql_endpoint`. Use `entity_type_id` to specify the entity type to
-download.
+download. Supply `graph` when downloading from a graph-scoped dataset.
 
 ---
 
 **URL**: `/datasets/sparql/load`\
 **Method**: `POST`\
-**Parameters**: `sparql_endpoint`
+**Parameters**: `sparql_endpoint`, `graph`, `authorization`
 
-Load metadata about available entity types from a SPARQL endpoint `sparql_endpoint`.
+Load metadata about available entity types from a SPARQL endpoint `sparql_endpoint`. Supply `graph` to select a dataset
+scoped to that default graph; omit it for an endpoint-only dataset. `authorization` is accepted only by this endpoint
+and must be a strict Base64-encoded UTF-8 `username:password` token.
 
 ---
 
@@ -307,11 +310,11 @@ _Example: `/job/d697ea3869422ce3c7cc1889264d03c7/lens/0`_
 
 Validate a link of `type` (`linkset` or `lens`) for the linkset/lens with `id` of the given `job_id`.
 
-Specify the uris of the `source` and `target` to identify the link to be validated. Or filter the links by
-specifying `apply_filters` to apply the filters specified by the user. Specify `valid` with `accepted`, `rejected`,
-`uncertain` and/or `unchecked` to only return from the specified validity types. Specify `uri` to only return links with
-the specified URIs. Specify `cluster_id` to only return the links of specific clusters. Specify `min` and/or `max`
-to only return links with a similarity score within the specified minimum and maximum score.
+Specify the uris of the `source` and `target` to identify the link to be validated. Or filter the links by specifying
+`apply_filters` to apply the filters specified by the user. Specify `valid` with `accepted`, `rejected`, `uncertain`
+and/or `unchecked` to only return from the specified validity types. Specify `uri` to only return links with the
+specified URIs. Specify `cluster_id` to only return the links of specific clusters. Specify `min` and/or `max` to only
+return links with a similarity score within the specified minimum and maximum score.
 
 Provide `validation` with either `accepted`, `rejected` or `uncertain` to validate the link or use `unchecked` to reset.
 
@@ -323,11 +326,11 @@ Provide `validation` with either `accepted`, `rejected` or `uncertain` to valida
 
 Motivate using `motivation` of `type` (`linkset` or `lens`) for the linkset/lens with `id` of the given `job_id`.
 
-Specify the uris of the `source` and `target` to identify the link to be motivated. Or filter the links by
-specifying `apply_filters` to apply the filters specified by the user. Specify `valid` with `accepted`, `rejected`,
-`uncertain` and/or `unchecked` to only return from the specified validity types. Specify `uri` to only return links with
-the specified URIs. Specify `cluster_id` to only return the links of specific clusters. Specify `min` and/or `max`
-to only return links with a similarity score within the specified minimum and maximum score.
+Specify the uris of the `source` and `target` to identify the link to be motivated. Or filter the links by specifying
+`apply_filters` to apply the filters specified by the user. Specify `valid` with `accepted`, `rejected`, `uncertain`
+and/or `unchecked` to only return from the specified validity types. Specify `uri` to only return links with the
+specified URIs. Specify `cluster_id` to only return the links of specific clusters. Specify `min` and/or `max` to only
+return links with a similarity score within the specified minimum and maximum score.
 
 ---
 
@@ -474,15 +477,15 @@ _Developer note: Use GET to obtain the generated SQL._
 **Method**: `POST`\
 **Parameters**: `apply_filters`, `uri`, `cluster_id`, `min`, `max`
 
-Returns the total number of clusters of `type` (`linkset` or `lens`) for the linkset/lens with `id` of the
-given `job_id`.
+Returns the total number of clusters of `type` (`linkset` or `lens`) for the linkset/lens with `id` of the given
+`job_id`.
 
 Specify `apply_filters` to apply the filters specified by the user. Specify `uri` to only return links with the
 specified URIs. Specify `cluster_id` to only return the links of specific clusters. Specify `min` and/or `max` to only
 take into account links with a similarity score within the specified minimum and maximum score. Specify `min_size`
-and/or `max_size` to only return clusters with a size that is within the specified minimum and maximum size.
-Specify `min_count` and/or `max_count` to only return clusters with a links count that is within the specified minimum
-and maximum count.
+and/or `max_size` to only return clusters with a size that is within the specified minimum and maximum size. Specify
+`min_count` and/or `max_count` to only return clusters with a links count that is within the specified minimum and
+maximum count.
 
 _Developer note: Use GET to obtain the generated SQL._
 
@@ -491,8 +494,8 @@ _Developer note: Use GET to obtain the generated SQL._
 **URL**: `/job/<job_id>/<type>/<id>/clusters/run`\
 **Method**: `POST`
 
-Start a clustering process of `type` (`linkset` or `lens`) for the linkset/lens with the given `id` of a
-specific `job_id`.
+Start a clustering process of `type` (`linkset` or `lens`) for the linkset/lens with the given `id` of a specific
+`job_id`.
 
 ---
 
@@ -595,6 +598,8 @@ Emits download progress on SPARQL datasets.
 {
   // The SPARQL endpoint
   "sparql_endpoint": "https://sparql2.goldenagents.org/rijksmuseum",
+  // The optional graph
+  "graph": "https://example.org/graph-a",
   // The identifier of the entity type from this SPARQL endpoint
   "entity_type_id": "http://www.europeana.eu/schemas/edm/Agent",
   // The total number of entities to be downloaded
@@ -614,6 +619,8 @@ Emits status change of a SPARQL dataset from the database.
 {
   // The SPARQL endpoint
   "sparql_endpoint": "https://sparql2.goldenagents.org/rijksmuseum",
+  // The optional graph
+  "graph": "https://example.org/graph-a",
   // The identifier of the entity type from this SPARQL endpoint
   "entity_type_id": "http://www.europeana.eu/schemas/edm/Agent",
   // The status of the collection from this dataset
@@ -631,6 +638,8 @@ Emits removal of a SPARQL dataset from the database.
 {
   // The SPARQL endpoint
   "sparql_endpoint": "https://sparql2.goldenagents.org/rijksmuseum",
+  // The optional graph
+  "graph": "https://example.org/graph-a",
   // The identifier of the entity type from this SPARQL endpoint
   "entity_type_id": "http://www.europeana.eu/schemas/edm/Agent"
 }
@@ -806,6 +815,8 @@ to use for a particular job.
     "timbuctoo_id": "ufab7d657a250e3461361c982ce9b38f3816e0c4b__ecartico_20190805",
     // In the case of 'sparql': the SPARQL endpoint
     "sparql_endpoint": "https://sparql2.goldenagents.org/rijksmuseum",
+    // In the case of 'sparql': optional graph
+    "graph": "https://example.org/graph-a",
     // The identifier of the entity type to use
     "entity_type_id": "foaf_Person"
   },
