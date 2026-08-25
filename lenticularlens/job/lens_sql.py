@@ -75,17 +75,18 @@ class LensSql:
                 ADD PRIMARY KEY (source_uri, target_uri),
                 ADD COLUMN cluster_id integer,
                 ADD COLUMN cluster_hash_id char(15),
-                ADD COLUMN motivation text;
+                ADD COLUMN motivation text
+                ADD COLUMN sort_order serial;
 
-                ALTER TABLE lenses.{lens} ADD COLUMN sort_order serial;
-
-                CREATE INDEX ON lenses.{lens} USING hash (source_uri);
                 CREATE INDEX ON lenses.{lens} USING hash (target_uri);
-                CREATE INDEX ON lenses.{lens} USING hash (valid);
-                
-                CREATE INDEX ON lenses.{lens} USING btree (cluster_id);
-                CREATE INDEX ON lenses.{lens} USING btree (similarity);
-                CREATE INDEX ON lenses.{lens} USING btree (sort_order);
+
+                CREATE INDEX ON lenses.{lens} USING btree (similarity, sort_order);
+                CREATE INDEX ON lenses.{lens} USING btree (valid, similarity);
+
+                CREATE INDEX ON lenses.{lens} USING btree (cluster_id, source_uri);
+                CREATE INDEX ON lenses.{lens} USING btree (cluster_id, target_uri);
+                CREATE INDEX ON lenses.{lens} USING btree (cluster_id, similarity);
+                CREATE INDEX ON lenses.{lens} USING btree (cluster_id) INCLUDE (cluster_hash_id, valid);
 
                 ANALYZE lenses.{lens};
             """
