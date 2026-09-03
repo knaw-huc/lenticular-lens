@@ -10,7 +10,7 @@ class LinksetValidator:
         self._type = type
         self._spec = spec
         self._from_sql = linkset_builder.get_linkset_from_sql()
-        self._filters_sql = linkset_builder.get_linkset_view_filters() if with_view_filters else sql.SQL('')
+        self._filters_sql = linkset_builder.get_linkset_view_filters(with_view_filters=with_view_filters)
 
     def validate(self, valid):
         if self._type == 'lens':

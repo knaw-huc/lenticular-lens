@@ -1,4 +1,4 @@
-from typing import Annotated, Literal
+from typing import Annotated, Literal, Optional
 from fastapi import APIRouter, HTTPException, Form, Query
 from starlette.responses import StreamingResponse
 
@@ -12,6 +12,17 @@ from lenticularlens.api.dependencies import JobSpecDep, LinksValidationFilterPar
 router = APIRouter(prefix='/{type}/{id:int}', tags=['spec'])
 router.include_router(links_router)
 router.include_router(clusters_router)
+
+
+class RdfExportParams(LinksValidationFilterParams):
+    export_linkset: bool = True
+    export_metadata: bool = True
+    export_validation_set: bool = True
+    export_cluster_set: bool = True
+    reification: Literal['none', 'standard', 'singleton', 'rdf_star'] = 'none'
+    link_pred_namespace: Optional[str] = None
+    link_pred_shortname: Optional[str] = None
+    creator: Optional[str] = None
 
 
 class ValidationParams(BasicFilterParams, SourceTargetParams, LinksFilterParams, LinksValidationFilterParams):
@@ -82,25 +93,24 @@ def csv_export(data: JobSpecDep, params: Annotated[LinksValidationFilterParams, 
 
 
 @router.get('/rdf')
-def rdf_export(data: JobSpecDep, user: UserDep,
-                     valid: list[Literal['all', 'accepted', 'rejected', 'uncertain', 'unchecked', 'disputed']] = None,
-                     export_linkset: bool = True, export_metadata: bool = True,
-                     export_validation_set: bool = True, export_cluster_set: bool = True,
-                     reification: Literal['none', 'standard', 'singleton', 'rdf_star'] = 'none',
-                     link_pred_namespace: str = None, link_pred_shortname: str = None, creator: str = None):
+def rdf_export(data: JobSpecDep, user: UserDep, params: Annotated[RdfExportParams, Query()]):
     job, type, id = data
     export = RdfExport(job, type, id)
-    validation = Validation.get(valid if valid is not None else ['all'])
-
-    if user:
-        creator = user.name
-
     export_generator = export.create_generator(
-        link_pred_namespace, link_pred_shortname, export_linkset, export_metadata,
-        export_validation_set, export_cluster_set, reification, creator, validation)
+        link_pred_namespace=params.link_pred_namespace,
+        link_pred_shortname=params.link_pred_shortname,
+        export_linkset=params.export_linkset,
+        export_metadata=params.export_metadata,
+        export_validation_set=params.export_validation_set,
+        export_cluster_set=params.export_cluster_set,
+        reification=params.reification,
+        creator=user.name if user else params.creator,
+        validation_filter=Validation.get(params.valid)
+    )
 
-    use_graphs = (export_linkset and export_metadata or export_validation_set or export_cluster_set) \
-                 or export_validation_set or export_cluster_set
+    use_graphs = ((params.export_linkset and
+                   params.export_metadata or params.export_validation_set or params.export_cluster_set) or
+                  params.export_validation_set or params.export_cluster_set)
     mimetype = 'application/trig' if use_graphs else 'text/turtle'
     extension = 'trig' if use_graphs else 'ttl'
 

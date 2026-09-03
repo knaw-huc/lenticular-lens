@@ -62,7 +62,7 @@ class LinksetBuilder:
             GROUP BY valid
         ''')).format(
             linkset_from=self.get_linkset_from_sql(),
-            linkset_view_filters=get_sql_empty(self.get_linkset_view_filters(), flag=with_view_filters),
+            linkset_view_filters=self.get_linkset_view_filters(with_view_filters=with_view_filters),
         )
 
     def get_total_clusters(self, with_view_filters=False):
@@ -135,7 +135,7 @@ class LinksetBuilder:
             selection_sql=selection_sql,
             linkset_from=self.get_linkset_from_sql(),
             props_joins_sql=props_joins_sql,
-            linkset_view_filters=get_sql_empty(self.get_linkset_view_filters(), flag=with_view_filters),
+            linkset_view_filters=self.get_linkset_view_filters(with_view_filters=with_view_filters),
             sort_sql=self.get_linkset_sort_sql(),
             pagination_sql=self.get_linkset_pagination_sql(),
         )
@@ -184,10 +184,10 @@ class LinksetBuilder:
             target_collection_filter_sql = \
                 sql.SQL('cluster_id = clusters.cluster_id AND target_collections @> ARRAY [c.collection_id]')
 
-            linkset_source_view_filters_sql = self.get_linkset_view_filters(source_collection_filter_sql) \
-                if with_view_filters else sql.SQL('WHERE {}').format(source_collection_filter_sql)
-            linkset_target_view_filters_sql = self.get_linkset_view_filters(target_collection_filter_sql) \
-                if with_view_filters else sql.SQL('WHERE {}').format(target_collection_filter_sql)
+            linkset_source_view_filters_sql = \
+                self.get_linkset_view_filters(source_collection_filter_sql, with_view_filters)
+            linkset_target_view_filters_sql = \
+                self.get_linkset_view_filters(target_collection_filter_sql, with_view_filters)
 
             props_joins_sql = sql.SQL('''
                 LEFT JOIN LATERAL (
@@ -260,17 +260,18 @@ class LinksetBuilder:
             view_name=sql.Identifier(self._table_name),
         )
 
-    def get_linkset_view_filters(self, additional_filters_sql=None):
+    def get_linkset_view_filters(self, additional_filters_sql=None, with_view_filters=False):
         additional_filter = None
-        if additional_filters_sql is not None or self._view.filters_per_entity_type:
-            additional_filter = additional_filters_sql + \
-                                get_sql_empty(self._additional_filter_sql, flag=self._view.filters_per_entity_type)
+        view_filters = with_view_filters and self._view.filters_per_entity_type
+        if additional_filters_sql is not None or view_filters:
+            additional_filter = get_sql_empty(additional_filters_sql) + \
+                                get_sql_empty(self._additional_filter_sql, flag=view_filters)
 
         return sql.SQL(cleandoc('''
             {filter_laterals_sql}
             {where_sql}
         ''')).format(
-            filter_laterals_sql=get_sql_empty(self._filter_laterals_sql, flag=self._view.filters_per_entity_type),
+            filter_laterals_sql=get_sql_empty(self._filter_laterals_sql, flag=view_filters),
             where_sql=self._links_filter.sql(additional_filter=additional_filter),
         )
 
@@ -313,7 +314,7 @@ class LinksetBuilder:
             )
         ''')).format(
             linkset_from=self.get_linkset_from_sql(),
-            linkset_view_filters=get_sql_empty(self.get_linkset_view_filters(), flag=with_view_filters),
+            linkset_view_filters=self.get_linkset_view_filters(with_view_filters=with_view_filters),
             all_nodes_sql=get_sql_empty(sql.SQL(', array_agg(DISTINCT uri) AS nodes'), with_all_nodes),
         )
 
@@ -431,6 +432,10 @@ class LinksetBuilder:
                 uri_key = entity_type.alias + '_uri'
                 if (not is_single_value or idx == 0) and (not check_key or source[check_key] in source[uri_key]):
                     values = source[entity_type.alias + '_' + prop.hash]
+                    if check_key:
+                        values = [value for value, uri in zip(values, source[uri_key])
+                                  if uri == source[check_key]]
+
                     values = list(filter(None, values)) if values is not None else []
                     if max_values or is_single_value:
                         values = values[:(max_values or 1)]
