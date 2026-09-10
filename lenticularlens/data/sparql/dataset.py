@@ -68,7 +68,7 @@ class Dataset(BaseDataset):
             ''', (dataset_id, sparql_endpoint))
 
             cur.execute('''
-                INSERT INTO sparql (dataset_id, sparql_endpoint, graph, authorization, status) 
+                INSERT INTO sparql (dataset_id, sparql_endpoint, graph, "authorization", status) 
                 VALUES (%s, %s, %s, %s, 'waiting')
                 ON CONFLICT (dataset_id) DO UPDATE SET status = 'waiting'
             ''', (dataset_id, sparql_endpoint, graph, authorization))
