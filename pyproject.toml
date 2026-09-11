@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "lenticular-lens"
-version = "1.38"
+version = "1.39"
 description = ""
 readme = "readme.md"
 package-mode = false

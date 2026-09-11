@@ -111,7 +111,7 @@ class SPARQL:
         """)
 
     def get_class_property_value_classes(self, class_uri: str, property_uri: str, inverse: bool) -> list[dict[str, Value]]:
-        # TODO: Added a limit to prevent timeouts for this query, but still have a representable subset to query
+        # Added a limit to prevent timeouts for this query, but still have a representable subset to query
         return self.fetch(f"""
             PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
             
@@ -128,7 +128,7 @@ class SPARQL:
                         
                         BIND(COALESCE(?valueClassExplicit, rdfs:Resource) AS ?valueClass)
                     }}
-                    LIMIT 500000
+                    LIMIT 10000
                 }}
             }}
         """)
